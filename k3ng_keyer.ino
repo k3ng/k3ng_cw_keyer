@@ -180,41 +180,22 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     Reset to defaults: squeeze both paddles at power up (good to use if you dorked up the speed and don't have the CLI)
     Press the right paddle to enter straight key mode at power up
     Press the left  paddle at power up to enter and stay forever in beacon mode
-*/
+
+New features in this beta / unstable release:
+
+  command_mode_active_led
+  + is AR
+  Made it easier to form prosigns in command mode memory program using \+ macro
+  
+  FEATURE_LED_RING
+  led_ring_sdi    A10 //2    //Data
+  led_ring_clk    A9 //3    //Clock
+  led_ring_le     A8 //4    //Latch
+  
+  fixed bug in eeprom initialization code
 
 
-/* beta features !!!
 
-#define tx_key_dit
-#define tx_key_dah
-OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
-
-
-*/
-
-/* new features  !!!!!!!
-
-    FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-    FEATURE_USB_KEYBOARD
-    FEATURE_DIT_DAH_BUFFER_CONTROL
-    FEATURE_USB_MOUSE
-    
-    CLI:
-      \&     Toggle CMOS Super Keyer Timing on/off
-      \%##   Set CMOS Super Keyer Timing %     
-      \.     Toggle dit buffer on/off
-      \-     Toggle dah buffer on/off
-    
-    USB Keyboard:
-       Keypad /         Dit Paddle (USB Keyboard Only)
-       Keypad *         Dah Paddle (USB Keyboard Only)
-       Keypad ENTER     Tune / Straightkey (USB Keyboard Only)
-       
-     USB Mouse
-     
-       Left Button      Dit
-       Right Button     Dah
-       Middle Button    Tune / Straightkey       
 */
 
 #include <stdio.h>
@@ -227,148 +208,19 @@ OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
 //#include <Wire.h>               // uncomment for any I2C feature
 //#include <Adafruit_MCP23017.h>       // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_I2C and Adafruit_RGBLCDShield lines below
 //#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_I2C and Adafruit_RGBLCDShield lines below
+#include <BasicTerm.h>              // Uncomment for contest practice
 
-// To override the pin settings below, update the line below to where your personal keyer_pin_settings.h file is located
-//#include "C:\Users\goody\Documents\Arduino Sketchbook\keyer\keyer_pin_settings.h"
-//#include "C:\Users\goody\Documents\Arduino Sketchbook\keyer\keyer_pin_settings_nanokeyer_rev_b.h"
-//#include "/home/goody/arduino/sketchbook/keyer/keyer_pin_settings_nanokeyer_rev_b.h"
-
-#define CODE_VERSION "2013061101UNSTABLE"
-
-// compile time features and options - comment or uncomment to add or delete features
-// FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
-#define FEATURE_SERIAL
-//#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
-#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
-#define FEATURE_SAY_HI
-#define FEATURE_MEMORIES
-//#define FEATURE_MEMORY_MACROS
-#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is recommended (see documentation)
-#define OPTION_WINKEY_2_SUPPORT     // requires FEATURE_WINKEY_EMULATION
-//#define FEATURE_BEACON
-//#define FEATURE_CALLSIGN_RECEIVE_PRACTICE
-//#define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
-//#define FEATURE_SERIAL_HELP
-//#define FEATURE_HELL
-//#define FEATURE_PS2_KEYBOARD        // also uncomment PS2Keyboard line below and PS2Keyboard.h include at the top (requires FEATURE_SERIAL)
-//#define FEATURE_USB_KEYBOARD         // also uncomment FEATURE_USB_KEYBOARD section below
-//#define FEATURE_DEAD_OP_WATCHDOG
-//#define FEATURE_AUTOSPACE
-//#define FEATURE_FARNSWORTH
-//#define FEATURE_DL2SBA_BANKSWITCH  // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
-//#define FEATURE_DISPLAY            // LCD display support (include one of the hardware options below)
-//#define FEATURE_LCD_4BIT           // classic LCD disidefplay using 4 I/O lines
-//#define FEATURE_LCD_I2C            // I2C LCD display using MCP23017 at addr 0x20 (Adafruit)
-//#define FEATURE_CW_DECODER
-//#define FEATURE_SLEEP                // go to sleep after x minutes to conserve battery power
-//#define FEATURE_ROTARY_ENCODER       // rotary encoder speed control
-//#define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-//#define FEATURE_DIT_DAH_BUFFER_CONTROL
-//#define FEATURE_HI_PRECISION_LOOP_TIMING
-//#define FEATURE_USB_MOUSE
-//#define FEATURE_CAPACITIVE_PADDLE_PINS
+#include "features_and_options.c"
+#include "keyer_debug.c"
 
 
-//#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
-#define OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-//#define OPTION_CLI_WINKEY_AUTOSWITCH
-#define OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // this will make Winkey emulation be the default at boot up; hold command button down at boot up to activate CLI mode
-//#define OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP     // if ASR is not disabled, you may need this to discard errant serial port bytes at startup
-//#define OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM // with this activated the unit will write non-volatile settings to EEPROM when set by Winkey commands
-//#define OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
-#define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
-//#define OPTION_WINKEY_EXTENDED_COMMANDS            // in development
-#define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
-//#define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
-#define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode
-#define OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT         // this makes dit paddle memory interruption a little smoother
-//#define OPTION_MORE_DISPLAY_MSGS                     // additional optional display messages - comment out to save memory
-//#define OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND        // enable this to ignore the TAB key in the Send CW window (this breaks SO2R functionality in N1MM)
-//#define OPTION_WATCHDOG_TIMER                        // this enables a four second ATmega48/88/168/328 watchdog timer; use for unattended/remote operation only
-//#define OPTION_MOUSE_MOVEMENT_PADDLE               // experimental (just fooling around) - mouse movement will act like a paddle
-//#define OPTION_NON_ENGLISH_EXTENSIONS  // add support for additional CW characters (i.e. À, Å, Þ, etc.)
-//#define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
+#include "keyer_pin_settings.h"
+//#include "keyer_pin_settings_nanokeyer_rev_b.h"
 
 
-// don't touch these unless you know what the hell you are doing
-//#define DEBUG_STARTUP
-//#define DEBUG_LOOP
-//#define DEBUG_EEPROM
-//#define DEBUG_MEMORIES
-//#define DEBUG_PLAY_MEMORY
-//#define DEBUG_SEND_CHAR
-//#define DEBUG_MEMORY_WRITE
-//#define DEBUG_MEMORYCHECK
-//#define DEBUG_CAPTURE_COM_PORT
-//#define DEBUG_HELL_TEST
-//#define DEBUG_WINKEY_PROTOCOL
-//#define DEBUG_CHECK_SERIAL
-//#define DEBUG_PS2_KEYBOARD
-//#define DEBUG_VARIABLE_DUMP
-//#define DEBUG_BUTTONS
-//#define DEBUG_COMMAND_MODE
-//#define DEBUG_GET_CW_INPUT_FROM_USER
-//#define DEBUG_POTENTIOMETER
-//#define DEBUG_CW_DECODER
-//#define DEBUG_CW_DECODER_WPM
-//#define DEBUG_SERIAL_SEND_CW_CALLOUT
-//#define DEBUG_SLEEP
-//#define DEBUG_BUTTON_ARRAY
-//#define DEBUG_USB
-//#define DEBUG_USB_KEYBOARD
+#define CODE_VERSION "2013081401UNSTABLE"
+#define eeprom_magic_number 12
 
-
-/* Pins - you must review these and configure ! */
-#ifndef keyer_pin_settings_h
-#define paddle_left 2
-#define paddle_right 5
-#define tx_key_line_1 11       // (high = key down/tx on)
-#define tx_key_line_2 12
-#define tx_key_line_3 0
-#define tx_key_line_4 0
-#define tx_key_line_5 0
-#define tx_key_line_6 0
-#define sidetone_line 4         // connect a speaker for sidetone
-#define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
-#define ptt_tx_1 0              // PTT ("push to talk") lines
-#define ptt_tx_2 0              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
-#define ptt_tx_3 0              //   These are optional - set to 0 if unused
-#define ptt_tx_4 0
-#define ptt_tx_5 0
-#define ptt_tx_6 0
-#define cw_decoder_pin A5 //A3
-#define tx_key_dit 0            // if defined, goes high for dit (any transmitter)
-#define tx_key_dah 0            // if defined, goes high for dah (any transmitter)
-
-#ifdef FEATURE_COMMAND_BUTTONS
-#define analog_buttons_pin A1
-#endif //FEATURE_COMMAND_BUTTONS
-
-
-//lcd pins
-#ifdef FEATURE_LCD_4BIT
-#define lcd_rs A2
-#define lcd_enable 10
-#define lcd_d4 6
-#define lcd_d5 7
-#define lcd_d6 8
-#define lcd_d7 9
-#endif //FEATURE_LCD_4BIT
-#endif //keyer_pin_settings_h
-
-//ps2 keyboard pins
-#ifdef FEATURE_PS2_KEYBOARD
-#define ps2_keyboard_data A3
-#define ps2_keyboard_clock 3    // this must be on an interrupt capable pin!
-#endif //FEATURE_PS2_KEYBOARD
-
-// rotary encoder pins and options - rotary encoder code from Jim Balls M0CKE
-#ifdef FEATURE_ROTARY_ENCODER
-#define OPTION_ENCODER_HALF_STEP_MODE     // Half-step mode?
-#define rotary_pin1 0                      // CW Encoder Pin
-#define rotary_pin2 0                    // CCW Encoder Pin
-#define OPTION_ENCODER_ENABLE_PULLUPS     // define to enable weak pullups.
-#endif //FEATURE_ROTARY_ENCODER
 
 
 //PS2Keyboard keyboard;          // uncomment this if FEATURE_PS2_KEYBOARD is enabled above
@@ -378,62 +230,63 @@ OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
 //Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();      // uncomment this for FEATURE_LCD_I2C
 
 
-/* Uncomment this section if using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE */
-/* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
-/*
-#include <avr/pgmspace.h>
-#include <avrpins.h>
-#include <max3421e.h>
-#include <usbhost.h>
-#include <usb_ch9.h>
-#include <Usb.h>
-#include <usbhub.h>
-#include <avr/pgmspace.h>
-#include <address.h>
-#include <hidboot.h>
-#include <printhex.h>
-#include <message.h>
-#include <hexdump.h>
-#include <parsetools.h>
-USB Usb;
-uint32_t next_time;
-*/
+/* Uncomment this section if using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE 
+ USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
+
+//#include <avr/pgmspace.h>
+//#include <avrpins.h>
+//#include <max3421e.h>
+//#include <usbhost.h>
+//#include <usb_ch9.h>
+//#include <Usb.h>
+//#include <usbhub.h>
+//#include <avr/pgmspace.h>
+//#include <address.h>
+//#include <hidboot.h>
+//#include <printhex.h>
+//#include <message.h>
+//#include <hexdump.h>
+//#include <parsetools.h>
+//USB Usb;
+//uint32_t next_time;
+
 /* End of FEATURE_USB_KEYBOARD / FEATURE_USB_MOUSE section */
 
 
 /* Uncomment this section if using FEATURE_USB_KEYBOARD  */
-/*
-class KbdRptParser : public KeyboardReportParser
-  {
-  protected:
-  virtual void OnKeyDown (uint8_t mod, uint8_t key);
-  virtual void OnKeyUp (uint8_t mod, uint8_t key);
-  };
-HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
-KbdRptParser KeyboardPrs;
-*/
+
+//class KbdRptParser : public KeyboardReportParser
+//  {
+//  protected:
+//  virtual void OnKeyDown (uint8_t mod, uint8_t key);
+//  virtual void OnKeyUp (uint8_t mod, uint8_t key);
+//  };
+//HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
+//KbdRptParser KeyboardPrs;
+
 /* End of FEATURE_USB_KEYBOARD section */
 
 
 /* Uncomment this section if using FEATURE_USB_MOUSE */
-/*
-class MouseRptParser : public MouseReportParser
-  {
-  protected:
-  virtual void OnMouseMove(MOUSEINFO *mi);
-  virtual void OnLeftButtonUp(MOUSEINFO *mi);
-  virtual void OnLeftButtonDown(MOUSEINFO *mi);
-  virtual void OnRightButtonUp(MOUSEINFO *mi);
-  virtual void OnRightButtonDown(MOUSEINFO *mi);
-  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
-  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
-  };
-HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
-MouseRptParser MousePrs;
-*/
+
+//class MouseRptParser : public MouseReportParser
+//  {
+//  protected:
+//  virtual void OnMouseMove(MOUSEINFO *mi);
+//  virtual void OnLeftButtonUp(MOUSEINFO *mi);
+//  virtual void OnLeftButtonDown(MOUSEINFO *mi);
+//  virtual void OnRightButtonUp(MOUSEINFO *mi);
+//  virtual void OnRightButtonDown(MOUSEINFO *mi);
+//  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
+//  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
+//  };
+//HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
+//MouseRptParser MousePrs;
+
 /* End of FEATURE_USB_MOUSE section */
 
-
+/* Uncomment this for contest practice*/
+BasicTerm term(&Serial);
 
 // Initial and hardcoded settings
 #define initial_speed_wpm 26             // "factory default" keyer speed setting
@@ -466,7 +319,6 @@ MouseRptParser MousePrs;
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
-#define number_of_memories byte(12)     // the number of memories (duh)
 #define memory_area_start 30             // the eeprom location where memory space starts
 #define memory_area_end 1023             // the eeprom location where memory space ends
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
@@ -477,20 +329,31 @@ MouseRptParser MousePrs;
 #define default_memory_repeat_time 3000  // time in milliseconds
 #define lcd_columns 16
 #define lcd_rows 2
-#define eeprom_magic_number 60
 #define hell_pixel_microseconds 4025
 #define program_memory_limit_consec_spaces 1
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
 #define serial_cut_numbers 0              // set to 1 to activate cut numbers in serial numbers (i.e. #10 = 1T, #19 = 1N)
-#define p_command_single_digit_wait_time 2
 #define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
 
 #ifdef FEATURE_COMMAND_BUTTONS
-#define analog_buttons_number_of_buttons 4  //16
+#define analog_buttons_number_of_buttons 4
 #define analog_buttons_r1 10
 #define analog_buttons_r2 1
 #endif
+
+
+#if defined(FEATURE_COMMAND_BUTTONS) &&  !defined(FEATURE_PS2_KEYBOARD) && !defined(FEATURE_USB_KEYBOARD) && !defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(FEATURE_WINKEY_EMULATION)
+#define number_of_memories byte(analog_buttons_number_of_buttons-1)
+#else
+#define number_of_memories byte(12)
+#endif
+
+
+#ifdef FEATURE_LED_RING
+#define led_ring_low_limit 10
+#define led_ring_high_limit 50
+#endif //FEATURE_LED_RING
 
 // Variable macros
 #define STRAIGHT 1
@@ -639,10 +502,12 @@ MouseRptParser MousePrs;
 #endif //OPTION_WINKEY_2_SUPPORT
 #endif //FEATURE_WINKEY_EMULATION
 
+#define PRINTCHAR 0
+#define NOPRINT 1
 
 // Variables and stuff
-struct config_t {  // 24 bytes
-  byte magic_number;
+struct config_t {  // 23 bytes
+  //byte magic_number;
   unsigned int wpm;
   byte paddle_mode;
   byte keyer_mode;
@@ -665,7 +530,7 @@ struct config_t {  // 24 bytes
 
 
 byte command_mode_disable_tx = 0;
-unsigned int dah_to_dit_ratio = initial_dah_to_dit_ratio;
+//unsigned int dah_to_dit_ratio = initial_dah_to_dit_ratio;
 byte current_tx_key_line = tx_key_line_1;
 unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3,initial_ptt_tail_time_tx4,initial_ptt_tail_time_tx5,initial_ptt_tail_time_tx6};
 unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3,initial_ptt_lead_time_tx4,initial_ptt_lead_time_tx5,initial_ptt_lead_time_tx6};
@@ -686,10 +551,10 @@ byte speed_mode = SPEED_NORMAL;
 unsigned int serial_number = 1;
 byte pause_sending_buffer = 0;
 byte length_letterspace = default_length_letterspace;
-byte length_wordspace = default_length_wordspace;
+//byte length_wordspace = default_length_wordspace;
 byte keying_compensation = default_keying_compensation;
 byte first_extension_time = default_first_extension_time;
-byte weighting = default_weighting;
+//byte weighting = default_weighting;
 byte ultimatic_mode = ULTIMATIC_NORMAL;
 float ptt_hang_time_wordspace_units = default_ptt_hang_time_wordspace_units;
 byte last_sending_type = MANUAL_SENDING;
@@ -755,7 +620,7 @@ byte pot_wpm_low_value;
 #ifdef FEATURE_POTENTIOMETER
 byte pot_wpm_high_value;
 byte last_pot_wpm_read;
-byte pot_activated;
+//byte pot_activated;
 int pot_full_scale_reading = default_pot_full_scale_reading;
 #endif //FEATURE_POTENTIOMETER
 
@@ -954,7 +819,7 @@ void loop()
       if (!send_buffer_bytes) {
         play_memory(0);
       }
-      service_send_buffer();
+      service_send_buffer(PRINTCHAR);
       #ifdef FEATURE_SERIAL
       check_serial();
       #endif
@@ -982,7 +847,7 @@ void loop()
     #endif //FEATURE_COMMAND_LINE_INTERFACE
     #endif //FEATURE_SERIAL
 
-    service_send_buffer();
+    service_send_buffer(PRINTCHAR);
     check_ptt_tail();
 
     #ifdef FEATURE_POTENTIOMETER
@@ -1014,7 +879,7 @@ void loop()
     #ifdef FEATURE_DISPLAY
     check_paddles();
     service_dit_dah_buffers();
-    service_send_buffer();
+    service_send_buffer(PRINTCHAR);
     service_lcd_paddle_echo();
     service_display();
     #endif //FEATURE_DISPLAY
@@ -1022,6 +887,11 @@ void loop()
     #ifdef FEATURE_CW_DECODER
     service_cw_decoder();
     #endif //FEATURE_CW_DECODER
+    
+    #ifdef FEATURE_LED_RING
+    update_led_ring();
+    #endif //FEATURE_LED_RING
+    
     
     #ifdef FEATURE_SLEEP
     check_sleep();
@@ -1801,7 +1671,7 @@ void ps2_usb_keyboard_play_memory(byte memory_number){
 }
 #endif  //defined(FEATURE_PS2_KEYBOARD) || defined(FEATURE_USB_KEYBOARD)
 //-------------------------------------------------------------------------------------------------------
-#ifdef defined(FEATURE_PS2_KEYBOARD) && defined(FEATURE_MEMORIES)
+#if defined(FEATURE_PS2_KEYBOARD) && defined(FEATURE_MEMORIES)
 void ps2_keyboard_program_memory(byte memory_number)
 {
 
@@ -1922,7 +1792,7 @@ int ps2_keyboard_get_number_input(byte places,int lower_limit, int upper_limit)
       if (machine_mode == NORMAL) {          // might as well do something while we're waiting
         check_paddles();
         service_dit_dah_buffers();
-        service_send_buffer();
+        service_send_buffer(PRINTCHAR);
 
         check_ptt_tail();
         #ifdef FEATURE_POTENTIOMETER
@@ -2136,7 +2006,7 @@ void check_potentiometer()
   Serial.println(F("loop: entering check_potentiometer")); 
   #endif        
     
-  if (pot_activated) {
+  if (configuration.pot_activated) {
     byte pot_value_wpm_read = pot_value_wpm();
     if ((abs(pot_value_wpm_read - last_pot_wpm_read) > potentiometer_change_threshold)) {
       #ifdef DEBUG_POTENTIOMETER
@@ -2491,10 +2361,10 @@ void check_ptt_tail()
       //if ((millis() - ptt_time) > ptt_tail_time) {
       if (last_sending_type == MANUAL_SENDING) {
         #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) > ((length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
+        if ((millis() - ptt_time) > ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
         #endif
         #ifdef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) > (((length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {
+        if ((millis() - ptt_time) > (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {
         #endif
           ptt_unkey();
         }
@@ -2511,7 +2381,8 @@ void check_ptt_tail()
 void write_settings_to_eeprom(int initialize_eeprom) {  
   
   if (initialize_eeprom) {
-    configuration.magic_number = eeprom_magic_number;
+    //configuration.magic_number = eeprom_magic_number;
+    EEPROM.write(0,eeprom_magic_number);
     #ifdef FEATURE_MEMORIES
     initialize_eeprom_memories();
     #endif  //FEATURE_MEMORIES    
@@ -2519,7 +2390,7 @@ void write_settings_to_eeprom(int initialize_eeprom) {
 
   const byte* p = (const byte*)(const void*)&configuration;
   unsigned int i;
-  int ee = 0;
+  int ee = 1;  // starting point of configuration struct
   for (i = 0; i < sizeof(configuration); i++){
     EEPROM.write(ee++, *p++);  
   }
@@ -2534,15 +2405,16 @@ int read_settings_from_eeprom() {
 
   // returns 0 if eeprom had valid settings, returns 1 if eeprom needs initialized
   
+  if (EEPROM.read(0) == eeprom_magic_number){
   
-  byte* p = (byte*)(void*)&configuration;
-  unsigned int i;
-  int ee = 0;
-  for (i = 0; i < sizeof(configuration); i++){
-    *p++ = EEPROM.read(ee++);  
-  }
+    byte* p = (byte*)(void*)&configuration;
+    unsigned int i;
+    int ee = 1; // starting point of configuration struct
+    for (i = 0; i < sizeof(configuration); i++){
+      *p++ = EEPROM.read(ee++);  
+    }
   
-  if (configuration.magic_number == eeprom_magic_number) {
+  //if (configuration.magic_number == eeprom_magic_number) {
     switch_to_tx_silent(configuration.current_tx);
     config_dirty = 0;
     return 0;
@@ -2670,7 +2542,7 @@ void send_dit(byte sending_type)
   dit_start_time = millis();
   #endif
   if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,HIGH);}
-  loop_element_lengths((1.0*(float(weighting)/50)),keying_compensation,character_wpm,sending_type);
+  loop_element_lengths((1.0*(float(configuration.weighting)/50)),keying_compensation,character_wpm,sending_type);
   if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,LOW);}
   #ifdef DEBUG_VARIABLE_DUMP
   dit_end_time = millis();
@@ -2681,7 +2553,7 @@ void send_dit(byte sending_type)
 //    dit_buffer = 0;
 //    dah_buffer = 0;
 //  }
-  loop_element_lengths((2.0-(float(weighting)/50)),(-1.0*keying_compensation),character_wpm,sending_type);
+  loop_element_lengths((2.0-(float(configuration.weighting)/50)),(-1.0*keying_compensation),character_wpm,sending_type);
   #ifdef FEATURE_AUTOSPACE
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active)) {
     check_paddles();
@@ -2743,7 +2615,7 @@ void send_dah(byte sending_type)
   dah_start_time = millis();
   #endif
   if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,HIGH);}
-  loop_element_lengths((float(dah_to_dit_ratio/100.0)*(float(weighting)/50)),keying_compensation,character_wpm,sending_type);
+  loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),keying_compensation,character_wpm,sending_type);
   if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,LOW);}
   #ifdef DEBUG_VARIABLE_DUMP
   dah_end_time = millis();
@@ -2753,7 +2625,7 @@ void send_dah(byte sending_type)
 //    dit_buffer = 0;
 //    dah_buffer = 0;
 //  }
-  loop_element_lengths((4.0-(3.0*(float(weighting)/50))),(-1.0*keying_compensation),character_wpm,sending_type);
+  loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),character_wpm,sending_type);
   #ifdef FEATURE_AUTOSPACE
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active)) {
     check_paddles();
@@ -3068,6 +2940,11 @@ void speed_set(int wpm_set)
 {
     configuration.wpm = wpm_set;
     config_dirty = 1;
+    
+    #ifdef FEATURE_LED_RING
+    update_led_ring();
+    #endif //FEATURE_LED_RING
+    
     #ifdef FEATURE_DISPLAY
     lcd_center_print_timed(String(configuration.wpm) + " wpm", 0, default_display_msg_delay);
     #endif
@@ -3075,7 +2952,7 @@ void speed_set(int wpm_set)
 
 //-------------------------------------------------------------------------------------------------------
 
-int get_cw_input_from_user(unsigned int exit_time_seconds) {
+int get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 
   byte looping = 1;
   byte paddle_hit = 0;
@@ -3086,7 +2963,7 @@ int get_cw_input_from_user(unsigned int exit_time_seconds) {
 
   while (looping) {
     #ifdef FEATURE_POTENTIOMETER
-    if (pot_activated) {
+    if (configuration.pot_activated) {
       check_potentiometer();
     }
     #endif
@@ -3118,7 +2995,7 @@ int get_cw_input_from_user(unsigned int exit_time_seconds) {
       looping = 0;
     }
 
-    if ((!paddle_hit) && (exit_time_seconds) && ((millis() - entry_time) > (exit_time_seconds * 1000))) { // if we were passed an exit time and no paddle was hit, blow out of here
+    if ((!paddle_hit) && (exit_time_milliseconds) && ((millis() - entry_time) > exit_time_milliseconds)) { // if we were passed an exit time and no paddle was hit, blow out of here
       return 0;
     }
 
@@ -3172,6 +3049,7 @@ void command_mode ()
   command_mode_disable_tx = 0;
 
   boop_beep();
+  if (command_mode_active_led) {digitalWrite(command_mode_active_led,HIGH);}
   #ifdef FEATURE_DISPLAY
   lcd.clear();
   lcd_center_print_timed("Command Mode", 0, default_display_msg_delay);
@@ -3274,13 +3152,13 @@ void command_mode ()
         case 2: command_tuning_mode(); break;                             // T - tuning mode
         #ifdef FEATURE_POTENTIOMETER
         case 1112:  // V - toggle pot active
-          if (pot_activated) {
-            pot_activated = 0; 
+          if (configuration.pot_activated) {
+            configuration.pot_activated = 0; 
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Pot Deactivated", 0, default_display_msg_delay);
             #endif             
           } else {
-            pot_activated = 1;
+            configuration.pot_activated = 1;
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Pot Activated", 0, default_display_msg_delay);
             #endif 
@@ -3338,6 +3216,7 @@ void command_mode ()
     }
   }
   beep_boop();
+  if (command_mode_active_led) {digitalWrite(command_mode_active_led,LOW);}
   machine_mode = NORMAL;
   speed_mode = speed_mode_before;   // go back to whatever speed mode we were in before
   configuration.keyer_mode = keyer_mode_before;
@@ -3388,8 +3267,8 @@ void command_set_mem_repeat_delay() {
 
 void adjust_dah_to_dit_ratio(int adjustment) {
 
- if ((dah_to_dit_ratio + adjustment) > 150 && (dah_to_dit_ratio + adjustment) < 810) {
-   dah_to_dit_ratio = dah_to_dit_ratio + adjustment;
+ if ((configuration.dah_to_dit_ratio + adjustment) > 150 && (configuration.dah_to_dit_ratio + adjustment) < 810) {
+   configuration.dah_to_dit_ratio = configuration.dah_to_dit_ratio + adjustment;
    #ifdef FEATURE_DISPLAY
    #ifdef OPTION_MORE_DISPLAY_MSGS
    lcd_center_print_timed("Dah/Dit: " + String(dah_to_dit_ratio), 0, default_display_msg_delay);
@@ -4147,7 +4026,7 @@ void send_char(char cw_char, byte omit_letterspace)
 
       case '=': send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); break;
       case '/': send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case ' ': loop_element_lengths((length_wordspace-length_letterspace-2),0,configuration.wpm,AUTOMATIC_SENDING); break;
+      case ' ': loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm,AUTOMATIC_SENDING); break;
       case '*': send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;    // using asterisk for BK
       //case '&': send_dit(AUTOMATIC_SENDING); loop_element_lengths(3); send_dits(3); break;
       case '.': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
@@ -4167,7 +4046,7 @@ void send_char(char cw_char, byte omit_letterspace)
       case '@': send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
       case '<': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;     // AR
       case '>': send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;               // SK
-      case '\n': break;
+      case '\n':
       case '\r': break;
       
       #ifdef OPTION_NON_ENGLISH_EXTENSIONS
@@ -4288,7 +4167,7 @@ void serial_qrss_mode()
 #endif
 //-------------------------------------------------------------------------------------------------------
 
-void service_send_buffer()
+void service_send_buffer(byte no_print)
 {
   // send one character out of the send buffer
   // values 200 and above do special things
@@ -4358,6 +4237,11 @@ void service_send_buffer()
             remove_from_send_buffer();
             configuration.wpm = configuration.wpm + send_buffer_array[0];
             remove_from_send_buffer();
+            
+            #ifdef FEATURE_LED_RING
+            update_led_ring();
+            #endif //FEATURE_LED_RING            
+            
           }
         }
 
@@ -4415,7 +4299,7 @@ void service_send_buffer()
         if (((serial_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open)) || (serial_mode != SERIAL_WINKEY_EMULATION)) {
         #endif //FEATURE_WINKEY_EMULATION
         #ifdef FEATURE_SERIAL
-        Serial.write(send_buffer_array[0]);
+        if (!no_print) {Serial.write(send_buffer_array[0]);}
         if (send_buffer_array[0] == 13) {
           Serial.write(10);  // if we got a carriage return, also send a line feed
         }
@@ -4558,6 +4442,11 @@ void winkey_unbuffered_speed_command(byte incoming_serial_byte) {
     #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
     config_dirty = 1;
     #endif
+    
+    #ifdef FEATURE_LED_RING
+    update_led_ring();
+    #endif //FEATURE_LED_RING    
+    
   }
 
 }
@@ -4614,7 +4503,7 @@ void winkey_dah_to_dit_ratio_command(byte incoming_serial_byte) {
 void winkey_weighting_command(byte incoming_serial_byte) {
 
   if ((incoming_serial_byte > 9) && (incoming_serial_byte < 91)) {
-    weighting = incoming_serial_byte;
+    configuration.weighting = incoming_serial_byte;
   }
 
 }
@@ -4737,9 +4626,9 @@ void winkey_setmode_command(byte incoming_serial_byte) {
   }
   #endif
   if ((incoming_serial_byte & 128) == 128) {  //xxxxxxx1 = contest wordspace
-     length_wordspace = 6;
+     configuration.length_wordspace = 6;
   } else {
-     length_wordspace = 7;
+     configuration.length_wordspace = 7;
   }
 
   if ((incoming_serial_byte & 64) == 64) {  //x1xxxxxx = paddle echo
@@ -4927,7 +4816,7 @@ void winkey_admin_get_values_command() {
 
   // 1 - mode register
   byte_to_send = 0;
-  if (length_wordspace != default_length_wordspace) {
+  if (configuration.length_wordspace != default_length_wordspace) {
     byte_to_send = byte_to_send | 1;
   }
   #ifdef FEATURE_AUTOSPACE
@@ -4980,7 +4869,7 @@ void winkey_admin_get_values_command() {
   }
 
   // 4 - weight
-  Serial.write(weighting);
+  Serial.write(configuration.weighting);
 
   // 5 - ptt lead
   Serial.write(zero);   // TODO - backwards calculate this
@@ -5213,7 +5102,7 @@ void service_winkey(byte action) {
       winkey_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
       winkey_paddle_echo_space_sent = 0;
     }
-    if ((winkey_host_open) && (winkey_paddle_echo_buffer == 0) && (winkey_paddle_echo_activated) && (millis() > (winkey_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(length_wordspace-length_letterspace)))) && (!winkey_paddle_echo_space_sent)) {
+    if ((winkey_host_open) && (winkey_paddle_echo_buffer == 0) && (winkey_paddle_echo_activated) && (millis() > (winkey_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!winkey_paddle_echo_space_sent)) {
       Serial.write(" ");
       winkey_paddle_echo_space_sent = 1;
     }
@@ -6062,7 +5951,7 @@ void process_serial_command() {
     case 83: serial_status(); break;                                              // S - Status command
     case 74: serial_set_dit_to_dah_ratio(); break;                          // J - dit to dah ratio
     #ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
-    case 75: serial_callsign_receive_practice(); break;                     // K - callsign receive practice
+    case 75: serial_cw_practice(); break;                     // K - CW practice
     #endif //FEATURE_CALLSIGN_RECEIVE_PRACTICE
     case 76: serial_set_weighting(); break;
     #ifdef FEATURE_FARNSWORTH
@@ -6110,8 +5999,8 @@ void process_serial_command() {
     #ifdef FEATURE_POTENTIOMETER
     case 86:                // V - toggle pot activation
       Serial.print(F("Potentiometer "));
-      pot_activated = !pot_activated;
-      if (pot_activated) {
+      configuration.pot_activated = !configuration.pot_activated;
+      if (configuration.pot_activated) {
         Serial.print(F("A"));
       } else {
         Serial.print(F("Dea"));
@@ -6224,7 +6113,7 @@ void service_serial_paddle_echo()
     cli_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
     cli_paddle_echo_space_sent = 0;
   }
-  if ((cli_paddle_echo_buffer == 0) && (cli_paddle_echo) && (millis() > (cli_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(length_wordspace-length_letterspace)))) && (!cli_paddle_echo_space_sent)) {
+  if ((cli_paddle_echo_buffer == 0) && (cli_paddle_echo) && (millis() > (cli_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!cli_paddle_echo_space_sent)) {
     Serial.write(" ");
     cli_paddle_echo_space_sent = 1;
   }
@@ -6304,11 +6193,11 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit)
       if (machine_mode == NORMAL) {          // might as well do something while we're waiting
         check_paddles();
         service_dit_dah_buffers();
-        service_send_buffer();
+        service_send_buffer(PRINTCHAR);
 
         check_ptt_tail();
         #ifdef FEATURE_POTENTIOMETER
-        if (pot_activated) {
+        if (configuration.pot_activated) {
           check_potentiometer();
         }
         #endif
@@ -6368,7 +6257,7 @@ void serial_change_wordspace()
   int set_wordspace_to = serial_get_number_input(2,0,100);
   if (set_wordspace_to > 0) {
     config_dirty = 1;
-    length_wordspace = set_wordspace_to;
+    configuration.length_wordspace = set_wordspace_to;
     Serial.write("Wordspace set to ");
     Serial.println(set_wordspace_to,DEC);
   }
@@ -6403,9 +6292,9 @@ void serial_set_dit_to_dah_ratio()
 {
     int set_ratio_to = serial_get_number_input(4, 99, 1000);
     if ((set_ratio_to > 99) && (set_ratio_to < 1000)) {
-      dah_to_dit_ratio = set_ratio_to;
+      configuration.dah_to_dit_ratio = set_ratio_to;
       Serial.print(F("Setting dah to dit ratio to "));
-      Serial.println((float(dah_to_dit_ratio)/100));
+      Serial.println((float(configuration.dah_to_dit_ratio)/100));
       config_dirty = 1;
     }
 }
@@ -6485,7 +6374,7 @@ void serial_set_weighting()
 {
   int set_weighting = serial_get_number_input(2,9,91);
   if (set_weighting > 0) {
-    weighting = set_weighting;
+    configuration.weighting = set_weighting;
     Serial.write("Setting weighting to ");
     Serial.println(set_weighting,DEC);
   }
@@ -6568,22 +6457,318 @@ String generate_callsign() {
 }
 
 #endif //FEATURE_CALLSIGN_RECEIVE_PRACTICE
+//---------------------------------------------------------------------
+#if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void paqso_practice(){
+  
+  // VT100 emulation in Linux: screen /dev/ttyACM1 115200 term vt100
+  
+  
+  #define CONTEST_PRACTICE_IDLE 0
+  #define CONTEST_PRACTICE_CQ_SENT 1
+  #define CONTEST_PRACTICE_REPORT_SENT 2
+  
+  
+  #define FIELD_CALLSIGN 0
+  #define FIELD_NR 1
+  #define FIELD_SECTION 2
+  
+  
+  byte overall_state = CONTEST_PRACTICE_IDLE;
+  byte loop1 = 1;
+  byte user_input_buffer[10];
+  byte user_input_buffer_characters = 0;
+  byte incoming_char = 0;
+  byte process_user_input_buffer = 0;
+  unsigned long escape_flag_time = 0;
+  String callsign;
+  String nr;
+  String section;
+  byte cq_answered = 0;
+  unsigned long transition_time = 0;
+  byte current_field = FIELD_CALLSIGN;
+
+  int previous_sidetone = configuration.hz_sidetone;
+  int previous_wpm = configuration.wpm;
+  int caller_sidetone = 0;
+  int caller_wpm_delta = 0;
+
+  while (Serial.available() > 0) {  // clear out the buffer if anything is there
+    Serial.read();
+  }  
+
+  term.init();
+  term.cls(); 
+  term.position(0,0);  
+  term.println(F("\nPA QSO Party Practice\n"));
+  term.println(F("This requires VT100 emulation!\n"));
+  term.println(F("F1 - Call CQ"));
+  term.println(F("F2 - Exchange"));
+  term.println(F("F3 - TU"));
+  term.println(F("Insert - Callsign + Exchange"));
+  term.println(F("\\ - Exit\n"));
+  term.println(F("Callsign  NR  Section"));
+  term.println(F("-------- ---- -------\n\n"));    
+  
+  while (loop1){
+    
+    
+    // get user keyboard input
+    if (Serial.available()){      
+      user_input_buffer[user_input_buffer_characters] = toupper(Serial.read());
+      switch(user_input_buffer[user_input_buffer_characters]){                    
+        case 27: //escape
+          escape_flag_time = millis();
+          user_input_buffer_characters++;
+        case 13: //return
+        case 32: //space
+          process_user_input_buffer = 1;
+          break;
+        case 127:
+        case 8: //backspace
+          if (user_input_buffer_characters > 0){user_input_buffer_characters--;}
+          Serial.write(27);
+          Serial.write(91);
+          Serial.write(49);
+          Serial.write(68);
+          break;
+
+          
+        default:
+          if (!(((user_input_buffer[user_input_buffer_characters-1] == 27) && (user_input_buffer[user_input_buffer_characters] == 79) && (user_input_buffer_characters>0)) ||
+          ((user_input_buffer[user_input_buffer_characters-2] == 27) && (user_input_buffer[user_input_buffer_characters-1] == 79) && (user_input_buffer_characters>1)))){
+            Serial.write(user_input_buffer[user_input_buffer_characters]);
+          }
+          user_input_buffer_characters++;
+          break;                 
+      } //switch(user_input_buffer[user_input_buffer_characters])
+      if (user_input_buffer_characters == 10){process_user_input_buffer = 1;}
+        
+    }//(Serial.available())
+    
+    
+    // process user keyboard input
+    if ((process_user_input_buffer) && ((escape_flag_time == 0) || ((millis()-escape_flag_time) > 100))){ 
+   
+      #ifdef DEBUG_CW_PRACTICE
+      Serial.print(F("escape_flag_time: process_user_input_buffer user_input_buffer_characters:"));
+      Serial.println(user_input_buffer_characters);
+      #endif
+      
+      if (user_input_buffer_characters > 0){
+        if (user_input_buffer[0] == '\\'){  // does user want to exit?
+          loop1 = 0;
+        } else {
+          if (user_input_buffer[0] == 27){
+            if (user_input_buffer_characters == 3){
+              if ((user_input_buffer[1] == 79) && (user_input_buffer[2] == 80)) {  //VT100 F1 key
+                configuration.hz_sidetone = previous_sidetone;
+                configuration.wpm = previous_wpm;
+                add_to_send_buffer('C');
+                add_to_send_buffer('Q');
+                add_to_send_buffer(' ');
+                add_to_send_buffer('T');
+                add_to_send_buffer('E');
+                add_to_send_buffer('S');
+                add_to_send_buffer('T');
+                add_to_send_buffer(' ');
+                add_to_send_buffer('D');
+                add_to_send_buffer('E');
+                add_to_send_buffer(' ');
+                add_to_send_buffer('K');
+                add_to_send_buffer('3');
+                add_to_send_buffer('N');
+                add_to_send_buffer('G');
+                overall_state = CONTEST_PRACTICE_CQ_SENT;
+                transition_time = millis();
+              } //((user_input_buffer[1] == 79) && (user_input_buffer[2] == 80)) VT100 F1 key       
+            } //(user_input_buffer_characters == 3)
+            if (user_input_buffer_characters == 4){
+              if ((user_input_buffer[1] == 91) && (user_input_buffer[2] == 50)  && (user_input_buffer[3] == 126)) { //VT100 INS key
+                for (byte x = 0; x < user_input_buffer_characters; x++) {
+                  add_to_send_buffer(user_input_buffer[x]);
+                }    
+                add_to_send_buffer(' ');         
+                add_to_send_buffer('0');
+                add_to_send_buffer('0');
+                add_to_send_buffer('1');
+                add_to_send_buffer(' ');
+                add_to_send_buffer('C');
+                add_to_send_buffer('A');
+                add_to_send_buffer('R');
+                configuration.hz_sidetone = previous_sidetone;
+                configuration.wpm = previous_wpm;              
+                overall_state = CONTEST_PRACTICE_REPORT_SENT;
+              }
+            } //(user_input_buffer_characters == 4)
+
+          } else { //(user_input_buffer[0] == 27)
+          
+          // we have a callsign, nr, or section
+          
+            switch(current_field){
+              case FIELD_CALLSIGN:
+                callsign = "";
+                for (byte x = 0; x < user_input_buffer_characters; x++) {
+                  callsign.concat(char(user_input_buffer[x]));
+                } 
+                current_field = FIELD_NR;
+                break;
+                
+              case FIELD_NR:
+                nr = "";
+                for (byte x = 0; x < user_input_buffer_characters; x++) {
+                  nr.concat(char(user_input_buffer[x]));
+                }               
+                current_field = FIELD_SECTION;
+                break;
+                
+              case FIELD_SECTION:
+                section = "";
+                for (byte x = 0; x < user_input_buffer_characters; x++) {
+                  section.concat(char(user_input_buffer[x]));
+                }               
+                current_field = FIELD_CALLSIGN;
+                break;
+              
+            }
+            term.position(13,0);
+            term.print(callsign);
+            term.position(13,9);
+            term.print(nr);
+            term.position(13,14);
+            term.println(section);
+            term.position(15,0);
+            term.print(F("                     ")); 
+            term.position(15,0);           
+            
+          }
+
+        } //(user_input_buffer[0] == '\\')
+      } //(user_input_buffer_characters > 0)
+      process_user_input_buffer = 0; 
+      user_input_buffer_characters = 0;    
+      escape_flag_time = 0;
+    } //((process_user_input_buffer) && ((escape_flag_time == 0) || ((millis() -escape_flag_time) > 100)))
+
+ //aaaaa   
+    //do autonomous events
+    service_send_buffer(NOPRINT);
+    
+    switch(overall_state){
+      case CONTEST_PRACTICE_CQ_SENT:
+        if (send_buffer_bytes == 0){
+          if (!cq_answered){
+            if (((millis() - transition_time) > random(250,1500))){  // add some random delay
+              callsign = generate_callsign();
+              caller_sidetone = random(500,1000);
+              configuration.hz_sidetone = caller_sidetone;
+              caller_wpm_delta = random(-5,5);
+              configuration.wpm = configuration.wpm + caller_wpm_delta;
+              for (byte x = 0; x < (callsign.length()); x++) {
+                add_to_send_buffer(callsign[x]);
+              }
+              cq_answered = 1;
+              transition_time = millis();
+            }
+          } else {  //send it again
+            if ((cq_answered) && ((millis() - transition_time) > random(2000,4000))){
+              configuration.hz_sidetone = caller_sidetone;
+              configuration.wpm = configuration.wpm + caller_wpm_delta;
+              for (byte x = 0; x < (callsign.length()); x++) {
+                add_to_send_buffer(callsign[x]);
+              }            
+              cq_answered++;
+              transition_time = millis();            
+            }
+          }
+        } else {
+          transition_time = millis();
+        } //send_buffer_bytes == 0
+        break;  //CONTEST_PRACTICE_CQ_SENT
+      
+      
+    } //switch(overall_state)
+    
+
+  } //while (loop1)
+  
+  configuration.hz_sidetone = previous_sidetone;
+  configuration.wpm = previous_wpm;
+  send_buffer_bytes = 0;
+
+}  
+#endif
+
+//---------------------------------------------------------------------
+#if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void serial_cw_practice(){
+  
+
+  byte menu_loop = 1;
+  byte menu_loop2 = 1;
+  char incoming_char = ' ';
+  
+  while(menu_loop){
+  
+    while (Serial.available() > 0) {  // clear out the buffer if anything is there
+      Serial.read();
+    }  
+    
+    Serial.println("CW Practice\n");
+    Serial.println("1 - US Callsigns");
+    Serial.println("2 - PA QSO Party");
+    Serial.println("0 - eXit\n");
+    
+    menu_loop2 = 1;
+    
+    while (menu_loop2){
+    
+      if (Serial.available()){
+        incoming_char = Serial.read();
+        menu_loop2 = 0;
+      }
+    }
+      
+      
+    //Serial.println(incoming_char);
+    
+    switch(incoming_char){
+      case '0': menu_loop = 0; break;
+      case '1': us_callsign_practice(); break;
+      case '2': paqso_practice(); break;
+        
+        
+    } //switch(incoming_char)
+    
+ 
+    
+  } //while(menu_loop)
+      
+  Serial.println(F("Exiting practice mode..."));
+  
+  
+}
+#endif
+
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
-#ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
-void serial_callsign_receive_practice()
+#if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void us_callsign_practice()
 {
 
-  byte looping = 1;
+  byte loop1 = 1;
+  byte loop2 = 0;
   byte serialwaitloop = 0;
   String callsign(10);
   char incoming_char = ' ';
   String user_entered_callsign = "";
 
-  randomSeed(analogRead(0));
+  byte previous_key_tx_state = key_tx;
+  key_tx = 0;
+  //randomSeed(analogRead(0));
+  randomSeed(millis());
   Serial.println(F("Callsign receive practice; type in callsign and hit ENTER."));
   Serial.println(F("If you are using the Arduino serial monitor, select \"Carriage Return\" line ending."));
   Serial.println(F("Enter a blackslash \\ to exit."));
@@ -6597,53 +6782,75 @@ void serial_callsign_receive_practice()
     incoming_char = Serial.read();
   }
 
-  while (looping){
+  while (loop1){
 
     callsign = generate_callsign();
+    loop2 = 1;
+    
+    while (loop2){
 
-    for (byte x = 0; x < (callsign.length()); x++) {
-      send_char(callsign[x],NORMAL);
-    }
-
-    serialwaitloop = 1;
-    user_entered_callsign = "";
-    while (serialwaitloop) {
-      if (Serial.available() > 0) {
-        incoming_char = Serial.read();
-        Serial.print(incoming_char);
-        if (incoming_char == 13) {
-          serialwaitloop = 0;
-        } else {
-          user_entered_callsign = user_entered_callsign + incoming_char;
+      for (byte x = 0; x < (callsign.length()); x++) {
+        send_char(callsign[x],NORMAL);
+      }
+  
+  //aaaa
+  
+      //Serial.println(callsign);
+  
+      serialwaitloop = 1;
+      user_entered_callsign = "";
+      while (serialwaitloop) {
+        if (Serial.available() > 0) {
+          incoming_char = Serial.read();
+          Serial.print(incoming_char);
+          if (incoming_char == 13) {
+            serialwaitloop = 0;
+          } else {
+            if (incoming_char != 10) {
+              user_entered_callsign = user_entered_callsign + incoming_char;
+            }
+          }
         }
       }
-    }
-
-    if (user_entered_callsign[0] == '\\') {
-      Serial.println(F("Exiting...\n"));
-      looping = 0;
-    } else {
-      user_entered_callsign.toUpperCase();  // the toUpperCase function was modified in 1.0; now it changes string in place
-      if (callsign.compareTo(user_entered_callsign) == 0) {
-        Serial.println(F("\nCorrect!"));
-      } else {
-        Serial.print(F("\nWrong: "));
-        Serial.println(callsign);
+  
+      if (user_entered_callsign[0] != '?') {
+        if ((user_entered_callsign[0] == '\\')){
+          Serial.println(F("Exiting...\n"));
+          loop1 = 0;
+          loop2 = 0;
+        } else {
+          user_entered_callsign.toUpperCase();  // the toUpperCase function was modified in 1.0; now it changes string in place
+          if (callsign.compareTo(user_entered_callsign) == 0) {
+            Serial.println(F("\nCorrect!"));
+            loop2 = 0;
+          } else {
+            Serial.print(F("\nWrong!"));
+            //Serial.println(callsign);
+            //loop2 = 0;
+          }
+        }
       }
-    }
-
-    delay(100);
-    #ifndef FEATURE_COMMAND_BUTTONS
-    while ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW) || (analogbuttonread(0))) {
-      looping = 0;
-    }
-    #endif
-    delay(10);
-  }
+  
+      delay(100);
+      #ifdef FEATURE_COMMAND_BUTTONS
+      while ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW) || (analogbuttonread(0))) {
+        loop1 = 0;
+        loop2 = 0;
+      }
+      #else 
+      while ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW)) {
+        loop1 = 0;
+        loop2 = 0;
+      }    
+      #endif //FEATURE_COMMAND_BUTTONS
+      delay(10);
+    } //loop2
+  } //loop1
+  
+  key_tx = previous_key_tx_state;
 }
-#endif
-#endif
-#endif
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
 //---------------------------------------------------------------------
 
 #ifdef FEATURE_SERIAL
@@ -6710,16 +6917,16 @@ void serial_status() {
   Serial.print(configuration.hz_sidetone,DEC);
   Serial.println(" hz");
   Serial.print(F("Dah to dit: "));
-  Serial.println((float(dah_to_dit_ratio)/100));
+  Serial.println((float(configuration.dah_to_dit_ratio)/100));
   Serial.print(F("Weighting: "));
-  Serial.println(weighting,DEC);
+  Serial.println(configuration.weighting,DEC);
   Serial.print(F("Serial Number: "));
   Serial.println(serial_number,DEC);
   #ifdef FEATURE_POTENTIOMETER
   Serial.print(F("Potentiometer WPM: "));
   Serial.print(pot_value_wpm(),DEC);
   Serial.print(F(" ("));
-  if (pot_activated != 1) {
+  if (configuration.pot_activated != 1) {
     Serial.print(F("not "));
   }
   Serial.println("activated)");
@@ -6733,7 +6940,7 @@ void serial_status() {
   }
   #endif
   Serial.print("Wordspace: ");
-  Serial.println(length_wordspace,DEC);
+  Serial.println(configuration.length_wordspace,DEC);
   Serial.print("TX: ");
   Serial.println(configuration.current_tx);  
   #ifdef FEATURE_MEMORIES
@@ -6750,9 +6957,9 @@ void serial_status() {
   #ifdef FEATURE_FARNSWORTH
   Serial.println(configuration.wpm_farnsworth);
   #endif //FEATURE_FARNSWORTH
-  Serial.println(1.0*(float(weighting)/50));
+  Serial.println(1.0*(float(configuration.weighting)/50));
   Serial.println(keying_compensation,DEC);
-  Serial.println(2.0-(float(weighting)/50));
+  Serial.println(2.0-(float(configuration.weighting)/50));
   Serial.println(-1.0*keying_compensation);
   Serial.println((dit_end_time-dit_start_time),DEC);
   Serial.println((dah_end_time-dah_start_time),DEC);
@@ -6821,18 +7028,18 @@ int convert_cw_number_to_ascii (long number_in)
    case 22111: return 55; break;
    case 22211: return 56; break;
    case 22221: return 57; break;
-
    case 112211: return 63; break;  // ?
    case 21121: return 47; break;   // /
-   #ifndef OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
-   case 21112: return 45; break;   // -
+   case 2111212: return '*'; break; // BK   
    case 221122: return 44; break;  // ,
-   case 2111212: return 36; break; // BK (store as ascii $)
-   #endif //OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
-
    case 222222: return 92; break;  // special hack; six dahs = \ (backslash)
+   //case 2222222: return '+'; break;
+   case 9: return 32; break;       // special 9 = space
    
-   #ifdef OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
+   #ifndef OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
+   case 21112: return '='; break;
+   case 12121: return '+'; break;
+   #else
    case 211112: return 45; break; // - // sp5iou
    case 21112: return 61; break; // = //sp5iou
    case 212122: return 33; break; // ! //sp5iou
@@ -6850,11 +7057,8 @@ int convert_cw_number_to_ascii (long number_in)
    case 111212: return 62; break; // SK (stored as ascii > ) // sp5iou
    case 12121: return 60; break; // AR (store as ascii < ) // sp5iou
    case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou
-   case 2111212: return 42; break; // BK (store as ascii *) //sp5iou
    #endif //OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
 
-   case 9: return 32; break;       // special 9 = space
-   
    #ifdef OPTION_NON_ENGLISH_EXTENSIONS
    case 12212: return 197; break;   // Å   - customize for your locality  ( 1 = dit, 2 = dah, return code is ASCII code )
    case 1212: return 196; break;    // Ä   - customize for your locality
@@ -7039,9 +7243,9 @@ void command_program_memory()
   Serial.print(F("command_program_memory: cw_char: "));
   Serial.println(cw_char);
   #endif
-  if (cw_char > 0) {  //aaaaa
+  if (cw_char > 0) {
     if ((cw_char == 12222) && (number_of_memories > 9)) { // we have a 1, this could be 1 or 1x
-      cw_char = get_cw_input_from_user(p_command_single_digit_wait_time);  // give the user 3 seconds to send another number
+      cw_char = get_cw_input_from_user((1200/configuration.wpm)*14);  // give the user some time to enter a second digit
       switch (cw_char) {
         case 0: program_memory(0); break;    // we didn't get anything, it's a 1   
         case 22222: program_memory(9); break; 
@@ -7715,6 +7919,10 @@ void program_memory(int memory_number)
   int memory_location_index = 0;
   long cwchar = 0;
   byte space_count = 0;
+  
+  #ifdef FEATURE_MEMORY_MACROS
+  byte macro_flag = 0;
+  #endif //FEATURE_MEMORY_MACROS
 
   dit_buffer = 0;
   dah_buffer = 0;
@@ -7758,11 +7966,20 @@ void program_memory(int memory_number)
          loop1 = 0;
        }
 
-       if ((paddle_hit == 0) && (millis() > (last_element_time + ((float(1200/configuration.wpm) * length_wordspace)))) && (space_count < program_memory_limit_consec_spaces)) {   // we have a space
+
+       #ifdef FEATURE_MEMORY_MACROS
+       if ((!macro_flag) && (paddle_hit == 0) && (millis() > (last_element_time + ((float(1200/configuration.wpm) * configuration.length_wordspace)))) && (space_count < program_memory_limit_consec_spaces)) {   // we have a space
          loop1 = 0;
          cwchar = 9;
          space_count++;
        }
+       #else
+       if ((paddle_hit == 0) && (millis() > (last_element_time + ((float(1200/configuration.wpm) * configuration.length_wordspace)))) && (space_count < program_memory_limit_consec_spaces)) {   // we have a space
+         loop1 = 0;
+         cwchar = 9;
+         space_count++;
+       }       
+       #endif //FEATURE_MEMORY_MACROS
 
        #ifdef FEATURE_COMMAND_BUTTONS
        while (analogbuttonread(0)) {    // hit the button to get out of command mode if no paddle was hit
@@ -7795,6 +8012,18 @@ void program_memory(int memory_number)
 
       EEPROM.write((memory_start(memory_number)+memory_location_index),convert_cw_number_to_ascii(cwchar));
       memory_location_index++;
+ 
+      #ifdef FEATURE_MEMORY_MACROS
+      if (!macro_flag) {
+        if (convert_cw_number_to_ascii(cwchar) == '\\') {macro_flag = 1;}  // if we got the \ macro character, supress spaces
+      } else {
+         if (convert_cw_number_to_ascii(cwchar) == '+') {    // if we're building a prosign, supress the next two spaces
+           macro_flag = 2; 
+         } else {
+           macro_flag--; 
+         }
+      }
+      #endif //FEATURE_MEMORY_MACROS
     }
 
     // are we out of memory locations?
@@ -7928,6 +8157,21 @@ void initialize_pins() {
   pinMode (cw_decoder_pin, INPUT);
   digitalWrite (cw_decoder_pin, HIGH);  
   #endif //FEATURE_CW_DECODER
+  
+  #ifdef FEATURE_COMMAND_BUTTONS
+  if(command_mode_active_led) {
+    pinMode (command_mode_active_led, OUTPUT);
+    digitalWrite (command_mode_active_led,LOW);
+  }
+  #endif //FEATURE_COMMAND_BUTTONS
+  
+  
+  #ifdef FEATURE_LED_RING
+  pinMode(led_ring_sdi,OUTPUT);
+  pinMode(led_ring_clk,OUTPUT);
+  pinMode(led_ring_le,OUTPUT);
+  #endif //FEATURE_LED_RING  
+  
 }
 
 //---------------------------------------------------------------------
@@ -8216,6 +8460,30 @@ void initialize_keyer_state(){
   configuration.hz_sidetone = initial_sidetone_freq;
   configuration.memory_repeat_time = default_memory_repeat_time;
   configuration.cmos_super_keyer_iambic_b_timing_percent = default_cmos_super_keyer_iambic_b_timing_percent;
+  
+  configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
+  configuration.current_tx = 1;
+  configuration.length_wordspace = default_length_wordspace;
+  configuration.weighting = default_weighting;
+  
+  #ifdef FEATURE_FARNSWORTH
+  configuration.wpm_farnsworth = initial_speed_wpm;
+  #endif //FEATURE_FARNSWORTH
+  
+  /* aaaaaa
+
+
+  byte autospace_active;
+
+  //probably OK: byte current_ptt_line;
+
+  unsigned int memory_repeat_time;
+  byte dit_buffer_off;
+  byte dah_buffer_off;
+
+  byte cmos_super_keyer_iambic_b_timing_on;
+  
+  */
 
 }  
 
@@ -8226,7 +8494,7 @@ void initialize_potentiometer(){
   pinMode(potentiometer,INPUT);
   pot_wpm_high_value = initial_pot_wpm_high_value;
   last_pot_wpm_read = pot_value_wpm();
-  pot_activated = 1;
+  configuration.pot_activated = 1;
   #endif
   
 }
@@ -9370,6 +9638,44 @@ uint8_t read_capacitive_pin(int pinToMeasure) {
 }
 
 #endif //FEATURE_CAPACITIVE_PADDLE_PINS
+//---------------------------------------------------------------------
+#ifdef FEATURE_LED_RING
+void update_led_ring(){
 
+  static int last_leds = 0;
+  int leds = 0;
+  
+  
 
-
+  leds = map(configuration.wpm,led_ring_low_limit,led_ring_high_limit,0,15);
+  if (leds < 0){leds = 0;}
+  if (leds > 15){leds = 15;}
+    
+  if (leds != last_leds){ 
+    digitalWrite(led_ring_le,LOW);
+    
+    digitalWrite(led_ring_sdi,LOW);
+    digitalWrite(led_ring_clk,HIGH);
+    digitalWrite(led_ring_clk,LOW);
+    
+    
+    for (int x = 15;x > 0;x--){
+      if (x <= leds){
+        digitalWrite(led_ring_sdi,HIGH);
+      } else {
+        digitalWrite(led_ring_sdi,LOW);
+      }
+      digitalWrite(led_ring_clk,HIGH);
+      digitalWrite(led_ring_clk,LOW);
+    }
+    
+    //shiftOut(led_ring_sdi,led_ring_clk,MSBFIRST,(sequence[y][x] >> 8));    //High byte first
+    //shiftOut(led_ring_sdi,led_ring_clk,MSBFIRST,sequence[y][x]);           //Low byte second
+    digitalWrite(led_ring_le,HIGH); 
+    
+    last_leds = leds;
+    digitalWrite(led_ring_sdi,LOW);
+  }    
+        
+}
+#endif //FEATURE_LED_RING
