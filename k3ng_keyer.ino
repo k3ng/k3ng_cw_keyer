@@ -180,15 +180,19 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     Reset to defaults: squeeze both paddles at power up (good to use if you dorked up the speed and don't have the CLI)
     Press the right paddle to enter straight key mode at power up
     Press the left  paddle at power up to enter and stay forever in beacon mode
+*/
 
 
+/* beta features !!!
 
- new features in this stable release:
+#define tx_key_dit
+#define tx_key_dah
+OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
 
-    #define tx_key_dit
-    #define tx_key_dah
-    OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
-    fixed ps2_keyboard_program_memory compiler error
+
+*/
+
+/* new features  !!!!!!!
 
     FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
     FEATURE_USB_KEYBOARD
@@ -229,18 +233,18 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 //#include "C:\Users\goody\Documents\Arduino Sketchbook\keyer\keyer_pin_settings_nanokeyer_rev_b.h"
 //#include "/home/goody/arduino/sketchbook/keyer/keyer_pin_settings_nanokeyer_rev_b.h"
 
-#define CODE_VERSION "2013071601"
+#define CODE_VERSION "2013061101UNSTABLE"
 
 // compile time features and options - comment or uncomment to add or delete features
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 #define FEATURE_SERIAL
-#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
+//#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
 #define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
 #define FEATURE_SAY_HI
 #define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
-//#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is recommended (see documentation)
-//#define OPTION_WINKEY_2_SUPPORT     // requires FEATURE_WINKEY_EMULATION
+#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is recommended (see documentation)
+#define OPTION_WINKEY_2_SUPPORT     // requires FEATURE_WINKEY_EMULATION
 //#define FEATURE_BEACON
 //#define FEATURE_CALLSIGN_RECEIVE_PRACTICE
 //#define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
@@ -374,59 +378,59 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 //Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();      // uncomment this for FEATURE_LCD_I2C
 
 
-/* Uncomment this section if using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE 
- USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
-
-//#include <avr/pgmspace.h>
-//#include <avrpins.h>
-//#include <max3421e.h>
-//#include <usbhost.h>
-//#include <usb_ch9.h>
-//#include <Usb.h>
-//#include <usbhub.h>
-//#include <avr/pgmspace.h>
-//#include <address.h>
-//#include <hidboot.h>
-//#include <printhex.h>
-//#include <message.h>
-//#include <hexdump.h>
-//#include <parsetools.h>
-//USB Usb;
-//uint32_t next_time;
-
+/* Uncomment this section if using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE */
+/* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
+/*
+#include <avr/pgmspace.h>
+#include <avrpins.h>
+#include <max3421e.h>
+#include <usbhost.h>
+#include <usb_ch9.h>
+#include <Usb.h>
+#include <usbhub.h>
+#include <avr/pgmspace.h>
+#include <address.h>
+#include <hidboot.h>
+#include <printhex.h>
+#include <message.h>
+#include <hexdump.h>
+#include <parsetools.h>
+USB Usb;
+uint32_t next_time;
+*/
 /* End of FEATURE_USB_KEYBOARD / FEATURE_USB_MOUSE section */
 
 
 /* Uncomment this section if using FEATURE_USB_KEYBOARD  */
-
-//class KbdRptParser : public KeyboardReportParser
-//  {
-//  protected:
-//  virtual void OnKeyDown (uint8_t mod, uint8_t key);
-//  virtual void OnKeyUp (uint8_t mod, uint8_t key);
-//  };
-//HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
-//KbdRptParser KeyboardPrs;
-
+/*
+class KbdRptParser : public KeyboardReportParser
+  {
+  protected:
+  virtual void OnKeyDown (uint8_t mod, uint8_t key);
+  virtual void OnKeyUp (uint8_t mod, uint8_t key);
+  };
+HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
+KbdRptParser KeyboardPrs;
+*/
 /* End of FEATURE_USB_KEYBOARD section */
 
 
 /* Uncomment this section if using FEATURE_USB_MOUSE */
-
-//class MouseRptParser : public MouseReportParser
-//  {
-//  protected:
-//  virtual void OnMouseMove(MOUSEINFO *mi);
-//  virtual void OnLeftButtonUp(MOUSEINFO *mi);
-//  virtual void OnLeftButtonDown(MOUSEINFO *mi);
-//  virtual void OnRightButtonUp(MOUSEINFO *mi);
-//  virtual void OnRightButtonDown(MOUSEINFO *mi);
-//  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
-//  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
-//  };
-//HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
-//MouseRptParser MousePrs;
-
+/*
+class MouseRptParser : public MouseReportParser
+  {
+  protected:
+  virtual void OnMouseMove(MOUSEINFO *mi);
+  virtual void OnLeftButtonUp(MOUSEINFO *mi);
+  virtual void OnLeftButtonDown(MOUSEINFO *mi);
+  virtual void OnRightButtonUp(MOUSEINFO *mi);
+  virtual void OnRightButtonDown(MOUSEINFO *mi);
+  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
+  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
+  };
+HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
+MouseRptParser MousePrs;
+*/
 /* End of FEATURE_USB_MOUSE section */
 
 
@@ -473,7 +477,7 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 #define default_memory_repeat_time 3000  // time in milliseconds
 #define lcd_columns 16
 #define lcd_rows 2
-#define eeprom_magic_number 10
+#define eeprom_magic_number 60
 #define hell_pixel_microseconds 4025
 #define program_memory_limit_consec_spaces 1
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
@@ -1797,7 +1801,7 @@ void ps2_usb_keyboard_play_memory(byte memory_number){
 }
 #endif  //defined(FEATURE_PS2_KEYBOARD) || defined(FEATURE_USB_KEYBOARD)
 //-------------------------------------------------------------------------------------------------------
-#if defined(FEATURE_PS2_KEYBOARD) && defined(FEATURE_MEMORIES)
+#ifdef defined(FEATURE_PS2_KEYBOARD) && defined(FEATURE_MEMORIES)
 void ps2_keyboard_program_memory(byte memory_number)
 {
 
