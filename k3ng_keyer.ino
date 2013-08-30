@@ -229,7 +229,7 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 //#include "C:\Users\goody\Documents\Arduino Sketchbook\keyer\keyer_pin_settings_nanokeyer_rev_b.h"
 //#include "/home/goody/arduino/sketchbook/keyer/keyer_pin_settings_nanokeyer_rev_b.h"
 
-#define CODE_VERSION "2013071601"
+#define CODE_VERSION "2013083001"
 
 // compile time features and options - comment or uncomment to add or delete features
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
@@ -8212,6 +8212,8 @@ void initialize_keyer_state(){
   configuration.hz_sidetone = initial_sidetone_freq;
   configuration.memory_repeat_time = default_memory_repeat_time;
   configuration.cmos_super_keyer_iambic_b_timing_percent = default_cmos_super_keyer_iambic_b_timing_percent;
+  
+  switch_to_tx_silent(1);
 
 }  
 
