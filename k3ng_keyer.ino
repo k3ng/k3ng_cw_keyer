@@ -99,11 +99,12 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     \e     Play serial number, then increment
     \f#### Change sidetone to #### hertz (must be four digits - use leading zero below 1000 hz)
     \h     Switch to Hell sending
-    \i#   Insert memory number
+    \i#    Insert memory number
     \l     Switch to CW (from Hell mode)
     \n     Decrement serial number, do not send
     \q##   Switch to QRSS mode, dit length ## seconds
     \r     Switch to regular speed mode
+    \s     Insert space
     \t###  Transmit for ### seconds (must be three digits, use leading zeros if necessary)
     \u     Activate PTT
     \v     Deactivate PTT
@@ -193,6 +194,8 @@ New features in this beta / unstable release:
   led_ring_le     A8 //4    //Latch
   
   fixed bug in eeprom initialization code
+  
+  \s memory macro = insert space
 
 
 
@@ -208,18 +211,16 @@ New features in this beta / unstable release:
 //#include <Wire.h>               // uncomment for any I2C feature
 //#include <Adafruit_MCP23017.h>       // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_I2C and Adafruit_RGBLCDShield lines below
 //#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_I2C and Adafruit_RGBLCDShield lines below
-#include <BasicTerm.h>              // Uncomment for contest practice
+//#include <BasicTerm.h>              // Uncomment for contest practice
 
 #include "features_and_options.c"
 #include "keyer_debug.c"
-
-
 #include "keyer_pin_settings.h"
 //#include "keyer_pin_settings_nanokeyer_rev_b.h"
 
 
-#define CODE_VERSION "2013081401UNSTABLE"
-#define eeprom_magic_number 12
+#define CODE_VERSION "2013090601UNSTABLE"
+#define eeprom_magic_number 13
 
 
 
@@ -286,7 +287,7 @@ New features in this beta / unstable release:
 /* End of FEATURE_USB_MOUSE section */
 
 /* Uncomment this for contest practice*/
-BasicTerm term(&Serial);
+//BasicTerm term(&Serial);
 
 // Initial and hardcoded settings
 #define initial_speed_wpm 26             // "factory default" keyer speed setting
@@ -6975,12 +6976,7 @@ void serial_status() {
     Serial.print(F("  button_array_high_limit: "));
     Serial.println(button_array_high_limit[x]);
   }
-  #endif
-  
-  //zzzz
-  
-
-  
+  #endif 
   
 }
 #endif
@@ -7464,98 +7460,10 @@ void play_memory(byte memory_number)
                   }       
                 }           
                 break;
-              
-//wwwww              
-              
-              /*case 49:                         // 1 - jump to memory 1
-                if (number_of_memories > 0) {
-                  memory_number = 0;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
+              //zzzzz
+              case 'S': // insert space
+                send_char(' ',NORMAL);
                 break;
-
-              case 50:                         // 2 - jump to memory 2
-                if (number_of_memories > 1) {
-                  memory_number = 1;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 51:                         // 3 - jump to memory 3
-                if (number_of_memories > 2) {
-                  memory_number = 2;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 52:                         // 4 - jump to memory 4
-                if (number_of_memories > 3) {
-                  memory_number = 3;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 53:                         // 5 - jump to memory 5
-                if (number_of_memories > 4) {
-                  memory_number = 4;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 54:                         // 6 - jump to memory 6
-                if (number_of_memories > 5) {
-                  memory_number = 5;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 55:                         // 7 - jump to memory 7
-                if (number_of_memories > 6) {
-                  memory_number = 6;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 56:                         // 8 - jump to memory 8
-                if (number_of_memories > 7) {
-                  memory_number = 7;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 57:                         // 9 - jump to memory 9
-                if (number_of_memories > 8) {
-                  memory_number = 8;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;*/
 
               case 88:                         // X - switch transmitter
                 y++;
@@ -8462,13 +8370,15 @@ void initialize_keyer_state(){
   configuration.cmos_super_keyer_iambic_b_timing_percent = default_cmos_super_keyer_iambic_b_timing_percent;
   
   configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
-  configuration.current_tx = 1;
+  //configuration.current_tx = 1;
   configuration.length_wordspace = default_length_wordspace;
   configuration.weighting = default_weighting;
   
   #ifdef FEATURE_FARNSWORTH
   configuration.wpm_farnsworth = initial_speed_wpm;
   #endif //FEATURE_FARNSWORTH
+  
+  switch_to_tx_silent(1);
   
   /* aaaaaa
 
