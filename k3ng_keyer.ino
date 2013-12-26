@@ -99,11 +99,12 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     \e     Play serial number, then increment
     \f#### Change sidetone to #### hertz (must be four digits - use leading zero below 1000 hz)
     \h     Switch to Hell sending
-    \i#   Insert memory number
+    \i#    Insert memory number
     \l     Switch to CW (from Hell mode)
     \n     Decrement serial number, do not send
     \q##   Switch to QRSS mode, dit length ## seconds
     \r     Switch to regular speed mode
+    \s     Insert space
     \t###  Transmit for ### seconds (must be three digits, use leading zeros if necessary)
     \u     Activate PTT
     \v     Deactivate PTT
@@ -181,36 +182,37 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     Press the right paddle to enter straight key mode at power up
     Press the left  paddle at power up to enter and stay forever in beacon mode
 
+New features in this beta / unstable release:
 
+  command_mode_active_led
+  + is AR
+  Made it easier to form prosigns in command mode memory program using \+ macro
+  
+  FEATURE_LED_RING
+  led_ring_sdi    A10 //2    //Data
+  led_ring_clk    A9 //3    //Clock
+  led_ring_le     A8 //4    //Latch
+  
+  fixed bug in eeprom initialization code
+  
+  \s memory macro = insert space
+  
+  2013090801UNSTABLE
 
- new features in this stable release:
+  check_ps2_keyboard() - changed code structure so Notepad++ displays and collapses it correctly (bug in Notepad++).
+  check_ps2_keyboard() - fixed bugs with configuration.dah_to_dit_ratio
+  
+  2013112701UNSTABLE
+  
+  improved command button reading accuracy
+  
+  2013122601
+  
+  renamed keyer_debug.c to keyer_debug.h
+  renamed features_and_options.c to keyer_features_and_options.h
+  FEATURE_LCD_YDv1 new
+  FEATURE_LCD_I2C renamed to FEATURE_LCD_ADAFRUIT_I2C
 
-    #define tx_key_dit
-    #define tx_key_dah
-    OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
-    fixed ps2_keyboard_program_memory compiler error
-
-    FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-    FEATURE_USB_KEYBOARD
-    FEATURE_DIT_DAH_BUFFER_CONTROL
-    FEATURE_USB_MOUSE
-    
-    CLI:
-      \&     Toggle CMOS Super Keyer Timing on/off
-      \%##   Set CMOS Super Keyer Timing %     
-      \.     Toggle dit buffer on/off
-      \-     Toggle dah buffer on/off
-    
-    USB Keyboard:
-       Keypad /         Dit Paddle (USB Keyboard Only)
-       Keypad *         Dah Paddle (USB Keyboard Only)
-       Keypad ENTER     Tune / Straightkey (USB Keyboard Only)
-       
-     USB Mouse
-     
-       Left Button      Dit
-       Right Button     Dah
-       Middle Button    Tune / Straightkey       
 */
 
 #include <stdio.h>
@@ -221,6 +223,7 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 //#include <PS2Keyboard.h>        // uncomment for PS2 Keyboard Feature along with the FEATURE_PS2_KEYBOARD and PS2Keyboard lines below
 //#include <LiquidCrystal.h>      // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_4BIT and LiquidCrystal lines below
 //#include <Wire.h>               // uncomment for any I2C feature
+<<<<<<< HEAD
 //#include <Adafruit_MCP23017.h>       // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_I2C and Adafruit_RGBLCDShield lines below
 //#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_I2C and Adafruit_RGBLCDShield lines below
 
@@ -335,64 +338,48 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 #define cw_decoder_pin A5 //A3
 #define tx_key_dit 0            // if defined, goes high for dit (any transmitter)
 #define tx_key_dah 0            // if defined, goes high for dah (any transmitter)
+=======
+//#include <LiquidCrystal_I2C.h>    // uncomment YourDuino I2C display (FEATURE_LCD_YDv1)
+//#include <Adafruit_MCP23017.h>       // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
+//#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
+//#include <BasicTerm.h>              // Uncomment for contest practice
+>>>>>>> unstable
 
-#ifdef FEATURE_COMMAND_BUTTONS
-#define analog_buttons_pin A1
-#endif //FEATURE_COMMAND_BUTTONS
+
+#include "keyer_features_and_options.h"
+#include "keyer_debug.h"
+#include "keyer_pin_settings.h"
+#include "keyer_settings.h"
+//#include "keyer.h"               // uncomment this for Sublime/Stino compilation
+//#include "keyer_pin_settings_nanokeyer_rev_b.h"
 
 
-//lcd pins
-#ifdef FEATURE_LCD_4BIT
-#define lcd_rs A2
-#define lcd_enable 10
-#define lcd_d4 6
-#define lcd_d5 7
-#define lcd_d6 8
-#define lcd_d7 9
-#endif //FEATURE_LCD_4BIT
-#endif //keyer_pin_settings_h
 
-//ps2 keyboard pins
-#ifdef FEATURE_PS2_KEYBOARD
-#define ps2_keyboard_data A3
-#define ps2_keyboard_clock 3    // this must be on an interrupt capable pin!
-#endif //FEATURE_PS2_KEYBOARD
+#define CODE_VERSION "2.0"
+#define eeprom_magic_number 14
 
-// rotary encoder pins and options - rotary encoder code from Jim Balls M0CKE
-#ifdef FEATURE_ROTARY_ENCODER
-#define OPTION_ENCODER_HALF_STEP_MODE     // Half-step mode?
-#define rotary_pin1 0                      // CW Encoder Pin
-#define rotary_pin2 0                    // CCW Encoder Pin
-#define OPTION_ENCODER_ENABLE_PULLUPS     // define to enable weak pullups.
-#endif //FEATURE_ROTARY_ENCODER
 
 
 //PS2Keyboard keyboard;          // uncomment this if FEATURE_PS2_KEYBOARD is enabled above
 
-//LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);  // uncomment this if FEATURE_LCD_4BIT is enabled above
+//LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);  // uncomment this if FEATURE_LCD_4BIT is enabled
 
-//Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();      // uncomment this for FEATURE_LCD_I2C
+//Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();      // uncomment this for FEATURE_LCD_ADAFRUIT_I2C
+
+//LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // uncomment for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
+
 
 
 /* Uncomment this section if using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE 
  USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
 
-//#include <avr/pgmspace.h>
-//#include <avrpins.h>
-//#include <max3421e.h>
-//#include <usbhost.h>
-//#include <usb_ch9.h>
-//#include <Usb.h>
-//#include <usbhub.h>
-//#include <avr/pgmspace.h>
-//#include <address.h>
-//#include <hidboot.h>
-//#include <printhex.h>
-//#include <message.h>
-//#include <hexdump.h>
-//#include <parsetools.h>
-//USB Usb;
-//uint32_t next_time;
+// #include <avr/pgmspace.h>
+// #include <Usb.h>
+// #include <usbhub.h>
+// #include <avr/pgmspace.h>
+// #include <hidboot.h>
+// USB Usb;
+// uint32_t next_time;
 
 /* End of FEATURE_USB_KEYBOARD / FEATURE_USB_MOUSE section */
 
@@ -413,7 +400,7 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 
 /* Uncomment this section if using FEATURE_USB_MOUSE */
 
-//class MouseRptParser : public MouseReportParser
+// class MouseRptParser : public MouseReportParser
 //  {
 //  protected:
 //  virtual void OnMouseMove(MOUSEINFO *mi);
@@ -424,221 +411,19 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 //  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
 //  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
 //  };
-//HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
-//MouseRptParser MousePrs;
+// HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
+// MouseRptParser MousePrs;
 
 /* End of FEATURE_USB_MOUSE section */
 
+/* Uncomment this for contest practice*/
+//BasicTerm term(&Serial);
 
-
-// Initial and hardcoded settings
-#define initial_speed_wpm 26             // "factory default" keyer speed setting
-#define initial_sidetone_freq 600        // "factory default" sidetone frequency setting
-#define hz_high_beep 1500                // frequency in hertz of high beep
-#define hz_low_beep 400                  // frequency in hertz of low beep
-#define initial_dah_to_dit_ratio 300     // 300 = 3 / normal 3:1 ratio
-#define initial_ptt_lead_time_tx1 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx1 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx2 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx2 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx3 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx3 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx4 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx4 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx5 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx5 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx6 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx6 10         // PTT tail time in mS
-#define initial_qrss_dit_length 1        // QRSS dit length in seconds
-#define initial_pot_wpm_low_value 13     // Potentiometer WPM fully CCW
-#define initial_pot_wpm_high_value 35    // Potentiometer WPM fully CW
-#define potentiometer_change_threshold 1 // don't change the keyer speed until pot wpm has changed more than this
-#define default_serial_baud_rate 115200
-#define send_buffer_size 150
-#define default_length_letterspace 3
-#define default_length_wordspace 7
-#define default_keying_compensation 0    // number of milliseconds to extend all dits and dahs - for QSK on boatanchors
-#define default_first_extension_time 0   // number of milliseconds to extend first sent dit or dah
-#define default_pot_full_scale_reading 1023
-#define default_weighting 50             // 50 = weighting factor of 1 (normal)
-#define default_ptt_hang_time_wordspace_units 0.0
-#define number_of_memories byte(12)     // the number of memories (duh)
-#define memory_area_start 30             // the eeprom location where memory space starts
-#define memory_area_end 1023             // the eeprom location where memory space ends
-#define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
-#define winkey_command_timeout_ms 5000
-#define winkey_discard_bytes_startup 3   // this is used if OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP is enabled above
-#define winkey_xoff_threshold 20         // the number of chars in the buffer when we begin sending XOFFs
-#define winkey_xon_threshold 10          // the number of chars in the buffer below which we deactivate XOFF
-#define default_memory_repeat_time 3000  // time in milliseconds
-#define lcd_columns 16
-#define lcd_rows 2
-#define eeprom_magic_number 10
-#define hell_pixel_microseconds 4025
-#define program_memory_limit_consec_spaces 1
-#define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
-#define serial_cut_numbers 0              // set to 1 to activate cut numbers in serial numbers (i.e. #10 = 1T, #19 = 1N)
-#define p_command_single_digit_wait_time 2
-#define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
-#define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
-
-#ifdef FEATURE_COMMAND_BUTTONS
-#define analog_buttons_number_of_buttons 4  //16
-#define analog_buttons_r1 10
-#define analog_buttons_r2 1
-#endif
-
-// Variable macros
-#define STRAIGHT 1
-#define IAMBIC_B 2
-#define IAMBIC_A 3
-#define BUG 4
-#define ULTIMATIC 5
-
-#define PADDLE_NORMAL 0
-#define PADDLE_REVERSE 1
-
-#define NORMAL 0
-#define BEACON 1
-#define COMMAND 2
-
-#define OMIT_LETTERSPACE 1
-
-#define SIDETONE_OFF 0
-#define SIDETONE_ON 1
-#define SIDETONE_PADDLE_ONLY 2
-
-#define SENDING_NOTHING 0
-#define SENDING_DIT 1
-#define SENDING_DAH 2
-
-#define SPEED_NORMAL 0
-#define SPEED_QRSS 1
-
-#define CW 0
-#define HELL 1
-
-#ifdef FEATURE_PS2_KEYBOARD
-#define PS2_KEYBOARD_NORMAL 0
-#endif //FEATURE_PS2_KEYBOARD
-
-#define SERIAL_NORMAL 0
-#define SERIAL_WINKEY_EMULATION 1
-
-#define SERIAL_SEND_BUFFER_SPECIAL_START 13
-#define SERIAL_SEND_BUFFER_WPM_CHANGE 14        
-#define SERIAL_SEND_BUFFER_PTT_ON 15            
-#define SERIAL_SEND_BUFFER_PTT_OFF 16           
-#define SERIAL_SEND_BUFFER_TIMED_KEY_DOWN 17    
-#define SERIAL_SEND_BUFFER_TIMED_WAIT 18        
-#define SERIAL_SEND_BUFFER_NULL 19              
-#define SERIAL_SEND_BUFFER_PROSIGN 20           
-#define SERIAL_SEND_BUFFER_HOLD_SEND 21         
-#define SERIAL_SEND_BUFFER_HOLD_SEND_RELEASE 22 
-#define SERIAL_SEND_BUFFER_MEMORY_NUMBER 23
-#define SERIAL_SEND_BUFFER_SPECIAL_END 24
-
-#define SERIAL_SEND_BUFFER_NORMAL 0
-#define SERIAL_SEND_BUFFER_TIMED_COMMAND 1
-#define SERIAL_SEND_BUFFER_HOLD 2
-
-#ifdef FEATURE_WINKEY_EMULATION
-#define WINKEY_NO_COMMAND_IN_PROGRESS 0
-#define WINKEY_UNBUFFERED_SPEED_COMMAND 1
-#define WINKEY_UNSUPPORTED_COMMAND 2
-#define WINKEY_POINTER_COMMAND 3
-#define WINKEY_ADMIN_COMMAND 4
-#define WINKEY_PAUSE_COMMAND 5
-#define WINKEY_KEY_COMMAND 6
-#define WINKEY_SETMODE_COMMAND 7
-#define WINKEY_SIDETONE_FREQ_COMMAND 8
-#define WINKEY_ADMIN_COMMAND_ECHO 9
-#define WINKEY_BUFFERED_SPEED_COMMAND 10
-#define WINKEY_DAH_TO_DIT_RATIO_COMMAND 11
-#define WINKEY_KEYING_COMPENSATION_COMMAND 12
-#define WINKEY_FIRST_EXTENSION_COMMAND 13
-#define WINKEY_PTT_TIMES_PARM1_COMMAND 14
-#define WINKEY_PTT_TIMES_PARM2_COMMAND 15
-#define WINKEY_SET_POT_PARM1_COMMAND 16
-#define WINKEY_SET_POT_PARM2_COMMAND 17
-#define WINKEY_SET_POT_PARM3_COMMAND 18
-#define WINKEY_SOFTWARE_PADDLE_COMMAND 19
-#define WINKEY_CANCEL_BUFFERED_SPEED_COMMAND 20
-#define WINKEY_BUFFFERED_PTT_COMMMAND 21
-#define WINKEY_HSCW_COMMAND 22
-#define WINKEY_BUFFERED_HSCW_COMMAND 23
-#define WINKEY_WEIGHTING_COMMAND 24
-#define WINKEY_KEY_BUFFERED_COMMAND 25
-#define WINKEY_WAIT_BUFFERED_COMMAND 26
-#define WINKEY_POINTER_01_COMMAND 27
-#define WINKEY_POINTER_02_COMMAND 28
-#define WINKEY_POINTER_03_COMMAND 29
-#define WINKEY_FARNSWORTH_COMMAND 30
-#define WINKEY_MERGE_COMMAND 31
-#define WINKEY_MERGE_PARM_2_COMMAND 32
-#define WINKEY_SET_PINCONFIG_COMMAND 33
-#define WINKEY_EXTENDED_COMMAND 34
-#ifdef OPTION_WINKEY_2_SUPPORT
-#define WINKEY_SEND_MSG 35
-#endif //OPTION_WINKEY_2_SUPPORT
-#define WINKEY_LOAD_SETTINGS_PARM_1_COMMAND 101
-#define WINKEY_LOAD_SETTINGS_PARM_2_COMMAND 102
-#define WINKEY_LOAD_SETTINGS_PARM_3_COMMAND 103
-#define WINKEY_LOAD_SETTINGS_PARM_4_COMMAND 104
-#define WINKEY_LOAD_SETTINGS_PARM_5_COMMAND 105
-#define WINKEY_LOAD_SETTINGS_PARM_6_COMMAND 106
-#define WINKEY_LOAD_SETTINGS_PARM_7_COMMAND 107
-#define WINKEY_LOAD_SETTINGS_PARM_8_COMMAND 108
-#define WINKEY_LOAD_SETTINGS_PARM_9_COMMAND 109
-#define WINKEY_LOAD_SETTINGS_PARM_10_COMMAND 110
-#define WINKEY_LOAD_SETTINGS_PARM_11_COMMAND 111
-#define WINKEY_LOAD_SETTINGS_PARM_12_COMMAND 112
-#define WINKEY_LOAD_SETTINGS_PARM_13_COMMAND 113
-#define WINKEY_LOAD_SETTINGS_PARM_14_COMMAND 114
-#define WINKEY_LOAD_SETTINGS_PARM_15_COMMAND 115
-
-#define HOUSEKEEPING 0
-#define SERVICE_SERIAL_BYTE 1
-#endif //FEATURE_WINKEY_EMULATION
-
-#define AUTOMATIC_SENDING 0
-#define MANUAL_SENDING 1
-
-#define ULTIMATIC_NORMAL 0
-#define ULTIMATIC_DIT_PRIORITY 1
-#define ULTIMATIC_DAH_PRIORITY 2
-
-#ifdef FEATURE_WINKEY_EMULATION
-// alter these below to map alternate sidetones for Winkey interface protocol emulation
-#ifdef OPTION_WINKEY_2_SUPPORT
-#define WINKEY_SIDETONE_1 3759
-#define WINKEY_SIDETONE_2 1879
-#define WINKEY_SIDETONE_3 1252
-#define WINKEY_SIDETONE_4 940
-#define WINKEY_SIDETONE_5 752
-#define WINKEY_SIDETONE_6 625
-#define WINKEY_SIDETONE_7 535
-#define WINKEY_SIDETONE_8 469
-#define WINKEY_SIDETONE_9 417
-#define WINKEY_SIDETONE_10 375
-#else //OPTION_WINKEY_2_SUPPORT
-#define WINKEY_SIDETONE_1 4000
-#define WINKEY_SIDETONE_2 2000
-#define WINKEY_SIDETONE_3 1333
-#define WINKEY_SIDETONE_4 1000
-#define WINKEY_SIDETONE_5 800
-#define WINKEY_SIDETONE_6 666
-#define WINKEY_SIDETONE_7 571
-#define WINKEY_SIDETONE_8 500
-#define WINKEY_SIDETONE_9 444
-#define WINKEY_SIDETONE_10 400
-#endif //OPTION_WINKEY_2_SUPPORT
-#endif //FEATURE_WINKEY_EMULATION
 
 
 // Variables and stuff
-struct config_t {  // 24 bytes
-  byte magic_number;
+struct config_t {  // 23 bytes
+  //byte magic_number;
   unsigned int wpm;
   byte paddle_mode;
   byte keyer_mode;
@@ -661,7 +446,7 @@ struct config_t {  // 24 bytes
 
 
 byte command_mode_disable_tx = 0;
-unsigned int dah_to_dit_ratio = initial_dah_to_dit_ratio;
+//unsigned int dah_to_dit_ratio = initial_dah_to_dit_ratio;
 byte current_tx_key_line = tx_key_line_1;
 unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3,initial_ptt_tail_time_tx4,initial_ptt_tail_time_tx5,initial_ptt_tail_time_tx6};
 unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3,initial_ptt_lead_time_tx4,initial_ptt_lead_time_tx5,initial_ptt_lead_time_tx6};
@@ -682,10 +467,10 @@ byte speed_mode = SPEED_NORMAL;
 unsigned int serial_number = 1;
 byte pause_sending_buffer = 0;
 byte length_letterspace = default_length_letterspace;
-byte length_wordspace = default_length_wordspace;
+//byte length_wordspace = default_length_wordspace;
 byte keying_compensation = default_keying_compensation;
 byte first_extension_time = default_first_extension_time;
-byte weighting = default_weighting;
+//byte weighting = default_weighting;
 byte ultimatic_mode = ULTIMATIC_NORMAL;
 float ptt_hang_time_wordspace_units = default_ptt_hang_time_wordspace_units;
 byte last_sending_type = MANUAL_SENDING;
@@ -703,7 +488,7 @@ enum lcd_statuses {LCD_CLEAR, LCD_REVERT, LCD_TIMED_MESSAGE, LCD_SCROLL_MSG};
 #define default_display_msg_delay 1000
 #endif //FEATURE_DISPLAY
 
-#ifdef FEATURE_LCD_I2C
+#ifdef FEATURE_LCD_ADAFRUIT_I2C
 #define RED 0x1
 #define YELLOW 0x3
 #define GREEN 0x2
@@ -712,7 +497,7 @@ enum lcd_statuses {LCD_CLEAR, LCD_REVERT, LCD_TIMED_MESSAGE, LCD_SCROLL_MSG};
 #define VIOLET 0x5
 #define WHITE 0x7
 byte lcdcolor = GREEN;  // default color for RGB LCD display
-#endif //FEATURE_LCD_I2C
+#endif //FEATURE_LCD_ADAFRUIT_I2C
 
 
 #ifdef OPTION_WINKEY_2_SUPPORT
@@ -751,11 +536,10 @@ byte pot_wpm_low_value;
 #ifdef FEATURE_POTENTIOMETER
 byte pot_wpm_high_value;
 byte last_pot_wpm_read;
-byte pot_activated;
 int pot_full_scale_reading = default_pot_full_scale_reading;
 #endif //FEATURE_POTENTIOMETER
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 byte incoming_serial_byte;
 long serial_baud_rate;
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
@@ -779,7 +563,7 @@ byte repeat_memory = 255;
 unsigned long last_memory_repeat_time = 0;
 #endif //FEATURE_MEMORIES
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 byte serial_mode = SERIAL_NORMAL;
 #endif //FEATURE_SERIAL
 
@@ -901,7 +685,6 @@ byte usb_dah = 0;
 #endif 
 
 
-
 //---------------------------------------------------------------------------------------------------------
 
 
@@ -950,8 +733,8 @@ void loop()
       if (!send_buffer_bytes) {
         play_memory(0);
       }
-      service_send_buffer();
-      #ifdef FEATURE_SERIAL
+      service_send_buffer(PRINTCHAR);
+      #if defined(FEATURE_SERIAL)
       check_serial();
       #endif
       #ifdef OPTION_WATCHDOG_TIMER
@@ -969,7 +752,7 @@ void loop()
     check_paddles();
     service_dit_dah_buffers();
 
-    #ifdef FEATURE_SERIAL       
+    #if defined(FEATURE_SERIAL)       
     check_serial();
     check_paddles();            
     service_dit_dah_buffers();
@@ -978,7 +761,7 @@ void loop()
     #endif //FEATURE_COMMAND_LINE_INTERFACE
     #endif //FEATURE_SERIAL
 
-    service_send_buffer();
+    service_send_buffer(PRINTCHAR);
     check_ptt_tail();
 
     #ifdef FEATURE_POTENTIOMETER
@@ -1010,7 +793,7 @@ void loop()
     #ifdef FEATURE_DISPLAY
     check_paddles();
     service_dit_dah_buffers();
-    service_send_buffer();
+    service_send_buffer(PRINTCHAR);
     service_lcd_paddle_echo();
     service_display();
     #endif //FEATURE_DISPLAY
@@ -1018,6 +801,11 @@ void loop()
     #ifdef FEATURE_CW_DECODER
     service_cw_decoder();
     #endif //FEATURE_CW_DECODER
+    
+    #ifdef FEATURE_LED_RING
+    update_led_ring();
+    #endif //FEATURE_LED_RING
+    
     
     #ifdef FEATURE_SLEEP
     check_sleep();
@@ -1146,7 +934,7 @@ void service_lcd_paddle_echo()
     lcd_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
     lcd_paddle_echo_space_sent = 0;
   }
-  if ((lcd_paddle_echo_buffer == 0) && (lcd_paddle_echo) && (millis() > (lcd_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(length_wordspace-length_letterspace)))) && (!lcd_paddle_echo_space_sent)) {
+  if ((lcd_paddle_echo_buffer == 0) && (lcd_paddle_echo) && (millis() > (lcd_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!lcd_paddle_echo_space_sent)) {
     display_scroll_print_char(' ');
     lcd_paddle_echo_space_sent = 1;
   }
@@ -1318,14 +1106,475 @@ void check_ps2_keyboard()
   int work_int = 0;
   uint8_t keystroke = 0;
   
+  /* NOTE!!! This entire block of code is repeated again below the #else.  This was done to fix a bug with Notepad++ not
+             collapsing code correctly when while() statements are encapsulated in #ifdef/#endifs.                        */
+  
   #ifdef FEATURE_MEMORIES
-  while ((keyboard.available()) && (play_memory_prempt == 0)) {
-  #endif
+  while ((keyboard.available()) && (play_memory_prempt == 0)) {      
+    
+    // read the next key
+    keystroke = keyboard.read();
+    
+    #ifdef FEATURE_SLEEP
+    last_activity_time = millis(); 
+    #endif //FEATURE_SLEEP
 
-  #ifndef FEATURE_MEMORIES
+    if (ps2_keyboard_mode == PS2_KEYBOARD_NORMAL) {
+      switch (keystroke) {
+        case PS2_PAGEUP : sidetone_adj(20); break;
+        case PS2_PAGEDOWN : sidetone_adj(-20); break;
+        case PS2_RIGHTARROW : adjust_dah_to_dit_ratio(int(configuration.dah_to_dit_ratio/10)); break;
+        case PS2_LEFTARROW : adjust_dah_to_dit_ratio(-1*int(configuration.dah_to_dit_ratio/10)); break;
+        case PS2_UPARROW : speed_set(configuration.wpm+1); break;
+        case PS2_DOWNARROW : speed_set(configuration.wpm-1); break;
+        case PS2_HOME :
+          configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
+          key_tx = 1;
+          config_dirty = 1;
+          #ifdef FEATURE_DISPLAY
+          #ifdef OPTION_MORE_DISPLAY_MSGS
+          lcd_center_print_timed("Default ratio", 0, default_display_msg_delay);
+          service_display();
+          #endif
+          #endif           
+          break;
+        case PS2_TAB :
+          if (pause_sending_buffer) {
+            pause_sending_buffer = 0;
+            #ifdef FEATURE_DISPLAY
+            #ifdef OPTION_MORE_DISPLAY_MSGS
+            lcd_center_print_timed("Resume", 0, default_display_msg_delay);
+            #endif
+            #endif                 
+          } else {
+            pause_sending_buffer = 1;
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Pause", 0, default_display_msg_delay);
+            #endif            
+          }
+        break;  // pause
+
+        case PS2_SCROLL :   // Prosign next two characters
+          ps2_prosign_flag = 1;
+          #ifdef FEATURE_DISPLAY
+          #ifdef OPTION_MORE_DISPLAY_MSGS
+          lcd_center_print_timed("Prosign", 0, default_display_msg_delay);
+          #endif
+          #endif          
+          break;
+
+        #ifdef FEATURE_MEMORIES
+        case PS2_F1 : ps2_usb_keyboard_play_memory(0); break;
+        case PS2_F2 : ps2_usb_keyboard_play_memory(1); break;
+        case PS2_F3 : ps2_usb_keyboard_play_memory(2); break;
+        case PS2_F4 : ps2_usb_keyboard_play_memory(3); break;
+        case PS2_F5 : ps2_usb_keyboard_play_memory(4); break;
+        case PS2_F6 : ps2_usb_keyboard_play_memory(5); break;
+        case PS2_F7 : ps2_usb_keyboard_play_memory(6); break;
+        case PS2_F8 : ps2_usb_keyboard_play_memory(7); break;
+        case PS2_F9 : ps2_usb_keyboard_play_memory(8); break;
+        case PS2_F10 : ps2_usb_keyboard_play_memory(9); break;
+        case PS2_F11 : ps2_usb_keyboard_play_memory(10); break;
+        case PS2_F12 : ps2_usb_keyboard_play_memory(11); break;
+        case PS2_F1_ALT : if (number_of_memories > 0) {repeat_memory_msg(0);} break;
+        case PS2_F2_ALT : if (number_of_memories > 1) {repeat_memory_msg(1);} break;
+        case PS2_F3_ALT : if (number_of_memories > 2) {repeat_memory_msg(2);} break;
+        case PS2_F4_ALT : if (number_of_memories > 3) {repeat_memory_msg(3);} break;
+        case PS2_F5_ALT : if (number_of_memories > 4) {repeat_memory_msg(4);} break;
+        case PS2_F6_ALT : if (number_of_memories > 5) {repeat_memory_msg(5);} break;
+        case PS2_F7_ALT : if (number_of_memories > 6) {repeat_memory_msg(6);} break;
+        case PS2_F8_ALT : if (number_of_memories > 7) {repeat_memory_msg(7);} break;
+        case PS2_F9_ALT : if (number_of_memories > 8) {repeat_memory_msg(8);} break;
+        case PS2_F10_ALT : if (number_of_memories > 9) {repeat_memory_msg(9);} break;
+        case PS2_F11_ALT : if (number_of_memories > 10) {repeat_memory_msg(10);} break;
+        case PS2_F12_ALT : if (number_of_memories > 11) {repeat_memory_msg(11);} break;
+        #endif
+
+        case PS2_DELETE : if (send_buffer_bytes > 0) { send_buffer_bytes--; } break;
+        case PS2_ESC :  // clear the serial send buffer and a bunch of other stuff
+          if (manual_ptt_invoke) {
+            manual_ptt_invoke = 0;
+            ptt_unkey();
+          }
+          if (keyboard_tune_on) {
+            tx_and_sidetone_key(0,MANUAL_SENDING);
+            keyboard_tune_on = 0;
+          }
+          if (pause_sending_buffer) {
+            pause_sending_buffer = 0;
+          }
+          clear_send_buffer();
+          #ifdef FEATURE_MEMORIES
+          //clear_memory_button_buffer();
+          play_memory_prempt = 1;
+          repeat_memory = 255;
+          #endif
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Abort", 0, default_display_msg_delay);
+          #endif          
+          break;
+
+        #ifdef FEATURE_MEMORIES
+        case PS2_F1_SHIFT  :
+          ps2_keyboard_program_memory(0);
+          break;
+
+        case PS2_F2_SHIFT  :
+          ps2_keyboard_program_memory(1);
+          break;
+
+        case PS2_F3_SHIFT  :
+          ps2_keyboard_program_memory(2);
+          break;
+
+        case PS2_F4_SHIFT  :
+          ps2_keyboard_program_memory(3);
+          break;
+
+        case PS2_F5_SHIFT  :
+          ps2_keyboard_program_memory(4);
+          break;
+
+        case PS2_F6_SHIFT  :
+          ps2_keyboard_program_memory(5);
+          break;
+
+        case PS2_F7_SHIFT  :
+          ps2_keyboard_program_memory(6);
+          break;
+
+        case PS2_F8_SHIFT  :
+          ps2_keyboard_program_memory(7);
+          break;
+
+        case PS2_F9_SHIFT  :
+          ps2_keyboard_program_memory(8);
+          break;
+
+        case PS2_F10_SHIFT  :
+          ps2_keyboard_program_memory(9);
+          break;
+
+        case PS2_F11_SHIFT  :
+          ps2_keyboard_program_memory(10);
+          break;
+
+        case PS2_F12_SHIFT  :
+          ps2_keyboard_program_memory(11);
+          break;
+        #endif //FEATURE_MEMORIES
+
+        case PS2_INSERT :   // send serial number and increment
+          put_serial_number_in_send_buffer();
+          serial_number++;
+          break;
+
+        case PS2_END :      // send serial number no increment
+          put_serial_number_in_send_buffer();
+          break;
+
+        case PS2_BACKSPACE_SHIFT :    // decrement serial number
+          serial_number--;
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Serial: " + String(serial_number), 0, default_display_msg_delay);
+          #endif          
+          break;
+
+        case PS2_LEFT_ALT :
+          #ifdef DEBUG_PS2_KEYBOARD
+          Serial.println("PS2_LEFT_ALT\n");
+          #endif
+          break;
+
+        case PS2_A_CTRL :
+          configuration.keyer_mode = IAMBIC_A;
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
+          #endif
+
+          config_dirty = 1;
+          break;
+
+        case PS2_B_CTRL :
+          configuration.keyer_mode = IAMBIC_B;
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
+          #endif          
+          config_dirty = 1;
+          break;
+
+        case PS2_D_CTRL :
+          configuration.keyer_mode = ULTIMATIC;
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
+          #endif        
+          config_dirty = 1;
+          break;
+
+        case PS2_E_CTRL :
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Enter Serial #", 0, default_display_msg_delay);
+          #else        
+          boop_beep();
+          #endif
+          work_int = ps2_keyboard_get_number_input(4,0,10000);
+          if (work_int > 0) {
+            serial_number = work_int;
+            #ifdef FEATURE_DISPLAY
+            lcd_status = LCD_REVERT;
+            #else             
+            beep();
+            #endif
+          }
+          break;
+
+        case PS2_G_CTRL :
+          configuration.keyer_mode = BUG;
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Bug", 0, default_display_msg_delay);
+          #endif
+          config_dirty = 1;
+          break;
+
+        case PS2_H_CTRL :
+          #ifdef FEATURE_HELL
+          if (char_send_mode == CW) {
+            char_send_mode = HELL;
+            beep();
+          } else {
+            char_send_mode = CW;
+            beep();
+          }
+          #endif //FEATURE_HELL
+          break;
+
+        case PS2_I_CTRL :
+          if (key_tx) {
+            key_tx = 0;
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
+            #endif
+            
+          } else {
+            key_tx = 1;
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("TX On", 0, default_display_msg_delay);
+            #endif      
+          }
+          break;
+
+        case PS2_M_CTRL:
+          #ifdef FEATURE_FARNSWORTH
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Farnsworth WPM", 0, default_display_msg_delay);
+          #else          
+          boop_beep();
+          #endif
+          work_int = ps2_keyboard_get_number_input(3,-1,1000);
+          if (work_int > -1) {
+            configuration.wpm_farnsworth = work_int;
+            #ifdef FEATURE_DISPLAY
+            lcd_status = LCD_REVERT;
+            #else
+            beep();
+            #endif
+            config_dirty = 1;
+          }
+          #endif
+          break;
+
+        case PS2_N_CTRL :
+          if (configuration.paddle_mode == PADDLE_NORMAL) {
+            configuration.paddle_mode = PADDLE_REVERSE;
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
+            #endif
+          } else {
+            configuration.paddle_mode = PADDLE_NORMAL;
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
+            #endif      
+          }
+          config_dirty = 1;
+          break;
+
+        case PS2_O_CTRL :
+          if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
+            configuration.sidetone_mode = SIDETONE_OFF;
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+            #endif      
+          } else {
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+            #endif      
+            configuration.sidetone_mode = SIDETONE_ON;
+          }
+          config_dirty = 1;
+         break;
+
+        case PS2_T_CTRL :
+          #ifdef FEATURE_MEMORIES
+          repeat_memory = 255;
+          #endif
+          if (keyboard_tune_on) {
+            tx_and_sidetone_key(0,MANUAL_SENDING);
+            keyboard_tune_on = 0;
+            #ifdef FEATURE_DISPLAY
+            lcd_status = LCD_REVERT;
+            #endif // FEATURE_DISPLAY
+          } else {
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Tune", 0, default_display_msg_delay);
+            #endif      
+            tx_and_sidetone_key(1,MANUAL_SENDING);
+            keyboard_tune_on = 1;
+          }
+          break;
+
+        case PS2_U_CTRL :
+          if (ptt_line_activated) {
+            manual_ptt_invoke = 0;
+            ptt_unkey();
+            #ifdef FEATURE_DISPLAY
+            lcd_status = LCD_REVERT;
+            #endif // FEATURE_DISPLAY            
+          } else {
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("PTT Invoke", 0, default_display_msg_delay);
+            #endif      
+            manual_ptt_invoke = 1;
+            ptt_key();
+          }
+          break;
+
+        case PS2_W_CTRL :
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("WPM Adjust", 0, default_display_msg_delay);
+          #else
+          boop_beep();
+          #endif
+          work_int = ps2_keyboard_get_number_input(3,0,1000);
+          if (work_int > 0) {
+            speed_set(work_int);
+            #ifdef FEATURE_DISPLAY
+            lcd_status = LCD_REVERT;
+            #else
+            beep();
+            #endif
+            config_dirty = 1;
+          }
+          break;
+
+        case PS2_F1_CTRL :
+          //current_ptt_line = ptt_tx_1;
+          //current_tx_key_line = tx_key_line_1;
+          switch_to_tx_silent(1);
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("TX 1", 0, default_display_msg_delay);
+          #endif          
+          break;
+
+        case PS2_F2_CTRL :
+          if ((ptt_tx_2) || (tx_key_line_2)) {
+            switch_to_tx_silent(2);
+            //current_ptt_line = ptt_tx_2;
+            //current_tx_key_line = tx_key_line_2;           
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("TX 2", 0, default_display_msg_delay);
+            #endif                      
+          }
+          break;
+
+        case PS2_F3_CTRL :
+          if ((ptt_tx_3)  || (tx_key_line_3)) {
+            switch_to_tx_silent(3);
+            //current_ptt_line = ptt_tx_3;
+            //current_tx_key_line = tx_key_line_3;                       
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("TX 3", 0, default_display_msg_delay);
+            #endif                                  
+          }
+          break;
+
+        case PS2_F4_CTRL :
+          if ((ptt_tx_4)  || (tx_key_line_4)) {
+            switch_to_tx_silent(4);
+            //current_ptt_line = ptt_tx_4;
+            //current_tx_key_line = tx_key_line_4;     
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("TX 4", 0, default_display_msg_delay);
+            #endif                                  
+          }
+          break;
+
+        case PS2_F5_CTRL :
+          if ((ptt_tx_5)  || (tx_key_line_5)) {
+            switch_to_tx_silent(5);
+            //current_ptt_line = ptt_tx_5;
+            //current_tx_key_line = tx_key_line_5;  
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("TX 5", 0, default_display_msg_delay);
+            #endif                      
+          }
+          break;
+
+        case PS2_F6_CTRL :
+          if ((ptt_tx_6)  || (tx_key_line_6)) {
+            switch_to_tx_silent(6);
+            //current_ptt_line = ptt_tx_6;
+            //current_tx_key_line = tx_key_line_6; 
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("TX 6", 0, default_display_msg_delay);
+            #endif                                  
+          }
+          break;
+
+        #ifdef FEATURE_AUTOSPACE
+        case PS2_Z_CTRL:
+          if (configuration.autospace_active) {
+            configuration.autospace_active = 0;
+            config_dirty = 1;
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
+            #endif                                  
+          } else {
+            configuration.autospace_active = 1;
+            config_dirty = 1;
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
+            #endif                                  
+          }
+          break;
+        #endif
+
+        default :
+          if ((keystroke > 31) && (keystroke < 123)) {
+            if (ps2_prosign_flag) {
+              add_to_send_buffer(SERIAL_SEND_BUFFER_PROSIGN);
+              ps2_prosign_flag = 0;
+            }
+            keystroke = uppercase(keystroke);
+            add_to_send_buffer(keystroke);
+            #ifdef FEATURE_MEMORIES
+            repeat_memory = 255;
+            #endif
+          }
+          break;
+      }
+    } else {
+
+    }
+  } //while ((keyboard.available()) && (play_memory_prempt == 0))
+    
+    
+    
+  #else //FEATURE_MEMORIES --------------------------------------------------------------------
+
+
+
   while (keyboard.available()) {
-  #endif
-
+ 
     // read the next key
     keystroke = keyboard.read();
     
@@ -1779,7 +2028,8 @@ void check_ps2_keyboard()
     } else {
 
     }
-  }
+  } //while (keyboard.available())
+  #endif //FEATURE_MEMORIES
 }
 #endif //FEATURE_PS2_KEYBOARD
 
@@ -1918,11 +2168,11 @@ int ps2_keyboard_get_number_input(byte places,int lower_limit, int upper_limit)
       if (machine_mode == NORMAL) {          // might as well do something while we're waiting
         check_paddles();
         service_dit_dah_buffers();
-        service_send_buffer();
+        service_send_buffer(PRINTCHAR);
 
         check_ptt_tail();
         #ifdef FEATURE_POTENTIOMETER
-        if (pot_activated) {
+        if (configuration.pot_activated) {
           check_potentiometer();
         }
         #endif
@@ -2132,7 +2382,7 @@ void check_potentiometer()
   Serial.println(F("loop: entering check_potentiometer")); 
   #endif        
     
-  if (pot_activated) {
+  if (configuration.pot_activated) {
     byte pot_value_wpm_read = pot_value_wpm();
     if ((abs(pot_value_wpm_read - last_pot_wpm_read) > potentiometer_change_threshold)) {
       #ifdef DEBUG_POTENTIOMETER
@@ -2487,10 +2737,10 @@ void check_ptt_tail()
       //if ((millis() - ptt_time) > ptt_tail_time) {
       if (last_sending_type == MANUAL_SENDING) {
         #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) > ((length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
+        if ((millis() - ptt_time) > ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
         #endif
         #ifdef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) > (((length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {
+        if ((millis() - ptt_time) > (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {
         #endif
           ptt_unkey();
         }
@@ -2507,7 +2757,8 @@ void check_ptt_tail()
 void write_settings_to_eeprom(int initialize_eeprom) {  
   
   if (initialize_eeprom) {
-    configuration.magic_number = eeprom_magic_number;
+    //configuration.magic_number = eeprom_magic_number;
+    EEPROM.write(0,eeprom_magic_number);
     #ifdef FEATURE_MEMORIES
     initialize_eeprom_memories();
     #endif  //FEATURE_MEMORIES    
@@ -2515,7 +2766,7 @@ void write_settings_to_eeprom(int initialize_eeprom) {
 
   const byte* p = (const byte*)(const void*)&configuration;
   unsigned int i;
-  int ee = 0;
+  int ee = 1;  // starting point of configuration struct
   for (i = 0; i < sizeof(configuration); i++){
     EEPROM.write(ee++, *p++);  
   }
@@ -2530,15 +2781,16 @@ int read_settings_from_eeprom() {
 
   // returns 0 if eeprom had valid settings, returns 1 if eeprom needs initialized
   
+  if (EEPROM.read(0) == eeprom_magic_number){
   
-  byte* p = (byte*)(void*)&configuration;
-  unsigned int i;
-  int ee = 0;
-  for (i = 0; i < sizeof(configuration); i++){
-    *p++ = EEPROM.read(ee++);  
-  }
+    byte* p = (byte*)(void*)&configuration;
+    unsigned int i;
+    int ee = 1; // starting point of configuration struct
+    for (i = 0; i < sizeof(configuration); i++){
+      *p++ = EEPROM.read(ee++);  
+    }
   
-  if (configuration.magic_number == eeprom_magic_number) {
+  //if (configuration.magic_number == eeprom_magic_number) {
     switch_to_tx_silent(configuration.current_tx);
     config_dirty = 0;
     return 0;
@@ -2666,7 +2918,7 @@ void send_dit(byte sending_type)
   dit_start_time = millis();
   #endif
   if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,HIGH);}
-  loop_element_lengths((1.0*(float(weighting)/50)),keying_compensation,character_wpm,sending_type);
+  loop_element_lengths((1.0*(float(configuration.weighting)/50)),keying_compensation,character_wpm,sending_type);
   if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,LOW);}
   #ifdef DEBUG_VARIABLE_DUMP
   dit_end_time = millis();
@@ -2677,7 +2929,7 @@ void send_dit(byte sending_type)
 //    dit_buffer = 0;
 //    dah_buffer = 0;
 //  }
-  loop_element_lengths((2.0-(float(weighting)/50)),(-1.0*keying_compensation),character_wpm,sending_type);
+  loop_element_lengths((2.0-(float(configuration.weighting)/50)),(-1.0*keying_compensation),character_wpm,sending_type);
   #ifdef FEATURE_AUTOSPACE
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active)) {
     check_paddles();
@@ -2739,7 +2991,7 @@ void send_dah(byte sending_type)
   dah_start_time = millis();
   #endif
   if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,HIGH);}
-  loop_element_lengths((float(dah_to_dit_ratio/100.0)*(float(weighting)/50)),keying_compensation,character_wpm,sending_type);
+  loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),keying_compensation,character_wpm,sending_type);
   if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,LOW);}
   #ifdef DEBUG_VARIABLE_DUMP
   dah_end_time = millis();
@@ -2749,7 +3001,7 @@ void send_dah(byte sending_type)
 //    dit_buffer = 0;
 //    dah_buffer = 0;
 //  }
-  loop_element_lengths((4.0-(3.0*(float(weighting)/50))),(-1.0*keying_compensation),character_wpm,sending_type);
+  loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),character_wpm,sending_type);
   #ifdef FEATURE_AUTOSPACE
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active)) {
     check_paddles();
@@ -2975,7 +3227,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #endif //FEATURE_ROTARY_ENCODER    
     
     #ifdef FEATURE_USB_KEYBOARD
-    service_usb_keyboard();
+    service_usb();
     #endif //FEATURE_USB_KEYBOARD
     
     if (configuration.keyer_mode != ULTIMATIC) {
@@ -3064,6 +3316,11 @@ void speed_set(int wpm_set)
 {
     configuration.wpm = wpm_set;
     config_dirty = 1;
+    
+    #ifdef FEATURE_LED_RING
+    update_led_ring();
+    #endif //FEATURE_LED_RING
+    
     #ifdef FEATURE_DISPLAY
     lcd_center_print_timed(String(configuration.wpm) + " wpm", 0, default_display_msg_delay);
     #endif
@@ -3071,7 +3328,7 @@ void speed_set(int wpm_set)
 
 //-------------------------------------------------------------------------------------------------------
 
-int get_cw_input_from_user(unsigned int exit_time_seconds) {
+int get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 
   byte looping = 1;
   byte paddle_hit = 0;
@@ -3082,7 +3339,7 @@ int get_cw_input_from_user(unsigned int exit_time_seconds) {
 
   while (looping) {
     #ifdef FEATURE_POTENTIOMETER
-    if (pot_activated) {
+    if (configuration.pot_activated) {
       check_potentiometer();
     }
     #endif
@@ -3114,7 +3371,7 @@ int get_cw_input_from_user(unsigned int exit_time_seconds) {
       looping = 0;
     }
 
-    if ((!paddle_hit) && (exit_time_seconds) && ((millis() - entry_time) > (exit_time_seconds * 1000))) { // if we were passed an exit time and no paddle was hit, blow out of here
+    if ((!paddle_hit) && (exit_time_milliseconds) && ((millis() - entry_time) > exit_time_milliseconds)) { // if we were passed an exit time and no paddle was hit, blow out of here
       return 0;
     }
 
@@ -3125,7 +3382,7 @@ int get_cw_input_from_user(unsigned int exit_time_seconds) {
     }
     #endif
 
-    #ifdef FEATURE_SERIAL
+    #if defined(FEATURE_SERIAL)
     check_serial();
     #endif
 
@@ -3168,6 +3425,7 @@ void command_mode ()
   command_mode_disable_tx = 0;
 
   boop_beep();
+  if (command_mode_active_led) {digitalWrite(command_mode_active_led,HIGH);}
   #ifdef FEATURE_DISPLAY
   lcd.clear();
   lcd_center_print_timed("Command Mode", 0, default_display_msg_delay);
@@ -3270,13 +3528,13 @@ void command_mode ()
         case 2: command_tuning_mode(); break;                             // T - tuning mode
         #ifdef FEATURE_POTENTIOMETER
         case 1112:  // V - toggle pot active
-          if (pot_activated) {
-            pot_activated = 0; 
+          if (configuration.pot_activated) {
+            configuration.pot_activated = 0; 
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Pot Deactivated", 0, default_display_msg_delay);
             #endif             
           } else {
-            pot_activated = 1;
+            configuration.pot_activated = 1;
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Pot Activated", 0, default_display_msg_delay);
             #endif 
@@ -3334,6 +3592,7 @@ void command_mode ()
     }
   }
   beep_boop();
+  if (command_mode_active_led) {digitalWrite(command_mode_active_led,LOW);}
   machine_mode = NORMAL;
   speed_mode = speed_mode_before;   // go back to whatever speed mode we were in before
   configuration.keyer_mode = keyer_mode_before;
@@ -3384,8 +3643,8 @@ void command_set_mem_repeat_delay() {
 
 void adjust_dah_to_dit_ratio(int adjustment) {
 
- if ((dah_to_dit_ratio + adjustment) > 150 && (dah_to_dit_ratio + adjustment) < 810) {
-   dah_to_dit_ratio = dah_to_dit_ratio + adjustment;
+ if ((configuration.dah_to_dit_ratio + adjustment) > 150 && (configuration.dah_to_dit_ratio + adjustment) < 810) {
+   configuration.dah_to_dit_ratio = configuration.dah_to_dit_ratio + adjustment;
    #ifdef FEATURE_DISPLAY
    #ifdef OPTION_MORE_DISPLAY_MSGS
    lcd_center_print_timed("Dah/Dit: " + String(dah_to_dit_ratio), 0, default_display_msg_delay);
@@ -3744,36 +4003,88 @@ void initialize_analog_button_array() {
 #ifdef FEATURE_COMMAND_BUTTONS
 byte analogbuttonpressed() {
 
+  int analog_line_read_average = 0;
+  int analog_read_temp = 0;
+  
+  if (analogRead(analog_buttons_pin) <= button_array_high_limit[analog_buttons_number_of_buttons-1]) {
+    
+    for (byte x = 0;x < 19;x++){
+      analog_read_temp = analogRead(analog_buttons_pin);
+      if (analog_read_temp <= button_array_high_limit[analog_buttons_number_of_buttons-1]){
+        analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2;
+      }
+    }
+    
+    for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
+      if ((analog_line_read_average > button_array_low_limit[x]) && (analog_line_read_average <=  button_array_high_limit[x])) {
+        #ifdef DEBUG_BUTTONS
+        //if (!debug_flag) {
+          Serial.print(F(" analogbuttonpressed: returning: "));
+          Serial.println(x);
+        //  debug_flag = 1;
+        //}
+        #endif         
+        return x;
+      }  
+    }    
+    
+  }
+  
+
+  /*
+
   int analog_line_read = analogRead(analog_buttons_pin);
+  
+  static byte samplecounts = 0;
+  static int running_analog_line_read_average = 0;
   
   #ifdef DEBUG_BUTTONS
   static byte debug_flag = 0;
   #endif
   
   if (analog_line_read < 1000) {
-    #ifdef DEBUG_BUTTONS
-    if (!debug_flag) {
-      Serial.print(F("\nanalogbuttonpressed: analog_line_read: "));
-      Serial.println(analog_line_read);
-    }
-    #endif
 
-    for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
-      if ((analog_line_read > button_array_low_limit[x])&& (analog_line_read <  button_array_high_limit[x])) {
-        #ifdef DEBUG_BUTTONS
-        if (!debug_flag) {
-          Serial.print(F("analogbuttonpressed: returning: "));
-          Serial.println(x);
-          debug_flag = 1;
-        }
-        #endif
-        return x;
-      }  
-    }
+    running_analog_line_read_average = running_analog_line_read_average + analog_line_read;
+    samplecounts++;
+    if (samplecounts > 19) {        
+      analog_line_read = running_analog_line_read_average / samplecounts;
+      
+      #ifdef DEBUG_BUTTONS
+      if (!debug_flag) {
+        Serial.print(F("\nanalogbuttonpressed: analog_line_read: "));
+        Serial.print(analog_line_read);
+        Serial.print(F(" samplecounts: "));
+        Serial.print(samplecounts);
+      }
+      #endif        
+      
+      for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
+        if ((analog_line_read > button_array_low_limit[x]) && (analog_line_read <=  button_array_high_limit[x])) {
+          #ifdef DEBUG_BUTTONS
+          if (!debug_flag) {
+            Serial.print(F(" analogbuttonpressed: returning: "));
+            Serial.println(x);
+            debug_flag = 1;
+          }
+          #endif
+          samplecounts = 0;
+          running_analog_line_read_average = 0;          
+          return x;
+        }  
+      }
+    }  //(samplecounts > 9)
+  } else {  //(analog_line_read < 1000)
+    samplecounts = 0;
+    running_analog_line_read_average = 0;
   }
+   
   #ifdef DEBUG_BUTTONS
   debug_flag = 0;
   #endif
+  
+  
+  */
+  
   return 255; 
 }
   
@@ -4143,7 +4454,7 @@ void send_char(char cw_char, byte omit_letterspace)
 
       case '=': send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); break;
       case '/': send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case ' ': loop_element_lengths((length_wordspace-length_letterspace-2),0,configuration.wpm,AUTOMATIC_SENDING); break;
+      case ' ': loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm,AUTOMATIC_SENDING); break;
       case '*': send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;    // using asterisk for BK
       //case '&': send_dit(AUTOMATIC_SENDING); loop_element_lengths(3); send_dits(3); break;
       case '.': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
@@ -4163,7 +4474,7 @@ void send_char(char cw_char, byte omit_letterspace)
       case '@': send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
       case '<': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;     // AR
       case '>': send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;               // SK
-      case '\n': break;
+      case '\n':
       case '\r': break;
       
       #ifdef OPTION_NON_ENGLISH_EXTENSIONS
@@ -4215,7 +4526,7 @@ int uppercase (int charbytein)
 }
 
 //-------------------------------------------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_qrss_mode()
 {
@@ -4284,7 +4595,7 @@ void serial_qrss_mode()
 #endif
 //-------------------------------------------------------------------------------------------------------
 
-void service_send_buffer()
+void service_send_buffer(byte no_print)
 {
   // send one character out of the send buffer
   // values 200 and above do special things
@@ -4354,6 +4665,11 @@ void service_send_buffer()
             remove_from_send_buffer();
             configuration.wpm = configuration.wpm + send_buffer_array[0];
             remove_from_send_buffer();
+            
+            #ifdef FEATURE_LED_RING
+            update_led_ring();
+            #endif //FEATURE_LED_RING            
+            
           }
         }
 
@@ -4410,8 +4726,8 @@ void service_send_buffer()
         #ifdef FEATURE_WINKEY_EMULATION
         if (((serial_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open)) || (serial_mode != SERIAL_WINKEY_EMULATION)) {
         #endif //FEATURE_WINKEY_EMULATION
-        #ifdef FEATURE_SERIAL
-        Serial.write(send_buffer_array[0]);
+        #if defined(FEATURE_SERIAL)
+        if (!no_print) {Serial.write(send_buffer_array[0]);}
         if (send_buffer_array[0] == 13) {
           Serial.write(10);  // if we got a carriage return, also send a line feed
         }
@@ -4545,7 +4861,7 @@ void winkey_unbuffered_speed_command(byte incoming_serial_byte) {
 
   if (incoming_serial_byte == 0) {
     #ifdef FEATURE_POTENTIOMETER
-      pot_activated = 1;
+      configuration.pot_activated = 1;
     #endif
   } else {
     configuration.wpm = incoming_serial_byte;
@@ -4554,6 +4870,11 @@ void winkey_unbuffered_speed_command(byte incoming_serial_byte) {
     #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
     config_dirty = 1;
     #endif
+    
+    #ifdef FEATURE_LED_RING
+    update_led_ring();
+    #endif //FEATURE_LED_RING    
+    
   }
 
 }
@@ -4596,7 +4917,7 @@ void winkey_first_extension_command(byte incoming_serial_byte) {
 void winkey_dah_to_dit_ratio_command(byte incoming_serial_byte) {
 
   if ((incoming_serial_byte > 32) && (incoming_serial_byte < 67)) {
-    dah_to_dit_ratio = (300*(float(incoming_serial_byte)/50));
+    configuration.dah_to_dit_ratio = (300*(float(incoming_serial_byte)/50));
     #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
     config_dirty = 1;
     #endif
@@ -4610,7 +4931,7 @@ void winkey_dah_to_dit_ratio_command(byte incoming_serial_byte) {
 void winkey_weighting_command(byte incoming_serial_byte) {
 
   if ((incoming_serial_byte > 9) && (incoming_serial_byte < 91)) {
-    weighting = incoming_serial_byte;
+    configuration.weighting = incoming_serial_byte;
   }
 
 }
@@ -4668,7 +4989,7 @@ void winkey_set_pot_parm3_command (byte incoming_serial_byte) {
     }
   }
   #endif //OPTION_WINKEY_2_SUPPORT
-  pot_activated = 1;
+  configuration.pot_activated = 1;
   #endif
 }
 #endif //FEATURE_WINKEY_EMULATION
@@ -4733,9 +5054,9 @@ void winkey_setmode_command(byte incoming_serial_byte) {
   }
   #endif
   if ((incoming_serial_byte & 128) == 128) {  //xxxxxxx1 = contest wordspace
-     length_wordspace = 6;
+     configuration.length_wordspace = 6;
   } else {
-     length_wordspace = 7;
+     configuration.length_wordspace = 7;
   }
 
   if ((incoming_serial_byte & 64) == 64) {  //x1xxxxxx = paddle echo
@@ -4923,7 +5244,7 @@ void winkey_admin_get_values_command() {
 
   // 1 - mode register
   byte_to_send = 0;
-  if (length_wordspace != default_length_wordspace) {
+  if (configuration.length_wordspace != default_length_wordspace) {
     byte_to_send = byte_to_send | 1;
   }
   #ifdef FEATURE_AUTOSPACE
@@ -4976,7 +5297,7 @@ void winkey_admin_get_values_command() {
   }
 
   // 4 - weight
-  Serial.write(weighting);
+  Serial.write(configuration.weighting);
 
   // 5 - ptt lead
   Serial.write(zero);   // TODO - backwards calculate this
@@ -5051,7 +5372,7 @@ void winkey_admin_get_values_command() {
 #endif
 //-------------------------------------------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_WINKEY_EMULATION
 #ifdef OPTION_WINKEY_2_SUPPORT
 void winkey_eeprom_download() {
@@ -5209,7 +5530,7 @@ void service_winkey(byte action) {
       winkey_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
       winkey_paddle_echo_space_sent = 0;
     }
-    if ((winkey_host_open) && (winkey_paddle_echo_buffer == 0) && (winkey_paddle_echo_activated) && (millis() > (winkey_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(length_wordspace-length_letterspace)))) && (!winkey_paddle_echo_space_sent)) {
+    if ((winkey_host_open) && (winkey_paddle_echo_buffer == 0) && (winkey_paddle_echo_activated) && (millis() > (winkey_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!winkey_paddle_echo_space_sent)) {
       Serial.write(" ");
       winkey_paddle_echo_space_sent = 1;
     }
@@ -5442,7 +5763,7 @@ void service_winkey(byte action) {
       if (winkey_status ==  WINKEY_HSCW_COMMAND) {
         if (incoming_serial_byte == 0) {
           #ifdef FEATURE_POTENTIOMETER
-            pot_activated = 1;
+            configuration.pot_activated = 1;
           #endif
         } else {
           configuration.wpm = ((incoming_serial_byte*100)/5);
@@ -5821,9 +6142,8 @@ void service_command_line_interface() {
 
 //-------------------------------------------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
-void check_serial()
-{
+#if defined(FEATURE_SERIAL)
+void check_serial(){
   
   #ifdef DEBUG_SERIAL_SEND_CW_CALLOUT
   byte debug_serial_send_cw[2];
@@ -5897,8 +6217,8 @@ void check_serial()
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL_HELP
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL_HELP)
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void print_serial_help(){
 
@@ -5984,7 +6304,7 @@ void print_serial_help(){
 #endif //FEATURE_SERIAL_HELP
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void process_serial_command() {
   
@@ -6001,7 +6321,7 @@ void process_serial_command() {
       }
       break;
     case 43: cli_prosign_flag = 1; break;
-    #ifdef FEATURE_SERIAL_HELP
+    #if defined(FEATURE_SERIAL_HELP)
     case 63: print_serial_help(); break;                         // ? = print help
     #endif //FEATURE_SERIAL_HELP
     case 65: configuration.keyer_mode = IAMBIC_A; config_dirty = 1; Serial.println(F("Iambic A")); break;    // A - Iambic A mode
@@ -6058,7 +6378,7 @@ void process_serial_command() {
     case 83: serial_status(); break;                                              // S - Status command
     case 74: serial_set_dit_to_dah_ratio(); break;                          // J - dit to dah ratio
     #ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
-    case 75: serial_callsign_receive_practice(); break;                     // K - callsign receive practice
+    case 75: serial_cw_practice(); break;                     // K - CW practice
     #endif //FEATURE_CALLSIGN_RECEIVE_PRACTICE
     case 76: serial_set_weighting(); break;
     #ifdef FEATURE_FARNSWORTH
@@ -6106,8 +6426,8 @@ void process_serial_command() {
     #ifdef FEATURE_POTENTIOMETER
     case 86:                // V - toggle pot activation
       Serial.print(F("Potentiometer "));
-      pot_activated = !pot_activated;
-      if (pot_activated) {
+      configuration.pot_activated = !configuration.pot_activated;
+      if (configuration.pot_activated) {
         Serial.print(F("A"));
       } else {
         Serial.print(F("Dea"));
@@ -6202,7 +6522,7 @@ void process_serial_command() {
 #endif //FEATURE_SERIAL
 #endif //FEATURE_COMMAND_LINE_INTERFACE
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 
 void service_serial_paddle_echo()
@@ -6220,7 +6540,7 @@ void service_serial_paddle_echo()
     cli_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
     cli_paddle_echo_space_sent = 0;
   }
-  if ((cli_paddle_echo_buffer == 0) && (cli_paddle_echo) && (millis() > (cli_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(length_wordspace-length_letterspace)))) && (!cli_paddle_echo_space_sent)) {
+  if ((cli_paddle_echo_buffer == 0) && (cli_paddle_echo) && (millis() > (cli_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!cli_paddle_echo_space_sent)) {
     Serial.write(" ");
     cli_paddle_echo_space_sent = 1;
   }
@@ -6228,7 +6548,7 @@ void service_serial_paddle_echo()
 #endif
 #endif
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 #ifdef FEATURE_MEMORIES
 void serial_set_memory_repeat() {
@@ -6245,7 +6565,7 @@ void serial_set_memory_repeat() {
 #endif
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 #ifdef FEATURE_MEMORIES
 void repeat_play_memory() {
@@ -6266,7 +6586,7 @@ void repeat_play_memory() {
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 #ifdef FEATURE_MEMORIES
 void serial_play_memory(byte memory_number) {
@@ -6284,7 +6604,7 @@ void serial_play_memory(byte memory_number) {
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 int serial_get_number_input(byte places,int lower_limit, int upper_limit)
 {
@@ -6300,11 +6620,11 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit)
       if (machine_mode == NORMAL) {          // might as well do something while we're waiting
         check_paddles();
         service_dit_dah_buffers();
-        service_send_buffer();
+        service_send_buffer(PRINTCHAR);
 
         check_ptt_tail();
         #ifdef FEATURE_POTENTIOMETER
-        if (pot_activated) {
+        if (configuration.pot_activated) {
           check_potentiometer();
         }
         #endif
@@ -6357,14 +6677,14 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit)
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_change_wordspace()
 {
   int set_wordspace_to = serial_get_number_input(2,0,100);
   if (set_wordspace_to > 0) {
     config_dirty = 1;
-    length_wordspace = set_wordspace_to;
+    configuration.length_wordspace = set_wordspace_to;
     Serial.write("Wordspace set to ");
     Serial.println(set_wordspace_to,DEC);
   }
@@ -6373,7 +6693,7 @@ void serial_change_wordspace()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_switch_tx()
 {
@@ -6393,15 +6713,15 @@ void serial_switch_tx()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_set_dit_to_dah_ratio()
 {
     int set_ratio_to = serial_get_number_input(4, 99, 1000);
     if ((set_ratio_to > 99) && (set_ratio_to < 1000)) {
-      dah_to_dit_ratio = set_ratio_to;
+      configuration.dah_to_dit_ratio = set_ratio_to;
       Serial.print(F("Setting dah to dit ratio to "));
-      Serial.println((float(dah_to_dit_ratio)/100));
+      Serial.println((float(configuration.dah_to_dit_ratio)/100));
       config_dirty = 1;
     }
 }
@@ -6409,7 +6729,7 @@ void serial_set_dit_to_dah_ratio()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_set_serial_number()
 {
@@ -6424,7 +6744,7 @@ void serial_set_serial_number()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_set_sidetone_freq()
 {
@@ -6441,7 +6761,7 @@ void serial_set_sidetone_freq()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_wpm_set()
 {
@@ -6457,7 +6777,7 @@ void serial_wpm_set()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 #ifdef FEATURE_FARNSWORTH
 void serial_set_farnsworth()
@@ -6475,13 +6795,13 @@ void serial_set_farnsworth()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_set_weighting()
 {
   int set_weighting = serial_get_number_input(2,9,91);
   if (set_weighting > 0) {
-    weighting = set_weighting;
+    configuration.weighting = set_weighting;
     Serial.write("Setting weighting to ");
     Serial.println(set_weighting,DEC);
   }
@@ -6490,7 +6810,7 @@ void serial_set_weighting()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_tune_command ()
 {
@@ -6564,22 +6884,318 @@ String generate_callsign() {
 }
 
 #endif //FEATURE_CALLSIGN_RECEIVE_PRACTICE
+//---------------------------------------------------------------------
+#if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void paqso_practice(){
+  
+  // VT100 emulation in Linux: screen /dev/ttyACM1 115200 term vt100
+  
+  
+  #define CONTEST_PRACTICE_IDLE 0
+  #define CONTEST_PRACTICE_CQ_SENT 1
+  #define CONTEST_PRACTICE_REPORT_SENT 2
+  
+  
+  #define FIELD_CALLSIGN 0
+  #define FIELD_NR 1
+  #define FIELD_SECTION 2
+  
+  
+  byte overall_state = CONTEST_PRACTICE_IDLE;
+  byte loop1 = 1;
+  byte user_input_buffer[10];
+  byte user_input_buffer_characters = 0;
+  byte incoming_char = 0;
+  byte process_user_input_buffer = 0;
+  unsigned long escape_flag_time = 0;
+  String callsign;
+  String nr;
+  String section;
+  byte cq_answered = 0;
+  unsigned long transition_time = 0;
+  byte current_field = FIELD_CALLSIGN;
+
+  int previous_sidetone = configuration.hz_sidetone;
+  int previous_wpm = configuration.wpm;
+  int caller_sidetone = 0;
+  int caller_wpm_delta = 0;
+
+  while (Serial.available() > 0) {  // clear out the buffer if anything is there
+    Serial.read();
+  }  
+
+  term.init();
+  term.cls(); 
+  term.position(0,0);  
+  term.println(F("\nPA QSO Party Practice\n"));
+  term.println(F("This requires VT100 emulation!\n"));
+  term.println(F("F1 - Call CQ"));
+  term.println(F("F2 - Exchange"));
+  term.println(F("F3 - TU"));
+  term.println(F("Insert - Callsign + Exchange"));
+  term.println(F("\\ - Exit\n"));
+  term.println(F("Callsign  NR  Section"));
+  term.println(F("-------- ---- -------\n\n"));    
+  
+  while (loop1){
+    
+    
+    // get user keyboard input
+    if (Serial.available()){      
+      user_input_buffer[user_input_buffer_characters] = toupper(Serial.read());
+      switch(user_input_buffer[user_input_buffer_characters]){                    
+        case 27: //escape
+          escape_flag_time = millis();
+          user_input_buffer_characters++;
+        case 13: //return
+        case 32: //space
+          process_user_input_buffer = 1;
+          break;
+        case 127:
+        case 8: //backspace
+          if (user_input_buffer_characters > 0){user_input_buffer_characters--;}
+          Serial.write(27);
+          Serial.write(91);
+          Serial.write(49);
+          Serial.write(68);
+          break;
+
+          
+        default:
+          if (!(((user_input_buffer[user_input_buffer_characters-1] == 27) && (user_input_buffer[user_input_buffer_characters] == 79) && (user_input_buffer_characters>0)) ||
+          ((user_input_buffer[user_input_buffer_characters-2] == 27) && (user_input_buffer[user_input_buffer_characters-1] == 79) && (user_input_buffer_characters>1)))){
+            Serial.write(user_input_buffer[user_input_buffer_characters]);
+          }
+          user_input_buffer_characters++;
+          break;                 
+      } //switch(user_input_buffer[user_input_buffer_characters])
+      if (user_input_buffer_characters == 10){process_user_input_buffer = 1;}
+        
+    }//(Serial.available())
+    
+    
+    // process user keyboard input
+    if ((process_user_input_buffer) && ((escape_flag_time == 0) || ((millis()-escape_flag_time) > 100))){ 
+   
+      #ifdef DEBUG_CW_PRACTICE
+      Serial.print(F("escape_flag_time: process_user_input_buffer user_input_buffer_characters:"));
+      Serial.println(user_input_buffer_characters);
+      #endif
+      
+      if (user_input_buffer_characters > 0){
+        if (user_input_buffer[0] == '\\'){  // does user want to exit?
+          loop1 = 0;
+        } else {
+          if (user_input_buffer[0] == 27){
+            if (user_input_buffer_characters == 3){
+              if ((user_input_buffer[1] == 79) && (user_input_buffer[2] == 80)) {  //VT100 F1 key
+                configuration.hz_sidetone = previous_sidetone;
+                configuration.wpm = previous_wpm;
+                add_to_send_buffer('C');
+                add_to_send_buffer('Q');
+                add_to_send_buffer(' ');
+                add_to_send_buffer('T');
+                add_to_send_buffer('E');
+                add_to_send_buffer('S');
+                add_to_send_buffer('T');
+                add_to_send_buffer(' ');
+                add_to_send_buffer('D');
+                add_to_send_buffer('E');
+                add_to_send_buffer(' ');
+                add_to_send_buffer('K');
+                add_to_send_buffer('3');
+                add_to_send_buffer('N');
+                add_to_send_buffer('G');
+                overall_state = CONTEST_PRACTICE_CQ_SENT;
+                transition_time = millis();
+              } //((user_input_buffer[1] == 79) && (user_input_buffer[2] == 80)) VT100 F1 key       
+            } //(user_input_buffer_characters == 3)
+            if (user_input_buffer_characters == 4){
+              if ((user_input_buffer[1] == 91) && (user_input_buffer[2] == 50)  && (user_input_buffer[3] == 126)) { //VT100 INS key
+                for (byte x = 0; x < user_input_buffer_characters; x++) {
+                  add_to_send_buffer(user_input_buffer[x]);
+                }    
+                add_to_send_buffer(' ');         
+                add_to_send_buffer('0');
+                add_to_send_buffer('0');
+                add_to_send_buffer('1');
+                add_to_send_buffer(' ');
+                add_to_send_buffer('C');
+                add_to_send_buffer('A');
+                add_to_send_buffer('R');
+                configuration.hz_sidetone = previous_sidetone;
+                configuration.wpm = previous_wpm;              
+                overall_state = CONTEST_PRACTICE_REPORT_SENT;
+              }
+            } //(user_input_buffer_characters == 4)
+
+          } else { //(user_input_buffer[0] == 27)
+          
+          // we have a callsign, nr, or section
+          
+            switch(current_field){
+              case FIELD_CALLSIGN:
+                callsign = "";
+                for (byte x = 0; x < user_input_buffer_characters; x++) {
+                  callsign.concat(char(user_input_buffer[x]));
+                } 
+                current_field = FIELD_NR;
+                break;
+                
+              case FIELD_NR:
+                nr = "";
+                for (byte x = 0; x < user_input_buffer_characters; x++) {
+                  nr.concat(char(user_input_buffer[x]));
+                }               
+                current_field = FIELD_SECTION;
+                break;
+                
+              case FIELD_SECTION:
+                section = "";
+                for (byte x = 0; x < user_input_buffer_characters; x++) {
+                  section.concat(char(user_input_buffer[x]));
+                }               
+                current_field = FIELD_CALLSIGN;
+                break;
+              
+            }
+            term.position(13,0);
+            term.print(callsign);
+            term.position(13,9);
+            term.print(nr);
+            term.position(13,14);
+            term.println(section);
+            term.position(15,0);
+            term.print(F("                     ")); 
+            term.position(15,0);           
+            
+          }
+
+        } //(user_input_buffer[0] == '\\')
+      } //(user_input_buffer_characters > 0)
+      process_user_input_buffer = 0; 
+      user_input_buffer_characters = 0;    
+      escape_flag_time = 0;
+    } //((process_user_input_buffer) && ((escape_flag_time == 0) || ((millis() -escape_flag_time) > 100)))
+
+ //aaaaa   
+    //do autonomous events
+    service_send_buffer(NOPRINT);
+    
+    switch(overall_state){
+      case CONTEST_PRACTICE_CQ_SENT:
+        if (send_buffer_bytes == 0){
+          if (!cq_answered){
+            if (((millis() - transition_time) > random(250,1500))){  // add some random delay
+              callsign = generate_callsign();
+              caller_sidetone = random(500,1000);
+              configuration.hz_sidetone = caller_sidetone;
+              caller_wpm_delta = random(-5,5);
+              configuration.wpm = configuration.wpm + caller_wpm_delta;
+              for (byte x = 0; x < (callsign.length()); x++) {
+                add_to_send_buffer(callsign[x]);
+              }
+              cq_answered = 1;
+              transition_time = millis();
+            }
+          } else {  //send it again
+            if ((cq_answered) && ((millis() - transition_time) > random(2000,4000))){
+              configuration.hz_sidetone = caller_sidetone;
+              configuration.wpm = configuration.wpm + caller_wpm_delta;
+              for (byte x = 0; x < (callsign.length()); x++) {
+                add_to_send_buffer(callsign[x]);
+              }            
+              cq_answered++;
+              transition_time = millis();            
+            }
+          }
+        } else {
+          transition_time = millis();
+        } //send_buffer_bytes == 0
+        break;  //CONTEST_PRACTICE_CQ_SENT
+      
+      
+    } //switch(overall_state)
+    
+
+  } //while (loop1)
+  
+  configuration.hz_sidetone = previous_sidetone;
+  configuration.wpm = previous_wpm;
+  send_buffer_bytes = 0;
+
+}  
+#endif
+
+//---------------------------------------------------------------------
+#if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void serial_cw_practice(){
+  
+
+  byte menu_loop = 1;
+  byte menu_loop2 = 1;
+  char incoming_char = ' ';
+  
+  while(menu_loop){
+  
+    while (Serial.available() > 0) {  // clear out the buffer if anything is there
+      Serial.read();
+    }  
+    
+    Serial.println("CW Practice\n");
+    Serial.println("1 - US Callsigns");
+    Serial.println("2 - PA QSO Party");
+    Serial.println("0 - eXit\n");
+    
+    menu_loop2 = 1;
+    
+    while (menu_loop2){
+    
+      if (Serial.available()){
+        incoming_char = Serial.read();
+        menu_loop2 = 0;
+      }
+    }
+      
+      
+    //Serial.println(incoming_char);
+    
+    switch(incoming_char){
+      case '0': menu_loop = 0; break;
+      case '1': us_callsign_practice(); break;
+      case '2': paqso_practice(); break;
+        
+        
+    } //switch(incoming_char)
+    
+ 
+    
+  } //while(menu_loop)
+      
+  Serial.println(F("Exiting practice mode..."));
+  
+  
+}
+#endif
+
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
-#ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
-void serial_callsign_receive_practice()
+#if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void us_callsign_practice()
 {
 
-  byte looping = 1;
+  byte loop1 = 1;
+  byte loop2 = 0;
   byte serialwaitloop = 0;
   String callsign(10);
   char incoming_char = ' ';
   String user_entered_callsign = "";
 
-  randomSeed(analogRead(0));
+  byte previous_key_tx_state = key_tx;
+  key_tx = 0;
+  //randomSeed(analogRead(0));
+  randomSeed(millis());
   Serial.println(F("Callsign receive practice; type in callsign and hit ENTER."));
   Serial.println(F("If you are using the Arduino serial monitor, select \"Carriage Return\" line ending."));
   Serial.println(F("Enter a blackslash \\ to exit."));
@@ -6593,56 +7209,78 @@ void serial_callsign_receive_practice()
     incoming_char = Serial.read();
   }
 
-  while (looping){
+  while (loop1){
 
     callsign = generate_callsign();
+    loop2 = 1;
+    
+    while (loop2){
 
-    for (byte x = 0; x < (callsign.length()); x++) {
-      send_char(callsign[x],NORMAL);
-    }
-
-    serialwaitloop = 1;
-    user_entered_callsign = "";
-    while (serialwaitloop) {
-      if (Serial.available() > 0) {
-        incoming_char = Serial.read();
-        Serial.print(incoming_char);
-        if (incoming_char == 13) {
-          serialwaitloop = 0;
-        } else {
-          user_entered_callsign = user_entered_callsign + incoming_char;
+      for (byte x = 0; x < (callsign.length()); x++) {
+        send_char(callsign[x],NORMAL);
+      }
+  
+  //aaaa
+  
+      //Serial.println(callsign);
+  
+      serialwaitloop = 1;
+      user_entered_callsign = "";
+      while (serialwaitloop) {
+        if (Serial.available() > 0) {
+          incoming_char = Serial.read();
+          Serial.print(incoming_char);
+          if (incoming_char == 13) {
+            serialwaitloop = 0;
+          } else {
+            if (incoming_char != 10) {
+              user_entered_callsign = user_entered_callsign + incoming_char;
+            }
+          }
         }
       }
-    }
-
-    if (user_entered_callsign[0] == '\\') {
-      Serial.println(F("Exiting...\n"));
-      looping = 0;
-    } else {
-      user_entered_callsign.toUpperCase();  // the toUpperCase function was modified in 1.0; now it changes string in place
-      if (callsign.compareTo(user_entered_callsign) == 0) {
-        Serial.println(F("\nCorrect!"));
-      } else {
-        Serial.print(F("\nWrong: "));
-        Serial.println(callsign);
+  
+      if (user_entered_callsign[0] != '?') {
+        if ((user_entered_callsign[0] == '\\')){
+          Serial.println(F("Exiting...\n"));
+          loop1 = 0;
+          loop2 = 0;
+        } else {
+          user_entered_callsign.toUpperCase();  // the toUpperCase function was modified in 1.0; now it changes string in place
+          if (callsign.compareTo(user_entered_callsign) == 0) {
+            Serial.println(F("\nCorrect!"));
+            loop2 = 0;
+          } else {
+            Serial.print(F("\nWrong!"));
+            //Serial.println(callsign);
+            //loop2 = 0;
+          }
+        }
       }
-    }
-
-    delay(100);
-    #ifndef FEATURE_COMMAND_BUTTONS
-    while ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW) || (analogbuttonread(0))) {
-      looping = 0;
-    }
-    #endif
-    delay(10);
-  }
+  
+      delay(100);
+      #ifdef FEATURE_COMMAND_BUTTONS
+      while ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW) || (analogbuttonread(0))) {
+        loop1 = 0;
+        loop2 = 0;
+      }
+      #else 
+      while ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW)) {
+        loop1 = 0;
+        loop2 = 0;
+      }    
+      #endif //FEATURE_COMMAND_BUTTONS
+      delay(10);
+    } //loop2
+  } //loop1
+  
+  key_tx = previous_key_tx_state;
 }
-#endif
-#endif
-#endif
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_status() {
 
@@ -6706,16 +7344,16 @@ void serial_status() {
   Serial.print(configuration.hz_sidetone,DEC);
   Serial.println(" hz");
   Serial.print(F("Dah to dit: "));
-  Serial.println((float(dah_to_dit_ratio)/100));
+  Serial.println((float(configuration.dah_to_dit_ratio)/100));
   Serial.print(F("Weighting: "));
-  Serial.println(weighting,DEC);
+  Serial.println(configuration.weighting,DEC);
   Serial.print(F("Serial Number: "));
   Serial.println(serial_number,DEC);
   #ifdef FEATURE_POTENTIOMETER
   Serial.print(F("Potentiometer WPM: "));
   Serial.print(pot_value_wpm(),DEC);
   Serial.print(F(" ("));
-  if (pot_activated != 1) {
+  if (configuration.pot_activated != 1) {
     Serial.print(F("not "));
   }
   Serial.println("activated)");
@@ -6729,7 +7367,7 @@ void serial_status() {
   }
   #endif
   Serial.print("Wordspace: ");
-  Serial.println(length_wordspace,DEC);
+  Serial.println(configuration.length_wordspace,DEC);
   Serial.print("TX: ");
   Serial.println(configuration.current_tx);  
   #ifdef FEATURE_MEMORIES
@@ -6746,9 +7384,9 @@ void serial_status() {
   #ifdef FEATURE_FARNSWORTH
   Serial.println(configuration.wpm_farnsworth);
   #endif //FEATURE_FARNSWORTH
-  Serial.println(1.0*(float(weighting)/50));
+  Serial.println(1.0*(float(configuration.weighting)/50));
   Serial.println(keying_compensation,DEC);
-  Serial.println(2.0-(float(weighting)/50));
+  Serial.println(2.0-(float(configuration.weighting)/50));
   Serial.println(-1.0*keying_compensation);
   Serial.println((dit_end_time-dit_start_time),DEC);
   Serial.println((dah_end_time-dah_start_time),DEC);
@@ -6764,12 +7402,7 @@ void serial_status() {
     Serial.print(F("  button_array_high_limit: "));
     Serial.println(button_array_high_limit[x]);
   }
-  #endif
-  
-  //zzzz
-  
-
-  
+  #endif 
   
 }
 #endif
@@ -6817,18 +7450,18 @@ int convert_cw_number_to_ascii (long number_in)
    case 22111: return 55; break;
    case 22211: return 56; break;
    case 22221: return 57; break;
-
    case 112211: return 63; break;  // ?
    case 21121: return 47; break;   // /
-   #ifndef OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
-   case 21112: return 45; break;   // -
+   case 2111212: return '*'; break; // BK   
    case 221122: return 44; break;  // ,
-   case 2111212: return 36; break; // BK (store as ascii $)
-   #endif //OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
-
    case 222222: return 92; break;  // special hack; six dahs = \ (backslash)
+   //case 2222222: return '+'; break;
+   case 9: return 32; break;       // special 9 = space
    
-   #ifdef OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
+   #ifndef OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
+   case 21112: return '='; break;
+   case 12121: return '+'; break;
+   #else
    case 211112: return 45; break; // - // sp5iou
    case 21112: return 61; break; // = //sp5iou
    case 212122: return 33; break; // ! //sp5iou
@@ -6846,11 +7479,8 @@ int convert_cw_number_to_ascii (long number_in)
    case 111212: return 62; break; // SK (stored as ascii > ) // sp5iou
    case 12121: return 60; break; // AR (store as ascii < ) // sp5iou
    case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou
-   case 2111212: return 42; break; // BK (store as ascii *) //sp5iou
    #endif //OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
 
-   case 9: return 32; break;       // special 9 = space
-   
    #ifdef OPTION_NON_ENGLISH_EXTENSIONS
    case 12212: return 197; break;   // Å   - customize for your locality  ( 1 = dit, 2 = dah, return code is ASCII code )
    case 1212: return 196; break;    // Ä   - customize for your locality
@@ -6952,7 +7582,7 @@ void serial_status_memories()
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifndef EXPERIMENTAL_MEMORY_CODE
 #ifdef FEATURE_MEMORIES
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
@@ -7035,9 +7665,9 @@ void command_program_memory()
   Serial.print(F("command_program_memory: cw_char: "));
   Serial.println(cw_char);
   #endif
-  if (cw_char > 0) {  //aaaaa
+  if (cw_char > 0) {
     if ((cw_char == 12222) && (number_of_memories > 9)) { // we have a 1, this could be 1 or 1x
-      cw_char = get_cw_input_from_user(p_command_single_digit_wait_time);  // give the user 3 seconds to send another number
+      cw_char = get_cw_input_from_user((1200/configuration.wpm)*14);  // give the user some time to enter a second digit
       switch (cw_char) {
         case 0: program_memory(0); break;    // we didn't get anything, it's a 1   
         case 22222: program_memory(9); break; 
@@ -7144,7 +7774,7 @@ void play_memory(byte memory_number)
 //  #endif
 
   if (machine_mode == NORMAL) {
-    #ifdef FEATURE_SERIAL
+    #if defined(FEATURE_SERIAL)
     #ifdef FEATURE_WINKEY_EMULATION
     if (serial_mode != SERIAL_WINKEY_EMULATION) {
       Serial.println();
@@ -7175,7 +7805,7 @@ void play_memory(byte memory_number)
       #endif
     }
 
-    #ifdef FEATURE_SERIAL
+    #if defined(FEATURE_SERIAL)
     check_serial();
     #endif
 
@@ -7195,7 +7825,7 @@ void play_memory(byte memory_number)
 
         if (eeprom_byte_read != 92) {          // do we have a backslash?
           if (machine_mode == NORMAL) {
-            #ifdef FEATURE_SERIAL
+            #if defined(FEATURE_SERIAL)
             #ifndef FEATURE_WINKEY_EMULATION
             Serial.write(eeprom_byte_read);
             #else  //FEATURE_WINKEY_EMULATION
@@ -7256,98 +7886,10 @@ void play_memory(byte memory_number)
                   }       
                 }           
                 break;
-              
-//wwwww              
-              
-              /*case 49:                         // 1 - jump to memory 1
-                if (number_of_memories > 0) {
-                  memory_number = 0;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
+              //zzzzz
+              case 'S': // insert space
+                send_char(' ',NORMAL);
                 break;
-
-              case 50:                         // 2 - jump to memory 2
-                if (number_of_memories > 1) {
-                  memory_number = 1;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 51:                         // 3 - jump to memory 3
-                if (number_of_memories > 2) {
-                  memory_number = 2;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 52:                         // 4 - jump to memory 4
-                if (number_of_memories > 3) {
-                  memory_number = 3;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 53:                         // 5 - jump to memory 5
-                if (number_of_memories > 4) {
-                  memory_number = 4;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 54:                         // 6 - jump to memory 6
-                if (number_of_memories > 5) {
-                  memory_number = 5;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 55:                         // 7 - jump to memory 7
-                if (number_of_memories > 6) {
-                  memory_number = 6;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 56:                         // 8 - jump to memory 8
-                if (number_of_memories > 7) {
-                  memory_number = 7;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;
-
-              case 57:                         // 9 - jump to memory 9
-                if (number_of_memories > 8) {
-                  memory_number = 8;
-                  y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
-                    Serial.println();
-                  }
-                }
-                break;*/
 
               case 88:                         // X - switch transmitter
                 y++;
@@ -7711,6 +8253,10 @@ void program_memory(int memory_number)
   int memory_location_index = 0;
   long cwchar = 0;
   byte space_count = 0;
+  
+  #ifdef FEATURE_MEMORY_MACROS
+  byte macro_flag = 0;
+  #endif //FEATURE_MEMORY_MACROS
 
   dit_buffer = 0;
   dah_buffer = 0;
@@ -7754,11 +8300,20 @@ void program_memory(int memory_number)
          loop1 = 0;
        }
 
-       if ((paddle_hit == 0) && (millis() > (last_element_time + ((float(1200/configuration.wpm) * length_wordspace)))) && (space_count < program_memory_limit_consec_spaces)) {   // we have a space
+
+       #ifdef FEATURE_MEMORY_MACROS
+       if ((!macro_flag) && (paddle_hit == 0) && (millis() > (last_element_time + ((float(1200/configuration.wpm) * configuration.length_wordspace)))) && (space_count < program_memory_limit_consec_spaces)) {   // we have a space
          loop1 = 0;
          cwchar = 9;
          space_count++;
        }
+       #else
+       if ((paddle_hit == 0) && (millis() > (last_element_time + ((float(1200/configuration.wpm) * configuration.length_wordspace)))) && (space_count < program_memory_limit_consec_spaces)) {   // we have a space
+         loop1 = 0;
+         cwchar = 9;
+         space_count++;
+       }       
+       #endif //FEATURE_MEMORY_MACROS
 
        #ifdef FEATURE_COMMAND_BUTTONS
        while (analogbuttonread(0)) {    // hit the button to get out of command mode if no paddle was hit
@@ -7791,6 +8346,18 @@ void program_memory(int memory_number)
 
       EEPROM.write((memory_start(memory_number)+memory_location_index),convert_cw_number_to_ascii(cwchar));
       memory_location_index++;
+ 
+      #ifdef FEATURE_MEMORY_MACROS
+      if (!macro_flag) {
+        if (convert_cw_number_to_ascii(cwchar) == '\\') {macro_flag = 1;}  // if we got the \ macro character, supress spaces
+      } else {
+         if (convert_cw_number_to_ascii(cwchar) == '+') {    // if we're building a prosign, supress the next two spaces
+           macro_flag = 2; 
+         } else {
+           macro_flag--; 
+         }
+      }
+      #endif //FEATURE_MEMORY_MACROS
     }
 
     // are we out of memory locations?
@@ -7924,6 +8491,21 @@ void initialize_pins() {
   pinMode (cw_decoder_pin, INPUT);
   digitalWrite (cw_decoder_pin, HIGH);  
   #endif //FEATURE_CW_DECODER
+  
+  #ifdef FEATURE_COMMAND_BUTTONS
+  if(command_mode_active_led) {
+    pinMode (command_mode_active_led, OUTPUT);
+    digitalWrite (command_mode_active_led,LOW);
+  }
+  #endif //FEATURE_COMMAND_BUTTONS
+  
+  
+  #ifdef FEATURE_LED_RING
+  pinMode(led_ring_sdi,OUTPUT);
+  pinMode(led_ring_clk,OUTPUT);
+  pinMode(led_ring_le,OUTPUT);
+  #endif //FEATURE_LED_RING  
+  
 }
 
 //---------------------------------------------------------------------
@@ -7932,7 +8514,7 @@ void initialize_debug_startup(){
 #ifdef DEBUG_STARTUP
 
   serial_status();  
-  #ifdef FEATURE_SERIAL
+  #if defined(FEATURE_SERIAL)
   Serial.println(F("FEATURE_SERIAL"));
   #endif
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
@@ -7962,7 +8544,7 @@ void initialize_debug_startup(){
   #ifdef FEATURE_POTENTIOMETER
   Serial.println(F("FEATURE_POTENTIOMETER"));
   #endif
-  #ifdef FEATURE_SERIAL_HELP
+  #if defined(FEATURE_SERIAL_HELP)
   Serial.println(F("FEATURE_SERIAL_HELP"));
   #endif
   #ifdef FEATURE_HELL
@@ -8037,7 +8619,7 @@ void service_cw_decoder() {
       #endif
     } else {
       if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))) { // should we send a space?
-         #ifdef FEATURE_SERIAL
+         #if defined(FEATURE_SERIAL)
          #ifdef FEATURE_COMMAND_LINE_INTERFACE
          Serial.write(32);
          screen_column++;
@@ -8168,7 +8750,7 @@ void service_cw_decoder() {
     Serial.print(F("service_cw_decoder: decode_character: "));
     Serial.println(decode_character);
     #endif //DEBUG_CW_DECODER
-    #ifdef FEATURE_SERIAL
+    #if defined(FEATURE_SERIAL)
     #ifdef FEATURE_COMMAND_LINE_INTERFACE
     Serial.write(convert_cw_number_to_ascii(decode_character));
     screen_column++;
@@ -8186,7 +8768,7 @@ void service_cw_decoder() {
     space_sent = 0;
   }
   
-  #ifdef FEATURE_SERIAL
+  #if defined(FEATURE_SERIAL)
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
   if (screen_column > CW_DECODER_SCREEN_COLUMNS) {
     Serial.println();
@@ -8213,7 +8795,35 @@ void initialize_keyer_state(){
   configuration.memory_repeat_time = default_memory_repeat_time;
   configuration.cmos_super_keyer_iambic_b_timing_percent = default_cmos_super_keyer_iambic_b_timing_percent;
   
+<<<<<<< HEAD
   switch_to_tx_silent(1);
+=======
+  configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
+  //configuration.current_tx = 1;
+  configuration.length_wordspace = default_length_wordspace;
+  configuration.weighting = default_weighting;
+  
+  #ifdef FEATURE_FARNSWORTH
+  configuration.wpm_farnsworth = initial_speed_wpm;
+  #endif //FEATURE_FARNSWORTH
+  
+  switch_to_tx_silent(1);
+  
+  /* aaaaaa
+
+
+  byte autospace_active;
+
+  //probably OK: byte current_ptt_line;
+
+  unsigned int memory_repeat_time;
+  byte dit_buffer_off;
+  byte dah_buffer_off;
+
+  byte cmos_super_keyer_iambic_b_timing_on;
+  
+  */
+>>>>>>> unstable
 
 }  
 
@@ -8224,7 +8834,7 @@ void initialize_potentiometer(){
   pinMode(potentiometer,INPUT);
   pot_wpm_high_value = initial_pot_wpm_high_value;
   last_pot_wpm_read = pot_value_wpm();
-  pot_activated = 1;
+  configuration.pot_activated = 1;
   #endif
   
 }
@@ -8326,7 +8936,7 @@ void check_for_debug_modes(){
 void initialize_serial_port(){
 
   // initialize serial port
-  #ifdef FEATURE_SERIAL
+  #if defined(FEATURE_SERIAL)
   #ifdef FEATURE_WINKEY_EMULATION
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
   #ifdef FEATURE_COMMAND_BUTTONS
@@ -8382,7 +8992,7 @@ void initialize_serial_port(){
     Serial.print(F("\n\rK3NG Keyer Version "));
     Serial.write(CODE_VERSION);
     Serial.println();
-    #ifdef FEATURE_SERIAL_HELP
+    #if defined(FEATURE_SERIAL_HELP)
     Serial.println(F("\n\rEnter \\? for help\n"));
     #endif
   }
@@ -8411,9 +9021,9 @@ void initialize_display(){
 
   #ifdef FEATURE_DISPLAY
   lcd.begin(lcd_columns, lcd_rows);
-  #ifdef FEATURE_LCD_I2C
+  #ifdef FEATURE_LCD_ADAFRUIT_I2C
   lcd.setBacklight(lcdcolor);
-  #endif //FEATURE_LCD_I2C
+  #endif //FEATURE_LCD_ADAFRUIT_I2C
   lcd_center_print_timed("K3NG Keyer",0,4000);
   #endif //FEATURE_DISPLAY
 
@@ -8988,12 +9598,12 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
   switch(key){   
     case 0x4b: case 0x61: sidetone_adj(20); return; break;
     case 0x4e: case 0x5b: sidetone_adj(-20); return; break;
-    case 0x4f: case 0x5e: adjust_dah_to_dit_ratio(int(dah_to_dit_ratio/10)); return; break;
-    case 0x50: case 0x5c: adjust_dah_to_dit_ratio(-1*int(dah_to_dit_ratio/10)); return; break;
+    case 0x4f: case 0x5e: adjust_dah_to_dit_ratio(int(configuration.dah_to_dit_ratio/10)); return; break;
+    case 0x50: case 0x5c: adjust_dah_to_dit_ratio(-1*int(configuration.dah_to_dit_ratio/10)); return; break;
     case 0x52: case 0x60: speed_set(configuration.wpm+1); return; break;
     case 0x51: case 0x5a: speed_set(configuration.wpm-1); return; break;
     case 0x4a: case 0x5f: //HOME
-      dah_to_dit_ratio = initial_dah_to_dit_ratio;
+      configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
       key_tx = 1;
       config_dirty = 1;
       #ifdef FEATURE_DISPLAY
@@ -9360,14 +9970,67 @@ uint8_t read_capacitive_pin(int pinToMeasure) {
                                 } else {
                                   if (*pin & bitmask) {
                                     cycles = 16;
+                                  }
                                 }
-
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   return cycles;
 
 }
 
 #endif //FEATURE_CAPACITIVE_PADDLE_PINS
+//---------------------------------------------------------------------
+#ifdef FEATURE_LED_RING
+void update_led_ring(){
 
+  static int last_leds = 0;
+  int leds = 0;
+  
+  
 
-
+  leds = map(configuration.wpm,led_ring_low_limit,led_ring_high_limit,0,15);
+  if (leds < 0){leds = 0;}
+  if (leds > 15){leds = 15;}
+    
+  if (leds != last_leds){ 
+    digitalWrite(led_ring_le,LOW);
+    
+    digitalWrite(led_ring_sdi,LOW);
+    digitalWrite(led_ring_clk,HIGH);
+    digitalWrite(led_ring_clk,LOW);
+    
+    
+    for (int x = 15;x > 0;x--){
+      if (x <= leds){
+        digitalWrite(led_ring_sdi,HIGH);
+      } else {
+        digitalWrite(led_ring_sdi,LOW);
+      }
+      digitalWrite(led_ring_clk,HIGH);
+      digitalWrite(led_ring_clk,LOW);
+    }
+    
+    //shiftOut(led_ring_sdi,led_ring_clk,MSBFIRST,(sequence[y][x] >> 8));    //High byte first
+    //shiftOut(led_ring_sdi,led_ring_clk,MSBFIRST,sequence[y][x]);           //Low byte second
+    digitalWrite(led_ring_le,HIGH); 
+    
+    last_leds = leds;
+    digitalWrite(led_ring_sdi,LOW);
+  }    
+        
+}
+#endif //FEATURE_LED_RING

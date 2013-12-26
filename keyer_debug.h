@@ -1,0 +1,26 @@
+// don't touch these unless you know what the hell you are doing or you're asked to uncomment these for debug dumps
+//#define DEBUG_STARTUP
+//#define DEBUG_LOOP
+//#define DEBUG_EEPROM
+//#define DEBUG_MEMORIES
+//#define DEBUG_PLAY_MEMORY
+//#define DEBUG_SEND_CHAR
+//#define DEBUG_MEMORY_WRITE
+//#define DEBUG_MEMORYCHECK
+//#define DEBUG_CAPTURE_COM_PORT
+//#define DEBUG_HELL_TEST
+//#define DEBUG_WINKEY_PROTOCOL
+//#define DEBUG_CHECK_SERIAL
+//#define DEBUG_PS2_KEYBOARD
+//#define DEBUG_VARIABLE_DUMP
+//#define DEBUG_BUTTONS
+//#define DEBUG_COMMAND_MODE
+//#define DEBUG_GET_CW_INPUT_FROM_USER
+//#define DEBUG_POTENTIOMETER
+//#define DEBUG_CW_DECODER
+//#define DEBUG_CW_DECODER_WPM
+//#define DEBUG_SERIAL_SEND_CW_CALLOUT
+//#define DEBUG_SLEEP
+//#define DEBUG_BUTTON_ARRAY
+//#define DEBUG_USB
+//#define DEBUG_USB_KEYBOARD
