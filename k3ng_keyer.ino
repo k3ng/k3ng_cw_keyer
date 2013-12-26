@@ -223,127 +223,10 @@ New features in this beta / unstable release:
 //#include <PS2Keyboard.h>        // uncomment for PS2 Keyboard Feature along with the FEATURE_PS2_KEYBOARD and PS2Keyboard lines below
 //#include <LiquidCrystal.h>      // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_4BIT and LiquidCrystal lines below
 //#include <Wire.h>               // uncomment for any I2C feature
-<<<<<<< HEAD
-//#include <Adafruit_MCP23017.h>       // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_I2C and Adafruit_RGBLCDShield lines below
-//#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_I2C and Adafruit_RGBLCDShield lines below
-
-// To override the pin settings below, update the line below to where your personal keyer_pin_settings.h file is located
-//#include "C:\Users\goody\Documents\Arduino Sketchbook\keyer\keyer_pin_settings.h"
-//#include "C:\Users\goody\Documents\Arduino Sketchbook\keyer\keyer_pin_settings_nanokeyer_rev_b.h"
-//#include "/home/goody/arduino/sketchbook/keyer/keyer_pin_settings_nanokeyer_rev_b.h"
-
-#define CODE_VERSION "2013083001"
-
-// compile time features and options - comment or uncomment to add or delete features
-// FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
-#define FEATURE_SERIAL
-#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
-#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
-#define FEATURE_SAY_HI
-#define FEATURE_MEMORIES
-//#define FEATURE_MEMORY_MACROS
-//#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is recommended (see documentation)
-//#define OPTION_WINKEY_2_SUPPORT     // requires FEATURE_WINKEY_EMULATION
-//#define FEATURE_BEACON
-//#define FEATURE_CALLSIGN_RECEIVE_PRACTICE
-//#define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
-//#define FEATURE_SERIAL_HELP
-//#define FEATURE_HELL
-//#define FEATURE_PS2_KEYBOARD        // also uncomment PS2Keyboard line below and PS2Keyboard.h include at the top (requires FEATURE_SERIAL)
-//#define FEATURE_USB_KEYBOARD         // also uncomment FEATURE_USB_KEYBOARD section below
-//#define FEATURE_DEAD_OP_WATCHDOG
-//#define FEATURE_AUTOSPACE
-//#define FEATURE_FARNSWORTH
-//#define FEATURE_DL2SBA_BANKSWITCH  // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
-//#define FEATURE_DISPLAY            // LCD display support (include one of the hardware options below)
-//#define FEATURE_LCD_4BIT           // classic LCD disidefplay using 4 I/O lines
-//#define FEATURE_LCD_I2C            // I2C LCD display using MCP23017 at addr 0x20 (Adafruit)
-//#define FEATURE_CW_DECODER
-//#define FEATURE_SLEEP                // go to sleep after x minutes to conserve battery power
-//#define FEATURE_ROTARY_ENCODER       // rotary encoder speed control
-//#define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-//#define FEATURE_DIT_DAH_BUFFER_CONTROL
-//#define FEATURE_HI_PRECISION_LOOP_TIMING
-//#define FEATURE_USB_MOUSE
-//#define FEATURE_CAPACITIVE_PADDLE_PINS
-
-
-//#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
-#define OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-//#define OPTION_CLI_WINKEY_AUTOSWITCH
-#define OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // this will make Winkey emulation be the default at boot up; hold command button down at boot up to activate CLI mode
-//#define OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP     // if ASR is not disabled, you may need this to discard errant serial port bytes at startup
-//#define OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM // with this activated the unit will write non-volatile settings to EEPROM when set by Winkey commands
-//#define OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
-#define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
-//#define OPTION_WINKEY_EXTENDED_COMMANDS            // in development
-#define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
-//#define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
-#define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode
-#define OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT         // this makes dit paddle memory interruption a little smoother
-//#define OPTION_MORE_DISPLAY_MSGS                     // additional optional display messages - comment out to save memory
-//#define OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND        // enable this to ignore the TAB key in the Send CW window (this breaks SO2R functionality in N1MM)
-//#define OPTION_WATCHDOG_TIMER                        // this enables a four second ATmega48/88/168/328 watchdog timer; use for unattended/remote operation only
-//#define OPTION_MOUSE_MOVEMENT_PADDLE               // experimental (just fooling around) - mouse movement will act like a paddle
-//#define OPTION_NON_ENGLISH_EXTENSIONS  // add support for additional CW characters (i.e. À, Å, Þ, etc.)
-//#define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
-
-
-// don't touch these unless you know what the hell you are doing
-//#define DEBUG_STARTUP
-//#define DEBUG_LOOP
-//#define DEBUG_EEPROM
-//#define DEBUG_MEMORIES
-//#define DEBUG_PLAY_MEMORY
-//#define DEBUG_SEND_CHAR
-//#define DEBUG_MEMORY_WRITE
-//#define DEBUG_MEMORYCHECK
-//#define DEBUG_CAPTURE_COM_PORT
-//#define DEBUG_HELL_TEST
-//#define DEBUG_WINKEY_PROTOCOL
-//#define DEBUG_CHECK_SERIAL
-//#define DEBUG_PS2_KEYBOARD
-//#define DEBUG_VARIABLE_DUMP
-//#define DEBUG_BUTTONS
-//#define DEBUG_COMMAND_MODE
-//#define DEBUG_GET_CW_INPUT_FROM_USER
-//#define DEBUG_POTENTIOMETER
-//#define DEBUG_CW_DECODER
-//#define DEBUG_CW_DECODER_WPM
-//#define DEBUG_SERIAL_SEND_CW_CALLOUT
-//#define DEBUG_SLEEP
-//#define DEBUG_BUTTON_ARRAY
-//#define DEBUG_USB
-//#define DEBUG_USB_KEYBOARD
-
-
-/* Pins - you must review these and configure ! */
-#ifndef keyer_pin_settings_h
-#define paddle_left 2
-#define paddle_right 5
-#define tx_key_line_1 11       // (high = key down/tx on)
-#define tx_key_line_2 12
-#define tx_key_line_3 0
-#define tx_key_line_4 0
-#define tx_key_line_5 0
-#define tx_key_line_6 0
-#define sidetone_line 4         // connect a speaker for sidetone
-#define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
-#define ptt_tx_1 0              // PTT ("push to talk") lines
-#define ptt_tx_2 0              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
-#define ptt_tx_3 0              //   These are optional - set to 0 if unused
-#define ptt_tx_4 0
-#define ptt_tx_5 0
-#define ptt_tx_6 0
-#define cw_decoder_pin A5 //A3
-#define tx_key_dit 0            // if defined, goes high for dit (any transmitter)
-#define tx_key_dah 0            // if defined, goes high for dah (any transmitter)
-=======
 //#include <LiquidCrystal_I2C.h>    // uncomment YourDuino I2C display (FEATURE_LCD_YDv1)
 //#include <Adafruit_MCP23017.h>       // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
 //#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
 //#include <BasicTerm.h>              // Uncomment for contest practice
->>>>>>> unstable
 
 
 #include "keyer_features_and_options.h"
@@ -8795,9 +8678,6 @@ void initialize_keyer_state(){
   configuration.memory_repeat_time = default_memory_repeat_time;
   configuration.cmos_super_keyer_iambic_b_timing_percent = default_cmos_super_keyer_iambic_b_timing_percent;
   
-<<<<<<< HEAD
-  switch_to_tx_silent(1);
-=======
   configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
   //configuration.current_tx = 1;
   configuration.length_wordspace = default_length_wordspace;
@@ -8823,7 +8703,6 @@ void initialize_keyer_state(){
   byte cmos_super_keyer_iambic_b_timing_on;
   
   */
->>>>>>> unstable
 
 }  
 
