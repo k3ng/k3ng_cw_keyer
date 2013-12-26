@@ -233,13 +233,13 @@ New features in this beta / unstable release:
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
 #include "keyer_settings.h"
-#include "keyer.h"               // uncomment this for Sublime/Stino compilation
+//#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 //#include "keyer_pin_settings_nanokeyer_rev_b.h"
 
 
 
-#define CODE_VERSION "2013122601UNSTABLE"
-#define eeprom_magic_number 13
+#define CODE_VERSION "2.0"
+#define eeprom_magic_number 14
 
 
 
