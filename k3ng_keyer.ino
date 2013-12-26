@@ -228,10 +228,14 @@ New features in this beta / unstable release:
 //#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
 //#include <BasicTerm.h>              // Uncomment for contest practice
 
+
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
+#include "keyer_settings.h"
+#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 //#include "keyer_pin_settings_nanokeyer_rev_b.h"
+
 
 
 #define CODE_VERSION "2013122601UNSTABLE"
@@ -241,7 +245,7 @@ New features in this beta / unstable release:
 
 //PS2Keyboard keyboard;          // uncomment this if FEATURE_PS2_KEYBOARD is enabled above
 
-//LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);  // uncomment this if FEATURE_LCD_4BIT is enabled above
+//LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);  // uncomment this if FEATURE_LCD_4BIT is enabled
 
 //Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();      // uncomment this for FEATURE_LCD_ADAFRUIT_I2C
 
@@ -252,22 +256,13 @@ New features in this beta / unstable release:
 /* Uncomment this section if using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE 
  USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
 
-//#include <avr/pgmspace.h>
-//#include <avrpins.h>
-//#include <max3421e.h>
-//#include <usbhost.h>
-//#include <usb_ch9.h>
-//#include <Usb.h>
-//#include <usbhub.h>
-//#include <avr/pgmspace.h>
-//#include <address.h>
-//#include <hidboot.h>
-//#include <printhex.h>
-//#include <message.h>
-//#include <hexdump.h>
-//#include <parsetools.h>
-//USB Usb;
-//uint32_t next_time;
+// #include <avr/pgmspace.h>
+// #include <Usb.h>
+// #include <usbhub.h>
+// #include <avr/pgmspace.h>
+// #include <hidboot.h>
+// USB Usb;
+// uint32_t next_time;
 
 /* End of FEATURE_USB_KEYBOARD / FEATURE_USB_MOUSE section */
 
@@ -288,7 +283,7 @@ New features in this beta / unstable release:
 
 /* Uncomment this section if using FEATURE_USB_MOUSE */
 
-//class MouseRptParser : public MouseReportParser
+// class MouseRptParser : public MouseReportParser
 //  {
 //  protected:
 //  virtual void OnMouseMove(MOUSEINFO *mi);
@@ -299,230 +294,15 @@ New features in this beta / unstable release:
 //  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
 //  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
 //  };
-//HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
-//MouseRptParser MousePrs;
+// HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
+// MouseRptParser MousePrs;
 
 /* End of FEATURE_USB_MOUSE section */
 
 /* Uncomment this for contest practice*/
 //BasicTerm term(&Serial);
 
-// Initial and hardcoded settings
-#define initial_speed_wpm 26             // "factory default" keyer speed setting
-#define initial_sidetone_freq 600        // "factory default" sidetone frequency setting
-#define hz_high_beep 1500                // frequency in hertz of high beep
-#define hz_low_beep 400                  // frequency in hertz of low beep
-#define initial_dah_to_dit_ratio 300     // 300 = 3 / normal 3:1 ratio
-#define initial_ptt_lead_time_tx1 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx1 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx2 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx2 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx3 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx3 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx4 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx4 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx5 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx5 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx6 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx6 10         // PTT tail time in mS
-#define initial_qrss_dit_length 1        // QRSS dit length in seconds
-#define initial_pot_wpm_low_value 13     // Potentiometer WPM fully CCW
-#define initial_pot_wpm_high_value 35    // Potentiometer WPM fully CW
-#define potentiometer_change_threshold 1 // don't change the keyer speed until pot wpm has changed more than this
-#define default_serial_baud_rate 115200
-#define send_buffer_size 150
-#define default_length_letterspace 3
-#define default_length_wordspace 7
-#define default_keying_compensation 0    // number of milliseconds to extend all dits and dahs - for QSK on boatanchors
-#define default_first_extension_time 0   // number of milliseconds to extend first sent dit or dah
-#define default_pot_full_scale_reading 1023
-#define default_weighting 50             // 50 = weighting factor of 1 (normal)
-#define default_ptt_hang_time_wordspace_units 0.0
-#define memory_area_start 30             // the eeprom location where memory space starts
-#define memory_area_end 1023             // the eeprom location where memory space ends
-#define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
-#define winkey_command_timeout_ms 5000
-#define winkey_discard_bytes_startup 3   // this is used if OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP is enabled above
-#define winkey_xoff_threshold 20         // the number of chars in the buffer when we begin sending XOFFs
-#define winkey_xon_threshold 10          // the number of chars in the buffer below which we deactivate XOFF
-#define default_memory_repeat_time 3000  // time in milliseconds
-#define lcd_columns 16
-#define lcd_rows 2
-#define hell_pixel_microseconds 4025
-#define program_memory_limit_consec_spaces 1
-#define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
-#define serial_cut_numbers 0              // set to 1 to activate cut numbers in serial numbers (i.e. #10 = 1T, #19 = 1N)
-#define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
-#define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
 
-#ifdef FEATURE_COMMAND_BUTTONS
-#define analog_buttons_number_of_buttons 4
-#define analog_buttons_r1 10
-#define analog_buttons_r2 1
-#endif
-
-
-#if defined(FEATURE_COMMAND_BUTTONS) &&  !defined(FEATURE_PS2_KEYBOARD) && !defined(FEATURE_USB_KEYBOARD) && !defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(FEATURE_WINKEY_EMULATION)
-#define number_of_memories byte(analog_buttons_number_of_buttons-1)
-#else
-#define number_of_memories byte(12)
-#endif
-
-
-#ifdef FEATURE_LED_RING
-#define led_ring_low_limit 10
-#define led_ring_high_limit 50
-#endif //FEATURE_LED_RING
-
-// Variable macros
-#define STRAIGHT 1
-#define IAMBIC_B 2
-#define IAMBIC_A 3
-#define BUG 4
-#define ULTIMATIC 5
-
-#define PADDLE_NORMAL 0
-#define PADDLE_REVERSE 1
-
-#define NORMAL 0
-#define BEACON 1
-#define COMMAND 2
-
-#define OMIT_LETTERSPACE 1
-
-#define SIDETONE_OFF 0
-#define SIDETONE_ON 1
-#define SIDETONE_PADDLE_ONLY 2
-
-#define SENDING_NOTHING 0
-#define SENDING_DIT 1
-#define SENDING_DAH 2
-
-#define SPEED_NORMAL 0
-#define SPEED_QRSS 1
-
-#define CW 0
-#define HELL 1
-
-#ifdef FEATURE_PS2_KEYBOARD
-#define PS2_KEYBOARD_NORMAL 0
-#endif //FEATURE_PS2_KEYBOARD
-
-#define SERIAL_NORMAL 0
-#define SERIAL_WINKEY_EMULATION 1
-
-#define SERIAL_SEND_BUFFER_SPECIAL_START 13
-#define SERIAL_SEND_BUFFER_WPM_CHANGE 14        
-#define SERIAL_SEND_BUFFER_PTT_ON 15            
-#define SERIAL_SEND_BUFFER_PTT_OFF 16           
-#define SERIAL_SEND_BUFFER_TIMED_KEY_DOWN 17    
-#define SERIAL_SEND_BUFFER_TIMED_WAIT 18        
-#define SERIAL_SEND_BUFFER_NULL 19              
-#define SERIAL_SEND_BUFFER_PROSIGN 20           
-#define SERIAL_SEND_BUFFER_HOLD_SEND 21         
-#define SERIAL_SEND_BUFFER_HOLD_SEND_RELEASE 22 
-#define SERIAL_SEND_BUFFER_MEMORY_NUMBER 23
-#define SERIAL_SEND_BUFFER_SPECIAL_END 24
-
-#define SERIAL_SEND_BUFFER_NORMAL 0
-#define SERIAL_SEND_BUFFER_TIMED_COMMAND 1
-#define SERIAL_SEND_BUFFER_HOLD 2
-
-#ifdef FEATURE_WINKEY_EMULATION
-#define WINKEY_NO_COMMAND_IN_PROGRESS 0
-#define WINKEY_UNBUFFERED_SPEED_COMMAND 1
-#define WINKEY_UNSUPPORTED_COMMAND 2
-#define WINKEY_POINTER_COMMAND 3
-#define WINKEY_ADMIN_COMMAND 4
-#define WINKEY_PAUSE_COMMAND 5
-#define WINKEY_KEY_COMMAND 6
-#define WINKEY_SETMODE_COMMAND 7
-#define WINKEY_SIDETONE_FREQ_COMMAND 8
-#define WINKEY_ADMIN_COMMAND_ECHO 9
-#define WINKEY_BUFFERED_SPEED_COMMAND 10
-#define WINKEY_DAH_TO_DIT_RATIO_COMMAND 11
-#define WINKEY_KEYING_COMPENSATION_COMMAND 12
-#define WINKEY_FIRST_EXTENSION_COMMAND 13
-#define WINKEY_PTT_TIMES_PARM1_COMMAND 14
-#define WINKEY_PTT_TIMES_PARM2_COMMAND 15
-#define WINKEY_SET_POT_PARM1_COMMAND 16
-#define WINKEY_SET_POT_PARM2_COMMAND 17
-#define WINKEY_SET_POT_PARM3_COMMAND 18
-#define WINKEY_SOFTWARE_PADDLE_COMMAND 19
-#define WINKEY_CANCEL_BUFFERED_SPEED_COMMAND 20
-#define WINKEY_BUFFFERED_PTT_COMMMAND 21
-#define WINKEY_HSCW_COMMAND 22
-#define WINKEY_BUFFERED_HSCW_COMMAND 23
-#define WINKEY_WEIGHTING_COMMAND 24
-#define WINKEY_KEY_BUFFERED_COMMAND 25
-#define WINKEY_WAIT_BUFFERED_COMMAND 26
-#define WINKEY_POINTER_01_COMMAND 27
-#define WINKEY_POINTER_02_COMMAND 28
-#define WINKEY_POINTER_03_COMMAND 29
-#define WINKEY_FARNSWORTH_COMMAND 30
-#define WINKEY_MERGE_COMMAND 31
-#define WINKEY_MERGE_PARM_2_COMMAND 32
-#define WINKEY_SET_PINCONFIG_COMMAND 33
-#define WINKEY_EXTENDED_COMMAND 34
-#ifdef OPTION_WINKEY_2_SUPPORT
-#define WINKEY_SEND_MSG 35
-#endif //OPTION_WINKEY_2_SUPPORT
-#define WINKEY_LOAD_SETTINGS_PARM_1_COMMAND 101
-#define WINKEY_LOAD_SETTINGS_PARM_2_COMMAND 102
-#define WINKEY_LOAD_SETTINGS_PARM_3_COMMAND 103
-#define WINKEY_LOAD_SETTINGS_PARM_4_COMMAND 104
-#define WINKEY_LOAD_SETTINGS_PARM_5_COMMAND 105
-#define WINKEY_LOAD_SETTINGS_PARM_6_COMMAND 106
-#define WINKEY_LOAD_SETTINGS_PARM_7_COMMAND 107
-#define WINKEY_LOAD_SETTINGS_PARM_8_COMMAND 108
-#define WINKEY_LOAD_SETTINGS_PARM_9_COMMAND 109
-#define WINKEY_LOAD_SETTINGS_PARM_10_COMMAND 110
-#define WINKEY_LOAD_SETTINGS_PARM_11_COMMAND 111
-#define WINKEY_LOAD_SETTINGS_PARM_12_COMMAND 112
-#define WINKEY_LOAD_SETTINGS_PARM_13_COMMAND 113
-#define WINKEY_LOAD_SETTINGS_PARM_14_COMMAND 114
-#define WINKEY_LOAD_SETTINGS_PARM_15_COMMAND 115
-
-#define HOUSEKEEPING 0
-#define SERVICE_SERIAL_BYTE 1
-#endif //FEATURE_WINKEY_EMULATION
-
-#define AUTOMATIC_SENDING 0
-#define MANUAL_SENDING 1
-
-#define ULTIMATIC_NORMAL 0
-#define ULTIMATIC_DIT_PRIORITY 1
-#define ULTIMATIC_DAH_PRIORITY 2
-
-#ifdef FEATURE_WINKEY_EMULATION
-// alter these below to map alternate sidetones for Winkey interface protocol emulation
-#ifdef OPTION_WINKEY_2_SUPPORT
-#define WINKEY_SIDETONE_1 3759
-#define WINKEY_SIDETONE_2 1879
-#define WINKEY_SIDETONE_3 1252
-#define WINKEY_SIDETONE_4 940
-#define WINKEY_SIDETONE_5 752
-#define WINKEY_SIDETONE_6 625
-#define WINKEY_SIDETONE_7 535
-#define WINKEY_SIDETONE_8 469
-#define WINKEY_SIDETONE_9 417
-#define WINKEY_SIDETONE_10 375
-#else //OPTION_WINKEY_2_SUPPORT
-#define WINKEY_SIDETONE_1 4000
-#define WINKEY_SIDETONE_2 2000
-#define WINKEY_SIDETONE_3 1333
-#define WINKEY_SIDETONE_4 1000
-#define WINKEY_SIDETONE_5 800
-#define WINKEY_SIDETONE_6 666
-#define WINKEY_SIDETONE_7 571
-#define WINKEY_SIDETONE_8 500
-#define WINKEY_SIDETONE_9 444
-#define WINKEY_SIDETONE_10 400
-#endif //OPTION_WINKEY_2_SUPPORT
-#endif //FEATURE_WINKEY_EMULATION
-
-#define PRINTCHAR 0
-#define NOPRINT 1
 
 // Variables and stuff
 struct config_t {  // 23 bytes
@@ -639,11 +419,10 @@ byte pot_wpm_low_value;
 #ifdef FEATURE_POTENTIOMETER
 byte pot_wpm_high_value;
 byte last_pot_wpm_read;
-//byte pot_activated;
 int pot_full_scale_reading = default_pot_full_scale_reading;
 #endif //FEATURE_POTENTIOMETER
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 byte incoming_serial_byte;
 long serial_baud_rate;
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
@@ -667,7 +446,7 @@ byte repeat_memory = 255;
 unsigned long last_memory_repeat_time = 0;
 #endif //FEATURE_MEMORIES
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 byte serial_mode = SERIAL_NORMAL;
 #endif //FEATURE_SERIAL
 
@@ -789,7 +568,6 @@ byte usb_dah = 0;
 #endif 
 
 
-
 //---------------------------------------------------------------------------------------------------------
 
 
@@ -839,7 +617,7 @@ void loop()
         play_memory(0);
       }
       service_send_buffer(PRINTCHAR);
-      #ifdef FEATURE_SERIAL
+      #if defined(FEATURE_SERIAL)
       check_serial();
       #endif
       #ifdef OPTION_WATCHDOG_TIMER
@@ -857,7 +635,7 @@ void loop()
     check_paddles();
     service_dit_dah_buffers();
 
-    #ifdef FEATURE_SERIAL       
+    #if defined(FEATURE_SERIAL)       
     check_serial();
     check_paddles();            
     service_dit_dah_buffers();
@@ -2277,7 +2055,7 @@ int ps2_keyboard_get_number_input(byte places,int lower_limit, int upper_limit)
 
         check_ptt_tail();
         #ifdef FEATURE_POTENTIOMETER
-        if (pot_activated) {
+        if (configuration.pot_activated) {
           check_potentiometer();
         }
         #endif
@@ -3332,7 +3110,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #endif //FEATURE_ROTARY_ENCODER    
     
     #ifdef FEATURE_USB_KEYBOARD
-    service_usb_keyboard();
+    service_usb();
     #endif //FEATURE_USB_KEYBOARD
     
     if (configuration.keyer_mode != ULTIMATIC) {
@@ -3487,7 +3265,7 @@ int get_cw_input_from_user(unsigned int exit_time_milliseconds) {
     }
     #endif
 
-    #ifdef FEATURE_SERIAL
+    #if defined(FEATURE_SERIAL)
     check_serial();
     #endif
 
@@ -4631,7 +4409,7 @@ int uppercase (int charbytein)
 }
 
 //-------------------------------------------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_qrss_mode()
 {
@@ -4831,7 +4609,7 @@ void service_send_buffer(byte no_print)
         #ifdef FEATURE_WINKEY_EMULATION
         if (((serial_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open)) || (serial_mode != SERIAL_WINKEY_EMULATION)) {
         #endif //FEATURE_WINKEY_EMULATION
-        #ifdef FEATURE_SERIAL
+        #if defined(FEATURE_SERIAL)
         if (!no_print) {Serial.write(send_buffer_array[0]);}
         if (send_buffer_array[0] == 13) {
           Serial.write(10);  // if we got a carriage return, also send a line feed
@@ -4966,7 +4744,7 @@ void winkey_unbuffered_speed_command(byte incoming_serial_byte) {
 
   if (incoming_serial_byte == 0) {
     #ifdef FEATURE_POTENTIOMETER
-      pot_activated = 1;
+      configuration.pot_activated = 1;
     #endif
   } else {
     configuration.wpm = incoming_serial_byte;
@@ -5022,7 +4800,7 @@ void winkey_first_extension_command(byte incoming_serial_byte) {
 void winkey_dah_to_dit_ratio_command(byte incoming_serial_byte) {
 
   if ((incoming_serial_byte > 32) && (incoming_serial_byte < 67)) {
-    dah_to_dit_ratio = (300*(float(incoming_serial_byte)/50));
+    configuration.dah_to_dit_ratio = (300*(float(incoming_serial_byte)/50));
     #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
     config_dirty = 1;
     #endif
@@ -5094,7 +4872,7 @@ void winkey_set_pot_parm3_command (byte incoming_serial_byte) {
     }
   }
   #endif //OPTION_WINKEY_2_SUPPORT
-  pot_activated = 1;
+  configuration.pot_activated = 1;
   #endif
 }
 #endif //FEATURE_WINKEY_EMULATION
@@ -5477,7 +5255,7 @@ void winkey_admin_get_values_command() {
 #endif
 //-------------------------------------------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_WINKEY_EMULATION
 #ifdef OPTION_WINKEY_2_SUPPORT
 void winkey_eeprom_download() {
@@ -5868,7 +5646,7 @@ void service_winkey(byte action) {
       if (winkey_status ==  WINKEY_HSCW_COMMAND) {
         if (incoming_serial_byte == 0) {
           #ifdef FEATURE_POTENTIOMETER
-            pot_activated = 1;
+            configuration.pot_activated = 1;
           #endif
         } else {
           configuration.wpm = ((incoming_serial_byte*100)/5);
@@ -6247,9 +6025,8 @@ void service_command_line_interface() {
 
 //-------------------------------------------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
-void check_serial()
-{
+#if defined(FEATURE_SERIAL)
+void check_serial(){
   
   #ifdef DEBUG_SERIAL_SEND_CW_CALLOUT
   byte debug_serial_send_cw[2];
@@ -6323,8 +6100,8 @@ void check_serial()
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL_HELP
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL_HELP)
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void print_serial_help(){
 
@@ -6410,7 +6187,7 @@ void print_serial_help(){
 #endif //FEATURE_SERIAL_HELP
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void process_serial_command() {
   
@@ -6427,7 +6204,7 @@ void process_serial_command() {
       }
       break;
     case 43: cli_prosign_flag = 1; break;
-    #ifdef FEATURE_SERIAL_HELP
+    #if defined(FEATURE_SERIAL_HELP)
     case 63: print_serial_help(); break;                         // ? = print help
     #endif //FEATURE_SERIAL_HELP
     case 65: configuration.keyer_mode = IAMBIC_A; config_dirty = 1; Serial.println(F("Iambic A")); break;    // A - Iambic A mode
@@ -6628,7 +6405,7 @@ void process_serial_command() {
 #endif //FEATURE_SERIAL
 #endif //FEATURE_COMMAND_LINE_INTERFACE
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 
 void service_serial_paddle_echo()
@@ -6654,7 +6431,7 @@ void service_serial_paddle_echo()
 #endif
 #endif
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 #ifdef FEATURE_MEMORIES
 void serial_set_memory_repeat() {
@@ -6671,7 +6448,7 @@ void serial_set_memory_repeat() {
 #endif
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 #ifdef FEATURE_MEMORIES
 void repeat_play_memory() {
@@ -6692,7 +6469,7 @@ void repeat_play_memory() {
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 #ifdef FEATURE_MEMORIES
 void serial_play_memory(byte memory_number) {
@@ -6710,7 +6487,7 @@ void serial_play_memory(byte memory_number) {
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 int serial_get_number_input(byte places,int lower_limit, int upper_limit)
 {
@@ -6783,7 +6560,7 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit)
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_change_wordspace()
 {
@@ -6799,7 +6576,7 @@ void serial_change_wordspace()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_switch_tx()
 {
@@ -6819,7 +6596,7 @@ void serial_switch_tx()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_set_dit_to_dah_ratio()
 {
@@ -6835,7 +6612,7 @@ void serial_set_dit_to_dah_ratio()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_set_serial_number()
 {
@@ -6850,7 +6627,7 @@ void serial_set_serial_number()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_set_sidetone_freq()
 {
@@ -6867,7 +6644,7 @@ void serial_set_sidetone_freq()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_wpm_set()
 {
@@ -6883,7 +6660,7 @@ void serial_wpm_set()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 #ifdef FEATURE_FARNSWORTH
 void serial_set_farnsworth()
@@ -6901,7 +6678,7 @@ void serial_set_farnsworth()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_set_weighting()
 {
@@ -6916,7 +6693,7 @@ void serial_set_weighting()
 #endif
 
 //---------------------------------------------------------------------
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_tune_command ()
 {
@@ -7386,7 +7163,7 @@ void us_callsign_practice()
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 void serial_status() {
 
@@ -7688,7 +7465,7 @@ void serial_status_memories()
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_SERIAL
+#if defined(FEATURE_SERIAL)
 #ifndef EXPERIMENTAL_MEMORY_CODE
 #ifdef FEATURE_MEMORIES
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
@@ -7880,7 +7657,7 @@ void play_memory(byte memory_number)
 //  #endif
 
   if (machine_mode == NORMAL) {
-    #ifdef FEATURE_SERIAL
+    #if defined(FEATURE_SERIAL)
     #ifdef FEATURE_WINKEY_EMULATION
     if (serial_mode != SERIAL_WINKEY_EMULATION) {
       Serial.println();
@@ -7911,7 +7688,7 @@ void play_memory(byte memory_number)
       #endif
     }
 
-    #ifdef FEATURE_SERIAL
+    #if defined(FEATURE_SERIAL)
     check_serial();
     #endif
 
@@ -7931,7 +7708,7 @@ void play_memory(byte memory_number)
 
         if (eeprom_byte_read != 92) {          // do we have a backslash?
           if (machine_mode == NORMAL) {
-            #ifdef FEATURE_SERIAL
+            #if defined(FEATURE_SERIAL)
             #ifndef FEATURE_WINKEY_EMULATION
             Serial.write(eeprom_byte_read);
             #else  //FEATURE_WINKEY_EMULATION
@@ -8620,7 +8397,7 @@ void initialize_debug_startup(){
 #ifdef DEBUG_STARTUP
 
   serial_status();  
-  #ifdef FEATURE_SERIAL
+  #if defined(FEATURE_SERIAL)
   Serial.println(F("FEATURE_SERIAL"));
   #endif
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
@@ -8650,7 +8427,7 @@ void initialize_debug_startup(){
   #ifdef FEATURE_POTENTIOMETER
   Serial.println(F("FEATURE_POTENTIOMETER"));
   #endif
-  #ifdef FEATURE_SERIAL_HELP
+  #if defined(FEATURE_SERIAL_HELP)
   Serial.println(F("FEATURE_SERIAL_HELP"));
   #endif
   #ifdef FEATURE_HELL
@@ -8725,7 +8502,7 @@ void service_cw_decoder() {
       #endif
     } else {
       if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))) { // should we send a space?
-         #ifdef FEATURE_SERIAL
+         #if defined(FEATURE_SERIAL)
          #ifdef FEATURE_COMMAND_LINE_INTERFACE
          Serial.write(32);
          screen_column++;
@@ -8856,7 +8633,7 @@ void service_cw_decoder() {
     Serial.print(F("service_cw_decoder: decode_character: "));
     Serial.println(decode_character);
     #endif //DEBUG_CW_DECODER
-    #ifdef FEATURE_SERIAL
+    #if defined(FEATURE_SERIAL)
     #ifdef FEATURE_COMMAND_LINE_INTERFACE
     Serial.write(convert_cw_number_to_ascii(decode_character));
     screen_column++;
@@ -8874,7 +8651,7 @@ void service_cw_decoder() {
     space_sent = 0;
   }
   
-  #ifdef FEATURE_SERIAL
+  #if defined(FEATURE_SERIAL)
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
   if (screen_column > CW_DECODER_SCREEN_COLUMNS) {
     Serial.println();
@@ -9038,7 +8815,7 @@ void check_for_debug_modes(){
 void initialize_serial_port(){
 
   // initialize serial port
-  #ifdef FEATURE_SERIAL
+  #if defined(FEATURE_SERIAL)
   #ifdef FEATURE_WINKEY_EMULATION
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
   #ifdef FEATURE_COMMAND_BUTTONS
@@ -9094,7 +8871,7 @@ void initialize_serial_port(){
     Serial.print(F("\n\rK3NG Keyer Version "));
     Serial.write(CODE_VERSION);
     Serial.println();
-    #ifdef FEATURE_SERIAL_HELP
+    #if defined(FEATURE_SERIAL_HELP)
     Serial.println(F("\n\rEnter \\? for help\n"));
     #endif
   }
@@ -9700,12 +9477,12 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
   switch(key){   
     case 0x4b: case 0x61: sidetone_adj(20); return; break;
     case 0x4e: case 0x5b: sidetone_adj(-20); return; break;
-    case 0x4f: case 0x5e: adjust_dah_to_dit_ratio(int(dah_to_dit_ratio/10)); return; break;
-    case 0x50: case 0x5c: adjust_dah_to_dit_ratio(-1*int(dah_to_dit_ratio/10)); return; break;
+    case 0x4f: case 0x5e: adjust_dah_to_dit_ratio(int(configuration.dah_to_dit_ratio/10)); return; break;
+    case 0x50: case 0x5c: adjust_dah_to_dit_ratio(-1*int(configuration.dah_to_dit_ratio/10)); return; break;
     case 0x52: case 0x60: speed_set(configuration.wpm+1); return; break;
     case 0x51: case 0x5a: speed_set(configuration.wpm-1); return; break;
     case 0x4a: case 0x5f: //HOME
-      dah_to_dit_ratio = initial_dah_to_dit_ratio;
+      configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
       key_tx = 1;
       config_dirty = 1;
       #ifdef FEATURE_DISPLAY
