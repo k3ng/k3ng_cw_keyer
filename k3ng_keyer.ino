@@ -201,6 +201,17 @@ New features in this beta / unstable release:
 
   check_ps2_keyboard() - changed code structure so Notepad++ displays and collapses it correctly (bug in Notepad++).
   check_ps2_keyboard() - fixed bugs with configuration.dah_to_dit_ratio
+  
+  2013112701UNSTABLE
+  
+  improved command button reading accuracy
+  
+  2013122601
+  
+  renamed keyer_debug.c to keyer_debug.h
+  renamed features_and_options.c to keyer_features_and_options.h
+  FEATURE_LCD_YDv1 new
+  FEATURE_LCD_I2C renamed to FEATURE_LCD_ADAFRUIT_I2C
 
 */
 
@@ -209,20 +220,21 @@ New features in this beta / unstable release:
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 #include <avr/sleep.h>               // uncomment for FEATURE_SLEEP
-#include <PS2Keyboard.h>        // uncomment for PS2 Keyboard Feature along with the FEATURE_PS2_KEYBOARD and PS2Keyboard lines below
+//#include <PS2Keyboard.h>        // uncomment for PS2 Keyboard Feature along with the FEATURE_PS2_KEYBOARD and PS2Keyboard lines below
 //#include <LiquidCrystal.h>      // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_4BIT and LiquidCrystal lines below
 //#include <Wire.h>               // uncomment for any I2C feature
-//#include <Adafruit_MCP23017.h>       // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_I2C and Adafruit_RGBLCDShield lines below
-//#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_I2C and Adafruit_RGBLCDShield lines below
+//#include <LiquidCrystal_I2C.h>    // uncomment YourDuino I2C display (FEATURE_LCD_YDv1)
+//#include <Adafruit_MCP23017.h>       // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
+//#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
 //#include <BasicTerm.h>              // Uncomment for contest practice
 
-#include "features_and_options.c"
-#include "keyer_debug.c"
+#include "keyer_features_and_options.h"
+#include "keyer_debug.h"
 #include "keyer_pin_settings.h"
 //#include "keyer_pin_settings_nanokeyer_rev_b.h"
 
 
-#define CODE_VERSION "2013090801UNSTABLE"
+#define CODE_VERSION "2013122601UNSTABLE"
 #define eeprom_magic_number 13
 
 
@@ -231,7 +243,10 @@ New features in this beta / unstable release:
 
 //LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);  // uncomment this if FEATURE_LCD_4BIT is enabled above
 
-//Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();      // uncomment this for FEATURE_LCD_I2C
+//Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();      // uncomment this for FEATURE_LCD_ADAFRUIT_I2C
+
+//LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // uncomment for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
+
 
 
 /* Uncomment this section if using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE 
@@ -576,7 +591,7 @@ enum lcd_statuses {LCD_CLEAR, LCD_REVERT, LCD_TIMED_MESSAGE, LCD_SCROLL_MSG};
 #define default_display_msg_delay 1000
 #endif //FEATURE_DISPLAY
 
-#ifdef FEATURE_LCD_I2C
+#ifdef FEATURE_LCD_ADAFRUIT_I2C
 #define RED 0x1
 #define YELLOW 0x3
 #define GREEN 0x2
@@ -585,7 +600,7 @@ enum lcd_statuses {LCD_CLEAR, LCD_REVERT, LCD_TIMED_MESSAGE, LCD_SCROLL_MSG};
 #define VIOLET 0x5
 #define WHITE 0x7
 byte lcdcolor = GREEN;  // default color for RGB LCD display
-#endif //FEATURE_LCD_I2C
+#endif //FEATURE_LCD_ADAFRUIT_I2C
 
 
 #ifdef OPTION_WINKEY_2_SUPPORT
@@ -1024,7 +1039,7 @@ void service_lcd_paddle_echo()
     lcd_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
     lcd_paddle_echo_space_sent = 0;
   }
-  if ((lcd_paddle_echo_buffer == 0) && (lcd_paddle_echo) && (millis() > (lcd_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(length_wordspace-length_letterspace)))) && (!lcd_paddle_echo_space_sent)) {
+  if ((lcd_paddle_echo_buffer == 0) && (lcd_paddle_echo) && (millis() > (lcd_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!lcd_paddle_echo_space_sent)) {
     display_scroll_print_char(' ');
     lcd_paddle_echo_space_sent = 1;
   }
@@ -4092,7 +4107,6 @@ void initialize_analog_button_array() {
 
 #ifdef FEATURE_COMMAND_BUTTONS
 byte analogbuttonpressed() {
-//zzzzz
 
   int analog_line_read_average = 0;
   int analog_read_temp = 0;
@@ -9109,9 +9123,9 @@ void initialize_display(){
 
   #ifdef FEATURE_DISPLAY
   lcd.begin(lcd_columns, lcd_rows);
-  #ifdef FEATURE_LCD_I2C
+  #ifdef FEATURE_LCD_ADAFRUIT_I2C
   lcd.setBacklight(lcdcolor);
-  #endif //FEATURE_LCD_I2C
+  #endif //FEATURE_LCD_ADAFRUIT_I2C
   lcd_center_print_timed("K3NG Keyer",0,4000);
   #endif //FEATURE_DISPLAY
 
