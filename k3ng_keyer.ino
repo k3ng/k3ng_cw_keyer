@@ -219,7 +219,7 @@ New features in this beta / unstable release:
 #include <EEPROM.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
-#include <avr/sleep.h>               // uncomment for FEATURE_SLEEP
+//#include <avr/sleep.h>               // uncomment for FEATURE_SLEEP
 //#include <PS2Keyboard.h>        // uncomment for PS2 Keyboard Feature along with the FEATURE_PS2_KEYBOARD and PS2Keyboard lines below
 //#include <LiquidCrystal.h>      // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_4BIT and LiquidCrystal lines below
 //#include <Wire.h>               // uncomment for any I2C feature
@@ -236,12 +236,8 @@ New features in this beta / unstable release:
 //#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 //#include "keyer_pin_settings_nanokeyer_rev_b.h"
 
-
-
 #define CODE_VERSION "2.0"
 #define eeprom_magic_number 14
-
-
 
 //PS2Keyboard keyboard;          // uncomment this if FEATURE_PS2_KEYBOARD is enabled above
 
