@@ -2,7 +2,7 @@
 
  K3NG Arduino CW Keyer
 
- Copyright 1340 BC, 2010, 2011, 2012, 2013 Anthony Good, K3NG
+ Copyright 1340 BC, 2010, 2011, 2012, 2013, 2014 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
 
     
@@ -184,34 +184,10 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 
 New features in this beta / unstable release:
 
-  command_mode_active_led
-  + is AR
-  Made it easier to form prosigns in command mode memory program using \+ macro
-  
-  FEATURE_LED_RING
-  led_ring_sdi    A10 //2    //Data
-  led_ring_clk    A9 //3    //Clock
-  led_ring_le     A8 //4    //Latch
-  
-  fixed bug in eeprom initialization code
-  
-  \s memory macro = insert space
-  
-  2013090801UNSTABLE
+  2.1.2014010901-UNSTABLE
+    - fixed bug with Winkey 00 admin command which affected Win-Test
 
-  check_ps2_keyboard() - changed code structure so Notepad++ displays and collapses it correctly (bug in Notepad++).
-  check_ps2_keyboard() - fixed bugs with configuration.dah_to_dit_ratio
-  
-  2013112701UNSTABLE
-  
-  improved command button reading accuracy
-  
-  2013122601
-  
-  renamed keyer_debug.c to keyer_debug.h
-  renamed features_and_options.c to keyer_features_and_options.h
-  FEATURE_LCD_YDv1 new
-  FEATURE_LCD_I2C renamed to FEATURE_LCD_ADAFRUIT_I2C
+
 
 */
 
@@ -232,12 +208,12 @@ New features in this beta / unstable release:
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
+//#include "keyer_pin_settings_nanokeyer_rev_b.h"
 #include "keyer_settings.h"
 //#include "keyer.h"               // uncomment this for Sublime/Stino compilation
-//#include "keyer_pin_settings_nanokeyer_rev_b.h"
 
-#define CODE_VERSION "2.0"
-#define eeprom_magic_number 14
+#define CODE_VERSION "2.1.2014010901-UNSTABLE"
+#define eeprom_magic_number 15
 
 //PS2Keyboard keyboard;          // uncomment this if FEATURE_PS2_KEYBOARD is enabled above
 
@@ -3304,7 +3280,9 @@ void command_mode ()
   command_mode_disable_tx = 0;
 
   boop_beep();
+  #ifdef command_mode_active_led
   if (command_mode_active_led) {digitalWrite(command_mode_active_led,HIGH);}
+  #endif //command_mode_active_led
   #ifdef FEATURE_DISPLAY
   lcd.clear();
   lcd_center_print_timed("Command Mode", 0, default_display_msg_delay);
@@ -3471,7 +3449,9 @@ void command_mode ()
     }
   }
   beep_boop();
+  #ifdef command_mode_active_led
   if (command_mode_active_led) {digitalWrite(command_mode_active_led,LOW);}
+  #endif //command_mode_active_led
   machine_mode = NORMAL;
   speed_mode = speed_mode_before;   // go back to whatever speed mode we were in before
   configuration.keyer_mode = keyer_mode_before;
@@ -5595,6 +5575,15 @@ void service_winkey(byte action) {
       }
     } else {
 
+      if (winkey_status == WINKEY_UNSUPPORTED_COMMAND) {
+        winkey_parmcount--;
+        if (winkey_parmcount == 0) {
+          Serial.write(0xc0|winkey_sending|winkey_xoff);           
+          winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+        }
+
+      }
+
       //WINKEY_LOAD_SETTINGS_PARM_1_COMMAND IS 101
       if ((winkey_status > 100) && (winkey_status < 116)) {   // Load Settings Command - this has 15 parameters, so we handle it a bit differently
         winkey_load_settings_command(winkey_status,incoming_serial_byte);
@@ -5757,6 +5746,8 @@ void service_winkey(byte action) {
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;  
       }
       #endif //OPTION_WINKEY_2_SUPPORT
+
+
 
       if (winkey_status == WINKEY_ADMIN_COMMAND) {
         switch (incoming_serial_byte) {
@@ -5950,14 +5941,6 @@ void service_winkey(byte action) {
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
 
-      if (winkey_status == WINKEY_UNSUPPORTED_COMMAND) {
-        winkey_parmcount--;
-        if (winkey_parmcount == 0) {
-          Serial.write(0xc0|winkey_sending|winkey_xoff);           
-          winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
-        }
-
-      }
     } // else (winkey_status == WINKEY_NO_COMMAND_IN_PROGRESS)
   }  // if (action == SERVICE_SERIAL_BYTE
 
@@ -8371,12 +8354,12 @@ void initialize_pins() {
   digitalWrite (cw_decoder_pin, HIGH);  
   #endif //FEATURE_CW_DECODER
   
-  #ifdef FEATURE_COMMAND_BUTTONS
+  #if defined(FEATURE_COMMAND_BUTTONS) && defined(command_mode_active_led)
   if(command_mode_active_led) {
     pinMode (command_mode_active_led, OUTPUT);
     digitalWrite (command_mode_active_led,LOW);
   }
-  #endif //FEATURE_COMMAND_BUTTONS
+  #endif //FEATURE_COMMAND_BUTTONS && command_mode_active_led
   
   
   #ifdef FEATURE_LED_RING
