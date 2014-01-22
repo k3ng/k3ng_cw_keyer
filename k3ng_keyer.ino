@@ -187,6 +187,21 @@ New features in this beta / unstable release:
   2.1.2014010901-UNSTABLE
     - fixed bug with Winkey 00 admin command which affected Win-Test
 
+  2.1.2014012101-UNSTABLE
+    - no longer necessary to manually uncomment:
+      #include <avr/sleep.h>
+      #include <PS2Keyboard.h>
+      #include <LiquidCrystal.h>
+      #include <Wire.h>
+      #include <LiquidCrystal_I2C.h>
+      #include <Adafruit_MCP23017.h>
+      #include <Adafruit_RGBLCDShield.h>
+      #include <BasicTerm.h>
+      PS2Keyboard keyboard;
+      LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
+      all USB keyboard and mouse stuff
+
+
 
 
 */
@@ -195,84 +210,100 @@ New features in this beta / unstable release:
 #include <EEPROM.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
-//#include <avr/sleep.h>               // uncomment for FEATURE_SLEEP
-//#include <PS2Keyboard.h>        // uncomment for PS2 Keyboard Feature along with the FEATURE_PS2_KEYBOARD and PS2Keyboard lines below
-//#include <LiquidCrystal.h>      // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_4BIT and LiquidCrystal lines below
-//#include <Wire.h>               // uncomment for any I2C feature
-//#include <LiquidCrystal_I2C.h>    // uncomment YourDuino I2C display (FEATURE_LCD_YDv1)
-//#include <Adafruit_MCP23017.h>       // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
-//#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
-//#include <BasicTerm.h>              // Uncomment for contest practice
 
 
+#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
 //#include "keyer_pin_settings_nanokeyer_rev_b.h"
 #include "keyer_settings.h"
-//#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 
-#define CODE_VERSION "2.1.2014010901-UNSTABLE"
-#define eeprom_magic_number 15
-
-//PS2Keyboard keyboard;          // uncomment this if FEATURE_PS2_KEYBOARD is enabled above
-
-//LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);  // uncomment this if FEATURE_LCD_4BIT is enabled
-
-//Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();      // uncomment this for FEATURE_LCD_ADAFRUIT_I2C
-
-//LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // uncomment for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
-
-
-
-/* Uncomment this section if using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE 
- USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
-
-// #include <avr/pgmspace.h>
-// #include <Usb.h>
-// #include <usbhub.h>
-// #include <avr/pgmspace.h>
-// #include <hidboot.h>
-// USB Usb;
-// uint32_t next_time;
-
-/* End of FEATURE_USB_KEYBOARD / FEATURE_USB_MOUSE section */
-
-
-/* Uncomment this section if using FEATURE_USB_KEYBOARD  */
-
-//class KbdRptParser : public KeyboardReportParser
-//  {
-//  protected:
-//  virtual void OnKeyDown (uint8_t mod, uint8_t key);
-//  virtual void OnKeyUp (uint8_t mod, uint8_t key);
-//  };
-//HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
-//KbdRptParser KeyboardPrs;
-
-/* End of FEATURE_USB_KEYBOARD section */
+#if defined(FEATURE_SLEEP)
+#include <avr/sleep.h>
+#endif 
+#if defined(FEATURE_PS2_KEYBOARD)
+#include <PS2Keyboard.h>
+#endif
+#if defined(FEATURE_LCD_4BIT)
+#include <LiquidCrystal.h>
+#endif
+#if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_YDv1)
+#include <Wire.h>
+#endif
+#if defined(FEATURE_LCD_YDv1)
+#include <LiquidCrystal_I2C.h>
+#endif
+#if defined(FEATURE_LCD_ADAFRUIT_I2C)
+#include <Adafruit_MCP23017.h>
+#endif
+#if defined(FEATURE_LCD_ADAFRUIT_I2C)
+#include <Adafruit_RGBLCDShield.h>
+#endif
+#if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
+#include <BasicTerm.h>
+#endif
+#if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
+#include <Usb.h>    /* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
+#include <usbhub.h>
+#include <hidboot.h>
+#endif
 
 
-/* Uncomment this section if using FEATURE_USB_MOUSE */
+#define CODE_VERSION "2.1.2014012101-UNSTABLE"
+#define eeprom_magic_number 16
 
-// class MouseRptParser : public MouseReportParser
-//  {
-//  protected:
-//  virtual void OnMouseMove(MOUSEINFO *mi);
-//  virtual void OnLeftButtonUp(MOUSEINFO *mi);
-//  virtual void OnLeftButtonDown(MOUSEINFO *mi);
-//  virtual void OnRightButtonUp(MOUSEINFO *mi);
-//  virtual void OnRightButtonDown(MOUSEINFO *mi);
-//  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
-//  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
-//  };
-// HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
-// MouseRptParser MousePrs;
+#if defined(FEATURE_PS2_KEYBOARD)
+PS2Keyboard keyboard;
+#endif
 
-/* End of FEATURE_USB_MOUSE section */
+#if defined(FEATURE_LCD_4BIT)
+LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
+#endif
 
-/* Uncomment this for contest practice*/
-//BasicTerm term(&Serial);
+#if defined(FEATURE_LCD_ADAFRUIT_I2C)
+Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+#endif
+
+#if defined(FEATURE_LCD_YDv1)
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
+#endif
+
+#if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
+USB Usb;
+uint32_t next_time;
+#endif
+
+#if defined(FEATURE_USB_KEYBOARD)
+class KbdRptParser : public KeyboardReportParser
+{
+  protected:
+  virtual void OnKeyDown (uint8_t mod, uint8_t key);
+  virtual void OnKeyUp (uint8_t mod, uint8_t key);
+};
+HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
+KbdRptParser KeyboardPrs;
+#endif
+
+#if defined(FEATURE_USB_MOUSE)
+class MouseRptParser : public MouseReportParser
+{
+  protected:
+  virtual void OnMouseMove(MOUSEINFO *mi);
+  virtual void OnLeftButtonUp(MOUSEINFO *mi);
+  virtual void OnLeftButtonDown(MOUSEINFO *mi);
+  virtual void OnRightButtonUp(MOUSEINFO *mi);
+  virtual void OnRightButtonDown(MOUSEINFO *mi);
+  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
+  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
+};
+HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
+MouseRptParser MousePrs;
+#endif //FEATURE_USB_MOUSE
+
+#if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
+BasicTerm term(&Serial);
+#endif
 
 
 
@@ -1441,12 +1472,12 @@ void check_ps2_keyboard()
       switch (keystroke) {
         case PS2_PAGEUP : sidetone_adj(20); break;
         case PS2_PAGEDOWN : sidetone_adj(-20); break;
-        case PS2_RIGHTARROW : adjust_dah_to_dit_ratio(int(dah_to_dit_ratio/10)); break;
-        case PS2_LEFTARROW : adjust_dah_to_dit_ratio(-1*int(dah_to_dit_ratio/10)); break;
+        case PS2_RIGHTARROW : adjust_dah_to_dit_ratio(int(configuration.dah_to_dit_ratio/10)); break;
+        case PS2_LEFTARROW : adjust_dah_to_dit_ratio(-1*int(configuration.dah_to_dit_ratio/10)); break;
         case PS2_UPARROW : speed_set(configuration.wpm+1); break;
         case PS2_DOWNARROW : speed_set(configuration.wpm-1); break;
         case PS2_HOME :
-          dah_to_dit_ratio = initial_dah_to_dit_ratio;
+          configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
           key_tx = 1;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
@@ -3506,7 +3537,7 @@ void adjust_dah_to_dit_ratio(int adjustment) {
    configuration.dah_to_dit_ratio = configuration.dah_to_dit_ratio + adjustment;
    #ifdef FEATURE_DISPLAY
    #ifdef OPTION_MORE_DISPLAY_MSGS
-   lcd_center_print_timed("Dah/Dit: " + String(dah_to_dit_ratio), 0, default_display_msg_delay);
+   lcd_center_print_timed("Dah/Dit: " + String(configuration.dah_to_dit_ratio), 0, default_display_msg_delay);
    service_display();
    #endif
    #endif   
