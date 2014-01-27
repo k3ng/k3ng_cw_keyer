@@ -3,8 +3,8 @@
 
 #define FEATURE_SERIAL
 #define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
-#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
-#define FEATURE_SAY_HI
+//#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
+//#define FEATURE_SAY_HI
 //#define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
 //#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is recommended (see documentation)
@@ -37,7 +37,6 @@
 
 //#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
 #define OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-//#define OPTION_CLI_WINKEY_AUTOSWITCH
 #define OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // this will make Winkey emulation be the default at boot up; hold command button down at boot up to activate CLI mode
 //#define OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP     // if ASR is not disabled, you may need this to discard errant serial port bytes at startup
 //#define OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM // with this activated the unit will write non-volatile settings to EEPROM when set by Winkey commands

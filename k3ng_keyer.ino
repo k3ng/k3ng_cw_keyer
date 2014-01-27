@@ -201,6 +201,8 @@ New features in this beta / unstable release:
       LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
       all USB keyboard and mouse stuff
 
+  2.1.2014012601-UNSTABLE
+    fixed Arduino IDE compilation errors
 
 
 
@@ -250,61 +252,8 @@ New features in this beta / unstable release:
 #endif
 
 
-#define CODE_VERSION "2.1.2014012101-UNSTABLE"
+#define CODE_VERSION "2.1.2014012601-UNSTABLE"
 #define eeprom_magic_number 16
-
-#if defined(FEATURE_PS2_KEYBOARD)
-PS2Keyboard keyboard;
-#endif
-
-#if defined(FEATURE_LCD_4BIT)
-LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
-#endif
-
-#if defined(FEATURE_LCD_ADAFRUIT_I2C)
-Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
-#endif
-
-#if defined(FEATURE_LCD_YDv1)
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
-#endif
-
-#if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
-USB Usb;
-uint32_t next_time;
-#endif
-
-#if defined(FEATURE_USB_KEYBOARD)
-class KbdRptParser : public KeyboardReportParser
-{
-  protected:
-  virtual void OnKeyDown (uint8_t mod, uint8_t key);
-  virtual void OnKeyUp (uint8_t mod, uint8_t key);
-};
-HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
-KbdRptParser KeyboardPrs;
-#endif
-
-#if defined(FEATURE_USB_MOUSE)
-class MouseRptParser : public MouseReportParser
-{
-  protected:
-  virtual void OnMouseMove(MOUSEINFO *mi);
-  virtual void OnLeftButtonUp(MOUSEINFO *mi);
-  virtual void OnLeftButtonDown(MOUSEINFO *mi);
-  virtual void OnRightButtonUp(MOUSEINFO *mi);
-  virtual void OnRightButtonDown(MOUSEINFO *mi);
-  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
-  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
-};
-HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
-MouseRptParser MousePrs;
-#endif //FEATURE_USB_MOUSE
-
-#if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
-BasicTerm term(&Serial);
-#endif
-
 
 
 // Variables and stuff
@@ -569,6 +518,64 @@ unsigned long usb_keyboard_special_mode_start_time = 0;
 byte usb_dit = 0;
 byte usb_dah = 0;
 #endif 
+
+
+
+
+#if defined(FEATURE_PS2_KEYBOARD)
+PS2Keyboard keyboard;
+#endif
+
+#if defined(FEATURE_LCD_4BIT)
+LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
+#endif
+
+#if defined(FEATURE_LCD_ADAFRUIT_I2C)
+Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+#endif
+
+#if defined(FEATURE_LCD_YDv1)
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
+#endif
+
+#if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
+USB Usb;
+uint32_t next_time;
+#endif
+
+#if defined(FEATURE_USB_KEYBOARD)
+class KbdRptParser : public KeyboardReportParser
+{
+  protected:
+  virtual void OnKeyDown (uint8_t mod, uint8_t key);
+  virtual void OnKeyUp (uint8_t mod, uint8_t key);
+};
+HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
+KbdRptParser KeyboardPrs;
+#endif
+
+#if defined(FEATURE_USB_MOUSE)
+class MouseRptParser : public MouseReportParser
+{
+  protected:
+  virtual void OnMouseMove(MOUSEINFO *mi);
+  virtual void OnLeftButtonUp(MOUSEINFO *mi);
+  virtual void OnLeftButtonDown(MOUSEINFO *mi);
+  virtual void OnRightButtonUp(MOUSEINFO *mi);
+  virtual void OnRightButtonDown(MOUSEINFO *mi);
+  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
+  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
+};
+HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
+MouseRptParser MousePrs;
+#endif //FEATURE_USB_MOUSE
+
+#if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
+BasicTerm term(&Serial);
+#endif
+
+
+
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -8826,57 +8833,55 @@ void initialize_serial_port(){
 
   // initialize serial port
   #if defined(FEATURE_SERIAL)
-  #ifdef FEATURE_WINKEY_EMULATION
-  #ifdef FEATURE_COMMAND_LINE_INTERFACE
+  
+  #if defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_COMMAND_LINE_INTERFACE) //--------------------------------------------
+  
   #ifdef FEATURE_COMMAND_BUTTONS
   if (analogbuttonread(0)) {
   #endif //FEATURE_COMMAND_BUTTONS
+  
     #ifdef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
     serial_mode = SERIAL_NORMAL;
     serial_baud_rate = default_serial_baud_rate;
-    #endif //OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
-    #ifndef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
+    #else
     serial_mode = SERIAL_WINKEY_EMULATION;
     serial_baud_rate = 1200;
     #endif  //ifndef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
+    
   } else {
+    
     #ifdef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
     serial_mode = SERIAL_WINKEY_EMULATION;
     serial_baud_rate = 1200;
-    #endif //OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
-    #ifndef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
+    #else
     serial_mode = SERIAL_NORMAL;
     serial_baud_rate = default_serial_baud_rate;
     #endif  //ifndef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
   }
+  
   #ifdef FEATURE_COMMAND_BUTTONS
   while (analogbuttonread(0)) {}
   #endif //FEATURE_COMMAND_BUTTONS
-  #endif //FEATURE_WINKEY_EMULATION
-  #endif //FEATURE_COMMAND_LINE_INTERFACE
+  
+  #endif //defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_COMMAND_LINE_INTERFACE)---------------------------------
 
-  #ifndef FEATURE_WINKEY_EMULATION
-  #ifdef FEATURE_COMMAND_LINE_INTERFACE
+  #if !defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_COMMAND_LINE_INTERFACE)
   serial_mode = SERIAL_NORMAL;
   serial_baud_rate = default_serial_baud_rate;
-  #endif // FEATURE_COMMAND_LINE_INTERFACE
-  #endif  //ifndef FEATURE_WINKEY_EMULATION
+  #endif  //!defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 
-  #ifdef FEATURE_WINKEY_EMULATION
-  #ifndef FEATURE_COMMAND_LINE_INTERFACE
+  #if defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_COMMAND_LINE_INTERFACE)
   serial_mode = SERIAL_WINKEY_EMULATION;
   serial_baud_rate = 1200;
-  #endif // FEATURE_COMMAND_LINE_INTERFACE
-  #endif  //ifndef FEATURE_WINKEY_EMULATION
+  #endif //defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_COMMAND_LINE_INTERFACE)
   
   Serial.begin(serial_baud_rate);
   
   #ifdef DEBUG_STARTUP
   Serial.println(F("setup: serial port opened"));
-  #endif
+  #endif //DEBUG_STARTUP
 
-  #ifndef OPTION_SUPPRESS_SERIAL_BOOT_MSG
-  #ifdef FEATURE_COMMAND_LINE_INTERFACE
+  #if !defined(OPTION_SUPPRESS_SERIAL_BOOT_MSG) && defined(FEATURE_COMMAND_LINE_INTERFACE)
   if (serial_mode == SERIAL_NORMAL) {
     Serial.print(F("\n\rK3NG Keyer Version "));
     Serial.write(CODE_VERSION);
@@ -8885,11 +8890,14 @@ void initialize_serial_port(){
     Serial.println(F("\n\rEnter \\? for help\n"));
     #endif
   }
+  
   #ifdef DEBUG_MEMORYCHECK
   memorycheck();
   #endif //DEBUG_MEMORYCHECK
-  #endif //FEATURE_COMMAND_LINE_INTERFACE
-  #endif //ifndef OPTION_SUPPRESS_SERIAL_BOOT_MSG
+  
+  #endif //!defined(OPTION_SUPPRESS_SERIAL_BOOT_MSG) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
+  
   #endif //FEATURE_SERIAL
   
   
