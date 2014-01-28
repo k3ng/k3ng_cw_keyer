@@ -3,12 +3,12 @@
 
 #define FEATURE_SERIAL
 #define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
-//#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
+#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
 //#define FEATURE_SAY_HI
 //#define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
-//#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is recommended (see documentation)
-//#define OPTION_WINKEY_2_SUPPORT     // requires FEATURE_WINKEY_EMULATION
+#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is recommended (see documentation)
+#define OPTION_WINKEY_2_SUPPORT     // requires FEATURE_WINKEY_EMULATION
 //#define FEATURE_BEACON
 //#define FEATURE_CALLSIGN_RECEIVE_PRACTICE
 //#define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes

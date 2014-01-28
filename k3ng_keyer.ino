@@ -203,10 +203,15 @@ New features in this beta / unstable release:
 
   2.1.2014012601-UNSTABLE
     fixed Arduino IDE compilation errors
-
+  
+  2.1.2014012701-UNSTABLE
+    fixed issue when FEATURE_COMMAND_LINE_INTERFACE and FEATURE_WINKEY_EMULATION are compiled without FEATURE_COMMAND_BUTTONS
 
 
 */
+
+#define CODE_VERSION "2.1.2014012701-UNSTABLE"
+#define eeprom_magic_number 16
 
 #include <stdio.h>
 #include <EEPROM.h>
@@ -251,10 +256,10 @@ New features in this beta / unstable release:
 #include <hidboot.h>
 #endif
 
-
-#define CODE_VERSION "2.1.2014012601-UNSTABLE"
-#define eeprom_magic_number 16
-
+// Dependencies
+#if defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_COMMAND_BUTTONS)
+#error "When configuring both FEATURE_COMMAND_LINE_INTERFACE and FEATURE_WINKEY_EMULATION you need to also have FEATURE_COMMAND_BUTTONS"
+#endif
 
 // Variables and stuff
 struct config_t {  // 23 bytes
@@ -8838,7 +8843,7 @@ void initialize_serial_port(){
   
   #ifdef FEATURE_COMMAND_BUTTONS
   if (analogbuttonread(0)) {
-  #endif //FEATURE_COMMAND_BUTTONS
+  
   
     #ifdef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
     serial_mode = SERIAL_NORMAL;
@@ -8849,6 +8854,7 @@ void initialize_serial_port(){
     #endif  //ifndef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
     
   } else {
+  #endif //FEATURE_COMMAND_BUTTONS
     
     #ifdef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
     serial_mode = SERIAL_WINKEY_EMULATION;
@@ -8857,7 +8863,10 @@ void initialize_serial_port(){
     serial_mode = SERIAL_NORMAL;
     serial_baud_rate = default_serial_baud_rate;
     #endif  //ifndef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
+    
+  #ifdef FEATURE_COMMAND_BUTTONS
   }
+  #endif //FEATURE_COMMAND_BUTTONS
   
   #ifdef FEATURE_COMMAND_BUTTONS
   while (analogbuttonread(0)) {}
