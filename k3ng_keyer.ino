@@ -207,10 +207,13 @@ New features in this beta / unstable release:
   2.1.2014012701-UNSTABLE
     fixed issue when FEATURE_COMMAND_LINE_INTERFACE and FEATURE_WINKEY_EMULATION are compiled without FEATURE_COMMAND_BUTTONS
 
+  2.1.2014020701-UNSTABLE
+    fixed compile bug involving hz_sidetone when OPTION_MORE_DISPLAY_MSGS is enabled
+
 
 */
 
-#define CODE_VERSION "2.1.2014012701-UNSTABLE"
+#define CODE_VERSION "2.1.2014020701-UNSTABLE"
 #define eeprom_magic_number 16
 
 #include <stdio.h>
@@ -219,7 +222,7 @@ New features in this beta / unstable release:
 #include <avr/wdt.h>
 
 
-//#include "keyer.h"               // uncomment this for Sublime/Stino compilation
+#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
@@ -3657,7 +3660,7 @@ void sidetone_adj(int hz) {
     config_dirty = 1;
     #ifdef FEATURE_DISPLAY
     #ifdef OPTION_MORE_DISPLAY_MSGS
-    lcd_center_print_timed("Sidetone " + String(hz_sidetone) + " Hz", 0, default_display_msg_delay);
+    lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
     #endif
     #endif   
   }
