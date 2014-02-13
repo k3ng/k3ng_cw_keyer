@@ -59,6 +59,9 @@
 #define number_of_memories byte(12)
 #endif
 
+#ifdef FEATURE_CAPACITIVE_PADDLE_PINS
+#define capacitance_threshold 2
+#endif //FEATURE_CAPACITIVE_PADDLE_PINS
 
 #ifdef FEATURE_LED_RING
 #define led_ring_low_limit 10

@@ -213,7 +213,7 @@ New features in this beta / unstable release:
 
 */
 
-#define CODE_VERSION "2.1.2014020701-UNSTABLE"
+#define CODE_VERSION "2.1.2014021201-UNSTABLE"
 #define eeprom_magic_number 16
 
 #include <stdio.h>
@@ -2716,7 +2716,21 @@ void check_dit_paddle()
   } else {
     dit_paddle = paddle_right;
   }
+
+
+  //pin_value = digitalRead(dit_paddle);
+
+  #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
   pin_value = digitalRead(dit_paddle);
+  #else
+  pin_value = read_capacitive_pin(dit_paddle);
+  if (pin_value > capacitance_threshold) {
+    pin_value = 1;
+  } else {
+    pin_value = 0;
+  }
+  #endif //FEATURE_CAPACITIVE_PADDLE_PINS
+
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
   if (usb_dit) {pin_value = 0;}
@@ -2773,7 +2787,19 @@ void check_dah_paddle()
   } else {
     dah_paddle = paddle_left;
   }
+
+  //pin_value = digitalRead(dah_paddle);
+
+  #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
   pin_value = digitalRead(dah_paddle);
+  #else
+  pin_value = read_capacitive_pin(dah_paddle);
+  if (pin_value > capacitance_threshold) {
+    pin_value = 1;
+  } else {
+    pin_value = 0;
+  }
+  #endif //FEATURE_CAPACITIVE_PADDLE_PINS  
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
   if (usb_dah) {pin_value = 0;}
@@ -8326,10 +8352,12 @@ int memory_end(byte memory_number) {
 
 void initialize_pins() {
   
+  #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
   pinMode (paddle_left, INPUT);
   digitalWrite (paddle_left, HIGH);
   pinMode (paddle_right, INPUT);
   digitalWrite (paddle_right, HIGH);
+  #endif //#ifdef FEATURE_CAPACITIVE_PADDLE_PINS
   
   if (tx_key_line_1) {
     pinMode (tx_key_line_1, OUTPUT);
