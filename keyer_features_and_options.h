@@ -7,8 +7,8 @@
 //#define FEATURE_SAY_HI
 //#define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
-#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is recommended (see documentation)
-#define OPTION_WINKEY_2_SUPPORT     // requires FEATURE_WINKEY_EMULATION
+//#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is highly recommended (see documentation)
+//#define OPTION_WINKEY_2_SUPPORT     // requires FEATURE_WINKEY_EMULATION
 //#define FEATURE_BEACON
 //#define FEATURE_CALLSIGN_RECEIVE_PRACTICE
 //#define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
@@ -31,9 +31,8 @@
 //#define FEATURE_DIT_DAH_BUFFER_CONTROL
 //#define FEATURE_HI_PRECISION_LOOP_TIMING
 //#define FEATURE_USB_MOUSE
-//#define FEATURE_CAPACITIVE_PADDLE_PINS
+//#define FEATURE_CAPACITIVE_PADDLE_PINS // remove the bypass capacitors on the paddle_left and paddle_right lines when using capactive paddles
 //#define FEATURE_LED_RING  // Mayhew Labs Led Ring support
-
 
 //#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
 #define OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING

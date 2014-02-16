@@ -185,7 +185,7 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 New features in this beta / unstable release:
 
   2.1.2014010901-UNSTABLE
-    - fixed bug with Winkey 00 admin command which affected Win-Test
+    - fixed bug with Winkey 00 admin command which affected Win-Test program
 
   2.1.2014012101-UNSTABLE
     - no longer necessary to manually uncomment:
@@ -210,10 +210,12 @@ New features in this beta / unstable release:
   2.1.2014020701-UNSTABLE
     fixed compile bug involving hz_sidetone when OPTION_MORE_DISPLAY_MSGS is enabled
 
+  2.1.2014021601-UNSTABLE
+    fixed compile bug with OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
 
 */
 
-#define CODE_VERSION "2.1.2014021201-UNSTABLE"
+#define CODE_VERSION "2.1.2014021601-UNSTABLE"
 #define eeprom_magic_number 16
 
 #include <stdio.h>
@@ -222,7 +224,7 @@ New features in this beta / unstable release:
 #include <avr/wdt.h>
 
 
-#include "keyer.h"               // uncomment this for Sublime/Stino compilation
+//#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
@@ -7402,7 +7404,7 @@ int convert_cw_number_to_ascii (long number_in)
    case 121212: return 46; break; // . //sp5iou
    case 1112112: return 36; break; // $ //sp5iou
    case 12111: return 38; break; // & // sp5iou
-   case 221122: return 44; break; // ,
+   //case 221122: return 44; break; // ,
    case 122221: return 39; break; // ' // sp5iou
    case 121121: return 34; break; // " // sp5iou
    case 122121: return 64; break; // @ // sp5iou
