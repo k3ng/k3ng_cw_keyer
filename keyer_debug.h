@@ -24,3 +24,4 @@
 //#define DEBUG_BUTTON_ARRAY
 //#define DEBUG_USB
 //#define DEBUG_USB_KEYBOARD
+//#define DEBUG_CAPACITIVE_PADDLE

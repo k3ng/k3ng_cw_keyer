@@ -213,9 +213,12 @@ New features in this beta / unstable release:
   2.1.2014021601-UNSTABLE
     fixed compile bug with OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
 
+  2.1.2014021701-UNSTABLE
+    fixed bugs with FEATURE_CAPACITIVE_PADDLE_PINS
+
 */
 
-#define CODE_VERSION "2.1.2014021601-UNSTABLE"
+#define CODE_VERSION "2.1.2014021701-UNSTABLE"
 #define eeprom_magic_number 16
 
 #include <stdio.h>
@@ -2720,18 +2723,9 @@ void check_dit_paddle()
   }
 
 
-  //pin_value = digitalRead(dit_paddle);
+  pin_value = paddle_pin_read(dit_paddle);
 
-  #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
-  pin_value = digitalRead(dit_paddle);
-  #else
-  pin_value = read_capacitive_pin(dit_paddle);
-  if (pin_value > capacitance_threshold) {
-    pin_value = 1;
-  } else {
-    pin_value = 0;
-  }
-  #endif //FEATURE_CAPACITIVE_PADDLE_PINS
+
 
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
@@ -2768,7 +2762,7 @@ void check_dit_paddle()
       clear_send_buffer();
       #ifdef OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT
       dit_buffer = 0;
-      while (!digitalRead(dit_paddle)) {};
+      while (!paddle_pin_read(dit_paddle)) {};
       memory_rpt_interrupt_flag = 1;
       #endif
     }
@@ -2790,18 +2784,9 @@ void check_dah_paddle()
     dah_paddle = paddle_left;
   }
 
-  //pin_value = digitalRead(dah_paddle);
 
-  #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
-  pin_value = digitalRead(dah_paddle);
-  #else
-  pin_value = read_capacitive_pin(dah_paddle);
-  if (pin_value > capacitance_threshold) {
-    pin_value = 1;
-  } else {
-    pin_value = 0;
-  }
-  #endif //FEATURE_CAPACITIVE_PADDLE_PINS  
+  pin_value = paddle_pin_read(dah_paddle);
+
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
   if (usb_dah) {pin_value = 0;}
@@ -3056,7 +3041,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #endif //FEATURE_USB_KEYBOARD || FEATURE_USB_MOUSE
     
     if (configuration.keyer_mode != ULTIMATIC) {
-      if ((configuration.keyer_mode == IAMBIC_A) && (digitalRead(paddle_left) == LOW ) && (digitalRead(paddle_right) == LOW )) {
+      if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
           iambic_flag = 1;
       }    
    
@@ -3078,7 +3063,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
           }
         }     
       } else {
-        if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (digitalRead(paddle_left) == LOW ) && (digitalRead(paddle_right) == LOW )) {
+        if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
           dah_buffer = 0;
           dit_buffer = 0;         
         }          
@@ -3095,9 +3080,9 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
     // blow out prematurely if we're automatic sending and a paddle gets hit
     #ifdef FEATURE_COMMAND_BUTTONS
-    if (sending_type == AUTOMATIC_SENDING && (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
+    if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
     #else
-    if (sending_type == AUTOMATIC_SENDING && (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || dit_buffer || dah_buffer)) {
+    if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
     #endif
     if (machine_mode == NORMAL) {
       return;
@@ -3105,7 +3090,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
   }   
  }
  
-  if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (digitalRead(paddle_left) == HIGH ) && (digitalRead(paddle_right) == HIGH )) {
+  if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
       iambic_flag = 0;
       dit_buffer = 0;
       dah_buffer = 0;
@@ -3160,7 +3145,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #endif //FEATURE_USB_KEYBOARD
     
     if (configuration.keyer_mode != ULTIMATIC) {
-      if ((configuration.keyer_mode == IAMBIC_A) && (digitalRead(paddle_left) == LOW ) && (digitalRead(paddle_right) == LOW )) {
+      if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
           iambic_flag = 1;
       }    
   
@@ -3182,7 +3167,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
           }
         }     
       } else {
-        if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (digitalRead(paddle_left) == LOW ) && (digitalRead(paddle_right) == LOW )) {
+        if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
           dah_buffer = 0;
           dit_buffer = 0;         
         }          
@@ -3199,9 +3184,9 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
     // blow out prematurely if we're automatic sending and a paddle gets hit
     #ifdef FEATURE_COMMAND_BUTTONS
-    if (sending_type == AUTOMATIC_SENDING && (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
+    if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
     #else
-    if (sending_type == AUTOMATIC_SENDING && (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || dit_buffer || dah_buffer)) {
+    if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
     #endif
     if (machine_mode == NORMAL) {
       return;
@@ -3209,7 +3194,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
   }   
  }
  
-  if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (digitalRead(paddle_left) == HIGH ) && (digitalRead(paddle_right) == HIGH )) {
+  if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
       iambic_flag = 0;
       dit_buffer = 0;
       dah_buffer = 0;
@@ -3603,18 +3588,18 @@ void command_dah_to_dit_ratio_adjust () {
   while (looping) {
    send_dit(AUTOMATIC_SENDING);
    send_dah(AUTOMATIC_SENDING);
-   if (digitalRead(paddle_left) == LOW) {
+   if (paddle_pin_read(paddle_left) == LOW) {
      adjust_dah_to_dit_ratio(10);
    }
-   if (digitalRead(paddle_right) == LOW) {
+   if (paddle_pin_read(paddle_right) == LOW) {
      adjust_dah_to_dit_ratio(-10);
    }
-   while ((digitalRead(paddle_left) == LOW && digitalRead(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+   while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
      looping = 0;
    }
    
   }
-  while (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   dit_buffer = 0;
   dah_buffer = 0;
 }
@@ -3637,42 +3622,42 @@ void command_tuning_mode() {
   key_tx = 1;
   while (looping) {
 
-    if (digitalRead(paddle_left) == LOW) {
+    if (paddle_pin_read(paddle_left) == LOW) {
       tx_and_sidetone_key(1,MANUAL_SENDING);
       ptt_key();
       latched = 0;
     } else {
-       if (digitalRead(paddle_left) == HIGH && latched == 0) {
+       if (paddle_pin_read(paddle_left) == HIGH && latched == 0) {
          tx_and_sidetone_key(0,MANUAL_SENDING);
          ptt_unkey();
        }
     }
 
-    if (digitalRead(paddle_right) == LOW && latched == 0) {
+    if (paddle_pin_read(paddle_right) == LOW && latched == 0) {
       latched = 1;
       tx_and_sidetone_key(1,MANUAL_SENDING);
       ptt_key();
-      while ((digitalRead(paddle_right) == LOW) && (digitalRead(paddle_left) == HIGH)) {
+      while ((paddle_pin_read(paddle_right) == LOW) && (paddle_pin_read(paddle_left) == HIGH)) {
         delay(10);
       }
     } else {
-      if ((digitalRead(paddle_right) == LOW) && (latched)) {
+      if ((paddle_pin_read(paddle_right) == LOW) && (latched)) {
         latched = 0;
         tx_and_sidetone_key(0,MANUAL_SENDING);
         ptt_unkey();
-        while ((digitalRead(paddle_right) == LOW) && (digitalRead(paddle_left) == HIGH)) {
+        while ((paddle_pin_read(paddle_right) == LOW) && (paddle_pin_read(paddle_left) == HIGH)) {
           delay(10);
         }
       }
     }
-   if ((analogbuttonread(0)) || ((digitalRead(paddle_left) == LOW) && (digitalRead(paddle_right) == LOW))) { // if paddles are squeezed or button0 pressed - exit
+   if ((analogbuttonread(0)) || ((paddle_pin_read(paddle_left) == LOW) && (paddle_pin_read(paddle_right) == LOW))) { // if paddles are squeezed or button0 pressed - exit
      looping = 0;
    }
    
   }
   tx_and_sidetone_key(0,MANUAL_SENDING);
   ptt_unkey();
-  while (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   key_tx = 0;
   send_dit(AUTOMATIC_SENDING);
   dit_buffer = 0;
@@ -3707,7 +3692,7 @@ void command_sidetone_freq_adj() {
 
   while (looping) {
     tone(sidetone_line, configuration.hz_sidetone);
-    if (digitalRead(paddle_left) == LOW) {
+    if (paddle_pin_read(paddle_left) == LOW) {
       #ifdef FEATURE_DISPLAY
       sidetone_adj(5);      
       lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);        
@@ -3716,7 +3701,7 @@ void command_sidetone_freq_adj() {
       #endif
       delay(10);
     }
-    if (digitalRead(paddle_right) == LOW) {
+    if (paddle_pin_read(paddle_right) == LOW) {
       #ifdef FEATURE_DISPLAY
       sidetone_adj(-5);
       lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);       
@@ -3725,13 +3710,13 @@ void command_sidetone_freq_adj() {
       #endif
       delay(10);
     }
-    while ((digitalRead(paddle_left) == LOW && digitalRead(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
       looping = 0;
     }
     
 
   }
-  while (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   noTone(sidetone_line);
 
 }
@@ -3751,19 +3736,19 @@ void command_speed_mode()
 
   while (looping) {
     send_dit(AUTOMATIC_SENDING);
-    if ((digitalRead(paddle_left) == LOW)) {
+    if ((paddle_pin_read(paddle_left) == LOW)) {
       speed_change(1);
     }
-    if ((digitalRead(paddle_right) == LOW)) {
+    if ((paddle_pin_read(paddle_right) == LOW)) {
       speed_change(-1);
     }
-    while ((digitalRead(paddle_left) == LOW && digitalRead(paddle_right) == LOW) || (analogbuttonread(0) ))  // if paddles are squeezed or button0 pressed - exit
+    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0) ))  // if paddles are squeezed or button0 pressed - exit
     {
       looping = 0;
     }
 
   }
-  while (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   #ifndef FEATURE_DISPLAY
   // announce speed in CW
   wpm_string = String(configuration.wpm, DEC);
@@ -4078,7 +4063,7 @@ void check_command_buttons()
     #endif
     button_depress_time = millis();
     while ((analogbuttontemp == analogbuttonpressed()) && ((millis() - button_depress_time) < 1000)) {
-      if ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW)) {
+      if ((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW)) {
         button_depress_time = 1001;  // if button 0 is held and a paddle gets hit, assume we have a hold and shortcut out
       }
     }
@@ -4132,7 +4117,7 @@ void check_command_buttons()
           key_tx = 0;
           // do stuff if this is a command button hold down
           while (analogbuttonpressed() == 0) {
-            if (digitalRead(paddle_left) == LOW) {                     // left paddle increase speed
+            if (paddle_pin_read(paddle_left) == LOW) {                     // left paddle increase speed
               speed_change(1);
               previous_sidetone_mode = configuration.sidetone_mode;
               configuration.sidetone_mode = SIDETONE_ON; 
@@ -4155,7 +4140,7 @@ void check_command_buttons()
               #endif
 
             }
-            if (digitalRead(paddle_right) == LOW) {                    // right paddle decreases speed
+            if (paddle_pin_read(paddle_right) == LOW) {                    // right paddle decreases speed
               speed_change(-1);
               previous_sidetone_mode = configuration.sidetone_mode;
               configuration.sidetone_mode = SIDETONE_ON; 
@@ -4182,7 +4167,7 @@ void check_command_buttons()
        }  //(analogbuttontemp == 0)
        if ((analogbuttontemp > 0) && (analogbuttontemp < analog_buttons_number_of_buttons)) {
          while (analogbuttonpressed() == analogbuttontemp) {
-            if (((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW)) && (analogbuttontemp < (number_of_memories + 1))){
+            if (((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW)) && (analogbuttontemp < (number_of_memories + 1))){
               #ifdef FEATURE_MEMORIES
               repeat_memory = analogbuttontemp - 1;
               last_memory_repeat_time = 0;
@@ -4222,7 +4207,7 @@ void service_dit_dah_buffers()
   #endif      
       
   if ((configuration.keyer_mode == IAMBIC_A) || (configuration.keyer_mode == IAMBIC_B) || (configuration.keyer_mode == ULTIMATIC)) {
-    if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (digitalRead(paddle_left)) && (digitalRead(paddle_right))) {
+    if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left)) && (paddle_pin_read(paddle_right))) {
       iambic_flag = 0;
       dit_buffer = 0;
       dah_buffer = 0;
@@ -7196,12 +7181,12 @@ void us_callsign_practice()
   
       delay(100);
       #ifdef FEATURE_COMMAND_BUTTONS
-      while ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW) || (analogbuttonread(0))) {
+      while ((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) {
         loop1 = 0;
         loop2 = 0;
       }
       #else 
-      while ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW)) {
+      while ((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW)) {
         loop1 = 0;
         loop2 = 0;
       }    
@@ -8197,7 +8182,7 @@ void program_memory(int memory_number)
   dit_buffer = 0;
   dah_buffer = 0;
   #ifdef FEATURE_COMMAND_BUTTONS
-  while ((digitalRead(paddle_left) == HIGH) && (digitalRead(paddle_right) == HIGH) && (!analogbuttonread(0))) { }  // loop until user starts sending or hits the button
+  while ((paddle_pin_read(paddle_left) == HIGH) && (paddle_pin_read(paddle_right) == HIGH) && (!analogbuttonread(0))) { }  // loop until user starts sending or hits the button
   #endif
 
   while (loop2) {
@@ -8354,12 +8339,12 @@ int memory_end(byte memory_number) {
 
 void initialize_pins() {
   
-  #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
+  //#ifndef FEATURE_CAPACITIVE_PADDLE_PINS
   pinMode (paddle_left, INPUT);
   digitalWrite (paddle_left, HIGH);
   pinMode (paddle_right, INPUT);
   digitalWrite (paddle_right, HIGH);
-  #endif //#ifdef FEATURE_CAPACITIVE_PADDLE_PINS
+  //#endif //#ifdef FEATURE_CAPACITIVE_PADDLE_PINS
   
   if (tx_key_line_1) {
     pinMode (tx_key_line_1, OUTPUT);
@@ -8818,8 +8803,8 @@ void initialize_watchdog(){
 void check_eeprom_for_initialization(){
 
   // do an eeprom reset to defaults if paddles are squeezed
-  if (digitalRead(paddle_left) == LOW && digitalRead(paddle_right) == LOW) {
-    while (digitalRead(paddle_left) == LOW && digitalRead(paddle_right) == LOW) {}
+  if (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {
+    while (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {}
     write_settings_to_eeprom(1);
     beep_boop();
     beep_boop();
@@ -8840,12 +8825,12 @@ void check_eeprom_for_initialization(){
 void check_for_beacon_mode(){
 
   // check for beacon mode (paddle_left == low) or straight key mode (paddle_right == low)
-  if (digitalRead(paddle_left) == LOW) {
+  if (paddle_pin_read(paddle_left) == LOW) {
     #ifdef FEATURE_BEACON
     machine_mode = BEACON;
     #endif
   } else {
-    if (digitalRead(paddle_right) == LOW) {
+    if (paddle_pin_read(paddle_right) == LOW) {
       configuration.keyer_mode = STRAIGHT;
     }
   }
@@ -9816,6 +9801,8 @@ uint8_t read_capacitive_pin(int pinToMeasure) {
   
   */
   
+
+
   // Variables used to translate from Arduino to AVR pin naming
   
   volatile uint8_t* port;
@@ -9831,23 +9818,40 @@ uint8_t read_capacitive_pin(int pinToMeasure) {
   ddr = portModeRegister(digitalPinToPort(pinToMeasure));
   bitmask = digitalPinToBitMask(pinToMeasure);
   pin = portInputRegister(digitalPinToPort(pinToMeasure));
-  
   // Discharge the pin first by setting it low and output
-  
   *port &= ~(bitmask);
   *ddr  |= bitmask;
   delay(1);
-  
+  // Prevent the timer IRQ from disturbing our measurement
+  noInterrupts();
   // Make the pin an input with the internal pull-up on
-  
   *ddr &= ~(bitmask);
   *port |= bitmask;
 
   // Now see how long the pin to get pulled up. This manual unrolling of the loop
   // decreases the number of hardware cycles between each read of the pin,
   // thus increasing sensitivity.
-
   uint8_t cycles = 17;
+       if (*pin & bitmask) { cycles =  0;}
+  else if (*pin & bitmask) { cycles =  1;}
+  else if (*pin & bitmask) { cycles =  2;}
+  else if (*pin & bitmask) { cycles =  3;}
+  else if (*pin & bitmask) { cycles =  4;}
+  else if (*pin & bitmask) { cycles =  5;}
+  else if (*pin & bitmask) { cycles =  6;}
+  else if (*pin & bitmask) { cycles =  7;}
+  else if (*pin & bitmask) { cycles =  8;}
+  else if (*pin & bitmask) { cycles =  9;}
+  else if (*pin & bitmask) { cycles = 10;}
+  else if (*pin & bitmask) { cycles = 11;}
+  else if (*pin & bitmask) { cycles = 12;}
+  else if (*pin & bitmask) { cycles = 13;}
+  else if (*pin & bitmask) { cycles = 14;}
+  else if (*pin & bitmask) { cycles = 15;}
+  else if (*pin & bitmask) { cycles = 16;}
+
+  // End of timing-critical section
+  interrupts();
 
   // Discharge the pin again by setting it low and output
   //  It's important to leave the pins low if you want to 
@@ -9855,83 +9859,27 @@ uint8_t read_capacitive_pin(int pinToMeasure) {
   //  the sensor is left pulled high, when you touch
   //  two sensors, your body will transfer the charge between
   //  sensors.
-  
   *port &= ~(bitmask);
   *ddr  |= bitmask;
 
-  if (*pin & bitmask) {
-    cycles = 0;
-  } else { 
-    if (*pin & bitmask) {
-      cycles =  1;
-    } else { 
-      if (*pin & bitmask) {
-        cycles =  2;
-      } else {
-        if (*pin & bitmask) {
-          cycles =  3;
-        } else {
-          if (*pin & bitmask) {
-            cycles =  4;
-          } else {
-            if (*pin & bitmask) {
-              cycles =  5;
-            } else {
-              if (*pin & bitmask) {
-                cycles =  6;
-              } else {
-                if (*pin & bitmask) {
-                  cycles =  7;
-                } else {
-                  if (*pin & bitmask) {
-                    cycles =  8;
-                  } else {
-                    if (*pin & bitmask) {
-                      cycles =  9;
-                    } else {
-                      if (*pin & bitmask) {
-                        cycles = 10;
-                      } else {
-                        if (*pin & bitmask) {
-                          cycles = 11;
-                        } else {
-                          if (*pin & bitmask) {
-                            cycles = 12;
-                          } else {
-                            if (*pin & bitmask) {
-                              cycles = 13;
-                            } else {
-                              if (*pin & bitmask) {
-                                cycles = 14;
-                              } else {
-                                if (*pin & bitmask) {
-                                  cycles = 15;
-                                } else {
-                                  if (*pin & bitmask) {
-                                    cycles = 16;
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+  #ifdef DEBUG_CAPACITIVE_PADDLE
+  static unsigned long last_cap_paddle_debug = 0;
+  if ((millis() - last_cap_paddle_debug) > 250){
+    Serial.flush();
+    Serial.print("read_capacitive_pin: pin:");
+    Serial.print(pinToMeasure);
+    Serial.print(" cyc:");
+    Serial.println(cycles);
+    last_cap_paddle_debug = millis();
   }
+  #endif //DEBUG_CAPACITIVE_PADDLE
 
   return cycles;
 
 }
 
 #endif //FEATURE_CAPACITIVE_PADDLE_PINS
+
 //---------------------------------------------------------------------
 #ifdef FEATURE_LED_RING
 void update_led_ring(){
@@ -9973,3 +9921,19 @@ void update_led_ring(){
         
 }
 #endif //FEATURE_LED_RING
+//---------------------------------------------------------------------
+int paddle_pin_read(int pin_to_read){
+
+
+  #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
+  return digitalRead(pin_to_read);
+  #else
+  if (read_capacitive_pin(pin_to_read) > capacitance_threshold) {
+    return LOW;
+  } else {
+    return HIGH;
+  }
+  #endif //FEATURE_CAPACITIVE_PADDLE_PINS  
+
+}
+//---------------------------------------------------------------------
