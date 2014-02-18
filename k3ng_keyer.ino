@@ -215,10 +215,13 @@ New features in this beta / unstable release:
 
   2.1.2014021701-UNSTABLE
     fixed bugs with FEATURE_CAPACITIVE_PADDLE_PINS
+    
+  2.1.2014021702-UNSTABLE
+    fixed issue with Arduino IDE compilation and FEATURE_CAPACITIVE_PADDLE_PINS code
 
 */
 
-#define CODE_VERSION "2.1.2014021701-UNSTABLE"
+#define CODE_VERSION "2.1.2014021702-UNSTABLE"
 #define eeprom_magic_number 16
 
 #include <stdio.h>
@@ -9832,7 +9835,7 @@ uint8_t read_capacitive_pin(int pinToMeasure) {
   // decreases the number of hardware cycles between each read of the pin,
   // thus increasing sensitivity.
   uint8_t cycles = 17;
-       if (*pin & bitmask) { cycles =  0;}
+  /*     if (*pin & bitmask) { cycles =  0;}
   else if (*pin & bitmask) { cycles =  1;}
   else if (*pin & bitmask) { cycles =  2;}
   else if (*pin & bitmask) { cycles =  3;}
@@ -9848,7 +9851,76 @@ uint8_t read_capacitive_pin(int pinToMeasure) {
   else if (*pin & bitmask) { cycles = 13;}
   else if (*pin & bitmask) { cycles = 14;}
   else if (*pin & bitmask) { cycles = 15;}
-  else if (*pin & bitmask) { cycles = 16;}
+  else if (*pin & bitmask) { cycles = 16;}*/
+  
+  
+  if (*pin & bitmask) {
+    cycles = 0;
+  } else { 
+    if (*pin & bitmask) {
+      cycles =  1;
+    } else { 
+      if (*pin & bitmask) {
+        cycles =  2;
+      } else {
+        if (*pin & bitmask) {
+          cycles =  3;
+        } else {
+          if (*pin & bitmask) {
+            cycles =  4;
+          } else {
+            if (*pin & bitmask) {
+              cycles =  5;
+            } else {
+              if (*pin & bitmask) {
+                cycles =  6;
+              } else {
+                if (*pin & bitmask) {
+                  cycles =  7;
+                } else {
+                  if (*pin & bitmask) {
+                    cycles =  8;
+                  } else {
+                    if (*pin & bitmask) {
+                      cycles =  9;
+                    } else {
+                      if (*pin & bitmask) {
+                        cycles = 10;
+                      } else {
+                        if (*pin & bitmask) {
+                          cycles = 11;
+                        } else {
+                          if (*pin & bitmask) {
+                            cycles = 12;
+                          } else {
+                            if (*pin & bitmask) {
+                              cycles = 13;
+                            } else {
+                              if (*pin & bitmask) {
+                                cycles = 14;
+                              } else {
+                                if (*pin & bitmask) {
+                                  cycles = 15;
+                                } else {
+                                  if (*pin & bitmask) {
+                                    cycles = 16;
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   // End of timing-critical section
   interrupts();
