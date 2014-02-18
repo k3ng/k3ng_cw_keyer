@@ -219,9 +219,12 @@ New features in this beta / unstable release:
   2.1.2014021702-UNSTABLE
     fixed issue with Arduino IDE compilation and FEATURE_CAPACITIVE_PADDLE_PINS code
 
+  2.1.2014021801-UNSTABLE
+    fixed issue with N command mode command - fix from LA3ZA
+
 */
 
-#define CODE_VERSION "2.1.2014021702-UNSTABLE"
+#define CODE_VERSION "2.1.2014021801-UNSTABLE"
 #define eeprom_magic_number 16
 
 #include <stdio.h>
@@ -3413,22 +3416,22 @@ void command_mode ()
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
         #ifdef FEATURE_MEMORIES
         case 1221: command_program_memory(); break;                       // P - program a memory
+        #endif //FEATURE_MEMORIES  Acknowledgement: LA3ZA fixed!
         case 21: // N - paddle mode toggle
           if (configuration.paddle_mode == PADDLE_NORMAL) {
             configuration.paddle_mode = PADDLE_REVERSE;
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
-            #endif 
+            #endif //FEATURE_DISPLAY
           } else {
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
-            #endif             
+            #endif //FEATURE_DISPLAY         
             configuration.paddle_mode = PADDLE_NORMAL;
           }
           config_dirty = 1;
           send_dit(AUTOMATIC_SENDING);
           break;  
-        #endif
         case 222: // O - toggle sidetone on and off
           if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {
             #ifdef FEATURE_DISPLAY
