@@ -222,9 +222,13 @@ New features in this beta / unstable release:
   2.1.2014021801-UNSTABLE
     fixed issue with N command mode command - fix from LA3ZA
 
+  2.1.2014022001-UNSTABLE
+    improved paddle echo and it should work better with autospace now
+    OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
+
 */
 
-#define CODE_VERSION "2.1.2014021801-UNSTABLE"
+#define CODE_VERSION "2.1.2014022001-UNSTABLE"
 #define eeprom_magic_number 16
 
 #include <stdio.h>
@@ -2658,7 +2662,13 @@ void check_ptt_tail()
         }
       } else {
         if ((millis() - ptt_time) > ptt_tail_time[configuration.current_tx-1]) {
+          #ifdef OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
+          if (!send_buffer_bytes){
+            ptt_unkey();
+          }
+          #else
           ptt_unkey();
+          #endif //OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
         }
       }
     }
@@ -2851,34 +2861,56 @@ void send_dit(byte sending_type)
 //  }
   loop_element_lengths((2.0-(float(configuration.weighting)/50)),(-1.0*keying_compensation),character_wpm,sending_type);
   #ifdef FEATURE_AUTOSPACE
+
+  byte autospace_end_of_character_flag = 0;
+
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active)) {
     check_paddles();
   }
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active) && (dit_buffer == 0) && (dah_buffer == 0)) {
     loop_element_lengths(2,0,configuration.wpm,sending_type);
+    autospace_end_of_character_flag = 1;
   }
   #endif
 
   #ifdef FEATURE_WINKEY_EMULATION
   if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_type == MANUAL_SENDING)) {
     winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 1;
-    winkey_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE    
   }
   #endif
 
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
   if ((cli_paddle_echo) && (sending_type == MANUAL_SENDING)) {
     cli_paddle_echo_buffer = (cli_paddle_echo_buffer * 10) + 1;
-    cli_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    cli_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+  
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){cli_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE
+
   }
   #endif
 
   #ifdef FEATURE_DISPLAY
   if ((lcd_paddle_echo) && (sending_type == MANUAL_SENDING)) {
     lcd_paddle_echo_buffer = (lcd_paddle_echo_buffer * 10) + 1;
-    lcd_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    lcd_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){lcd_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE    
   }
   #endif
+
+  #ifdef FEATURE_AUTOSPACE
+  autospace_end_of_character_flag = 0;
+  #endif //FEATURE_AUTOSPACE
+
   
   being_sent = SENDING_NOTHING;
   last_sending_type = sending_type;
@@ -2923,34 +2955,61 @@ void send_dah(byte sending_type)
 //  }
   loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),character_wpm,sending_type);
   #ifdef FEATURE_AUTOSPACE
+
+  byte autospace_end_of_character_flag = 0;
+
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active)) {
     check_paddles();
   }
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active) && (dit_buffer == 0) && (dah_buffer == 0)) {
     loop_element_lengths(2,0,configuration.wpm,sending_type);
+    autospace_end_of_character_flag = 1;
   }
   #endif
 
   #ifdef FEATURE_WINKEY_EMULATION
   if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_type == MANUAL_SENDING)) {
     winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 2;
-    winkey_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE
+
   }
   #endif
 
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
   if ((cli_paddle_echo) && (sending_type == MANUAL_SENDING)) {
     cli_paddle_echo_buffer = (cli_paddle_echo_buffer * 10) + 2;
-    cli_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    cli_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){cli_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE
+
+
   }
   #endif
 
   #ifdef FEATURE_DISPLAY
   if ((lcd_paddle_echo) && (sending_type == MANUAL_SENDING)) {
     lcd_paddle_echo_buffer = (lcd_paddle_echo_buffer * 10) + 2;
-    lcd_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    lcd_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){lcd_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE    
+
+
   }
   #endif
+
+  #ifdef FEATURE_AUTOSPACE
+  autospace_end_of_character_flag = 0;
+  #endif //FEATURE_AUTOSPACE  
 
 //  if ((keyer_mode == IAMBIC_A) && (iambic_flag)) {
 //    iambic_flag = 0;
@@ -7813,7 +7872,7 @@ void play_memory(byte memory_number)
                   }       
                 }           
                 break;
-              //zzzzz
+          
               case 'S': // insert space
                 send_char(' ',NORMAL);
                 break;

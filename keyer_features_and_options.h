@@ -4,7 +4,7 @@
 #define FEATURE_SERIAL
 #define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
 //#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
-//#define FEATURE_SAY_HI
+#define FEATURE_SAY_HI
 //#define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
 //#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is highly recommended (see documentation)
@@ -52,4 +52,4 @@
 //#define OPTION_MOUSE_MOVEMENT_PADDLE               // experimental (just fooling around) - mouse movement will act like a paddle
 //#define OPTION_NON_ENGLISH_EXTENSIONS  // add support for additional CW characters (i.e. À, Å, Þ, etc.)
 //#define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
-
+#define OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED    // this option keeps PTT high if there are characters buffered from the keyboard, the serial interface, or Winkey
