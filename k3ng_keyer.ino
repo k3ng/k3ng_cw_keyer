@@ -226,9 +226,12 @@ New features in this beta / unstable release:
     improved paddle echo and it should work better with autospace now
     OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
 
+  2.1.2014022101-UNSTABLE
+    #define OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY // for English/Japanese font LCD controller (HD44780UA00) which has a few European characters (code donated by LA3ZA)
+
 */
 
-#define CODE_VERSION "2.1.2014022001-UNSTABLE"
+#define CODE_VERSION "2.1.2014022101-UNSTABLE"
 #define eeprom_magic_number 16
 
 #include <stdio.h>
@@ -237,7 +240,7 @@ New features in this beta / unstable release:
 #include <avr/wdt.h>
 
 
-//#include "keyer.h"               // uncomment this for Sublime/Stino compilation
+#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
@@ -4478,6 +4481,19 @@ void send_char(char cw_char, byte omit_letterspace)
       case 211: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ó'
       case 220: send_dits(2);send_dahs(2);break; // 'Ü'
       case 223: send_dits(6);break; // 'ß'
+
+      // for English/Japanese font LCD controller which has a few European characters also (HD44780UA00) (LA3ZA code)
+      case 225: send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'ä' LA3ZA
+      case 239: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'ö' LA3ZA
+      case 242: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'ø' LA3ZA
+      case 245: send_dits(2);send_dahs(2);break; // 'ü' LA3ZA
+      case 246: send_dahs(4);break; // almost '' or rather sigma LA3ZA
+      case 252: send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // å (sort of) LA3ZA
+      case 238: send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dahs(2);break; // 'ñ' LA3ZA
+      case 226: send_dits(6);break; // 'ß' LA3ZA
+
+
+
       #endif //OPTION_NON_ENGLISH_EXTENSIONS      
       
       case '|': loop_element_lengths(0.5,0,configuration.wpm,AUTOMATIC_SENDING); return; break;
@@ -7467,25 +7483,44 @@ int convert_cw_number_to_ascii (long number_in)
    case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou
    #endif //OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
 
+
    #ifdef OPTION_NON_ENGLISH_EXTENSIONS
+   
+   #ifdef OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
+   // for English/Japanese font LCD controller which has a few European characters also (HD44780UA00):
+   case 1212: return 225; break;  // ä LA3ZA
+// case 2221: return 239; break;    // ö LA3ZA - customize for your locality
+   case 2221: return 242; break;    // ø (sort of) LA3ZA
+   case 1122: return 245; break;    // ü LA3ZA
+   case 2222: return 246; break;    // almost  or rather sigma LA3ZA
+   case 12212: return 252; break;   // å (sort of) LA3ZA
+   case 22122: return 238; break;   // ñ LA3ZA
+   case 111111: return 226; break;   // ß LA3ZA
+   
+   #else  
+   // for English/Cyrillic/Western European font LCD controller (HD44780UA02):
    case 12212: return 197; break;   // Å   - customize for your locality  ( 1 = dit, 2 = dah, return code is ASCII code )
-   case 1212: return 196; break;    // Ä   - customize for your locality
+   //case 1212: return 196; break;    // Ä   - customize for your locality
    //case 12212: return 192; break; // À   - customize for your locality
    //case 1212: return 197; break;  // Ä   - customize for your locality
-   //case 1212: return 198; break;  // Æ   - customize for your locality
-   case 21211: return 199; break;   // Ç
-   case 11221: return 208; break;   // Ð
-   case 2222: return 138; break;    // Š
-   case 12112: return 200; break;   // È
-   case 11211: return 201; break;   // É
-   case 221121: return 142; break;  // Ž
+   case 1212: return 198; break;  // Æ   - customize for your locality
+   case 2222: return 138; break;    // 
    case 22122: return 209; break;   // Ñ
-   case 2221: return 214; break;    // Ö 
+   //case 2221: return 214; break;    // Ö 
    //case 2221: return 211; break;  // Ó   - customize for your locality  ( 1 = dit, 2 = dah, return code is ASCII code )
-   //case 2221: return 216; break;  // Ø   - customize for your locality
+   case 2221: return 216; break;  // Ø   - customize for your locality
    case 1122: return 220; break;    // Ü 
    case 111111: return 223; break;   // ß
+   #endif //OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
+   
+   case 21211: return 199; break;   // Ç
+   case 11221: return 208; break;   // Ð
+      case 12112: return 200; break;   // È
+   case 11211: return 201; break;   // É
+   case 221121: return 142; break;  // 
+   
    #endif //OPTION_NON_ENGLISH_EXTENSIONS
+
 
    default: return 254; break;
  }

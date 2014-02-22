@@ -53,3 +53,4 @@
 //#define OPTION_NON_ENGLISH_EXTENSIONS  // add support for additional CW characters (i.e. À, Å, Þ, etc.)
 //#define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 #define OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED    // this option keeps PTT high if there are characters buffered from the keyboard, the serial interface, or Winkey
+#define OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY // for English/Japanese font LCD controller (HD44780UA00) which has a few European characters (code donated by LA3ZA)
