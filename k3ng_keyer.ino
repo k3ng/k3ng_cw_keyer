@@ -229,9 +229,12 @@ New features in this beta / unstable release:
   2.1.2014022101-UNSTABLE
     #define OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY // for English/Japanese font LCD controller (HD44780UA00) which has a few European characters (code donated by LA3ZA)
 
+  2.1.2014030201-UNSTABLE  
+    OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code
+
 */
 
-#define CODE_VERSION "2.1.2014022101-UNSTABLE"
+#define CODE_VERSION "2.1.2014030201-UNSTABLE"
 #define eeprom_magic_number 16
 
 #include <stdio.h>
@@ -240,7 +243,7 @@ New features in this beta / unstable release:
 #include <avr/wdt.h>
 
 
-//#include "keyer.h"               // uncomment this for Sublime/Stino compilation
+#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
@@ -841,6 +844,10 @@ void service_display() {
 void service_lcd_paddle_echo()
 {
 
+  #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+  byte ascii_temp = 0;
+  #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+
   #ifdef DEBUG_LOOP
   Serial.println(F("loop: entering service_lcd_paddle_echo"));
   #endif    
@@ -848,7 +855,25 @@ void service_lcd_paddle_echo()
   static byte lcd_paddle_echo_space_sent = 1;
 
   if ((lcd_paddle_echo_buffer) && (lcd_paddle_echo) && (millis() > lcd_paddle_echo_buffer_decode_time)) {
+    #ifndef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
     display_scroll_print_char(byte(convert_cw_number_to_ascii(lcd_paddle_echo_buffer)));
+    #else //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+    ascii_temp = byte(convert_cw_number_to_ascii(lcd_paddle_echo_buffer));
+    switch (ascii_temp){
+      #ifndef OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
+      case 197: ascii_temp = 6; // Å 
+      #else
+      case 252: ascii_temp = 6; // Å
+      #endif //OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
+      case 198: ascii_temp = 4; // Æ
+      #ifndef OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
+      case 216: ascii_temp = 5; // Ø 
+      #else
+      case 242: ascii_temp = 5; // Ø 
+      #endif //OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
+    }
+    display_scroll_print_char(ascii_temp);
+    #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
     lcd_paddle_echo_buffer = 0;
     lcd_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
     lcd_paddle_echo_space_sent = 0;
@@ -3152,10 +3177,10 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #else
     if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
     #endif
-    if (machine_mode == NORMAL) {
-      return;
-    }
-  }   
+      if (machine_mode == NORMAL) {
+        return;
+      }
+    }   
  }
  
   if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
@@ -4776,7 +4801,7 @@ void service_send_buffer(byte no_print)
     }
 
   }
-
+//zzzzz
   //if the paddles are hit, dump the buffer
   check_paddles();
   if ((dit_buffer || dah_buffer) && (send_buffer_bytes  > 0)) {
@@ -4789,7 +4814,7 @@ void service_send_buffer(byte no_print)
     #endif
     #ifdef FEATURE_WINKEY_EMULATION
     if (winkey_sending && winkey_host_open) {
-      Serial.write(0xc2|winkey_sending|winkey_xoff);
+      Serial.write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
       winkey_interrupted = 1;
     }
     #endif
@@ -7504,7 +7529,7 @@ int convert_cw_number_to_ascii (long number_in)
    //case 12212: return 192; break; // À   - customize for your locality
    //case 1212: return 197; break;  // Ä   - customize for your locality
    case 1212: return 198; break;  // Æ   - customize for your locality
-   case 2222: return 138; break;    // 
+   case 2222: return 138; break;    // Š
    case 22122: return 209; break;   // Ñ
    //case 2221: return 214; break;    // Ö 
    //case 2221: return 211; break;  // Ó   - customize for your locality  ( 1 = dit, 2 = dah, return code is ASCII code )
@@ -7517,7 +7542,7 @@ int convert_cw_number_to_ascii (long number_in)
    case 11221: return 208; break;   // Ð
       case 12112: return 200; break;   // È
    case 11211: return 201; break;   // É
-   case 221121: return 142; break;  // 
+   case 221121: return 142; break;  // Ž
    
    #endif //OPTION_NON_ENGLISH_EXTENSIONS
 
@@ -9048,6 +9073,28 @@ void initialize_display(){
   #ifdef FEATURE_LCD_ADAFRUIT_I2C
   lcd.setBacklight(lcdcolor);
   #endif //FEATURE_LCD_ADAFRUIT_I2C
+
+  #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code
+  byte newChar0[8] = { B10000,B01000,B00100,B00010,B00001,B00010,B00100,B00000}; // >
+  byte Lae[8] ={ B00000,B00000,B11010,B00101,B01111,B10100,B11111,B00000}; // æ
+  byte Loe[8] ={ B00000,B00001,B01110,B10101,B10101,B01110,B10000,B00000}; // ø
+  byte Laa[8] ={ B00100,B00000,B01110,B00001,B01111,B10001,B01111,B00000}; // å
+  byte Sae[8] ={ B01111,B10100,B10100,B11110,B10100,B10100,B10111,B00000}; // Æ
+  byte Soe[8] ={ B00001,B01110,B10011,B10101,B11001,B01110,B10000,B00000}; // Ø
+  byte Saa[8] ={ B00100,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // Å
+  byte VT[8] = { B11111,B10101,B10101,B01110,B01110,B00100,B00100,B00000}; // VT  
+  lcd.createChar(0, newChar0); // upload 8 charaters to the lcd
+  lcd.createChar(1, Lae); // æ
+  lcd.createChar(2, Loe); // ø
+  lcd.createChar(3, Laa); // å
+  lcd.createChar(4, Sae); // Æ
+  lcd.createChar(5, Soe); // Ø
+  lcd.createChar(6, Saa); // Å
+  lcd.createChar(7, VT); // VT ( ;-) 
+  lcd.clear(); // you have to ;o)
+  #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+
+
   lcd_center_print_timed("K3NG Keyer",0,4000);
   #endif //FEATURE_DISPLAY
 

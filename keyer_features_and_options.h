@@ -20,8 +20,8 @@
 //#define FEATURE_AUTOSPACE
 //#define FEATURE_FARNSWORTH
 //#define FEATURE_DL2SBA_BANKSWITCH  // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
-//#define FEATURE_DISPLAY            // LCD display support (include one of the hardware options below)
-//#define FEATURE_LCD_4BIT           // classic LCD disidefplay using 4 I/O lines
+#define FEATURE_DISPLAY            // LCD display support (include one of the hardware options below)
+#define FEATURE_LCD_4BIT           // classic LCD disidefplay using 4 I/O lines
 //#define FEATURE_LCD_ADAFRUIT_I2C            // Adafruit I2C LCD display using MCP23017 at addr 0x20
 //#define FEATURE_LCD_YDv1          // YourDuino I2C LCD display with old LCM 1602 V1 ic
 //#define FEATURE_CW_DECODER
@@ -50,7 +50,8 @@
 //#define OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND        // enable this to ignore the TAB key in the Send CW window (this breaks SO2R functionality in N1MM)
 //#define OPTION_WATCHDOG_TIMER                        // this enables a four second ATmega48/88/168/328 watchdog timer; use for unattended/remote operation only
 //#define OPTION_MOUSE_MOVEMENT_PADDLE               // experimental (just fooling around) - mouse movement will act like a paddle
-//#define OPTION_NON_ENGLISH_EXTENSIONS  // add support for additional CW characters (i.e. À, Å, Þ, etc.)
+#define OPTION_NON_ENGLISH_EXTENSIONS  // add support for additional CW characters (i.e. À, Å, Þ, etc.)
 //#define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 #define OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED    // this option keeps PTT high if there are characters buffered from the keyboard, the serial interface, or Winkey
-#define OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY // for English/Japanese font LCD controller (HD44780UA00) which has a few European characters (code donated by LA3ZA)
+//#define OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY // for English/Japanese font LCD controller (HD44780UA00) which has a few European characters (code donated by LA3ZA)
+#define OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // LCD display suport for non-English (NO/DK/DE) characters - Courtesy of OX1JHM
