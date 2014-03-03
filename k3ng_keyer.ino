@@ -243,7 +243,7 @@ New features in this beta / unstable release:
 #include <avr/wdt.h>
 
 
-#include "keyer.h"               // uncomment this for Sublime/Stino compilation
+//#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
