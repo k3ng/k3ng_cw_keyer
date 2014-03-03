@@ -5,7 +5,7 @@
 #define hz_low_beep 400                  // frequency in hertz of low beep
 #define initial_dah_to_dit_ratio 300     // 300 = 3 / normal 3:1 ratio
 #define initial_ptt_lead_time_tx1 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx1 10         // PTT tail time in mS
+#define initial_ptt_tail_time_tx1 0//10         // PTT tail time in mS
 #define initial_ptt_lead_time_tx2 10         // PTT lead time in mS
 #define initial_ptt_tail_time_tx2 10         // PTT tail time in mS
 #define initial_ptt_lead_time_tx3 10         // PTT lead time in mS

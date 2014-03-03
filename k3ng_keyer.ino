@@ -232,10 +232,13 @@ New features in this beta / unstable release:
   2.1.2014030201-UNSTABLE  
     OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code
 
+  2.1.2014030202-UNSTABLE
+    OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+
 */
 
-#define CODE_VERSION "2.1.2014030201-UNSTABLE"
-#define eeprom_magic_number 16
+#define CODE_VERSION "2.1.2014030202-UNSTABLE"
+#define eeprom_magic_number 17
 
 #include <stdio.h>
 #include <EEPROM.h>
@@ -2681,13 +2684,20 @@ void check_ptt_tail()
       //if ((millis() - ptt_time) > ptt_tail_time) {
       if (last_sending_type == MANUAL_SENDING) {
         #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) > ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
-        #endif
-        #ifdef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) > (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {
-        #endif
+        if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
+          ptt_unkey();
+        }          
+        #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+        #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+        if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {       
           ptt_unkey();
         }
+        #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+        if ((millis() - ptt_time) >= ptt_tail_time[configuration.current_tx-1]) {       
+          ptt_unkey();
+        }
+        #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+        #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
       } else {
         if ((millis() - ptt_time) > ptt_tail_time[configuration.current_tx-1]) {
           #ifdef OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
@@ -4973,6 +4983,7 @@ void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
+
   ptt_tail_time[configuration.current_tx-1] = (incoming_serial_byte*10);
   #ifdef DEBUG_WINKEY_PROTOCOL
   send_char('P',NORMAL);
