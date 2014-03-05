@@ -235,9 +235,24 @@ New features in this beta / unstable release:
   2.1.2014030202-UNSTABLE
     OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
 
+  2.1.2014030302-UNSTABLE
+    // alter these to map to alternate hang time wordspace units
+    #define WINKEY_HANG_TIME_1_0 1.0
+    #define WINKEY_HANG_TIME_1_33 1.33
+    #define WINKEY_HANG_TIME_1_66 1.66
+    #define WINKEY_HANG_TIME_2_0 2.0
+
+    improved paddle interruption of send_char()
+    Updated OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS from OZ1JHM provided code
+
+  2.1.2014030401-UNSTABLE
+    removed OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
+    update to OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+    OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
+
 */
 
-#define CODE_VERSION "2.1.2014030202-UNSTABLE"
+#define CODE_VERSION "2.1.2014030401-UNSTABLE"
 #define eeprom_magic_number 17
 
 #include <stdio.h>
@@ -246,7 +261,7 @@ New features in this beta / unstable release:
 #include <avr/wdt.h>
 
 
-//#include "keyer.h"               // uncomment this for Sublime/Stino compilation
+//#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
@@ -863,17 +878,13 @@ void service_lcd_paddle_echo()
     #else //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
     ascii_temp = byte(convert_cw_number_to_ascii(lcd_paddle_echo_buffer));
     switch (ascii_temp){
-      #ifndef OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
-      case 197: ascii_temp = 6; // Å 
-      #else
-      case 252: ascii_temp = 6; // Å
-      #endif //OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
-      case 198: ascii_temp = 4; // Æ
-      #ifndef OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
-      case 216: ascii_temp = 5; // Ø 
-      #else
-      case 242: ascii_temp = 5; // Ø 
-      #endif //OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
+      case 220: ascii_temp = 0;break; // U_umlaut  (D, ...)
+      case 214: ascii_temp = 1;break; // O_umlaut  (D, SM, OH, ...)
+      case 196: ascii_temp = 2;break; // A_umlaut  (D, SM, OH, ...)
+      case 198: ascii_temp = 3;break; // AE_capital (OZ, LA)
+      case 216: ascii_temp = 4;break; // OE_capital (OZ, LA)
+      case 197: ascii_temp = 6;break; // AA_capital (OZ, LA, SM)
+      case 209: ascii_temp = 7;break; // N-tilde (EA) 
     }
     display_scroll_print_char(ascii_temp);
     #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
@@ -2779,8 +2790,6 @@ void check_dit_paddle()
 
   pin_value = paddle_pin_read(dit_paddle);
 
-
-
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
   if (usb_dit) {pin_value = 0;}
@@ -2806,6 +2815,19 @@ void check_dit_paddle()
     }
     #endif
     dit_buffer = 1;
+
+    #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
+    if (!winkey_interrupted && winkey_host_open){
+      Serial.write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+      winkey_interrupted = 1;
+      // tone(sidetone_line,1000);
+      // delay(500);
+      // noTone(sidetone_line);
+      dit_buffer = 0;
+    }   
+    #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
+
+
     #ifdef FEATURE_SLEEP
     last_activity_time = millis(); 
     #endif //FEATURE_SLEEP
@@ -2822,6 +2844,10 @@ void check_dit_paddle()
     }
     #endif
   }
+
+
+
+
 
 }
 
@@ -2854,6 +2880,19 @@ void check_dah_paddle()
     }
     #endif
     dah_buffer = 1;
+
+    #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
+    if (!winkey_interrupted && winkey_host_open){
+      Serial.write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+      winkey_interrupted = 1;
+      // tone(sidetone_line,1000);
+      // delay(500);
+      // noTone(sidetone_line);
+      //dah_buffer = 0;
+    }   
+    #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
+
+
     #ifdef FEATURE_SLEEP
     last_activity_time = millis(); 
     #endif //FEATURE_SLEEP    
@@ -4396,20 +4435,37 @@ void boop_beep()
 
 //-------------------------------------------------------------------------------------------------------
 
-void send_dits(int dits)
-{
-  for (;dits > 0;dits--) {
-    send_dit(AUTOMATIC_SENDING);
-  }
+// void send_dits(int dits)
+// {
+//   for (;dits > 0;dits--) {
+//     send_dit(AUTOMATIC_SENDING);
+//   }
 
-}
+// }
 
 //-------------------------------------------------------------------------------------------------------
 
-void send_dahs(int dahs)
-{
-  for (;dahs > 0;dahs--) {
-    send_dah(AUTOMATIC_SENDING);
+// void send_dahs(int dahs)
+// {
+//   for (;dahs > 0;dahs--) {
+//     send_dah(AUTOMATIC_SENDING);
+//   }
+
+// }
+
+//-------------------------------------------------------------------------------------------------------
+void send_the_dits_and_dahs(char * cw_to_send){
+
+
+  for (int x = 0;x < 12;x++){
+    switch(cw_to_send[x]){
+      case '.': send_dit(AUTOMATIC_SENDING); break;
+      case '-': send_dah(AUTOMATIC_SENDING); break;
+      default: return; break;
+    }
+    if ((dit_buffer) || (dah_buffer)){
+      return;
+    }
   }
 
 }
@@ -4426,7 +4482,8 @@ void send_char(char cw_char, byte omit_letterspace)
   }
   Serial.println();
   #endif
-  
+
+
   #ifdef FEATURE_SLEEP
   last_activity_time = millis(); 
   #endif //FEATURE_SLEEP
@@ -4435,104 +4492,104 @@ void send_char(char cw_char, byte omit_letterspace)
 
   if (char_send_mode == CW) {
     switch (cw_char) {
-      case 'A': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case 'B': send_dah(AUTOMATIC_SENDING); send_dits(3); break;
-      case 'C': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'D': send_dah(AUTOMATIC_SENDING); send_dits(2); break;
-      case 'E': send_dit(AUTOMATIC_SENDING); break;
-      case 'F': send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'G': send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
-      case 'H': send_dits(4); break;
-      case 'I': send_dits(2); break;
-      case 'J': send_dit(AUTOMATIC_SENDING); send_dahs(3); break;
-      case 'K': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case 'L': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); break;
-      case 'M': send_dahs(2); break;
-      case 'N': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'O': send_dahs(3); break;
-      case 'P': send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
-      case 'Q': send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case 'R': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'S': send_dits(3); break;
-      case 'T': send_dah(AUTOMATIC_SENDING); break;
-      case 'U': send_dits(2); send_dah(AUTOMATIC_SENDING); break;
-      case 'V': send_dits(3); send_dah(AUTOMATIC_SENDING); break;
-      case 'W': send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
-      case 'X': send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); break;
-      case 'Y': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
-      case 'Z': send_dahs(2); send_dits(2); break;
+      case 'A': send_the_dits_and_dahs(".-");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case 'B': send_the_dits_and_dahs("-...");break;//send_dah(AUTOMATIC_SENDING); send_dits(3); break;
+      case 'C': send_the_dits_and_dahs("-.-.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case 'D': send_the_dits_and_dahs("-..");break;//send_dah(AUTOMATIC_SENDING); send_dits(2); break;
+      case 'E': send_the_dits_and_dahs(".");break;//send_dit(AUTOMATIC_SENDING); break;
+      case 'F': send_the_dits_and_dahs("..-.");break;//send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case 'G': send_the_dits_and_dahs("--.");break;//send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
+      case 'H': send_the_dits_and_dahs("....");break;//send_dits(4); break;
+      case 'I': send_the_dits_and_dahs("..");break;//send_dits(2); break;
+      case 'J': send_the_dits_and_dahs(".---");break;//send_dit(AUTOMATIC_SENDING); send_dahs(3); break;
+      case 'K': send_the_dits_and_dahs("-.-");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case 'L': send_the_dits_and_dahs(".-..");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); break;
+      case 'M': send_the_dits_and_dahs("--");break;//send_dahs(2); break;
+      case 'N': send_the_dits_and_dahs("-.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case 'O': send_the_dits_and_dahs("---");break;//send_dahs(3); break;
+      case 'P': send_the_dits_and_dahs(".--.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
+      case 'Q': send_the_dits_and_dahs("--.-");break;//send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case 'R': send_the_dits_and_dahs(".-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case 'S': send_the_dits_and_dahs("...");break;//send_dits(3); break;
+      case 'T': send_the_dits_and_dahs("-");break;//send_dah(AUTOMATIC_SENDING); break;
+      case 'U': send_the_dits_and_dahs("..-");break;//send_dits(2); send_dah(AUTOMATIC_SENDING); break;
+      case 'V': send_the_dits_and_dahs("...-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); break;
+      case 'W': send_the_dits_and_dahs(".--");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
+      case 'X': send_the_dits_and_dahs("-..-");break;//send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); break;
+      case 'Y': send_the_dits_and_dahs("-.--");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
+      case 'Z': send_the_dits_and_dahs("--..");break;//send_dahs(2); send_dits(2); break;
 
-      case '0': send_dahs(5); break;
-      case '1': send_dit(AUTOMATIC_SENDING); send_dahs(4); break;
-      case '2': send_dits(2); send_dahs(3); break;
-      case '3': send_dits(3); send_dahs(2); break;
-      case '4': send_dits(4); send_dah(AUTOMATIC_SENDING); break;
-      case '5': send_dits(5); break;
-      case '6': send_dah(AUTOMATIC_SENDING); send_dits(4); break;
-      case '7': send_dahs(2); send_dits(3); break;
-      case '8': send_dahs(3); send_dits(2); break;
-      case '9': send_dahs(4); send_dit(AUTOMATIC_SENDING); break;
+      case '0': send_the_dits_and_dahs("-----");break;//send_dahs(5); break;
+      case '1': send_the_dits_and_dahs(".----");break;//send_dit(AUTOMATIC_SENDING); send_dahs(4); break;
+      case '2': send_the_dits_and_dahs("..---");break;//send_dits(2); send_dahs(3); break;
+      case '3': send_the_dits_and_dahs("...--");break;//send_dits(3); send_dahs(2); break;
+      case '4': send_the_dits_and_dahs("....-");break;//send_dits(4); send_dah(AUTOMATIC_SENDING); break;
+      case '5': send_the_dits_and_dahs(".....");break;//send_dits(5); break;
+      case '6': send_the_dits_and_dahs("-....");break;//send_dah(AUTOMATIC_SENDING); send_dits(4); break;
+      case '7': send_the_dits_and_dahs("--...");break;//send_dahs(2); send_dits(3); break;
+      case '8': send_the_dits_and_dahs("---..");break;//send_dahs(3); send_dits(2); break;
+      case '9': send_the_dits_and_dahs("----.");break;//send_dahs(4); send_dit(AUTOMATIC_SENDING); break;
 
-      case '=': send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); break;
-      case '/': send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '=': send_the_dits_and_dahs("-...-");break;//send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); break;
+      case '/': send_the_dits_and_dahs("-..-.");break;//send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
       case ' ': loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm,AUTOMATIC_SENDING); break;
-      case '*': send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;    // using asterisk for BK
+      case '*': send_the_dits_and_dahs("-...-.-");break;//send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;    // using asterisk for BK
       //case '&': send_dit(AUTOMATIC_SENDING); loop_element_lengths(3); send_dits(3); break;
-      case '.': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case ',': send_dahs(2); send_dits(2); send_dahs(2); break;
-      case '\'': send_dit(AUTOMATIC_SENDING); send_dahs(4); send_dit(AUTOMATIC_SENDING); break;                   // apostrophe
-      case '!': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
-      case '(': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
-      case ')': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case '&': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(3); break;
-      case ':': send_dahs(3); send_dits(3); break;
-      case ';': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '+': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '-': send_dah(AUTOMATIC_SENDING); send_dits(4); send_dah(AUTOMATIC_SENDING); break;
-      case '_': send_dits(2); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case '"': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '$': send_dits(3); send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); break;
-      case '@': send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '<': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;     // AR
-      case '>': send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;               // SK
+      case '.': send_the_dits_and_dahs(".-.-.-");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case ',': send_the_dits_and_dahs("--..--");break;//send_dahs(2); send_dits(2); send_dahs(2); break;
+      case '\'': send_the_dits_and_dahs(".----.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(4); send_dit(AUTOMATIC_SENDING); break;                   // apostrophe
+      case '!': send_the_dits_and_dahs("-.-.--");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
+      case '(': send_the_dits_and_dahs("-.--.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
+      case ')': send_the_dits_and_dahs("-.--.-");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case '&': send_the_dits_and_dahs(".-...");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(3); break;
+      case ':': send_the_dits_and_dahs("---...");break;//send_dahs(3); send_dits(3); break;
+      case ';': send_the_dits_and_dahs("-.-.-.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '+': send_the_dits_and_dahs(".-.-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '-': send_the_dits_and_dahs("-....-");break;//send_dah(AUTOMATIC_SENDING); send_dits(4); send_dah(AUTOMATIC_SENDING); break;
+      case '_': send_the_dits_and_dahs("..--.-");break;//send_dits(2); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case '"': send_the_dits_and_dahs(".-..-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '$': send_the_dits_and_dahs("...-..-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); break;
+      case '@': send_the_dits_and_dahs(".--.-.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '<': send_the_dits_and_dahs(".-.-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;     // AR
+      case '>': send_the_dits_and_dahs("...-.-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;               // SK
       case '\n':
       case '\r': break;
       
       #ifdef OPTION_NON_ENGLISH_EXTENSIONS
-      case 192: send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // 'À'
-      case 194: send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Â'
-      case 197: send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // 'Å' / 
-      case 196: send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Ä'
-      case 198: send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Æ'
-      case 199: send_dah(AUTOMATIC_SENDING);send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); break;  // 'Ç'
-      case 208: send_dits(2);send_dahs(2);send_dit(AUTOMATIC_SENDING);break;  // 'Ð'
-      case 138: send_dahs(4);break; // 'Š'
-      case 200: send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING);send_dits(2);send_dah(AUTOMATIC_SENDING); break; // 'È'
-      case 201: send_dits(2);send_dah(AUTOMATIC_SENDING);send_dits(2);break; // 'É'
-      case 142: send_dahs(2);send_dits(2);send_dah(AUTOMATIC_SENDING);send_dit(AUTOMATIC_SENDING);break; // 'Ž'
-      case 209: send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dahs(2);break; // 'Ñ'
-      case 214: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ö'
-      case 216: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ø'
-      case 211: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ó'
-      case 220: send_dits(2);send_dahs(2);break; // 'Ü'
-      case 223: send_dits(6);break; // 'ß'
+      case 192: send_the_dits_and_dahs(".--.-");break;//send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // 'À'
+      case 194: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Â'
+      case 197: send_the_dits_and_dahs(".--.-");break;//send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // 'Å' / 
+      case 196: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Ä'
+      case 198: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Æ'
+      case 199: send_the_dits_and_dahs("-.-..");break;//send_dah(AUTOMATIC_SENDING);send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); break;  // 'Ç'
+      case 208: send_the_dits_and_dahs("..--.");break;//send_dits(2);send_dahs(2);send_dit(AUTOMATIC_SENDING);break;  // 'Ð'
+      case 138: send_the_dits_and_dahs("----");break;//send_dahs(4);break; // 'Š'
+      case 200: send_the_dits_and_dahs(".-..-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING);send_dits(2);send_dah(AUTOMATIC_SENDING); break; // 'È'
+      case 201: send_the_dits_and_dahs("..-..");break;//send_dits(2);send_dah(AUTOMATIC_SENDING);send_dits(2);break; // 'É'
+      case 142: send_the_dits_and_dahs("--..-.");break;//send_dahs(2);send_dits(2);send_dah(AUTOMATIC_SENDING);send_dit(AUTOMATIC_SENDING);break; // 'Ž'
+      case 209: send_the_dits_and_dahs("--.--");break;//send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dahs(2);break; // 'Ñ'
+      case 214: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ö'
+      case 216: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ø'
+      case 211: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ó'
+      case 220: send_the_dits_and_dahs("..--");break;//send_dits(2);send_dahs(2);break; // 'Ü'
+      case 223: send_the_dits_and_dahs("------");break;//send_dits(6);break; // 'ß'
 
       // for English/Japanese font LCD controller which has a few European characters also (HD44780UA00) (LA3ZA code)
-      case 225: send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'ä' LA3ZA
-      case 239: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'ö' LA3ZA
-      case 242: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'ø' LA3ZA
-      case 245: send_dits(2);send_dahs(2);break; // 'ü' LA3ZA
-      case 246: send_dahs(4);break; // almost '' or rather sigma LA3ZA
-      case 252: send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // å (sort of) LA3ZA
-      case 238: send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dahs(2);break; // 'ñ' LA3ZA
-      case 226: send_dits(6);break; // 'ß' LA3ZA
+      case 225: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'ä' LA3ZA
+      case 239: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'ö' LA3ZA
+      case 242: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'ø' LA3ZA
+      case 245: send_the_dits_and_dahs("..--");break;//send_dits(2);send_dahs(2);break; // 'ü' LA3ZA
+      case 246: send_the_dits_and_dahs("----");break;//send_dahs(4);break; // almost '' or rather sigma LA3ZA
+      case 252: send_the_dits_and_dahs(".--.-");break;//send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // å (sort of) LA3ZA
+      case 238: send_the_dits_and_dahs("--.--");break;//send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dahs(2);break; // 'ñ' LA3ZA
+      case 226: send_the_dits_and_dahs("------");break;//send_dits(6);break; // 'ß' LA3ZA
 
 
 
       #endif //OPTION_NON_ENGLISH_EXTENSIONS      
       
       case '|': loop_element_lengths(0.5,0,configuration.wpm,AUTOMATIC_SENDING); return; break;
-      default: send_dits(2); send_dahs(2); send_dits(2); break;
+      default: send_the_dits_and_dahs("..--..");break;//send_dits(2); send_dahs(2); send_dits(2); break;
       
     }
     if (omit_letterspace != OMIT_LETTERSPACE) {
@@ -4811,7 +4868,7 @@ void service_send_buffer(byte no_print)
     }
 
   }
-//zzzzz
+
   //if the paddles are hit, dump the buffer
   check_paddles();
   if ((dit_buffer || dah_buffer) && (send_buffer_bytes  > 0)) {
@@ -5163,10 +5220,10 @@ void winkey_set_pinconfig_command(byte incoming_serial_byte) {
   }
 
   switch(incoming_serial_byte & 48) {
-    case 0: ptt_hang_time_wordspace_units = 1.0; break;
-    case 16: ptt_hang_time_wordspace_units = 1.33; break;
-    case 32: ptt_hang_time_wordspace_units = 1.66; break;
-    case 48: ptt_hang_time_wordspace_units = 2.0; break;
+    case 0: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_1_0; break;
+    case 16: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_1_33; break;
+    case 32: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_1_66; break;
+    case 48: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_2_0; break;
   }
 
   switch(incoming_serial_byte & 12) {
@@ -5535,6 +5592,7 @@ void service_winkey(byte action) {
       if (ptt_line_activated == 0) {
         winkey_sending = 0;
         winkey_interrupted = 0;
+        //Serial.write(0xc2|winkey_sending|winkey_xoff);  <- this makes N1MM get borked
         Serial.write(0xc0|winkey_sending|winkey_xoff);    // tell the host we've sent everything
         winkey_buffer_counter = 0;
         winkey_buffer_pointer = 0;
@@ -7521,37 +7579,25 @@ int convert_cw_number_to_ascii (long number_in)
 
 
    #ifdef OPTION_NON_ENGLISH_EXTENSIONS
-   
-   #ifdef OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
-   // for English/Japanese font LCD controller which has a few European characters also (HD44780UA00):
-   case 1212: return 225; break;  // ä LA3ZA
-// case 2221: return 239; break;    // ö LA3ZA - customize for your locality
-   case 2221: return 242; break;    // ø (sort of) LA3ZA
-   case 1122: return 245; break;    // ü LA3ZA
-   case 2222: return 246; break;    // almost  or rather sigma LA3ZA
-   case 12212: return 252; break;   // å (sort of) LA3ZA
-   case 22122: return 238; break;   // ñ LA3ZA
-   case 111111: return 226; break;   // ß LA3ZA
-   
-   #else  
    // for English/Cyrillic/Western European font LCD controller (HD44780UA02):
-   case 12212: return 197; break;   // Å   - customize for your locality  ( 1 = dit, 2 = dah, return code is ASCII code )
-   //case 1212: return 196; break;    // Ä   - customize for your locality
-   //case 12212: return 192; break; // À   - customize for your locality
-   //case 1212: return 197; break;  // Ä   - customize for your locality
-   case 1212: return 198; break;  // Æ   - customize for your locality
-   case 2222: return 138; break;    // Š
-   case 22122: return 209; break;   // Ñ
-   //case 2221: return 214; break;    // Ö 
-   //case 2221: return 211; break;  // Ó   - customize for your locality  ( 1 = dit, 2 = dah, return code is ASCII code )
-   case 2221: return 216; break;  // Ø   - customize for your locality
-   case 1122: return 220; break;    // Ü 
-   case 111111: return 223; break;   // ß
-   #endif //OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
+   case 12212: return 197; break;   // Ã…    - AA_capital (OZ, LA, SM)
+   //case 1212: return 196; break;    // Ãƒ    - A_umlaut (D, SM, OH, ...)
+   //case 12212: return 192; break; // Ã    - A accent   
+   case 1212: return 198; break;  // Ã†    - AE_capital   (OZ, LA)
+   case 2222: return 138; break;    // CH
+   case 22122: return 209; break;   // Ã‘                 
+   //case 2221: return 214; break;    // Ã–    - O_umlaut  (D, SM, OH, ...)
+   //case 2221: return 211; break;  // Ã“    - O accent
+   case 2221: return 216; break;  // Ã˜    - OE_capital    (OZ, LA)
+   case 1122: return 220; break;    // Ãœ   - U_umlaut     (D, ...)
+   case 111111: return 223; break;  // beta - double S    (D?, ...)   
+
+
+
    
    case 21211: return 199; break;   // Ç
    case 11221: return 208; break;   // Ð
-      case 12112: return 200; break;   // È
+   case 12112: return 200; break;   // È
    case 11211: return 201; break;   // É
    case 221121: return 142; break;  // Ž
    
@@ -8864,21 +8910,6 @@ void initialize_keyer_state(){
   #endif //FEATURE_FARNSWORTH
   
   switch_to_tx_silent(1);
-  
-  /* aaaaaa
-
-
-  byte autospace_active;
-
-  //probably OK: byte current_ptt_line;
-
-  unsigned int memory_repeat_time;
-  byte dit_buffer_off;
-  byte dah_buffer_off;
-
-  byte cmos_super_keyer_iambic_b_timing_on;
-  
-  */
 
 }  
 
@@ -9085,23 +9116,27 @@ void initialize_display(){
   lcd.setBacklight(lcdcolor);
   #endif //FEATURE_LCD_ADAFRUIT_I2C
 
-  #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code
-  byte newChar0[8] = { B10000,B01000,B00100,B00010,B00001,B00010,B00100,B00000}; // >
-  byte Lae[8] ={ B00000,B00000,B11010,B00101,B01111,B10100,B11111,B00000}; // æ
-  byte Loe[8] ={ B00000,B00001,B01110,B10101,B10101,B01110,B10000,B00000}; // ø
-  byte Laa[8] ={ B00100,B00000,B01110,B00001,B01111,B10001,B01111,B00000}; // å
-  byte Sae[8] ={ B01111,B10100,B10100,B11110,B10100,B10100,B10111,B00000}; // Æ
-  byte Soe[8] ={ B00001,B01110,B10011,B10101,B11001,B01110,B10000,B00000}; // Ø
-  byte Saa[8] ={ B00100,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // Å
-  byte VT[8] = { B11111,B10101,B10101,B01110,B01110,B00100,B00100,B00000}; // VT  
-  lcd.createChar(0, newChar0); // upload 8 charaters to the lcd
-  lcd.createChar(1, Lae); // æ
-  lcd.createChar(2, Loe); // ø
-  lcd.createChar(3, Laa); // å
-  lcd.createChar(4, Sae); // Æ
-  lcd.createChar(5, Soe); // Ø
-  lcd.createChar(6, Saa); // Å
-  lcd.createChar(7, VT); // VT ( ;-) 
+  #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
+  // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/
+  
+  byte U_umlaut[8] =   {B01010,B00000,B10001,B10001,B10001,B10001,B01110,B00000}; // Ãœ  
+  byte O_umlaut[8] =   {B01010,B00000,B01110,B10001,B10001,B10001,B01110,B00000}; // Ã–  
+  byte A_umlaut[8] =   {B01010,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // Ã„    
+  byte AE_capital[8] = {B01111,B10100,B10100,B11110,B10100,B10100,B10111,B00000}; // Ã† 
+  byte OE_capital[8] = {B00001,B01110,B10011,B10101,B11001,B01110,B10000,B00000}; // Ã˜ 
+  byte empty[8] =      {B00000,B00000,B00000,B00000,B00000,B00000,B00000,B00000}; // empty 
+  byte AA_capital[8] = {B00100,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // Ã…   
+  byte Ntilde[8] =     {B01101,B10010,B00000,B11001,B10101,B10011,B10001,B00000}; // Ã‘
+  
+  //     upload 8 charaters to the lcd
+  lcd.createChar(0, U_umlaut); //     German
+  lcd.createChar(1, O_umlaut); //     German, Swedish
+  lcd.createChar(3, A_umlaut); //     German, Swedish 
+  lcd.createChar(3, AE_capital); //   Danish, Norwegian
+  lcd.createChar(4, OE_capital); //   Danish, Norwegian
+  lcd.createChar(5, empty); //        For some reason this one needs to display nothing - otherwise it will display in pauses on serial interface
+  lcd.createChar(6, AA_capital); //   Danish, Norwegian, Swedish
+  lcd.createChar(7, Ntilde); //       Spanish
   lcd.clear(); // you have to ;o)
   #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
 

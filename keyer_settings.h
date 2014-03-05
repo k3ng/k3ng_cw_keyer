@@ -4,17 +4,17 @@
 #define hz_high_beep 1500                // frequency in hertz of high beep
 #define hz_low_beep 400                  // frequency in hertz of low beep
 #define initial_dah_to_dit_ratio 300     // 300 = 3 / normal 3:1 ratio
-#define initial_ptt_lead_time_tx1 10         // PTT lead time in mS
-#define initial_ptt_tail_time_tx1 0//10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx2 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx1 0         // PTT lead time in mS
+#define initial_ptt_tail_time_tx1 10         // PTT tail time in mS
+#define initial_ptt_lead_time_tx2 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx2 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx3 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx3 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx3 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx4 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx4 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx4 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx5 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx5 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx5 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx6 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx6 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx6 10         // PTT tail time in mS
 #define initial_qrss_dit_length 1        // QRSS dit length in seconds
 #define initial_pot_wpm_low_value 13     // Potentiometer WPM fully CCW
@@ -214,6 +214,13 @@
 #define WINKEY_SIDETONE_9 444
 #define WINKEY_SIDETONE_10 400
 #endif //OPTION_WINKEY_2_SUPPORT
+
+// alter these to map to alternate hang time wordspace units
+#define WINKEY_HANG_TIME_1_0 1.0
+#define WINKEY_HANG_TIME_1_33 1.33
+#define WINKEY_HANG_TIME_1_66 1.66
+#define WINKEY_HANG_TIME_2_0 2.0
+
 #endif //FEATURE_WINKEY_EMULATION
 
 #define PRINTCHAR 0
