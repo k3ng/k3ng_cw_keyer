@@ -249,10 +249,16 @@ New features in this beta / unstable release:
     removed OPTION_NON_ENGLISH_CHARACTERS_ON_JAPANESE_LCD_DISPLAY
     update to OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
     OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
+  
+  2.1.2014030501-UNSTABLE
+    Updates to OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+
+  2.1.2014030901-UNSTABLE
+    Update to OPTION_NON_ENGLISH_EXTENSIONS
 
 */
 
-#define CODE_VERSION "2.1.2014030401-UNSTABLE"
+#define CODE_VERSION "2.1.2014030901-UNSTABLE"
 #define eeprom_magic_number 17
 
 #include <stdio.h>
@@ -7580,18 +7586,17 @@ int convert_cw_number_to_ascii (long number_in)
 
    #ifdef OPTION_NON_ENGLISH_EXTENSIONS
    // for English/Cyrillic/Western European font LCD controller (HD44780UA02):
-   case 12212: return 197; break;   // Ã…    - AA_capital (OZ, LA, SM)
-   //case 1212: return 196; break;    // Ãƒ    - A_umlaut (D, SM, OH, ...)
-   //case 12212: return 192; break; // Ã    - A accent   
-   case 1212: return 198; break;  // Ã†    - AE_capital   (OZ, LA)
-   case 2222: return 138; break;    // CH
-   case 22122: return 209; break;   // Ã‘                 
-   //case 2221: return 214; break;    // Ã–    - O_umlaut  (D, SM, OH, ...)
-   //case 2221: return 211; break;  // Ã“    - O accent
-   case 2221: return 216; break;  // Ã˜    - OE_capital    (OZ, LA)
-   case 1122: return 220; break;    // Ãœ   - U_umlaut     (D, ...)
-   case 111111: return 223; break;  // beta - double S    (D?, ...)   
-
+   case 12212: return 197; break;     // 'Å' - AA_capital (OZ, LA, SM)
+   //case 12212: return 192; break;   // 'À' - A accent   
+   case 1212: return 198; break;      // 'Æ' - AE_capital   (OZ, LA)
+   //case 1212: return 196; break;    // 'Ä' - A_umlaut (D, SM, OH, ...)
+   case 2222: return 138; break;      // CH  - (Russian letter symbol)
+   case 22122: return 209; break;     // 'Ñ' - (EA)               
+   //case 2221: return 214; break;    // 'Ö' – O_umlaut  (D, SM, OH, ...)
+   //case 2221: return 211; break;    // 'Ò' - O accent
+   case 2221: return 216; break;      // 'Ø' - OE_capital    (OZ, LA)
+   case 1122: return 220; break;      // 'Ü' - U_umlaut     (D, ...)
+   case 111111: return 223; break;    // beta - double S    (D?, ...)   
 
 
    
@@ -9118,20 +9123,23 @@ void initialize_display(){
 
   #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
   // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/
-  
-  byte U_umlaut[8] =   {B01010,B00000,B10001,B10001,B10001,B10001,B01110,B00000}; // Ãœ  
-  byte O_umlaut[8] =   {B01010,B00000,B01110,B10001,B10001,B10001,B01110,B00000}; // Ã–  
-  byte A_umlaut[8] =   {B01010,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // Ã„    
-  byte AE_capital[8] = {B01111,B10100,B10100,B11110,B10100,B10100,B10111,B00000}; // Ã† 
-  byte OE_capital[8] = {B00001,B01110,B10011,B10101,B11001,B01110,B10000,B00000}; // Ã˜ 
+
+
+  byte U_umlaut[8] =   {B01010,B00000,B10001,B10001,B10001,B10001,B01110,B00000}; // 'Ü'  
+  byte O_umlaut[8] =   {B01010,B00000,B01110,B10001,B10001,B10001,B01110,B00000}; // 'Ö'  
+  byte A_umlaut[8] =   {B01010,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // 'Ä'    
+  byte AE_capital[8] = {B01111,B10100,B10100,B11110,B10100,B10100,B10111,B00000}; // 'Æ' 
+  byte OE_capital[8] = {B00001,B01110,B10011,B10101,B11001,B01110,B10000,B00000}; // 'Ø' 
   byte empty[8] =      {B00000,B00000,B00000,B00000,B00000,B00000,B00000,B00000}; // empty 
-  byte AA_capital[8] = {B00100,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // Ã…   
-  byte Ntilde[8] =     {B01101,B10010,B00000,B11001,B10101,B10011,B10001,B00000}; // Ã‘
+  byte AA_capital[8] = {B00100,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // 'Å'   
+  byte Ntilde[8] =     {B01101,B10010,B00000,B11001,B10101,B10011,B10001,B00000}; // 'Ñ' 
+
+  
   
   //     upload 8 charaters to the lcd
   lcd.createChar(0, U_umlaut); //     German
   lcd.createChar(1, O_umlaut); //     German, Swedish
-  lcd.createChar(3, A_umlaut); //     German, Swedish 
+  lcd.createChar(2, A_umlaut); //     German, Swedish 
   lcd.createChar(3, AE_capital); //   Danish, Norwegian
   lcd.createChar(4, OE_capital); //   Danish, Norwegian
   lcd.createChar(5, empty); //        For some reason this one needs to display nothing - otherwise it will display in pauses on serial interface
