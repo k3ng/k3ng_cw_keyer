@@ -2,7 +2,7 @@
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
 #define FEATURE_SERIAL
-#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
+//#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
 //#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
 #define FEATURE_SAY_HI
 //#define FEATURE_MEMORIES
@@ -20,8 +20,8 @@
 //#define FEATURE_AUTOSPACE
 //#define FEATURE_FARNSWORTH
 //#define FEATURE_DL2SBA_BANKSWITCH  // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
-#define FEATURE_DISPLAY            // LCD display support (include one of the hardware options below)
-#define FEATURE_LCD_4BIT           // classic LCD disidefplay using 4 I/O lines
+//#define FEATURE_DISPLAY            // LCD display support (include one of the hardware options below)
+//#define FEATURE_LCD_4BIT           // classic LCD disidefplay using 4 I/O lines
 //#define FEATURE_LCD_ADAFRUIT_I2C            // Adafruit I2C LCD display using MCP23017 at addr 0x20
 //#define FEATURE_LCD_YDv1          // YourDuino I2C LCD display with old LCM 1602 V1 ic
 //#define FEATURE_CW_DECODER
