@@ -256,9 +256,12 @@ New features in this beta / unstable release:
   2.1.2014030901-UNSTABLE
     Update to OPTION_NON_ENGLISH_EXTENSIONS
 
+  2.1.2014031001-UNSTABLE
+    DEBUG_DISPLAY_SCROLL_PRINT_CHAR
+
 */
 
-#define CODE_VERSION "2.1.2014030901-UNSTABLE"
+#define CODE_VERSION "2.1.2014031001-UNSTABLE"
 #define eeprom_magic_number 17
 
 #include <stdio.h>
@@ -913,6 +916,13 @@ void display_scroll_print_char(char charin){
  static byte column_pointer = 0;
  static byte row_pointer = 0;
  byte x = 0;
+
+ #ifdef DEBUG_DISPLAY_SCROLL_PRINT_CHAR
+ Serial.print(F("display_scroll_print_char: "));
+ Serial.write(charin);
+ Serial.print(" ");
+ Serial.println(charin);
+ #endif //DEBUG_DISPLAY_SCROLL_PRINT_CHAR
  
  if (lcd_status != LCD_SCROLL_MSG) {
    lcd_status = LCD_SCROLL_MSG;
@@ -9178,32 +9188,6 @@ void initialize_display(){
   }
 }
 
-//--------------------------------------------------------------------- 
-//#ifdef FEATURE_USB_KEYBOARD
-//void KbdRptParser::PrintKey(uint8_t m, uint8_t key)	
-//{
-  
-  /*
-  
-    MODIFIERKEYS mod;
-    *((uint8_t*)&mod) = m;
-    Serial.print((mod.bmLeftCtrl   == 1) ? "C" : " ");
-    Serial.print((mod.bmLeftShift  == 1) ? "S" : " ");
-    Serial.print((mod.bmLeftAlt    == 1) ? "A" : " ");
-    Serial.print((mod.bmLeftGUI    == 1) ? "G" : " ");
-    
-    Serial.print(" >");
-    PrintHex<uint8_t>(key, 0x80);
-    Serial.print("< ");
-
-    Serial.print((mod.bmRightCtrl   == 1) ? "C" : " ");
-    Serial.print((mod.bmRightShift  == 1) ? "S" : " ");
-    Serial.print((mod.bmRightAlt    == 1) ? "A" : " ");
-    Serial.println((mod.bmRightGUI    == 1) ? "G" : " ");
-    
-    */
-//};
-//#endif //FEATURE_USB_KEYBOARD
 
 //--------------------------------------------------------------------- 
 #ifdef FEATURE_USB_KEYBOARD
