@@ -259,9 +259,15 @@ New features in this beta / unstable release:
   2.1.2014031001-UNSTABLE
     DEBUG_DISPLAY_SCROLL_PRINT_CHAR
 
+  2.1.2014031201-UNSTABLE
+    OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS addition code in display_scroll_print_char() 
+
+  2.1.2014040301-UNSTABLE
+    fixed bug with OPTION_REVERSE_BUTTON_ORDER
+
 */
 
-#define CODE_VERSION "2.1.2014031001-UNSTABLE"
+#define CODE_VERSION "2.1.2014040301-UNSTABLE"
 #define eeprom_magic_number 17
 
 #include <stdio.h>
@@ -913,36 +919,48 @@ void service_lcd_paddle_echo()
 #ifdef FEATURE_DISPLAY
 void display_scroll_print_char(char charin){
   
- static byte column_pointer = 0;
- static byte row_pointer = 0;
- byte x = 0;
+  static byte column_pointer = 0;
+  static byte row_pointer = 0;
+  byte x = 0;
 
- #ifdef DEBUG_DISPLAY_SCROLL_PRINT_CHAR
- Serial.print(F("display_scroll_print_char: "));
- Serial.write(charin);
- Serial.print(" ");
- Serial.println(charin);
- #endif //DEBUG_DISPLAY_SCROLL_PRINT_CHAR
- 
- if (lcd_status != LCD_SCROLL_MSG) {
-   lcd_status = LCD_SCROLL_MSG;
-   lcd.clear();
- }
- if (column_pointer > (lcd_columns-1)) {
-   row_pointer++;
-   column_pointer = 0;
-   if (row_pointer > (lcd_rows-1)) {
-     for (x = 0; x < (lcd_rows-1); x++) {
-       lcd_scroll_buffer[x] = lcd_scroll_buffer[x+1];
-     }
-     lcd_scroll_buffer[x] = "";     
-     row_pointer--;
-     lcd_scroll_flag = 1;
-   }    
+  #ifdef DEBUG_DISPLAY_SCROLL_PRINT_CHAR
+  Serial.print(F("display_scroll_print_char: "));
+  Serial.write(charin);
+  Serial.print(" ");
+  Serial.println(charin);
+  #endif //DEBUG_DISPLAY_SCROLL_PRINT_CHAR
+
+  #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+  switch (charin){
+    case 220: charin = 0;break; // U_umlaut  (D, ...)
+    case 214: charin = 1;break; // O_umlaut  (D, SM, OH, ...)
+    case 196: charin = 2;break; // A_umlaut  (D, SM, OH, ...)
+    case 198: charin = 3;break; // AE_capital (OZ, LA)
+    case 216: charin = 4;break; // OE_capital (OZ, LA)
+    case 197: charin = 6;break; // AA_capital (OZ, LA, SM)
+    case 209: charin = 7;break; // N-tilde (EA) 
+  }
+  #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+
+  if (lcd_status != LCD_SCROLL_MSG) {
+    lcd_status = LCD_SCROLL_MSG;
+    lcd.clear();
   } 
- lcd_scroll_buffer[row_pointer].concat(charin);
- column_pointer++;
- lcd_scroll_buffer_dirty = 1; 
+  if (column_pointer > (lcd_columns-1)) {
+    row_pointer++;
+    column_pointer = 0;
+    if (row_pointer > (lcd_rows-1)) {
+      for (x = 0; x < (lcd_rows-1); x++) {
+        lcd_scroll_buffer[x] = lcd_scroll_buffer[x+1];
+      }
+      lcd_scroll_buffer[x] = "";     
+      row_pointer--;
+      lcd_scroll_flag = 1;
+    }    
+   } 
+  lcd_scroll_buffer[row_pointer].concat(charin);
+  column_pointer++;
+  lcd_scroll_buffer_dirty = 1; 
 }
 
 #endif //FEATURE_DISPLAY
@@ -4041,6 +4059,12 @@ void initialize_analog_button_array() {
     #ifndef OPTION_REVERSE_BUTTON_ORDER
     button_array_low_limit[x] = (button_value - ((button_value - lower_button_value)/2));
     button_array_high_limit[x] = (button_value + ((higher_button_value - button_value)/2));
+    #else
+    button_array_low_limit[y] = (button_value - ((button_value - lower_button_value)/2));
+    button_array_high_limit[y] = (button_value + ((higher_button_value - button_value)/2));
+    y--;
+    #endif
+
     #ifdef DEBUG_BUTTON_ARRAY    
     Serial.print("initialize_analog_button_array: ");
     Serial.print(x);
@@ -4049,11 +4073,8 @@ void initialize_analog_button_array() {
     Serial.print(" - ");
     Serial.println(button_array_high_limit[x]);
     #endif //DEBUG_BUTTON_ARRAY
-    #else
-    button_array_low_limit[y] = (button_value - ((button_value - lower_button_value)/2));
-    button_array_high_limit[y] = (button_value + ((higher_button_value - button_value)/2));
-    y--;
-    #endif
+
+
   }
   
   #else //FEATURE_DL2SBA_BANKSWITCH
@@ -4082,6 +4103,7 @@ byte analogbuttonpressed() {
   int analog_line_read_average = 0;
   int analog_read_temp = 0;
   
+  #ifndef OPTION_REVERSE_BUTTON_ORDER
   if (analogRead(analog_buttons_pin) <= button_array_high_limit[analog_buttons_number_of_buttons-1]) {
     
     for (byte x = 0;x < 19;x++){
@@ -4105,6 +4127,39 @@ byte analogbuttonpressed() {
     }    
     
   }
+
+  #else //OPTION_REVERSE_BUTTON_ORDER
+
+  if (analogRead(analog_buttons_pin) <= button_array_high_limit[0]) {
+    \
+    for (byte x = 0;x < 19;x++){
+      analog_read_temp = analogRead(analog_buttons_pin);
+      if (analog_read_temp <= button_array_high_limit[0]){
+        analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2;
+      }
+    }
+    
+    #ifdef DEBUG_BUTTONS
+    Serial.print(F(" analogbuttonpressed: analog_line_read_average: "));
+    Serial.println(analog_line_read_average);
+    #endif 
+
+    for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
+      if ((analog_line_read_average > button_array_low_limit[x]) && (analog_line_read_average <=  button_array_high_limit[x])) {
+        #ifdef DEBUG_BUTTONS
+        //if (!debug_flag) {
+          Serial.print(F(" analogbuttonpressed: returning: "));
+          Serial.println(x);
+        //  debug_flag = 1;
+        //}
+        #endif         
+        return x;
+      }  
+    }    
+    
+  }
+
+  #endif //OPTION_REVERSE_BUTTON_ORDER
   
 
   /*
