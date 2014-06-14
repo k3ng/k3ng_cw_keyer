@@ -265,9 +265,13 @@ New features in this beta / unstable release:
   2.1.2014040301-UNSTABLE
     fixed bug with OPTION_REVERSE_BUTTON_ORDER
 
+  2.1.2014061401-UNSTABLE
+    #define WINKEY_1_REPORT_VERSION_NUMBER 10
+    #define WINKEY_2_REPORT_VERSION_NUMBER 23
+
 */
 
-#define CODE_VERSION "2.1.2014040301-UNSTABLE"
+#define CODE_VERSION "2.1.2014061401-UNSTABLE"
 #define eeprom_magic_number 17
 
 #include <stdio.h>
@@ -276,7 +280,7 @@ New features in this beta / unstable release:
 #include <avr/wdt.h>
 
 
-//#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
+#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
@@ -6052,7 +6056,7 @@ void service_winkey(byte action) {
       }
       #endif //OPTION_WINKEY_2_SUPPORT
 
-
+//zzzzzz
 
       if (winkey_status == WINKEY_ADMIN_COMMAND) {
         switch (incoming_serial_byte) {
@@ -6060,9 +6064,9 @@ void service_winkey(byte action) {
           case 0x01: wdt_enable(WDTO_30MS); while(1) {}; break;  // reset command
           case 0x02:  // host open command - send version back to host
             #ifdef OPTION_WINKEY_2_SUPPORT
-            Serial.write(23);
+            Serial.write(WINKEY_2_REPORT_VERSION_NUMBER);
             #else //OPTION_WINKEY_2_SUPPORT
-            Serial.write(10);
+            Serial.write(WINKEY_1_REPORT_VERSION_NUMBER);
             #endif //OPTION_WINKEY_2_SUPPORT
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             winkey_host_open = 1;

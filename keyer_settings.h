@@ -215,6 +215,9 @@
 #define WINKEY_SIDETONE_10 400
 #endif //OPTION_WINKEY_2_SUPPORT
 
+#define WINKEY_1_REPORT_VERSION_NUMBER 10
+#define WINKEY_2_REPORT_VERSION_NUMBER 23
+
 // alter these to map to alternate hang time wordspace units
 #define WINKEY_HANG_TIME_1_0 1.0
 #define WINKEY_HANG_TIME_1_33 1.33
