@@ -2,7 +2,7 @@
 
  K3NG Arduino CW Keyer
 
- Copyright 1340 BC, 2010, 2011, 2012, 2013 Anthony Good, K3NG
+ Copyright 1340 BC, 2010, 2011, 2012, 2013, 2014 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
 
     
@@ -182,123 +182,101 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     Press the right paddle to enter straight key mode at power up
     Press the left  paddle at power up to enter and stay forever in beacon mode
 
-New features in this beta / unstable release:
+New fetures in this stable release:
 
-  command_mode_active_led
-  + is AR
-  Made it easier to form prosigns in command mode memory program using \+ macro
-  
-  FEATURE_LED_RING
-  led_ring_sdi    A10 //2    //Data
-  led_ring_clk    A9 //3    //Clock
-  led_ring_le     A8 //4    //Latch
-  
-  fixed bug in eeprom initialization code
-  
-  \s memory macro = insert space
-  
-  2013090801UNSTABLE
 
-  check_ps2_keyboard() - changed code structure so Notepad++ displays and collapses it correctly (bug in Notepad++).
-  check_ps2_keyboard() - fixed bugs with configuration.dah_to_dit_ratio
-  
-  2013112701UNSTABLE
-  
-  improved command button reading accuracy
-  
-  2013122601
-  
-  renamed keyer_debug.c to keyer_debug.h
-  renamed features_and_options.c to keyer_features_and_options.h
-  FEATURE_LCD_YDv1 new
-  FEATURE_LCD_I2C renamed to FEATURE_LCD_ADAFRUIT_I2C
+    fixed bug with Winkey 00 admin command which affected Win-Test program
+    no longer necessary to manually uncomment:
+      #include <avr/sleep.h>
+      #include <PS2Keyboard.h>
+      #include <LiquidCrystal.h>
+      #include <Wire.h>
+      #include <LiquidCrystal_I2C.h>
+      #include <Adafruit_MCP23017.h>
+      #include <Adafruit_RGBLCDShield.h>
+      #include <BasicTerm.h>
+      PS2Keyboard keyboard;
+      LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
+      all USB keyboard and mouse stuff
+    fixed Arduino IDE compilation errors
+    fixed issue when FEATURE_COMMAND_LINE_INTERFACE and FEATURE_WINKEY_EMULATION are compiled without FEATURE_COMMAND_BUTTONS
+    fixed compile bug involving hz_sidetone when OPTION_MORE_DISPLAY_MSGS is enabled
+    fixed compile bug with OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
+    fixed bugs with FEATURE_CAPACITIVE_PADDLE_PINS
+    fixed issue with Arduino IDE compilation and FEATURE_CAPACITIVE_PADDLE_PINS code
+    fixed issue with N command mode command - fix from LA3ZA
+    improved paddle echo and it should work better with autospace now
+    OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
+    OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code
+    OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+    // alter these to map to alternate hang time wordspace units
+      #define WINKEY_HANG_TIME_1_0 1.0
+      #define WINKEY_HANG_TIME_1_33 1.33
+      #define WINKEY_HANG_TIME_1_66 1.66
+      #define WINKEY_HANG_TIME_2_0 2.0
+    improved paddle interruption of send_char()
+    Updated OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS from OZ1JHM provided code
+    OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
+    Updates to OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+    Update to OPTION_NON_ENGLISH_EXTENSIONS
+    DEBUG_DISPLAY_SCROLL_PRINT_CHAR
+    OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS addition code in display_scroll_print_char() 
+    fixed bug with OPTION_REVERSE_BUTTON_ORDER
+    #define WINKEY_1_REPORT_VERSION_NUMBER 10
+    #define WINKEY_2_REPORT_VERSION_NUMBER 23
 
 */
+
+#define CODE_VERSION "2.2"
+#define eeprom_magic_number 18
 
 #include <stdio.h>
 #include <EEPROM.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
-//#include <avr/sleep.h>               // uncomment for FEATURE_SLEEP
-//#include <PS2Keyboard.h>        // uncomment for PS2 Keyboard Feature along with the FEATURE_PS2_KEYBOARD and PS2Keyboard lines below
-//#include <LiquidCrystal.h>      // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_4BIT and LiquidCrystal lines below
-//#include <Wire.h>               // uncomment for any I2C feature
-//#include <LiquidCrystal_I2C.h>    // uncomment YourDuino I2C display (FEATURE_LCD_YDv1)
-//#include <Adafruit_MCP23017.h>       // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
-//#include <Adafruit_RGBLCDShield.h>   // uncomment for FEATURE_DISPLAY in combination with FEATURE_LCD_ADAFRUIT_I2C and Adafruit_RGBLCDShield lines below
-//#include <BasicTerm.h>              // Uncomment for contest practice
 
 
+//#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
 #include "keyer_features_and_options.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
-#include "keyer_settings.h"
-//#include "keyer.h"               // uncomment this for Sublime/Stino compilation
 //#include "keyer_pin_settings_nanokeyer_rev_b.h"
+#include "keyer_settings.h"
 
-#define CODE_VERSION "2.0"
-#define eeprom_magic_number 14
+#if defined(FEATURE_SLEEP)
+#include <avr/sleep.h>
+#endif 
+#if defined(FEATURE_PS2_KEYBOARD)
+#include <PS2Keyboard.h>
+#endif
+#if defined(FEATURE_LCD_4BIT)
+#include <LiquidCrystal.h>
+#endif
+#if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_YDv1)
+#include <Wire.h>
+#endif
+#if defined(FEATURE_LCD_YDv1)
+#include <LiquidCrystal_I2C.h>
+#endif
+#if defined(FEATURE_LCD_ADAFRUIT_I2C)
+#include <Adafruit_MCP23017.h>
+#endif
+#if defined(FEATURE_LCD_ADAFRUIT_I2C)
+#include <Adafruit_RGBLCDShield.h>
+#endif
+#if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
+#include <BasicTerm.h>
+#endif
+#if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
+#include <Usb.h>    /* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
+#include <usbhub.h>
+#include <hidboot.h>
+#endif
 
-//PS2Keyboard keyboard;          // uncomment this if FEATURE_PS2_KEYBOARD is enabled above
-
-//LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);  // uncomment this if FEATURE_LCD_4BIT is enabled
-
-//Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();      // uncomment this for FEATURE_LCD_ADAFRUIT_I2C
-
-//LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // uncomment for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
-
-
-
-/* Uncomment this section if using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE 
- USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
-
-// #include <avr/pgmspace.h>
-// #include <Usb.h>
-// #include <usbhub.h>
-// #include <avr/pgmspace.h>
-// #include <hidboot.h>
-// USB Usb;
-// uint32_t next_time;
-
-/* End of FEATURE_USB_KEYBOARD / FEATURE_USB_MOUSE section */
-
-
-/* Uncomment this section if using FEATURE_USB_KEYBOARD  */
-
-//class KbdRptParser : public KeyboardReportParser
-//  {
-//  protected:
-//  virtual void OnKeyDown (uint8_t mod, uint8_t key);
-//  virtual void OnKeyUp (uint8_t mod, uint8_t key);
-//  };
-//HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
-//KbdRptParser KeyboardPrs;
-
-/* End of FEATURE_USB_KEYBOARD section */
-
-
-/* Uncomment this section if using FEATURE_USB_MOUSE */
-
-// class MouseRptParser : public MouseReportParser
-//  {
-//  protected:
-//  virtual void OnMouseMove(MOUSEINFO *mi);
-//  virtual void OnLeftButtonUp(MOUSEINFO *mi);
-//  virtual void OnLeftButtonDown(MOUSEINFO *mi);
-//  virtual void OnRightButtonUp(MOUSEINFO *mi);
-//  virtual void OnRightButtonDown(MOUSEINFO *mi);
-//  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
-//  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
-//  };
-// HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
-// MouseRptParser MousePrs;
-
-/* End of FEATURE_USB_MOUSE section */
-
-/* Uncomment this for contest practice*/
-//BasicTerm term(&Serial);
-
-
+// Dependencies
+#if defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_COMMAND_BUTTONS)
+#error "When configuring both FEATURE_COMMAND_LINE_INTERFACE and FEATURE_WINKEY_EMULATION you need to also have FEATURE_COMMAND_BUTTONS"
+#endif
 
 // Variables and stuff
 struct config_t {  // 23 bytes
@@ -564,6 +542,64 @@ byte usb_dah = 0;
 #endif 
 
 
+
+
+#if defined(FEATURE_PS2_KEYBOARD)
+PS2Keyboard keyboard;
+#endif
+
+#if defined(FEATURE_LCD_4BIT)
+LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
+#endif
+
+#if defined(FEATURE_LCD_ADAFRUIT_I2C)
+Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+#endif
+
+#if defined(FEATURE_LCD_YDv1)
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
+#endif
+
+#if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
+USB Usb;
+uint32_t next_time;
+#endif
+
+#if defined(FEATURE_USB_KEYBOARD)
+class KbdRptParser : public KeyboardReportParser
+{
+  protected:
+  virtual void OnKeyDown (uint8_t mod, uint8_t key);
+  virtual void OnKeyUp (uint8_t mod, uint8_t key);
+};
+HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
+KbdRptParser KeyboardPrs;
+#endif
+
+#if defined(FEATURE_USB_MOUSE)
+class MouseRptParser : public MouseReportParser
+{
+  protected:
+  virtual void OnMouseMove(MOUSEINFO *mi);
+  virtual void OnLeftButtonUp(MOUSEINFO *mi);
+  virtual void OnLeftButtonDown(MOUSEINFO *mi);
+  virtual void OnRightButtonUp(MOUSEINFO *mi);
+  virtual void OnRightButtonDown(MOUSEINFO *mi);
+  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
+  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
+};
+HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
+MouseRptParser MousePrs;
+#endif //FEATURE_USB_MOUSE
+
+#if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
+BasicTerm term(&Serial);
+#endif
+
+
+
+
+
 //---------------------------------------------------------------------------------------------------------
 
 
@@ -801,6 +837,10 @@ void service_display() {
 void service_lcd_paddle_echo()
 {
 
+  #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+  byte ascii_temp = 0;
+  #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+
   #ifdef DEBUG_LOOP
   Serial.println(F("loop: entering service_lcd_paddle_echo"));
   #endif    
@@ -808,7 +848,21 @@ void service_lcd_paddle_echo()
   static byte lcd_paddle_echo_space_sent = 1;
 
   if ((lcd_paddle_echo_buffer) && (lcd_paddle_echo) && (millis() > lcd_paddle_echo_buffer_decode_time)) {
+    #ifndef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
     display_scroll_print_char(byte(convert_cw_number_to_ascii(lcd_paddle_echo_buffer)));
+    #else //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+    ascii_temp = byte(convert_cw_number_to_ascii(lcd_paddle_echo_buffer));
+    switch (ascii_temp){
+      case 220: ascii_temp = 0;break; // U_umlaut  (D, ...)
+      case 214: ascii_temp = 1;break; // O_umlaut  (D, SM, OH, ...)
+      case 196: ascii_temp = 2;break; // A_umlaut  (D, SM, OH, ...)
+      case 198: ascii_temp = 3;break; // AE_capital (OZ, LA)
+      case 216: ascii_temp = 4;break; // OE_capital (OZ, LA)
+      case 197: ascii_temp = 6;break; // AA_capital (OZ, LA, SM)
+      case 209: ascii_temp = 7;break; // N-tilde (EA) 
+    }
+    display_scroll_print_char(ascii_temp);
+    #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
     lcd_paddle_echo_buffer = 0;
     lcd_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
     lcd_paddle_echo_space_sent = 0;
@@ -825,29 +879,48 @@ void service_lcd_paddle_echo()
 #ifdef FEATURE_DISPLAY
 void display_scroll_print_char(char charin){
   
- static byte column_pointer = 0;
- static byte row_pointer = 0;
- byte x = 0;
- 
- if (lcd_status != LCD_SCROLL_MSG) {
-   lcd_status = LCD_SCROLL_MSG;
-   lcd.clear();
- }
- if (column_pointer > (lcd_columns-1)) {
-   row_pointer++;
-   column_pointer = 0;
-   if (row_pointer > (lcd_rows-1)) {
-     for (x = 0; x < (lcd_rows-1); x++) {
-       lcd_scroll_buffer[x] = lcd_scroll_buffer[x+1];
-     }
-     lcd_scroll_buffer[x] = "";     
-     row_pointer--;
-     lcd_scroll_flag = 1;
-   }    
+  static byte column_pointer = 0;
+  static byte row_pointer = 0;
+  byte x = 0;
+
+  #ifdef DEBUG_DISPLAY_SCROLL_PRINT_CHAR
+  Serial.print(F("display_scroll_print_char: "));
+  Serial.write(charin);
+  Serial.print(" ");
+  Serial.println(charin);
+  #endif //DEBUG_DISPLAY_SCROLL_PRINT_CHAR
+
+  #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+  switch (charin){
+    case 220: charin = 0;break; // U_umlaut  (D, ...)
+    case 214: charin = 1;break; // O_umlaut  (D, SM, OH, ...)
+    case 196: charin = 2;break; // A_umlaut  (D, SM, OH, ...)
+    case 198: charin = 3;break; // AE_capital (OZ, LA)
+    case 216: charin = 4;break; // OE_capital (OZ, LA)
+    case 197: charin = 6;break; // AA_capital (OZ, LA, SM)
+    case 209: charin = 7;break; // N-tilde (EA) 
+  }
+  #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+
+  if (lcd_status != LCD_SCROLL_MSG) {
+    lcd_status = LCD_SCROLL_MSG;
+    lcd.clear();
   } 
- lcd_scroll_buffer[row_pointer].concat(charin);
- column_pointer++;
- lcd_scroll_buffer_dirty = 1; 
+  if (column_pointer > (lcd_columns-1)) {
+    row_pointer++;
+    column_pointer = 0;
+    if (row_pointer > (lcd_rows-1)) {
+      for (x = 0; x < (lcd_rows-1); x++) {
+        lcd_scroll_buffer[x] = lcd_scroll_buffer[x+1];
+      }
+      lcd_scroll_buffer[x] = "";     
+      row_pointer--;
+      lcd_scroll_flag = 1;
+    }    
+   } 
+  lcd_scroll_buffer[row_pointer].concat(charin);
+  column_pointer++;
+  lcd_scroll_buffer_dirty = 1; 
 }
 
 #endif //FEATURE_DISPLAY
@@ -1465,12 +1538,12 @@ void check_ps2_keyboard()
       switch (keystroke) {
         case PS2_PAGEUP : sidetone_adj(20); break;
         case PS2_PAGEDOWN : sidetone_adj(-20); break;
-        case PS2_RIGHTARROW : adjust_dah_to_dit_ratio(int(dah_to_dit_ratio/10)); break;
-        case PS2_LEFTARROW : adjust_dah_to_dit_ratio(-1*int(dah_to_dit_ratio/10)); break;
+        case PS2_RIGHTARROW : adjust_dah_to_dit_ratio(int(configuration.dah_to_dit_ratio/10)); break;
+        case PS2_LEFTARROW : adjust_dah_to_dit_ratio(-1*int(configuration.dah_to_dit_ratio/10)); break;
         case PS2_UPARROW : speed_set(configuration.wpm+1); break;
         case PS2_DOWNARROW : speed_set(configuration.wpm-1); break;
         case PS2_HOME :
-          dah_to_dit_ratio = initial_dah_to_dit_ratio;
+          configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
           key_tx = 1;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
@@ -2616,16 +2689,29 @@ void check_ptt_tail()
       //if ((millis() - ptt_time) > ptt_tail_time) {
       if (last_sending_type == MANUAL_SENDING) {
         #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) > ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
-        #endif
-        #ifdef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) > (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {
-        #endif
+        if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
+          ptt_unkey();
+        }          
+        #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+        #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+        if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {       
           ptt_unkey();
         }
+        #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+        if ((millis() - ptt_time) >= ptt_tail_time[configuration.current_tx-1]) {       
+          ptt_unkey();
+        }
+        #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+        #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
       } else {
         if ((millis() - ptt_time) > ptt_tail_time[configuration.current_tx-1]) {
+          #ifdef OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
+          if (!send_buffer_bytes){
+            ptt_unkey();
+          }
+          #else
           ptt_unkey();
+          #endif //OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
         }
       }
     }
@@ -2694,7 +2780,10 @@ void check_dit_paddle()
   } else {
     dit_paddle = paddle_right;
   }
-  pin_value = digitalRead(dit_paddle);
+
+
+  pin_value = paddle_pin_read(dit_paddle);
+
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
   if (usb_dit) {pin_value = 0;}
@@ -2720,6 +2809,19 @@ void check_dit_paddle()
     }
     #endif
     dit_buffer = 1;
+
+    #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
+    if (!winkey_interrupted && winkey_host_open){
+      Serial.write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+      winkey_interrupted = 1;
+      // tone(sidetone_line,1000);
+      // delay(500);
+      // noTone(sidetone_line);
+      dit_buffer = 0;
+    }   
+    #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
+
+
     #ifdef FEATURE_SLEEP
     last_activity_time = millis(); 
     #endif //FEATURE_SLEEP
@@ -2730,12 +2832,16 @@ void check_dit_paddle()
       clear_send_buffer();
       #ifdef OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT
       dit_buffer = 0;
-      while (!digitalRead(dit_paddle)) {};
+      while (!paddle_pin_read(dit_paddle)) {};
       memory_rpt_interrupt_flag = 1;
       #endif
     }
     #endif
   }
+
+
+
+
 
 }
 
@@ -2751,7 +2857,10 @@ void check_dah_paddle()
   } else {
     dah_paddle = paddle_left;
   }
-  pin_value = digitalRead(dah_paddle);
+
+
+  pin_value = paddle_pin_read(dah_paddle);
+
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
   if (usb_dah) {pin_value = 0;}
@@ -2765,6 +2874,19 @@ void check_dah_paddle()
     }
     #endif
     dah_buffer = 1;
+
+    #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
+    if (!winkey_interrupted && winkey_host_open){
+      Serial.write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+      winkey_interrupted = 1;
+      // tone(sidetone_line,1000);
+      // delay(500);
+      // noTone(sidetone_line);
+      //dah_buffer = 0;
+    }   
+    #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
+
+
     #ifdef FEATURE_SLEEP
     last_activity_time = millis(); 
     #endif //FEATURE_SLEEP    
@@ -2810,34 +2932,56 @@ void send_dit(byte sending_type)
 //  }
   loop_element_lengths((2.0-(float(configuration.weighting)/50)),(-1.0*keying_compensation),character_wpm,sending_type);
   #ifdef FEATURE_AUTOSPACE
+
+  byte autospace_end_of_character_flag = 0;
+
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active)) {
     check_paddles();
   }
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active) && (dit_buffer == 0) && (dah_buffer == 0)) {
     loop_element_lengths(2,0,configuration.wpm,sending_type);
+    autospace_end_of_character_flag = 1;
   }
   #endif
 
   #ifdef FEATURE_WINKEY_EMULATION
   if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_type == MANUAL_SENDING)) {
     winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 1;
-    winkey_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE    
   }
   #endif
 
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
   if ((cli_paddle_echo) && (sending_type == MANUAL_SENDING)) {
     cli_paddle_echo_buffer = (cli_paddle_echo_buffer * 10) + 1;
-    cli_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    cli_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+  
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){cli_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE
+
   }
   #endif
 
   #ifdef FEATURE_DISPLAY
   if ((lcd_paddle_echo) && (sending_type == MANUAL_SENDING)) {
     lcd_paddle_echo_buffer = (lcd_paddle_echo_buffer * 10) + 1;
-    lcd_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    lcd_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){lcd_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE    
   }
   #endif
+
+  #ifdef FEATURE_AUTOSPACE
+  autospace_end_of_character_flag = 0;
+  #endif //FEATURE_AUTOSPACE
+
   
   being_sent = SENDING_NOTHING;
   last_sending_type = sending_type;
@@ -2882,34 +3026,61 @@ void send_dah(byte sending_type)
 //  }
   loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),character_wpm,sending_type);
   #ifdef FEATURE_AUTOSPACE
+
+  byte autospace_end_of_character_flag = 0;
+
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active)) {
     check_paddles();
   }
   if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active) && (dit_buffer == 0) && (dah_buffer == 0)) {
     loop_element_lengths(2,0,configuration.wpm,sending_type);
+    autospace_end_of_character_flag = 1;
   }
   #endif
 
   #ifdef FEATURE_WINKEY_EMULATION
   if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_type == MANUAL_SENDING)) {
     winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 2;
-    winkey_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE
+
   }
   #endif
 
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
   if ((cli_paddle_echo) && (sending_type == MANUAL_SENDING)) {
     cli_paddle_echo_buffer = (cli_paddle_echo_buffer * 10) + 2;
-    cli_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    cli_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){cli_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE
+
+
   }
   #endif
 
   #ifdef FEATURE_DISPLAY
   if ((lcd_paddle_echo) && (sending_type == MANUAL_SENDING)) {
     lcd_paddle_echo_buffer = (lcd_paddle_echo_buffer * 10) + 2;
-    lcd_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    lcd_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){lcd_paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE    
+
+
   }
   #endif
+
+  #ifdef FEATURE_AUTOSPACE
+  autospace_end_of_character_flag = 0;
+  #endif //FEATURE_AUTOSPACE  
 
 //  if ((keyer_mode == IAMBIC_A) && (iambic_flag)) {
 //    iambic_flag = 0;
@@ -3006,7 +3177,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #endif //FEATURE_USB_KEYBOARD || FEATURE_USB_MOUSE
     
     if (configuration.keyer_mode != ULTIMATIC) {
-      if ((configuration.keyer_mode == IAMBIC_A) && (digitalRead(paddle_left) == LOW ) && (digitalRead(paddle_right) == LOW )) {
+      if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
           iambic_flag = 1;
       }    
    
@@ -3028,7 +3199,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
           }
         }     
       } else {
-        if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (digitalRead(paddle_left) == LOW ) && (digitalRead(paddle_right) == LOW )) {
+        if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
           dah_buffer = 0;
           dit_buffer = 0;         
         }          
@@ -3045,17 +3216,17 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
     // blow out prematurely if we're automatic sending and a paddle gets hit
     #ifdef FEATURE_COMMAND_BUTTONS
-    if (sending_type == AUTOMATIC_SENDING && (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
+    if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
     #else
-    if (sending_type == AUTOMATIC_SENDING && (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || dit_buffer || dah_buffer)) {
+    if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
     #endif
-    if (machine_mode == NORMAL) {
-      return;
-    }
-  }   
+      if (machine_mode == NORMAL) {
+        return;
+      }
+    }   
  }
  
-  if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (digitalRead(paddle_left) == HIGH ) && (digitalRead(paddle_right) == HIGH )) {
+  if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
       iambic_flag = 0;
       dit_buffer = 0;
       dah_buffer = 0;
@@ -3110,7 +3281,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #endif //FEATURE_USB_KEYBOARD
     
     if (configuration.keyer_mode != ULTIMATIC) {
-      if ((configuration.keyer_mode == IAMBIC_A) && (digitalRead(paddle_left) == LOW ) && (digitalRead(paddle_right) == LOW )) {
+      if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
           iambic_flag = 1;
       }    
   
@@ -3132,7 +3303,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
           }
         }     
       } else {
-        if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (digitalRead(paddle_left) == LOW ) && (digitalRead(paddle_right) == LOW )) {
+        if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
           dah_buffer = 0;
           dit_buffer = 0;         
         }          
@@ -3149,9 +3320,9 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
     // blow out prematurely if we're automatic sending and a paddle gets hit
     #ifdef FEATURE_COMMAND_BUTTONS
-    if (sending_type == AUTOMATIC_SENDING && (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
+    if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
     #else
-    if (sending_type == AUTOMATIC_SENDING && (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || dit_buffer || dah_buffer)) {
+    if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
     #endif
     if (machine_mode == NORMAL) {
       return;
@@ -3159,7 +3330,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
   }   
  }
  
-  if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (digitalRead(paddle_left) == HIGH ) && (digitalRead(paddle_right) == HIGH )) {
+  if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
       iambic_flag = 0;
       dit_buffer = 0;
       dah_buffer = 0;
@@ -3304,7 +3475,9 @@ void command_mode ()
   command_mode_disable_tx = 0;
 
   boop_beep();
+  #ifdef command_mode_active_led
   if (command_mode_active_led) {digitalWrite(command_mode_active_led,HIGH);}
+  #endif //command_mode_active_led
   #ifdef FEATURE_DISPLAY
   lcd.clear();
   lcd_center_print_timed("Command Mode", 0, default_display_msg_delay);
@@ -3373,22 +3546,22 @@ void command_mode ()
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
         #ifdef FEATURE_MEMORIES
         case 1221: command_program_memory(); break;                       // P - program a memory
+        #endif //FEATURE_MEMORIES  Acknowledgement: LA3ZA fixed!
         case 21: // N - paddle mode toggle
           if (configuration.paddle_mode == PADDLE_NORMAL) {
             configuration.paddle_mode = PADDLE_REVERSE;
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
-            #endif 
+            #endif //FEATURE_DISPLAY
           } else {
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
-            #endif             
+            #endif //FEATURE_DISPLAY         
             configuration.paddle_mode = PADDLE_NORMAL;
           }
           config_dirty = 1;
           send_dit(AUTOMATIC_SENDING);
           break;  
-        #endif
         case 222: // O - toggle sidetone on and off
           if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {
             #ifdef FEATURE_DISPLAY
@@ -3471,7 +3644,9 @@ void command_mode ()
     }
   }
   beep_boop();
+  #ifdef command_mode_active_led
   if (command_mode_active_led) {digitalWrite(command_mode_active_led,LOW);}
+  #endif //command_mode_active_led
   machine_mode = NORMAL;
   speed_mode = speed_mode_before;   // go back to whatever speed mode we were in before
   configuration.keyer_mode = keyer_mode_before;
@@ -3526,7 +3701,7 @@ void adjust_dah_to_dit_ratio(int adjustment) {
    configuration.dah_to_dit_ratio = configuration.dah_to_dit_ratio + adjustment;
    #ifdef FEATURE_DISPLAY
    #ifdef OPTION_MORE_DISPLAY_MSGS
-   lcd_center_print_timed("Dah/Dit: " + String(dah_to_dit_ratio), 0, default_display_msg_delay);
+   lcd_center_print_timed("Dah/Dit: " + String(configuration.dah_to_dit_ratio), 0, default_display_msg_delay);
    service_display();
    #endif
    #endif   
@@ -3549,18 +3724,18 @@ void command_dah_to_dit_ratio_adjust () {
   while (looping) {
    send_dit(AUTOMATIC_SENDING);
    send_dah(AUTOMATIC_SENDING);
-   if (digitalRead(paddle_left) == LOW) {
+   if (paddle_pin_read(paddle_left) == LOW) {
      adjust_dah_to_dit_ratio(10);
    }
-   if (digitalRead(paddle_right) == LOW) {
+   if (paddle_pin_read(paddle_right) == LOW) {
      adjust_dah_to_dit_ratio(-10);
    }
-   while ((digitalRead(paddle_left) == LOW && digitalRead(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+   while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
      looping = 0;
    }
    
   }
-  while (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   dit_buffer = 0;
   dah_buffer = 0;
 }
@@ -3583,42 +3758,42 @@ void command_tuning_mode() {
   key_tx = 1;
   while (looping) {
 
-    if (digitalRead(paddle_left) == LOW) {
+    if (paddle_pin_read(paddle_left) == LOW) {
       tx_and_sidetone_key(1,MANUAL_SENDING);
       ptt_key();
       latched = 0;
     } else {
-       if (digitalRead(paddle_left) == HIGH && latched == 0) {
+       if (paddle_pin_read(paddle_left) == HIGH && latched == 0) {
          tx_and_sidetone_key(0,MANUAL_SENDING);
          ptt_unkey();
        }
     }
 
-    if (digitalRead(paddle_right) == LOW && latched == 0) {
+    if (paddle_pin_read(paddle_right) == LOW && latched == 0) {
       latched = 1;
       tx_and_sidetone_key(1,MANUAL_SENDING);
       ptt_key();
-      while ((digitalRead(paddle_right) == LOW) && (digitalRead(paddle_left) == HIGH)) {
+      while ((paddle_pin_read(paddle_right) == LOW) && (paddle_pin_read(paddle_left) == HIGH)) {
         delay(10);
       }
     } else {
-      if ((digitalRead(paddle_right) == LOW) && (latched)) {
+      if ((paddle_pin_read(paddle_right) == LOW) && (latched)) {
         latched = 0;
         tx_and_sidetone_key(0,MANUAL_SENDING);
         ptt_unkey();
-        while ((digitalRead(paddle_right) == LOW) && (digitalRead(paddle_left) == HIGH)) {
+        while ((paddle_pin_read(paddle_right) == LOW) && (paddle_pin_read(paddle_left) == HIGH)) {
           delay(10);
         }
       }
     }
-   if ((analogbuttonread(0)) || ((digitalRead(paddle_left) == LOW) && (digitalRead(paddle_right) == LOW))) { // if paddles are squeezed or button0 pressed - exit
+   if ((analogbuttonread(0)) || ((paddle_pin_read(paddle_left) == LOW) && (paddle_pin_read(paddle_right) == LOW))) { // if paddles are squeezed or button0 pressed - exit
      looping = 0;
    }
    
   }
   tx_and_sidetone_key(0,MANUAL_SENDING);
   ptt_unkey();
-  while (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   key_tx = 0;
   send_dit(AUTOMATIC_SENDING);
   dit_buffer = 0;
@@ -3634,7 +3809,7 @@ void sidetone_adj(int hz) {
     config_dirty = 1;
     #ifdef FEATURE_DISPLAY
     #ifdef OPTION_MORE_DISPLAY_MSGS
-    lcd_center_print_timed("Sidetone " + String(hz_sidetone) + " Hz", 0, default_display_msg_delay);
+    lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
     #endif
     #endif   
   }
@@ -3653,7 +3828,7 @@ void command_sidetone_freq_adj() {
 
   while (looping) {
     tone(sidetone_line, configuration.hz_sidetone);
-    if (digitalRead(paddle_left) == LOW) {
+    if (paddle_pin_read(paddle_left) == LOW) {
       #ifdef FEATURE_DISPLAY
       sidetone_adj(5);      
       lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);        
@@ -3662,7 +3837,7 @@ void command_sidetone_freq_adj() {
       #endif
       delay(10);
     }
-    if (digitalRead(paddle_right) == LOW) {
+    if (paddle_pin_read(paddle_right) == LOW) {
       #ifdef FEATURE_DISPLAY
       sidetone_adj(-5);
       lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);       
@@ -3671,13 +3846,13 @@ void command_sidetone_freq_adj() {
       #endif
       delay(10);
     }
-    while ((digitalRead(paddle_left) == LOW && digitalRead(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
       looping = 0;
     }
     
 
   }
-  while (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   noTone(sidetone_line);
 
 }
@@ -3697,19 +3872,19 @@ void command_speed_mode()
 
   while (looping) {
     send_dit(AUTOMATIC_SENDING);
-    if ((digitalRead(paddle_left) == LOW)) {
+    if ((paddle_pin_read(paddle_left) == LOW)) {
       speed_change(1);
     }
-    if ((digitalRead(paddle_right) == LOW)) {
+    if ((paddle_pin_read(paddle_right) == LOW)) {
       speed_change(-1);
     }
-    while ((digitalRead(paddle_left) == LOW && digitalRead(paddle_right) == LOW) || (analogbuttonread(0) ))  // if paddles are squeezed or button0 pressed - exit
+    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0) ))  // if paddles are squeezed or button0 pressed - exit
     {
       looping = 0;
     }
 
   }
-  while (digitalRead(paddle_left) == LOW || digitalRead(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   #ifndef FEATURE_DISPLAY
   // announce speed in CW
   wpm_string = String(configuration.wpm, DEC);
@@ -3844,6 +4019,12 @@ void initialize_analog_button_array() {
     #ifndef OPTION_REVERSE_BUTTON_ORDER
     button_array_low_limit[x] = (button_value - ((button_value - lower_button_value)/2));
     button_array_high_limit[x] = (button_value + ((higher_button_value - button_value)/2));
+    #else
+    button_array_low_limit[y] = (button_value - ((button_value - lower_button_value)/2));
+    button_array_high_limit[y] = (button_value + ((higher_button_value - button_value)/2));
+    y--;
+    #endif
+
     #ifdef DEBUG_BUTTON_ARRAY    
     Serial.print("initialize_analog_button_array: ");
     Serial.print(x);
@@ -3852,11 +4033,8 @@ void initialize_analog_button_array() {
     Serial.print(" - ");
     Serial.println(button_array_high_limit[x]);
     #endif //DEBUG_BUTTON_ARRAY
-    #else
-    button_array_low_limit[y] = (button_value - ((button_value - lower_button_value)/2));
-    button_array_high_limit[y] = (button_value + ((higher_button_value - button_value)/2));
-    y--;
-    #endif
+
+
   }
   
   #else //FEATURE_DL2SBA_BANKSWITCH
@@ -3885,6 +4063,7 @@ byte analogbuttonpressed() {
   int analog_line_read_average = 0;
   int analog_read_temp = 0;
   
+  #ifndef OPTION_REVERSE_BUTTON_ORDER
   if (analogRead(analog_buttons_pin) <= button_array_high_limit[analog_buttons_number_of_buttons-1]) {
     
     for (byte x = 0;x < 19;x++){
@@ -3908,6 +4087,39 @@ byte analogbuttonpressed() {
     }    
     
   }
+
+  #else //OPTION_REVERSE_BUTTON_ORDER
+
+  if (analogRead(analog_buttons_pin) <= button_array_high_limit[0]) {
+    \
+    for (byte x = 0;x < 19;x++){
+      analog_read_temp = analogRead(analog_buttons_pin);
+      if (analog_read_temp <= button_array_high_limit[0]){
+        analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2;
+      }
+    }
+    
+    #ifdef DEBUG_BUTTONS
+    Serial.print(F(" analogbuttonpressed: analog_line_read_average: "));
+    Serial.println(analog_line_read_average);
+    #endif 
+
+    for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
+      if ((analog_line_read_average > button_array_low_limit[x]) && (analog_line_read_average <=  button_array_high_limit[x])) {
+        #ifdef DEBUG_BUTTONS
+        //if (!debug_flag) {
+          Serial.print(F(" analogbuttonpressed: returning: "));
+          Serial.println(x);
+        //  debug_flag = 1;
+        //}
+        #endif         
+        return x;
+      }  
+    }    
+    
+  }
+
+  #endif //OPTION_REVERSE_BUTTON_ORDER
   
 
   /*
@@ -4024,7 +4236,7 @@ void check_command_buttons()
     #endif
     button_depress_time = millis();
     while ((analogbuttontemp == analogbuttonpressed()) && ((millis() - button_depress_time) < 1000)) {
-      if ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW)) {
+      if ((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW)) {
         button_depress_time = 1001;  // if button 0 is held and a paddle gets hit, assume we have a hold and shortcut out
       }
     }
@@ -4078,7 +4290,7 @@ void check_command_buttons()
           key_tx = 0;
           // do stuff if this is a command button hold down
           while (analogbuttonpressed() == 0) {
-            if (digitalRead(paddle_left) == LOW) {                     // left paddle increase speed
+            if (paddle_pin_read(paddle_left) == LOW) {                     // left paddle increase speed
               speed_change(1);
               previous_sidetone_mode = configuration.sidetone_mode;
               configuration.sidetone_mode = SIDETONE_ON; 
@@ -4101,7 +4313,7 @@ void check_command_buttons()
               #endif
 
             }
-            if (digitalRead(paddle_right) == LOW) {                    // right paddle decreases speed
+            if (paddle_pin_read(paddle_right) == LOW) {                    // right paddle decreases speed
               speed_change(-1);
               previous_sidetone_mode = configuration.sidetone_mode;
               configuration.sidetone_mode = SIDETONE_ON; 
@@ -4128,7 +4340,7 @@ void check_command_buttons()
        }  //(analogbuttontemp == 0)
        if ((analogbuttontemp > 0) && (analogbuttontemp < analog_buttons_number_of_buttons)) {
          while (analogbuttonpressed() == analogbuttontemp) {
-            if (((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW)) && (analogbuttontemp < (number_of_memories + 1))){
+            if (((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW)) && (analogbuttontemp < (number_of_memories + 1))){
               #ifdef FEATURE_MEMORIES
               repeat_memory = analogbuttontemp - 1;
               last_memory_repeat_time = 0;
@@ -4168,7 +4380,7 @@ void service_dit_dah_buffers()
   #endif      
       
   if ((configuration.keyer_mode == IAMBIC_A) || (configuration.keyer_mode == IAMBIC_B) || (configuration.keyer_mode == ULTIMATIC)) {
-    if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (digitalRead(paddle_left)) && (digitalRead(paddle_right))) {
+    if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left)) && (paddle_pin_read(paddle_right))) {
       iambic_flag = 0;
       dit_buffer = 0;
       dah_buffer = 0;
@@ -4254,20 +4466,37 @@ void boop_beep()
 
 //-------------------------------------------------------------------------------------------------------
 
-void send_dits(int dits)
-{
-  for (;dits > 0;dits--) {
-    send_dit(AUTOMATIC_SENDING);
-  }
+// void send_dits(int dits)
+// {
+//   for (;dits > 0;dits--) {
+//     send_dit(AUTOMATIC_SENDING);
+//   }
 
-}
+// }
 
 //-------------------------------------------------------------------------------------------------------
 
-void send_dahs(int dahs)
-{
-  for (;dahs > 0;dahs--) {
-    send_dah(AUTOMATIC_SENDING);
+// void send_dahs(int dahs)
+// {
+//   for (;dahs > 0;dahs--) {
+//     send_dah(AUTOMATIC_SENDING);
+//   }
+
+// }
+
+//-------------------------------------------------------------------------------------------------------
+void send_the_dits_and_dahs(char * cw_to_send){
+
+
+  for (int x = 0;x < 12;x++){
+    switch(cw_to_send[x]){
+      case '.': send_dit(AUTOMATIC_SENDING); break;
+      case '-': send_dah(AUTOMATIC_SENDING); break;
+      default: return; break;
+    }
+    if ((dit_buffer) || (dah_buffer)){
+      return;
+    }
   }
 
 }
@@ -4284,7 +4513,8 @@ void send_char(char cw_char, byte omit_letterspace)
   }
   Serial.println();
   #endif
-  
+
+
   #ifdef FEATURE_SLEEP
   last_activity_time = millis(); 
   #endif //FEATURE_SLEEP
@@ -4293,91 +4523,104 @@ void send_char(char cw_char, byte omit_letterspace)
 
   if (char_send_mode == CW) {
     switch (cw_char) {
-      case 'A': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case 'B': send_dah(AUTOMATIC_SENDING); send_dits(3); break;
-      case 'C': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'D': send_dah(AUTOMATIC_SENDING); send_dits(2); break;
-      case 'E': send_dit(AUTOMATIC_SENDING); break;
-      case 'F': send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'G': send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
-      case 'H': send_dits(4); break;
-      case 'I': send_dits(2); break;
-      case 'J': send_dit(AUTOMATIC_SENDING); send_dahs(3); break;
-      case 'K': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case 'L': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); break;
-      case 'M': send_dahs(2); break;
-      case 'N': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'O': send_dahs(3); break;
-      case 'P': send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
-      case 'Q': send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case 'R': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'S': send_dits(3); break;
-      case 'T': send_dah(AUTOMATIC_SENDING); break;
-      case 'U': send_dits(2); send_dah(AUTOMATIC_SENDING); break;
-      case 'V': send_dits(3); send_dah(AUTOMATIC_SENDING); break;
-      case 'W': send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
-      case 'X': send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); break;
-      case 'Y': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
-      case 'Z': send_dahs(2); send_dits(2); break;
+      case 'A': send_the_dits_and_dahs(".-");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case 'B': send_the_dits_and_dahs("-...");break;//send_dah(AUTOMATIC_SENDING); send_dits(3); break;
+      case 'C': send_the_dits_and_dahs("-.-.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case 'D': send_the_dits_and_dahs("-..");break;//send_dah(AUTOMATIC_SENDING); send_dits(2); break;
+      case 'E': send_the_dits_and_dahs(".");break;//send_dit(AUTOMATIC_SENDING); break;
+      case 'F': send_the_dits_and_dahs("..-.");break;//send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case 'G': send_the_dits_and_dahs("--.");break;//send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
+      case 'H': send_the_dits_and_dahs("....");break;//send_dits(4); break;
+      case 'I': send_the_dits_and_dahs("..");break;//send_dits(2); break;
+      case 'J': send_the_dits_and_dahs(".---");break;//send_dit(AUTOMATIC_SENDING); send_dahs(3); break;
+      case 'K': send_the_dits_and_dahs("-.-");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case 'L': send_the_dits_and_dahs(".-..");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); break;
+      case 'M': send_the_dits_and_dahs("--");break;//send_dahs(2); break;
+      case 'N': send_the_dits_and_dahs("-.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case 'O': send_the_dits_and_dahs("---");break;//send_dahs(3); break;
+      case 'P': send_the_dits_and_dahs(".--.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
+      case 'Q': send_the_dits_and_dahs("--.-");break;//send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case 'R': send_the_dits_and_dahs(".-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case 'S': send_the_dits_and_dahs("...");break;//send_dits(3); break;
+      case 'T': send_the_dits_and_dahs("-");break;//send_dah(AUTOMATIC_SENDING); break;
+      case 'U': send_the_dits_and_dahs("..-");break;//send_dits(2); send_dah(AUTOMATIC_SENDING); break;
+      case 'V': send_the_dits_and_dahs("...-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); break;
+      case 'W': send_the_dits_and_dahs(".--");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
+      case 'X': send_the_dits_and_dahs("-..-");break;//send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); break;
+      case 'Y': send_the_dits_and_dahs("-.--");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
+      case 'Z': send_the_dits_and_dahs("--..");break;//send_dahs(2); send_dits(2); break;
 
-      case '0': send_dahs(5); break;
-      case '1': send_dit(AUTOMATIC_SENDING); send_dahs(4); break;
-      case '2': send_dits(2); send_dahs(3); break;
-      case '3': send_dits(3); send_dahs(2); break;
-      case '4': send_dits(4); send_dah(AUTOMATIC_SENDING); break;
-      case '5': send_dits(5); break;
-      case '6': send_dah(AUTOMATIC_SENDING); send_dits(4); break;
-      case '7': send_dahs(2); send_dits(3); break;
-      case '8': send_dahs(3); send_dits(2); break;
-      case '9': send_dahs(4); send_dit(AUTOMATIC_SENDING); break;
+      case '0': send_the_dits_and_dahs("-----");break;//send_dahs(5); break;
+      case '1': send_the_dits_and_dahs(".----");break;//send_dit(AUTOMATIC_SENDING); send_dahs(4); break;
+      case '2': send_the_dits_and_dahs("..---");break;//send_dits(2); send_dahs(3); break;
+      case '3': send_the_dits_and_dahs("...--");break;//send_dits(3); send_dahs(2); break;
+      case '4': send_the_dits_and_dahs("....-");break;//send_dits(4); send_dah(AUTOMATIC_SENDING); break;
+      case '5': send_the_dits_and_dahs(".....");break;//send_dits(5); break;
+      case '6': send_the_dits_and_dahs("-....");break;//send_dah(AUTOMATIC_SENDING); send_dits(4); break;
+      case '7': send_the_dits_and_dahs("--...");break;//send_dahs(2); send_dits(3); break;
+      case '8': send_the_dits_and_dahs("---..");break;//send_dahs(3); send_dits(2); break;
+      case '9': send_the_dits_and_dahs("----.");break;//send_dahs(4); send_dit(AUTOMATIC_SENDING); break;
 
-      case '=': send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); break;
-      case '/': send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '=': send_the_dits_and_dahs("-...-");break;//send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); break;
+      case '/': send_the_dits_and_dahs("-..-.");break;//send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
       case ' ': loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm,AUTOMATIC_SENDING); break;
-      case '*': send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;    // using asterisk for BK
+      case '*': send_the_dits_and_dahs("-...-.-");break;//send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;    // using asterisk for BK
       //case '&': send_dit(AUTOMATIC_SENDING); loop_element_lengths(3); send_dits(3); break;
-      case '.': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case ',': send_dahs(2); send_dits(2); send_dahs(2); break;
-      case '\'': send_dit(AUTOMATIC_SENDING); send_dahs(4); send_dit(AUTOMATIC_SENDING); break;                   // apostrophe
-      case '!': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
-      case '(': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
-      case ')': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case '&': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(3); break;
-      case ':': send_dahs(3); send_dits(3); break;
-      case ';': send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '+': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '-': send_dah(AUTOMATIC_SENDING); send_dits(4); send_dah(AUTOMATIC_SENDING); break;
-      case '_': send_dits(2); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case '"': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '$': send_dits(3); send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); break;
-      case '@': send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '<': send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;     // AR
-      case '>': send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;               // SK
+      case '.': send_the_dits_and_dahs(".-.-.-");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case ',': send_the_dits_and_dahs("--..--");break;//send_dahs(2); send_dits(2); send_dahs(2); break;
+      case '\'': send_the_dits_and_dahs(".----.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(4); send_dit(AUTOMATIC_SENDING); break;                   // apostrophe
+      case '!': send_the_dits_and_dahs("-.-.--");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
+      case '(': send_the_dits_and_dahs("-.--.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
+      case ')': send_the_dits_and_dahs("-.--.-");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case '&': send_the_dits_and_dahs(".-...");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(3); break;
+      case ':': send_the_dits_and_dahs("---...");break;//send_dahs(3); send_dits(3); break;
+      case ';': send_the_dits_and_dahs("-.-.-.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '+': send_the_dits_and_dahs(".-.-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '-': send_the_dits_and_dahs("-....-");break;//send_dah(AUTOMATIC_SENDING); send_dits(4); send_dah(AUTOMATIC_SENDING); break;
+      case '_': send_the_dits_and_dahs("..--.-");break;//send_dits(2); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
+      case '"': send_the_dits_and_dahs(".-..-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '$': send_the_dits_and_dahs("...-..-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); break;
+      case '@': send_the_dits_and_dahs(".--.-.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '<': send_the_dits_and_dahs(".-.-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;     // AR
+      case '>': send_the_dits_and_dahs("...-.-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;               // SK
       case '\n':
       case '\r': break;
       
       #ifdef OPTION_NON_ENGLISH_EXTENSIONS
-      case 192: send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // 'À'
-      case 194: send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Â'
-      case 197: send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // 'Å' / 
-      case 196: send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Ä'
-      case 198: send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Æ'
-      case 199: send_dah(AUTOMATIC_SENDING);send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); break;  // 'Ç'
-      case 208: send_dits(2);send_dahs(2);send_dit(AUTOMATIC_SENDING);break;  // 'Ð'
-      case 138: send_dahs(4);break; // 'Š'
-      case 200: send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING);send_dits(2);send_dah(AUTOMATIC_SENDING); break; // 'È'
-      case 201: send_dits(2);send_dah(AUTOMATIC_SENDING);send_dits(2);break; // 'É'
-      case 142: send_dahs(2);send_dits(2);send_dah(AUTOMATIC_SENDING);send_dit(AUTOMATIC_SENDING);break; // 'Ž'
-      case 209: send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dahs(2);break; // 'Ñ'
-      case 214: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ö'
-      case 216: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ø'
-      case 211: send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ó'
-      case 220: send_dits(2);send_dahs(2);break; // 'Ü'
-      case 223: send_dits(6);break; // 'ß'
+      case 192: send_the_dits_and_dahs(".--.-");break;//send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // 'À'
+      case 194: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Â'
+      case 197: send_the_dits_and_dahs(".--.-");break;//send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // 'Å' / 
+      case 196: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Ä'
+      case 198: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Æ'
+      case 199: send_the_dits_and_dahs("-.-..");break;//send_dah(AUTOMATIC_SENDING);send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); break;  // 'Ç'
+      case 208: send_the_dits_and_dahs("..--.");break;//send_dits(2);send_dahs(2);send_dit(AUTOMATIC_SENDING);break;  // 'Ð'
+      case 138: send_the_dits_and_dahs("----");break;//send_dahs(4);break; // 'Š'
+      case 200: send_the_dits_and_dahs(".-..-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING);send_dits(2);send_dah(AUTOMATIC_SENDING); break; // 'È'
+      case 201: send_the_dits_and_dahs("..-..");break;//send_dits(2);send_dah(AUTOMATIC_SENDING);send_dits(2);break; // 'É'
+      case 142: send_the_dits_and_dahs("--..-.");break;//send_dahs(2);send_dits(2);send_dah(AUTOMATIC_SENDING);send_dit(AUTOMATIC_SENDING);break; // 'Ž'
+      case 209: send_the_dits_and_dahs("--.--");break;//send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dahs(2);break; // 'Ñ'
+      case 214: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ö'
+      case 216: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ø'
+      case 211: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ó'
+      case 220: send_the_dits_and_dahs("..--");break;//send_dits(2);send_dahs(2);break; // 'Ü'
+      case 223: send_the_dits_and_dahs("------");break;//send_dits(6);break; // 'ß'
+
+      // for English/Japanese font LCD controller which has a few European characters also (HD44780UA00) (LA3ZA code)
+      case 225: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'ä' LA3ZA
+      case 239: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'ö' LA3ZA
+      case 242: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'ø' LA3ZA
+      case 245: send_the_dits_and_dahs("..--");break;//send_dits(2);send_dahs(2);break; // 'ü' LA3ZA
+      case 246: send_the_dits_and_dahs("----");break;//send_dahs(4);break; // almost '' or rather sigma LA3ZA
+      case 252: send_the_dits_and_dahs(".--.-");break;//send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // å (sort of) LA3ZA
+      case 238: send_the_dits_and_dahs("--.--");break;//send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dahs(2);break; // 'ñ' LA3ZA
+      case 226: send_the_dits_and_dahs("------");break;//send_dits(6);break; // 'ß' LA3ZA
+
+
+
       #endif //OPTION_NON_ENGLISH_EXTENSIONS      
       
       case '|': loop_element_lengths(0.5,0,configuration.wpm,AUTOMATIC_SENDING); return; break;
-      default: send_dits(2); send_dahs(2); send_dits(2); break;
+      default: send_the_dits_and_dahs("..--..");break;//send_dits(2); send_dahs(2); send_dits(2); break;
       
     }
     if (omit_letterspace != OMIT_LETTERSPACE) {
@@ -4669,7 +4912,7 @@ void service_send_buffer(byte no_print)
     #endif
     #ifdef FEATURE_WINKEY_EMULATION
     if (winkey_sending && winkey_host_open) {
-      Serial.write(0xc2|winkey_sending|winkey_xoff);
+      Serial.write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
       winkey_interrupted = 1;
     }
     #endif
@@ -4828,6 +5071,7 @@ void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
+
   ptt_tail_time[configuration.current_tx-1] = (incoming_serial_byte*10);
   #ifdef DEBUG_WINKEY_PROTOCOL
   send_char('P',NORMAL);
@@ -5007,10 +5251,10 @@ void winkey_set_pinconfig_command(byte incoming_serial_byte) {
   }
 
   switch(incoming_serial_byte & 48) {
-    case 0: ptt_hang_time_wordspace_units = 1.0; break;
-    case 16: ptt_hang_time_wordspace_units = 1.33; break;
-    case 32: ptt_hang_time_wordspace_units = 1.66; break;
-    case 48: ptt_hang_time_wordspace_units = 2.0; break;
+    case 0: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_1_0; break;
+    case 16: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_1_33; break;
+    case 32: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_1_66; break;
+    case 48: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_2_0; break;
   }
 
   switch(incoming_serial_byte & 12) {
@@ -5379,6 +5623,7 @@ void service_winkey(byte action) {
       if (ptt_line_activated == 0) {
         winkey_sending = 0;
         winkey_interrupted = 0;
+        //Serial.write(0xc2|winkey_sending|winkey_xoff);  <- this makes N1MM get borked
         Serial.write(0xc0|winkey_sending|winkey_xoff);    // tell the host we've sent everything
         winkey_buffer_counter = 0;
         winkey_buffer_pointer = 0;
@@ -5595,6 +5840,15 @@ void service_winkey(byte action) {
       }
     } else {
 
+      if (winkey_status == WINKEY_UNSUPPORTED_COMMAND) {
+        winkey_parmcount--;
+        if (winkey_parmcount == 0) {
+          Serial.write(0xc0|winkey_sending|winkey_xoff);           
+          winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+        }
+
+      }
+
       //WINKEY_LOAD_SETTINGS_PARM_1_COMMAND IS 101
       if ((winkey_status > 100) && (winkey_status < 116)) {   // Load Settings Command - this has 15 parameters, so we handle it a bit differently
         winkey_load_settings_command(winkey_status,incoming_serial_byte);
@@ -5764,9 +6018,9 @@ void service_winkey(byte action) {
           case 0x01: wdt_enable(WDTO_30MS); while(1) {}; break;  // reset command
           case 0x02:  // host open command - send version back to host
             #ifdef OPTION_WINKEY_2_SUPPORT
-            Serial.write(23);
+            Serial.write(WINKEY_2_REPORT_VERSION_NUMBER);
             #else //OPTION_WINKEY_2_SUPPORT
-            Serial.write(10);
+            Serial.write(WINKEY_1_REPORT_VERSION_NUMBER);
             #endif //OPTION_WINKEY_2_SUPPORT
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             winkey_host_open = 1;
@@ -5950,14 +6204,6 @@ void service_winkey(byte action) {
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
 
-      if (winkey_status == WINKEY_UNSUPPORTED_COMMAND) {
-        winkey_parmcount--;
-        if (winkey_parmcount == 0) {
-          Serial.write(0xc0|winkey_sending|winkey_xoff);           
-          winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
-        }
-
-      }
     } // else (winkey_status == WINKEY_NO_COMMAND_IN_PROGRESS)
   }  // if (action == SERVICE_SERIAL_BYTE
 
@@ -6956,8 +7202,7 @@ void paqso_practice(){
       user_input_buffer_characters = 0;    
       escape_flag_time = 0;
     } //((process_user_input_buffer) && ((escape_flag_time == 0) || ((millis() -escape_flag_time) > 100)))
-
- //aaaaa   
+  
     //do autonomous events
     service_send_buffer(NOPRINT);
     
@@ -7099,7 +7344,6 @@ void us_callsign_practice()
         send_char(callsign[x],NORMAL);
       }
   
-  //aaaa
   
       //Serial.println(callsign);
   
@@ -7139,12 +7383,12 @@ void us_callsign_practice()
   
       delay(100);
       #ifdef FEATURE_COMMAND_BUTTONS
-      while ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW) || (analogbuttonread(0))) {
+      while ((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) {
         loop1 = 0;
         loop2 = 0;
       }
       #else 
-      while ((digitalRead(paddle_left) == LOW) || (digitalRead(paddle_right) == LOW)) {
+      while ((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW)) {
         loop1 = 0;
         loop2 = 0;
       }    
@@ -7347,7 +7591,7 @@ int convert_cw_number_to_ascii (long number_in)
    case 121212: return 46; break; // . //sp5iou
    case 1112112: return 36; break; // $ //sp5iou
    case 12111: return 38; break; // & // sp5iou
-   case 221122: return 44; break; // ,
+   //case 221122: return 44; break; // ,
    case 122221: return 39; break; // ' // sp5iou
    case 121121: return 34; break; // " // sp5iou
    case 122121: return 64; break; // @ // sp5iou
@@ -7360,25 +7604,31 @@ int convert_cw_number_to_ascii (long number_in)
    case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou
    #endif //OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
 
+
    #ifdef OPTION_NON_ENGLISH_EXTENSIONS
-   case 12212: return 197; break;   // Å   - customize for your locality  ( 1 = dit, 2 = dah, return code is ASCII code )
-   case 1212: return 196; break;    // Ä   - customize for your locality
-   //case 12212: return 192; break; // À   - customize for your locality
-   //case 1212: return 197; break;  // Ä   - customize for your locality
-   //case 1212: return 198; break;  // Æ   - customize for your locality
+   // for English/Cyrillic/Western European font LCD controller (HD44780UA02):
+   case 12212: return 197; break;     // 'Å' - AA_capital (OZ, LA, SM)
+   //case 12212: return 192; break;   // 'À' - A accent   
+   case 1212: return 198; break;      // 'Æ' - AE_capital   (OZ, LA)
+   //case 1212: return 196; break;    // 'Ä' - A_umlaut (D, SM, OH, ...)
+   case 2222: return 138; break;      // CH  - (Russian letter symbol)
+   case 22122: return 209; break;     // 'Ñ' - (EA)               
+   //case 2221: return 214; break;    // 'Ö' – O_umlaut  (D, SM, OH, ...)
+   //case 2221: return 211; break;    // 'Ò' - O accent
+   case 2221: return 216; break;      // 'Ø' - OE_capital    (OZ, LA)
+   case 1122: return 220; break;      // 'Ü' - U_umlaut     (D, ...)
+   case 111111: return 223; break;    // beta - double S    (D?, ...)   
+
+
+   
    case 21211: return 199; break;   // Ç
    case 11221: return 208; break;   // Ð
-   case 2222: return 138; break;    // Š
    case 12112: return 200; break;   // È
    case 11211: return 201; break;   // É
    case 221121: return 142; break;  // Ž
-   case 22122: return 209; break;   // Ñ
-   case 2221: return 214; break;    // Ö 
-   //case 2221: return 211; break;  // Ó   - customize for your locality  ( 1 = dit, 2 = dah, return code is ASCII code )
-   //case 2221: return 216; break;  // Ø   - customize for your locality
-   case 1122: return 220; break;    // Ü 
-   case 111111: return 223; break;   // ß
+   
    #endif //OPTION_NON_ENGLISH_EXTENSIONS
+
 
    default: return 254; break;
  }
@@ -7765,7 +8015,7 @@ void play_memory(byte memory_number)
                   }       
                 }           
                 break;
-              //zzzzz
+          
               case 'S': // insert space
                 send_char(' ',NORMAL);
                 break;
@@ -8140,7 +8390,7 @@ void program_memory(int memory_number)
   dit_buffer = 0;
   dah_buffer = 0;
   #ifdef FEATURE_COMMAND_BUTTONS
-  while ((digitalRead(paddle_left) == HIGH) && (digitalRead(paddle_right) == HIGH) && (!analogbuttonread(0))) { }  // loop until user starts sending or hits the button
+  while ((paddle_pin_read(paddle_left) == HIGH) && (paddle_pin_read(paddle_right) == HIGH) && (!analogbuttonread(0))) { }  // loop until user starts sending or hits the button
   #endif
 
   while (loop2) {
@@ -8297,10 +8547,12 @@ int memory_end(byte memory_number) {
 
 void initialize_pins() {
   
+  //#ifndef FEATURE_CAPACITIVE_PADDLE_PINS
   pinMode (paddle_left, INPUT);
   digitalWrite (paddle_left, HIGH);
   pinMode (paddle_right, INPUT);
   digitalWrite (paddle_right, HIGH);
+  //#endif //#ifdef FEATURE_CAPACITIVE_PADDLE_PINS
   
   if (tx_key_line_1) {
     pinMode (tx_key_line_1, OUTPUT);
@@ -8371,12 +8623,12 @@ void initialize_pins() {
   digitalWrite (cw_decoder_pin, HIGH);  
   #endif //FEATURE_CW_DECODER
   
-  #ifdef FEATURE_COMMAND_BUTTONS
+  #if defined(FEATURE_COMMAND_BUTTONS) && defined(command_mode_active_led)
   if(command_mode_active_led) {
     pinMode (command_mode_active_led, OUTPUT);
     digitalWrite (command_mode_active_led,LOW);
   }
-  #endif //FEATURE_COMMAND_BUTTONS
+  #endif //FEATURE_COMMAND_BUTTONS && command_mode_active_led
   
   
   #ifdef FEATURE_LED_RING
@@ -8684,21 +8936,6 @@ void initialize_keyer_state(){
   #endif //FEATURE_FARNSWORTH
   
   switch_to_tx_silent(1);
-  
-  /* aaaaaa
-
-
-  byte autospace_active;
-
-  //probably OK: byte current_ptt_line;
-
-  unsigned int memory_repeat_time;
-  byte dit_buffer_off;
-  byte dah_buffer_off;
-
-  byte cmos_super_keyer_iambic_b_timing_on;
-  
-  */
 
 }  
 
@@ -8759,8 +8996,8 @@ void initialize_watchdog(){
 void check_eeprom_for_initialization(){
 
   // do an eeprom reset to defaults if paddles are squeezed
-  if (digitalRead(paddle_left) == LOW && digitalRead(paddle_right) == LOW) {
-    while (digitalRead(paddle_left) == LOW && digitalRead(paddle_right) == LOW) {}
+  if (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {
+    while (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {}
     write_settings_to_eeprom(1);
     beep_boop();
     beep_boop();
@@ -8781,12 +9018,12 @@ void check_eeprom_for_initialization(){
 void check_for_beacon_mode(){
 
   // check for beacon mode (paddle_left == low) or straight key mode (paddle_right == low)
-  if (digitalRead(paddle_left) == LOW) {
+  if (paddle_pin_read(paddle_left) == LOW) {
     #ifdef FEATURE_BEACON
     machine_mode = BEACON;
     #endif
   } else {
-    if (digitalRead(paddle_right) == LOW) {
+    if (paddle_pin_read(paddle_right) == LOW) {
       configuration.keyer_mode = STRAIGHT;
     }
   }
@@ -8812,57 +9049,59 @@ void initialize_serial_port(){
 
   // initialize serial port
   #if defined(FEATURE_SERIAL)
-  #ifdef FEATURE_WINKEY_EMULATION
-  #ifdef FEATURE_COMMAND_LINE_INTERFACE
+  
+  #if defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_COMMAND_LINE_INTERFACE) //--------------------------------------------
+  
   #ifdef FEATURE_COMMAND_BUTTONS
   if (analogbuttonread(0)) {
-  #endif //FEATURE_COMMAND_BUTTONS
+  
+  
     #ifdef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
     serial_mode = SERIAL_NORMAL;
     serial_baud_rate = default_serial_baud_rate;
-    #endif //OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
-    #ifndef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
+    #else
     serial_mode = SERIAL_WINKEY_EMULATION;
     serial_baud_rate = 1200;
     #endif  //ifndef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
+    
   } else {
+  #endif //FEATURE_COMMAND_BUTTONS
+    
     #ifdef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
     serial_mode = SERIAL_WINKEY_EMULATION;
     serial_baud_rate = 1200;
-    #endif //OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
-    #ifndef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
+    #else
     serial_mode = SERIAL_NORMAL;
     serial_baud_rate = default_serial_baud_rate;
     #endif  //ifndef OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
+    
+  #ifdef FEATURE_COMMAND_BUTTONS
   }
+  #endif //FEATURE_COMMAND_BUTTONS
+  
   #ifdef FEATURE_COMMAND_BUTTONS
   while (analogbuttonread(0)) {}
   #endif //FEATURE_COMMAND_BUTTONS
-  #endif //FEATURE_WINKEY_EMULATION
-  #endif //FEATURE_COMMAND_LINE_INTERFACE
+  
+  #endif //defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_COMMAND_LINE_INTERFACE)---------------------------------
 
-  #ifndef FEATURE_WINKEY_EMULATION
-  #ifdef FEATURE_COMMAND_LINE_INTERFACE
+  #if !defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_COMMAND_LINE_INTERFACE)
   serial_mode = SERIAL_NORMAL;
   serial_baud_rate = default_serial_baud_rate;
-  #endif // FEATURE_COMMAND_LINE_INTERFACE
-  #endif  //ifndef FEATURE_WINKEY_EMULATION
+  #endif  //!defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 
-  #ifdef FEATURE_WINKEY_EMULATION
-  #ifndef FEATURE_COMMAND_LINE_INTERFACE
+  #if defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_COMMAND_LINE_INTERFACE)
   serial_mode = SERIAL_WINKEY_EMULATION;
   serial_baud_rate = 1200;
-  #endif // FEATURE_COMMAND_LINE_INTERFACE
-  #endif  //ifndef FEATURE_WINKEY_EMULATION
+  #endif //defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_COMMAND_LINE_INTERFACE)
   
   Serial.begin(serial_baud_rate);
   
   #ifdef DEBUG_STARTUP
   Serial.println(F("setup: serial port opened"));
-  #endif
+  #endif //DEBUG_STARTUP
 
-  #ifndef OPTION_SUPPRESS_SERIAL_BOOT_MSG
-  #ifdef FEATURE_COMMAND_LINE_INTERFACE
+  #if !defined(OPTION_SUPPRESS_SERIAL_BOOT_MSG) && defined(FEATURE_COMMAND_LINE_INTERFACE)
   if (serial_mode == SERIAL_NORMAL) {
     Serial.print(F("\n\rK3NG Keyer Version "));
     Serial.write(CODE_VERSION);
@@ -8871,11 +9110,14 @@ void initialize_serial_port(){
     Serial.println(F("\n\rEnter \\? for help\n"));
     #endif
   }
+  
   #ifdef DEBUG_MEMORYCHECK
   memorycheck();
   #endif //DEBUG_MEMORYCHECK
-  #endif //FEATURE_COMMAND_LINE_INTERFACE
-  #endif //ifndef OPTION_SUPPRESS_SERIAL_BOOT_MSG
+  
+  #endif //!defined(OPTION_SUPPRESS_SERIAL_BOOT_MSG) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
+  
   #endif //FEATURE_SERIAL
   
   
@@ -8899,6 +9141,35 @@ void initialize_display(){
   #ifdef FEATURE_LCD_ADAFRUIT_I2C
   lcd.setBacklight(lcdcolor);
   #endif //FEATURE_LCD_ADAFRUIT_I2C
+
+  #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
+  // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/
+
+
+  byte U_umlaut[8] =   {B01010,B00000,B10001,B10001,B10001,B10001,B01110,B00000}; // 'Ü'  
+  byte O_umlaut[8] =   {B01010,B00000,B01110,B10001,B10001,B10001,B01110,B00000}; // 'Ö'  
+  byte A_umlaut[8] =   {B01010,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // 'Ä'    
+  byte AE_capital[8] = {B01111,B10100,B10100,B11110,B10100,B10100,B10111,B00000}; // 'Æ' 
+  byte OE_capital[8] = {B00001,B01110,B10011,B10101,B11001,B01110,B10000,B00000}; // 'Ø' 
+  byte empty[8] =      {B00000,B00000,B00000,B00000,B00000,B00000,B00000,B00000}; // empty 
+  byte AA_capital[8] = {B00100,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // 'Å'   
+  byte Ntilde[8] =     {B01101,B10010,B00000,B11001,B10101,B10011,B10001,B00000}; // 'Ñ' 
+
+  
+  
+  //     upload 8 charaters to the lcd
+  lcd.createChar(0, U_umlaut); //     German
+  lcd.createChar(1, O_umlaut); //     German, Swedish
+  lcd.createChar(2, A_umlaut); //     German, Swedish 
+  lcd.createChar(3, AE_capital); //   Danish, Norwegian
+  lcd.createChar(4, OE_capital); //   Danish, Norwegian
+  lcd.createChar(5, empty); //        For some reason this one needs to display nothing - otherwise it will display in pauses on serial interface
+  lcd.createChar(6, AA_capital); //   Danish, Norwegian, Swedish
+  lcd.createChar(7, Ntilde); //       Spanish
+  lcd.clear(); // you have to ;o)
+  #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+
+
   lcd_center_print_timed("K3NG Keyer",0,4000);
   #endif //FEATURE_DISPLAY
 
@@ -8928,32 +9199,6 @@ void initialize_display(){
   }
 }
 
-//--------------------------------------------------------------------- 
-//#ifdef FEATURE_USB_KEYBOARD
-//void KbdRptParser::PrintKey(uint8_t m, uint8_t key)	
-//{
-  
-  /*
-  
-    MODIFIERKEYS mod;
-    *((uint8_t*)&mod) = m;
-    Serial.print((mod.bmLeftCtrl   == 1) ? "C" : " ");
-    Serial.print((mod.bmLeftShift  == 1) ? "S" : " ");
-    Serial.print((mod.bmLeftAlt    == 1) ? "A" : " ");
-    Serial.print((mod.bmLeftGUI    == 1) ? "G" : " ");
-    
-    Serial.print(" >");
-    PrintHex<uint8_t>(key, 0x80);
-    Serial.print("< ");
-
-    Serial.print((mod.bmRightCtrl   == 1) ? "C" : " ");
-    Serial.print((mod.bmRightShift  == 1) ? "S" : " ");
-    Serial.print((mod.bmRightAlt    == 1) ? "A" : " ");
-    Serial.println((mod.bmRightGUI    == 1) ? "G" : " ");
-    
-    */
-//};
-//#endif //FEATURE_USB_KEYBOARD
 
 //--------------------------------------------------------------------- 
 #ifdef FEATURE_USB_KEYBOARD
@@ -9752,6 +9997,8 @@ uint8_t read_capacitive_pin(int pinToMeasure) {
   
   */
   
+
+
   // Variables used to translate from Arduino to AVR pin naming
   
   volatile uint8_t* port;
@@ -9767,34 +10014,39 @@ uint8_t read_capacitive_pin(int pinToMeasure) {
   ddr = portModeRegister(digitalPinToPort(pinToMeasure));
   bitmask = digitalPinToBitMask(pinToMeasure);
   pin = portInputRegister(digitalPinToPort(pinToMeasure));
-  
   // Discharge the pin first by setting it low and output
-  
   *port &= ~(bitmask);
   *ddr  |= bitmask;
   delay(1);
-  
+  // Prevent the timer IRQ from disturbing our measurement
+  noInterrupts();
   // Make the pin an input with the internal pull-up on
-  
   *ddr &= ~(bitmask);
   *port |= bitmask;
 
   // Now see how long the pin to get pulled up. This manual unrolling of the loop
   // decreases the number of hardware cycles between each read of the pin,
   // thus increasing sensitivity.
-
   uint8_t cycles = 17;
-
-  // Discharge the pin again by setting it low and output
-  //  It's important to leave the pins low if you want to 
-  //  be able to touch more than 1 sensor at a time - if
-  //  the sensor is left pulled high, when you touch
-  //  two sensors, your body will transfer the charge between
-  //  sensors.
+  /*     if (*pin & bitmask) { cycles =  0;}
+  else if (*pin & bitmask) { cycles =  1;}
+  else if (*pin & bitmask) { cycles =  2;}
+  else if (*pin & bitmask) { cycles =  3;}
+  else if (*pin & bitmask) { cycles =  4;}
+  else if (*pin & bitmask) { cycles =  5;}
+  else if (*pin & bitmask) { cycles =  6;}
+  else if (*pin & bitmask) { cycles =  7;}
+  else if (*pin & bitmask) { cycles =  8;}
+  else if (*pin & bitmask) { cycles =  9;}
+  else if (*pin & bitmask) { cycles = 10;}
+  else if (*pin & bitmask) { cycles = 11;}
+  else if (*pin & bitmask) { cycles = 12;}
+  else if (*pin & bitmask) { cycles = 13;}
+  else if (*pin & bitmask) { cycles = 14;}
+  else if (*pin & bitmask) { cycles = 15;}
+  else if (*pin & bitmask) { cycles = 16;}*/
   
-  *port &= ~(bitmask);
-  *ddr  |= bitmask;
-
+  
   if (*pin & bitmask) {
     cycles = 0;
   } else { 
@@ -9863,11 +10115,36 @@ uint8_t read_capacitive_pin(int pinToMeasure) {
     }
   }
 
+  // End of timing-critical section
+  interrupts();
+
+  // Discharge the pin again by setting it low and output
+  //  It's important to leave the pins low if you want to 
+  //  be able to touch more than 1 sensor at a time - if
+  //  the sensor is left pulled high, when you touch
+  //  two sensors, your body will transfer the charge between
+  //  sensors.
+  *port &= ~(bitmask);
+  *ddr  |= bitmask;
+
+  #ifdef DEBUG_CAPACITIVE_PADDLE
+  static unsigned long last_cap_paddle_debug = 0;
+  if ((millis() - last_cap_paddle_debug) > 250){
+    Serial.flush();
+    Serial.print("read_capacitive_pin: pin:");
+    Serial.print(pinToMeasure);
+    Serial.print(" cyc:");
+    Serial.println(cycles);
+    last_cap_paddle_debug = millis();
+  }
+  #endif //DEBUG_CAPACITIVE_PADDLE
+
   return cycles;
 
 }
 
 #endif //FEATURE_CAPACITIVE_PADDLE_PINS
+
 //---------------------------------------------------------------------
 #ifdef FEATURE_LED_RING
 void update_led_ring(){
@@ -9909,3 +10186,19 @@ void update_led_ring(){
         
 }
 #endif //FEATURE_LED_RING
+//---------------------------------------------------------------------
+int paddle_pin_read(int pin_to_read){
+
+
+  #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
+  return digitalRead(pin_to_read);
+  #else
+  if (read_capacitive_pin(pin_to_read) > capacitance_threshold) {
+    return LOW;
+  } else {
+    return HIGH;
+  }
+  #endif //FEATURE_CAPACITIVE_PADDLE_PINS  
+
+}
+//---------------------------------------------------------------------

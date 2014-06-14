@@ -4,17 +4,17 @@
 #define hz_high_beep 1500                // frequency in hertz of high beep
 #define hz_low_beep 400                  // frequency in hertz of low beep
 #define initial_dah_to_dit_ratio 300     // 300 = 3 / normal 3:1 ratio
-#define initial_ptt_lead_time_tx1 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx1 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx1 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx2 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx2 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx2 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx3 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx3 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx3 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx4 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx4 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx4 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx5 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx5 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx5 10         // PTT tail time in mS
-#define initial_ptt_lead_time_tx6 10         // PTT lead time in mS
+#define initial_ptt_lead_time_tx6 0         // PTT lead time in mS
 #define initial_ptt_tail_time_tx6 10         // PTT tail time in mS
 #define initial_qrss_dit_length 1        // QRSS dit length in seconds
 #define initial_pot_wpm_low_value 13     // Potentiometer WPM fully CCW
@@ -45,6 +45,7 @@
 #define serial_cut_numbers 0              // set to 1 to activate cut numbers in serial numbers (i.e. #10 = 1T, #19 = 1N)
 #define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
+#define cw_echo_timing_factor 0.25
 
 #ifdef FEATURE_COMMAND_BUTTONS
 #define analog_buttons_number_of_buttons 4
@@ -59,6 +60,9 @@
 #define number_of_memories byte(12)
 #endif
 
+#ifdef FEATURE_CAPACITIVE_PADDLE_PINS
+#define capacitance_threshold 2
+#endif //FEATURE_CAPACITIVE_PADDLE_PINS
 
 #ifdef FEATURE_LED_RING
 #define led_ring_low_limit 10
@@ -210,6 +214,16 @@
 #define WINKEY_SIDETONE_9 444
 #define WINKEY_SIDETONE_10 400
 #endif //OPTION_WINKEY_2_SUPPORT
+
+#define WINKEY_1_REPORT_VERSION_NUMBER 10
+#define WINKEY_2_REPORT_VERSION_NUMBER 23
+
+// alter these to map to alternate hang time wordspace units
+#define WINKEY_HANG_TIME_1_0 1.0
+#define WINKEY_HANG_TIME_1_33 1.33
+#define WINKEY_HANG_TIME_1_66 1.66
+#define WINKEY_HANG_TIME_2_0 2.0
+
 #endif //FEATURE_WINKEY_EMULATION
 
 #define PRINTCHAR 0
