@@ -84,6 +84,7 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     N  Toggle paddle reverse
     O  Toggle sidetone on / off
     P#(#) Program a memory
+    S  Alphabet code practice (FEATURE_ALPHABET_SEND_PRACTICE)
     T  Tune mode
     V  Toggle potentiometer active / inactive
     W  Change speed
@@ -224,10 +225,11 @@ New fetures in this stable release:
     fixed bug with OPTION_REVERSE_BUTTON_ORDER
     #define WINKEY_1_REPORT_VERSION_NUMBER 10
     #define WINKEY_2_REPORT_VERSION_NUMBER 23
+    S command - alphabet send practice; contributed by Ryan, KC2ZWM
 
 */
 
-#define CODE_VERSION "2.2"
+#define CODE_VERSION "2.2.2014070301"
 #define eeprom_magic_number 18
 
 #include <stdio.h>
@@ -3633,6 +3635,13 @@ void command_mode ()
         case 11112: play_memory(3); break;
         case 11111: play_memory(4); break;
         #endif
+        #ifdef FEATURE_ALPHABET_SEND_PRACTICE
+        case 111:
+          send_dit(AUTOMATIC_SENDING); 
+          command_alphabet_send_practice(); // S - Alphabet Send Practice
+          stay_in_command_mode = 0;
+          break;
+        #endif  //FEATURE_ALPHABET_SEND_PRACTICE
         case 9: stay_in_command_mode = 0; break;                          // button was hit - exit
         default: // unknown command, send a ?
           #ifdef FEATURE_DISPLAY
@@ -10202,3 +10211,31 @@ int paddle_pin_read(int pin_to_read){
 
 }
 //---------------------------------------------------------------------
+#ifdef FEATURE_ALPHABET_SEND_PRACTICE
+void command_alphabet_send_practice(){
+
+  // contributed by Ryan, KC2ZWM
+
+  int cw_char;
+  char letter = 'A';
+  
+  do
+  {
+    cw_char = get_cw_input_from_user(0);
+    if (letter == (char)(convert_cw_number_to_ascii(cw_char))){
+      beep();
+      //send_dit(AUTOMATIC_SENDING);
+      if (letter < 'Z')
+        letter++;
+      else
+        letter = 'A';
+    }
+    else
+    if (cw_char != 9) {
+      boop();
+      boop();
+      //send_dah(AUTOMATIC_SENDING);
+    }
+  } while (cw_char != 9);
+}
+#endif //FEATURE_ALPHABET_SEND_PRACTICE
