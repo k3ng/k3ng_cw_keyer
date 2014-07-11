@@ -225,11 +225,14 @@ New fetures in this stable release:
     fixed bug with OPTION_REVERSE_BUTTON_ORDER
     #define WINKEY_1_REPORT_VERSION_NUMBER 10
     #define WINKEY_2_REPORT_VERSION_NUMBER 23
+
     S command - alphabet send practice; contributed by Ryan, KC2ZWM
+      #define correct_answer_led 0
+      #define wrong_answer_led 0
 
 */
 
-#define CODE_VERSION "2.2.2014070301"
+#define CODE_VERSION "2.2.2014071001"
 #define eeprom_magic_number 18
 
 #include <stdio.h>
@@ -270,9 +273,11 @@ New fetures in this stable release:
 #include <BasicTerm.h>
 #endif
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
-#include <Usb.h>    /* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
-#include <usbhub.h>
 #include <hidboot.h>
+#include <usbhub.h>
+#include <Usb.h>    /* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
+//#include <usbhub.h>
+//#include <hidboot.h>
 #endif
 
 // Dependencies
@@ -8645,6 +8650,18 @@ void initialize_pins() {
   pinMode(led_ring_clk,OUTPUT);
   pinMode(led_ring_le,OUTPUT);
   #endif //FEATURE_LED_RING  
+
+  #ifdef FEATURE_ALPHABET_SEND_PRACTICE
+  if (correct_answer_led) {
+    pinMode(correct_answer_led, OUTPUT);
+    digitalWrite(correct_answer_led, LOW);
+  }
+  if (wrong_answer_led) {
+    pinMode(wrong_answer_led, OUTPUT);
+    digitalWrite(wrong_answer_led, LOW);
+  }
+  #endif //FEATURE_ALPHABET_SEND_PRACTICE
+
   
 }
 
@@ -10222,8 +10239,12 @@ void command_alphabet_send_practice(){
   do
   {
     cw_char = get_cw_input_from_user(0);
-    if (letter == (char)(convert_cw_number_to_ascii(cw_char))){
+    if (letter == (char)(convert_cw_number_to_ascii(cw_char))){  
+      if (correct_answer_led) {
+        digitalWrite(correct_answer_led, HIGH);
+      }
       beep();
+
       //send_dit(AUTOMATIC_SENDING);
       if (letter < 'Z')
         letter++;
@@ -10232,10 +10253,24 @@ void command_alphabet_send_practice(){
     }
     else
     if (cw_char != 9) {
+      if (wrong_answer_led) {
+        digitalWrite(wrong_answer_led, HIGH);
+      }      
       boop();
       boop();
       //send_dah(AUTOMATIC_SENDING);
     }
   } while (cw_char != 9);
+
+
+  if (correct_answer_led) {
+    digitalWrite(correct_answer_led, LOW);
+  }
+  if (wrong_answer_led) {
+    digitalWrite(wrong_answer_led, LOW);
+  }      
+
 }
 #endif //FEATURE_ALPHABET_SEND_PRACTICE
+
+

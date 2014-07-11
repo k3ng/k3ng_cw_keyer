@@ -57,3 +57,8 @@
 #define led_ring_le     A8 //4    //Latch
 #endif //FEATURE_LED_RING
 
+#ifdef FEATURE_ALPHABET_SEND_PRACTICE
+#define correct_answer_led 0
+#define wrong_answer_led 0
+#endif //FEATURE_ALPHABET_SEND_PRACTICE
+
