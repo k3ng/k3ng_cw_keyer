@@ -232,7 +232,7 @@ New fetures in this stable release:
 
 */
 
-#define CODE_VERSION "2.2.2014071001"
+#define CODE_VERSION "2.2.2014071801"
 #define eeprom_magic_number 18
 
 #include <stdio.h>
@@ -10243,6 +10243,9 @@ void command_alphabet_send_practice(){
       if (correct_answer_led) {
         digitalWrite(correct_answer_led, HIGH);
       }
+      if (wrong_answer_led) {
+        digitalWrite(wrong_answer_led, LOW);
+      }      
       beep();
 
       //send_dit(AUTOMATIC_SENDING);
@@ -10255,7 +10258,10 @@ void command_alphabet_send_practice(){
     if (cw_char != 9) {
       if (wrong_answer_led) {
         digitalWrite(wrong_answer_led, HIGH);
-      }      
+      }  
+      if (correct_answer_led) {
+        digitalWrite(correct_answer_led, LOW);
+      }          
       boop();
       boop();
       //send_dah(AUTOMATIC_SENDING);
