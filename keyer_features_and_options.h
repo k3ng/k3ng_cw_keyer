@@ -2,8 +2,8 @@
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
 #define FEATURE_SERIAL
-#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
-//define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
+//#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
+//#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
 #define FEATURE_SAY_HI
 //#define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
@@ -46,6 +46,7 @@
 //#define OPTION_WINKEY_EXTENDED_COMMANDS            // in development
 #define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE       // additional code to check_dit_paddle() and check_dah_paddle() to send 0xC2 status byte when paddles are hit
 #define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
+#define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET  // activate this when using Winkey 2 emulation and Win-Test
 //#define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
 #define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode
 #define OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT         // this makes dit paddle memory interruption a little smoother
