@@ -65,6 +65,7 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     \.     Toggle dit buffer on/off
     \-     Toggle dah buffer on/off
     \~     Reset unit
+    \:     Toggle cw send echo
 
  Buttons
     button 0: command mode / command mode exit
@@ -237,10 +238,11 @@ New fetures in this stable release:
       #define DEBUG_AUX_SERIAL_PORT &Serial1
       #define DEBUG_AUX_SERIAL_PORT_BAUD 115200
       #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET - fixes an issue with Win-Test and Winkey 2 emulation
+      /: - CW send echo inhibit toggle
 
 */
 
-#define CODE_VERSION "2.2.2014072702"
+#define CODE_VERSION "2.2.2014073101"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -421,6 +423,7 @@ long cli_paddle_echo_buffer = 0;
 unsigned long cli_paddle_echo_buffer_decode_time = 0;
 byte cli_prosign_flag = 0;
 byte cli_wait_for_cr_to_send_cw = 0;
+byte cw_send_echo_inhibit = 0;
 #endif //FEATURE_COMMAND_LINE_INTERFACE
 #endif //FEATURE_SERIAL
 
@@ -4877,9 +4880,11 @@ void service_send_buffer(byte no_print)
         if (((serial_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open)) || (serial_mode != SERIAL_WINKEY_EMULATION)) {
         #endif //FEATURE_WINKEY_EMULATION
         #if defined(FEATURE_SERIAL)
-        if (!no_print) {main_serial_port->write(send_buffer_array[0]);}
-        if (send_buffer_array[0] == 13) {
-          main_serial_port->write(10);  // if we got a carriage return, also send a line feed
+        if ((!no_print) && (!cw_send_echo_inhibit)){
+          main_serial_port->write(send_buffer_array[0]);
+          if (send_buffer_array[0] == 13) {
+            main_serial_port->write(10);  // if we got a carriage return, also send a line feed
+          }
         }
         #endif //FEATURE_SERIAL
         #ifdef FEATURE_WINKEY_EMULATION
@@ -5689,7 +5694,6 @@ void service_winkey(byte action) {
   }  // if (action == HOUSEKEEPING)
 
   if (action == SERVICE_SERIAL_BYTE) {
-//zzzzz
     #ifdef DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY
     debug_port->print("rx: ");
     if ((incoming_serial_byte != 13) && (incoming_serial_byte != 9)){
@@ -6837,6 +6841,9 @@ void process_serial_command() {
       config_dirty = 1;    
       break;
     #endif //FEATURE_DIT_DAH_BUFFER_CONTROL
+    case ':':
+      if (cw_send_echo_inhibit) cw_send_echo_inhibit = 0; else cw_send_echo_inhibit = 1;
+      break;
     default: main_serial_port->println(F("Unknown command")); break;
   }
 
@@ -8153,7 +8160,7 @@ void play_memory(byte memory_number)
           if (machine_mode == NORMAL) {
             #if defined(FEATURE_SERIAL)
             #ifndef FEATURE_WINKEY_EMULATION
-            main_serial_port->write(eeprom_byte_read);
+            if (!cw_send_echo_inhibit) {main_serial_port->write(eeprom_byte_read);}
             #else  //FEATURE_WINKEY_EMULATION
             if (((serial_mode == SERIAL_WINKEY_EMULATION) && (winkey_paddle_echo_activated) && (winkey_host_open)) || (serial_mode != SERIAL_WINKEY_EMULATION)) {
               main_serial_port->write(eeprom_byte_read);
