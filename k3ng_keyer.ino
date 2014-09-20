@@ -242,7 +242,7 @@ New fetures in this stable release:
 
 */
 
-#define CODE_VERSION "2.2.2014073101"
+#define CODE_VERSION "2.2.2014092001"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -416,6 +416,7 @@ int pot_full_scale_reading = default_pot_full_scale_reading;
 #if defined(FEATURE_SERIAL)
 byte incoming_serial_byte;
 long serial_baud_rate;
+byte cw_send_echo_inhibit = 0;
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
 byte serial_backslash_command;
 byte cli_paddle_echo = 0;
@@ -423,7 +424,6 @@ long cli_paddle_echo_buffer = 0;
 unsigned long cli_paddle_echo_buffer_decode_time = 0;
 byte cli_prosign_flag = 0;
 byte cli_wait_for_cr_to_send_cw = 0;
-byte cw_send_echo_inhibit = 0;
 #endif //FEATURE_COMMAND_LINE_INTERFACE
 #endif //FEATURE_SERIAL
 
