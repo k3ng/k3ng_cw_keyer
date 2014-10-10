@@ -240,9 +240,11 @@ New fetures in this stable release:
       #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET - fixes an issue with Win-Test and Winkey 2 emulation
       /: - CW send echo inhibit toggle
 
+    bug with get_cw_input_from_user(unsigned int exit_time_milliseconds) fixed (thanks Rob, W7FJ)
+
 */
 
-#define CODE_VERSION "2.2.2014092001"
+#define CODE_VERSION "2.2.2014100901"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -3402,11 +3404,11 @@ void speed_set(int wpm_set)
 
 //-------------------------------------------------------------------------------------------------------
 
-int get_cw_input_from_user(unsigned int exit_time_milliseconds) {
+long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 
   byte looping = 1;
   byte paddle_hit = 0;
-  int cw_char = 0;
+  long cw_char = 0;
   unsigned long last_element_time = 0;
   byte button_hit = 0;
   unsigned long entry_time = millis();

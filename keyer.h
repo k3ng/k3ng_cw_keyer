@@ -12,7 +12,7 @@ void check_dit_paddle(void);
 void check_dah_paddle(void);
 void speed_change(int change);
 void speed_set(int wpm_set);
-int get_cw_input_from_user(unsigned int exit_time_seconds);
+long get_cw_input_from_user(unsigned int exit_time_seconds);
 void command_mode(void);
 void command_set_mem_repeat_delay(void);
 void adjust_dah_to_dit_ratio(int adjustment);
