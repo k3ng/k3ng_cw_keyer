@@ -242,9 +242,11 @@ New fetures in this stable release:
 
     bug with get_cw_input_from_user(unsigned int exit_time_milliseconds) fixed (thanks Rob, W7FJ)
 
+    OPTION_WINKEY_FREQUENT_STATUS_REPORT / RUMlog and RUMped compatibility- thanks Jim W2XO for code
+
 */
 
-#define CODE_VERSION "2.2.2014100901"
+#define CODE_VERSION "2.2.2014101201"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -4982,6 +4984,9 @@ void remove_from_send_buffer()
     for (int x = 0;x < send_buffer_bytes;x++) {
       send_buffer_array[x] = send_buffer_array[x+1];
     }
+    #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_FREQUENT_STATUS_REPORT)
+    main_serial_port->write(0xc0|winkey_sending|winkey_xoff);
+   #endif
   }
 }
 
