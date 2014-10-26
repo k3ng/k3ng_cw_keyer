@@ -244,9 +244,11 @@ New fetures in this stable release:
 
     OPTION_WINKEY_FREQUENT_STATUS_REPORT / RUMlog and RUMped compatibility- thanks Jim W2XO for code
 
+    2wpm_limit_low and wpm_limit_high settings in keyer_settings.h
+
 */
 
-#define CODE_VERSION "2.2.2014101201"
+#define CODE_VERSION "2.2.201410261"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -3379,7 +3381,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
 void speed_change(int change)
 {
-  if (((configuration.wpm + change) > 5) && ((configuration.wpm + change) < 60)) {
+  if (((configuration.wpm + change) > wpm_limit_low) && ((configuration.wpm + change) < wpm_limit_high)) {
     speed_set(configuration.wpm + change);
   }
   

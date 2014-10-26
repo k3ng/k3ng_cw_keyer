@@ -19,6 +19,8 @@
 #define initial_qrss_dit_length 1        // QRSS dit length in seconds
 #define initial_pot_wpm_low_value 13     // Potentiometer WPM fully CCW
 #define initial_pot_wpm_high_value 35    // Potentiometer WPM fully CW
+#define wpm_limit_low 5
+#define wpm_limit_high 60
 #define potentiometer_change_threshold 1 // don't change the keyer speed until pot wpm has changed more than this
 #define default_serial_baud_rate 115200
 #define send_buffer_size 150
