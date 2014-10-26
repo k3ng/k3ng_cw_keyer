@@ -48,6 +48,7 @@
 #define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
 #define cw_echo_timing_factor 0.25
+#define potentiomenter_always_on 0
 
 #ifdef FEATURE_COMMAND_BUTTONS
 #define analog_buttons_number_of_buttons 4

@@ -244,11 +244,13 @@ New fetures in this stable release:
 
     OPTION_WINKEY_FREQUENT_STATUS_REPORT / RUMlog and RUMped compatibility- thanks Jim W2XO for code
 
-    2wpm_limit_low and wpm_limit_high settings in keyer_settings.h
+    wpm_limit_low and wpm_limit_high settings in keyer_settings.h
+
+    potentiomenter_always_on setting in keyer_settings.h
 
 */
 
-#define CODE_VERSION "2.2.201410261"
+#define CODE_VERSION "2.2.2014102602"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -2362,9 +2364,9 @@ void check_potentiometer()
 {
   #ifdef DEBUG_LOOP
   main_serial_port->println(F("loop: entering check_potentiometer")); 
-  #endif        
+  #endif
     
-  if (configuration.pot_activated) {
+  if (configuration.pot_activated || potentiomenter_always_on) {
     byte pot_value_wpm_read = pot_value_wpm();
     if ((abs(pot_value_wpm_read - last_pot_wpm_read) > potentiometer_change_threshold)) {
       #ifdef DEBUG_POTENTIOMETER
