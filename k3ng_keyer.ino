@@ -232,7 +232,6 @@ New fetures in this stable release:
       #define correct_answer_led 0
       #define wrong_answer_led 0
 
-    Not documented yet:
       #define DEBUG_AUX_SERIAL_PORT
       #define DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY
       #define MAIN_SERIAL_PORT &Serial
@@ -250,11 +249,13 @@ New fetures in this stable release:
       potentiomenter_always_on setting in keyer_settings.h
 
       Command Mode E command: announce speed
+      
+      Fixed compilation errror involving OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET and FEATURE_WINKEY_EMULATION
 
 
 */
 
-#define CODE_VERSION "2.2.2014111702"
+#define CODE_VERSION "2.2.2014111801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -274,7 +275,7 @@ New fetures in this stable release:
 #include <avr/sleep.h>
 #endif 
 #if defined(FEATURE_PS2_KEYBOARD)
-#include <PS2Keyboard.h>
+#include "PS2Keyboard.h"
 #endif
 #if defined(FEATURE_LCD_4BIT)
 #include <LiquidCrystal.h>
@@ -6217,7 +6218,7 @@ void service_winkey(byte action) {
             debug_port->println("service_winkey: WINKEY_ADMIN_COMMAND host open");
             #endif //DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY  
             boop_beep();             
-            break;OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET
+            break;
           case 0x03: // host close command
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             winkey_host_open = 0;
