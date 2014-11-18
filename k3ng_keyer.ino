@@ -78,6 +78,7 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     A  Switch to Iambic A mode
     B  Switch to Iambic B mode
     D  Switch to Ultimatic mode
+    E  Announce speed
     F  Adjust sidetone frequency
     G  Switch to bug mode
     I  TX enable / disable
@@ -240,17 +241,20 @@ New fetures in this stable release:
       #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET - fixes an issue with Win-Test and Winkey 2 emulation
       /: - CW send echo inhibit toggle
 
-    bug with get_cw_input_from_user(unsigned int exit_time_milliseconds) fixed (thanks Rob, W7FJ)
+      bug with get_cw_input_from_user(unsigned int exit_time_milliseconds) fixed (thanks Rob, W7FJ)
 
-    OPTION_WINKEY_FREQUENT_STATUS_REPORT / RUMlog and RUMped compatibility- thanks Jim W2XO for code
+      OPTION_WINKEY_FREQUENT_STATUS_REPORT / RUMlog and RUMped compatibility- thanks Jim W2XO for code
 
-    wpm_limit_low and wpm_limit_high settings in keyer_settings.h
+      wpm_limit_low and wpm_limit_high settings in keyer_settings.h
 
-    potentiomenter_always_on setting in keyer_settings.h
+      potentiomenter_always_on setting in keyer_settings.h
+
+      Command Mode E command: announce speed
+
 
 */
 
-#define CODE_VERSION "2.2.2014102602"
+#define CODE_VERSION "2.2.2014111701"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -3541,6 +3545,15 @@ void command_mode ()
           lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
           #endif          
           send_dit(AUTOMATIC_SENDING);
+          break;
+
+        //xxxxxxx
+        case 1: // E - announce spEed
+          char c[4];
+          delay(250);
+          sprintf(c, "%d", configuration.wpm);
+          send_char(c[0],NORMAL);
+          send_char(c[1],NORMAL);
           break; 
         case 211: // D - Ultimatic mode
           configuration.keyer_mode = ULTIMATIC;

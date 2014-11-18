@@ -1,7 +1,7 @@
 // compile time features and options - comment or uncomment to add or delete features
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
-#define FEATURE_SERIAL
+//#define FEATURE_SERIAL
 //#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
 //#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
 #define FEATURE_SAY_HI
