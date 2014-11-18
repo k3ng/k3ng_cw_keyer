@@ -254,7 +254,7 @@ New fetures in this stable release:
 
 */
 
-#define CODE_VERSION "2.2.2014111701"
+#define CODE_VERSION "2.2.2014111702"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -3612,11 +3612,17 @@ void command_mode ()
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
             #endif 
+            #ifdef DEBUG_COMMAND_MODE
+            main_serial_port->println(F("command_mode: SIDETONE_OFF"));
+            #endif
             configuration.sidetone_mode = SIDETONE_OFF;
            } else {
              #ifdef FEATURE_DISPLAY
              lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
              #endif 
+             #ifdef DEBUG_COMMAND_MODE
+             main_serial_port->println(F("command_mode: SIDETONE_ON"));
+             #endif             
              configuration.sidetone_mode = SIDETONE_ON;
            }
            config_dirty = 1;
