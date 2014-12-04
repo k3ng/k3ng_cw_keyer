@@ -170,15 +170,15 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     have been modified in order to return codes for keys not originally configured in the PS2Keyboard library.  These modified files are available
     at http://radioartisan.wordpress.com/k3ng-modified-ps2keyboard-library-files/
 
+    Some keyboards may require a reset sequence upon startup.  This is activated with OPTION_PS2_KEYBOARD_RESET.
+
  USB Keyboard Notes (FEATURE_USB_KEYBOARD)
  
     To use a USB keyboard you need to download and install this library: https://github.com/felis/USB_Host_Shield_2.0 .  You may use an Arduino Mega
     ADK board (which has a built in USB host interface, get or Circuits@Home USB shield (http://www.circuitsathome.com/products-page/arduino-shields/usb-host-shield-2-0-for-arduino),
     or built your own MAX3421 based USB port.
     
-    If you are using an Arduino Mega ADK, you must uncomment this line in the USB Host Shield Library avrpins.h file:
-    
-    #define BOARD_MEGA_ADK
+    If you are using an Arduino Mega ADK, you must customize the USB Host Shield Library settings.h file!
  
  Useful Stuff
     Reset to defaults: squeeze both paddles at power up (good to use if you dorked up the speed and don't have the CLI)
@@ -252,10 +252,12 @@ New fetures in this stable release:
       
       Fixed compilation errror involving OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET and FEATURE_WINKEY_EMULATION
 
+      OPTION_PS2_KEYBOARD_RESET, thanks Bill, W9BEL for the code
+
 
 */
 
-#define CODE_VERSION "2.2.2014111801"
+#define CODE_VERSION "2.2.2014120302"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -299,8 +301,6 @@ New fetures in this stable release:
 #include <hidboot.h>
 #include <usbhub.h>
 #include <Usb.h>    /* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
-//#include <usbhub.h>
-//#include <hidboot.h>
 #endif
 
 // Dependencies
@@ -9380,13 +9380,60 @@ void initialize_serial_port(){
 }
 
 //--------------------------------------------------------------------- 
-void  initialize_ps2_keyboard(){
+void initialize_ps2_keyboard(){
 
   #ifdef FEATURE_PS2_KEYBOARD
+
+  #ifdef OPTION_PS2_KEYBOARD_RESET             // code contributed by Bill, W9BEL
+  attachInterrupt(1, ps2int_write, FALLING);
+  digitalWrite(ps2_keyboard_data, LOW); // pullup off
+  pinMode(ps2_keyboard_data, OUTPUT); // pull clock low
+  delay(200);
+  #endif //OPTION_PS2_KEYBOARD_RESET
+
+
   keyboard.begin(ps2_keyboard_data, ps2_keyboard_clock);
-  #endif
+  #endif //FEATURE_PS2_KEYBOARD
   
 }
+//--------------------------------------------------------------------- 
+
+#if defined(FEATURE_PS2_KEYBOARD) && defined(OPTION_PS2_KEYBOARD_RESET)
+void ps2int_write() {
+
+  // code contributed by Bill, W9BEL
+  //----- Called from initialize_ps2_keyboard to reset Mini KBD ---------
+  // The ISR for the external interrupt in read mode
+
+
+  uint8_t buffer[45];
+  uint8_t head, tail, writeByte = 255;
+  uint8_t curbit = 0, parity = 0, ack =0;
+ 
+  if(curbit < 8) {
+    if(writeByte & 1) {
+      parity ^= 1;
+      digitalWrite(ps2_keyboard_data, HIGH);
+    } else
+      digitalWrite(ps2_keyboard_data, LOW);
+    writeByte >>= 1;
+  } else if(curbit == 8) { // parity
+    if(parity)
+      digitalWrite(ps2_keyboard_data, LOW);
+    else
+      digitalWrite(ps2_keyboard_data, HIGH);
+  } else if(curbit == 9) { // time to let go
+    pinMode(ps2_keyboard_data, INPUT); // release line
+    digitalWrite(ps2_keyboard_data, HIGH); // pullup on
+  } else { // time to check device ACK and hold clock again
+    //holdClock();
+    digitalWrite(ps2_keyboard_clock, LOW); // pullup off
+    pinMode(ps2_keyboard_clock, OUTPUT); // pull clock low
+    ack = !digitalRead(ps2_keyboard_data);
+  }
+  curbit++;
+}
+#endif 
 
 //--------------------------------------------------------------------- 
 
