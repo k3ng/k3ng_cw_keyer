@@ -229,6 +229,7 @@ New fetures in this stable release:
     #define WINKEY_2_REPORT_VERSION_NUMBER 23
 
     S command - alphabet send practice; contributed by Ryan, KC2ZWM
+
       #define correct_answer_led 0
       #define wrong_answer_led 0
 
@@ -254,10 +255,12 @@ New fetures in this stable release:
 
       OPTION_PS2_KEYBOARD_RESET, thanks Bill, W9BEL for the code
 
+      FEATURE_CW_DECODER No space on LCD bug fixed by Rob, W7FJ
+
 
 */
 
-#define CODE_VERSION "2.2.2014120302"
+#define CODE_VERSION "2.2.2014120701"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -8996,6 +8999,7 @@ void service_cw_decoder() {
       tone(sidetone_line, 1500);
       #endif
     } else {
+      /* FEATURE_CW_DECODER No space on LCD bug fixed by Rob, W7FJ
       if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))) { // should we send a space?
          #if defined(FEATURE_SERIAL)
          #ifdef FEATURE_COMMAND_LINE_INTERFACE
@@ -9005,6 +9009,24 @@ void service_cw_decoder() {
          #endif //FEATURE_SERIAL
          space_sent = 1;
       }
+      */
+
+      if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))) { // should we send a space?
+         #if defined(FEATURE_SERIAL)
+         #ifdef FEATURE_COMMAND_LINE_INTERFACE
+         main_serial_port->write(32);
+         screen_column++;
+         #endif //FEATURE_COMMAND_LINE_INTERFACE
+         #endif //FEATURE_SERIAL
+         #ifdef FEATURE_DISPLAY
+         display_scroll_print_char(' ');
+         #endif //FEATURE_DISPLAY
+         space_sent = 1;
+
+      }
+
+
+
     }
   } else {
     if (cd_decoder_pin_state != last_state) {
