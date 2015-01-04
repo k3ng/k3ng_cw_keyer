@@ -62,3 +62,7 @@
 #define wrong_answer_led 0
 #endif //FEATURE_ALPHABET_SEND_PRACTICE
 
+#ifdef FEATURE_PTT_INTERLOCK
+#define ptt_interlock 22  // this pin disables PTT and TX KEY
+#endif //FEATURE_PTT_INTERLOCK
+

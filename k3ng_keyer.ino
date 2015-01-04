@@ -228,39 +228,44 @@ New fetures in this stable release:
     #define WINKEY_1_REPORT_VERSION_NUMBER 10
     #define WINKEY_2_REPORT_VERSION_NUMBER 23
 
-    S command - alphabet send practice; contributed by Ryan, KC2ZWM
+    S command - alphabet send practice; contributed by Ryan, KC2ZWM (documented on web page)
 
-      #define correct_answer_led 0
-      #define wrong_answer_led 0
+    #define correct_answer_led 0
+    #define wrong_answer_led 0
 
-      #define DEBUG_AUX_SERIAL_PORT
-      #define DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY
-      #define MAIN_SERIAL_PORT &Serial
-      #define DEBUG_AUX_SERIAL_PORT &Serial1
-      #define DEBUG_AUX_SERIAL_PORT_BAUD 115200
-      #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET - fixes an issue with Win-Test and Winkey 2 emulation
-      /: - CW send echo inhibit toggle
+    #define DEBUG_AUX_SERIAL_PORT
+    #define DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY
+    #define MAIN_SERIAL_PORT &Serial
+    #define DEBUG_AUX_SERIAL_PORT &Serial1
+    #define DEBUG_AUX_SERIAL_PORT_BAUD 115200
+    #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET - fixes an issue with Win-Test and Winkey 2 emulation
+    /: - CW send echo inhibit toggle (documented on web page)
 
-      bug with get_cw_input_from_user(unsigned int exit_time_milliseconds) fixed (thanks Rob, W7FJ)
+    bug with get_cw_input_from_user(unsigned int exit_time_milliseconds) fixed (thanks Rob, W7FJ)
 
-      OPTION_WINKEY_FREQUENT_STATUS_REPORT / RUMlog and RUMped compatibility- thanks Jim W2XO for code
+    OPTION_WINKEY_FREQUENT_STATUS_REPORT / RUMlog and RUMped compatibility- thanks Jim W2XO for code (documented on web page)
 
-      wpm_limit_low and wpm_limit_high settings in keyer_settings.h
+    wpm_limit_low and wpm_limit_high settings in keyer_settings.h
 
-      potentiomenter_always_on setting in keyer_settings.h
+    potentiomenter_always_on setting in keyer_settings.h
 
-      Command Mode E command: announce speed
+    Command Mode E command: announce speed  (documented on web page)
       
-      Fixed compilation errror involving OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET and FEATURE_WINKEY_EMULATION
+    Fixed compilation error involving OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET and FEATURE_WINKEY_EMULATION
 
-      OPTION_PS2_KEYBOARD_RESET, thanks Bill, W9BEL for the code
+    OPTION_PS2_KEYBOARD_RESET, thanks Bill, W9BEL for the code (documented on web page 2015-01-03)
 
-      FEATURE_CW_DECODER No space on LCD bug fixed by Rob, W7FJ
+    FEATURE_CW_DECODER No space on LCD bug fixed by Rob, W7FJ
 
+    Bug fix in speed_change() - lcd_center_print_timed() - Thanks Vincenzo, IZ0RUS
+
+    FEATURE_PTT_INTERLOCK
+
+    Fixed bug in FEATURE_USB_KEYBOARD, reported by Bill, W9BEL
 
 */
 
-#define CODE_VERSION "2.2.2014120701"
+#define CODE_VERSION "2.2.2015010302"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -568,6 +573,7 @@ unsigned char state = 0;
 
 #ifdef FEATURE_USB_KEYBOARD
 unsigned long usb_keyboard_special_mode_start_time = 0;
+String keyboard_string;
 #endif //FEATURE_USB_KEYBOARD
 
 #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
@@ -636,7 +642,9 @@ HardwareSerial * debug_port;
 
 HardwareSerial * main_serial_port;
 
-
+#ifdef FEATURE_PTT_INTERLOCK
+byte ptt_interlock_active = 0;
+#endif //FEATURE_PTT_INTERLOCK
 
 
 
@@ -765,6 +773,10 @@ void loop()
     #ifdef FEATURE_SLEEP
     check_sleep();
     #endif //FEATURE_SLEEP
+
+    #ifdef FEATURE_PTT_INTERLOCK
+    service_ptt_interlock();
+    #endif //FEATURE_PTT_INTERLOCK
   }
   
 }
@@ -2096,7 +2108,7 @@ void ps2_keyboard_program_memory(byte memory_number)
         } else {
           keystroke = uppercase(keystroke);
           #ifdef FEATURE_DISPLAY
-          keyboard_string.concat(keystroke);
+          keyboard_string.concat(char(keystroke));
           if (keyboard_string.length() > lcd_columns) {
             lcd_center_print_timed(keyboard_string.substring((keyboard_string.length()-lcd_columns)), 1, default_display_msg_delay);
           } else {         
@@ -3139,6 +3151,8 @@ void send_dah(byte sending_type)
 
 void tx_and_sidetone_key (int state, byte sending_type)
 {
+
+  #ifndef FEATURE_PTT_INTERLOCK
   if ((state) && (key_state == 0)) {
     if (key_tx) {
       byte previous_ptt_line_activated = ptt_line_activated;
@@ -3174,6 +3188,46 @@ void tx_and_sidetone_key (int state, byte sending_type)
       key_state = 0;
     }
   }
+  #else  //FEATURE_PTT_INTERLOCK
+  if ((state) && (key_state == 0)) {
+    if ((key_tx) && (!ptt_interlock_active)) {
+      byte previous_ptt_line_activated = ptt_line_activated;
+      ptt_key();
+      if (current_tx_key_line) {digitalWrite (current_tx_key_line, HIGH);}
+      #ifdef OPTION_WINKEY_2_SUPPORT
+      if ((wk2_both_tx_activated) && (tx_key_line_2)) {
+        digitalWrite (tx_key_line_2, HIGH);
+      }
+      #endif
+      if ((first_extension_time) && (previous_ptt_line_activated == 0)) {
+        delay(first_extension_time);
+      }
+    }
+    if ((configuration.sidetone_mode == SIDETONE_ON) || (machine_mode == COMMAND) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+      tone(sidetone_line, configuration.hz_sidetone);
+    }
+    key_state = 1;
+  } else {
+    if ((state == 0) && (key_state)) {
+      if (key_tx) {
+        if (current_tx_key_line) {digitalWrite (current_tx_key_line, LOW);}
+        #ifdef OPTION_WINKEY_2_SUPPORT
+        if ((wk2_both_tx_activated) && (tx_key_line_2)) {
+          digitalWrite (tx_key_line_2, LOW);
+        }
+        #endif        
+        ptt_key();
+      }
+      if ((configuration.sidetone_mode == SIDETONE_ON) || (machine_mode == COMMAND) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+        noTone(sidetone_line);
+      }
+      key_state = 0;
+    }
+  }
+
+  #endif //FEATURE_PTT_INTERLOCK
+
+
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -3396,7 +3450,7 @@ void speed_change(int change)
   }
   
   #ifdef FEATURE_DISPLAY
-  lcd_center_print_timed(String(configuration.wpm) + " wpm", 1, default_display_msg_delay);
+  lcd_center_print_timed(String(configuration.wpm) + " wpm", 0, default_display_msg_delay);
   #endif
 }
 
@@ -9546,7 +9600,6 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
   static byte user_input_index = 0;
   static byte user_input_array[255];
   static int user_num_input_number_entered = 0;
-  String keyboard_string;
   byte user_input_process_it = 0;
   #ifdef FEATURE_MEMORIES
   static byte usb_keyboard_program_memory = 0;
@@ -9586,7 +9639,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       user_input_index--;
       #ifdef FEATURE_DISPLAY
       keyboard_string = keyboard_string.substring(0,keyboard_string.length()-1);
-      lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
+      lcd_center_print_timed(keyboard_string, 1, 0 /*default_display_msg_delay)*/);
       #endif 
       usb_keyboard_special_mode_start_time = millis();      
       return;
@@ -9606,7 +9659,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       usb_keyboard_special_mode_start_time = millis();
       keystroke = uppercase(keystroke);   
       #ifdef FEATURE_DISPLAY
-      keyboard_string.concat(keystroke);
+      keyboard_string.concat(char(keystroke));
       if (keyboard_string.length() > lcd_columns) {
         lcd_center_print_timed(keyboard_string.substring((keyboard_string.length()-lcd_columns)), 1, default_display_msg_delay);
       } else {         
@@ -9761,6 +9814,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       if (usb_keyboard_program_memory < 9) {
         lcd_string.concat(' ');
       }
+      keyboard_string = "";
       lcd_string.concat(usb_keyboard_program_memory+1);
       lcd_center_print_timed(lcd_string, 0, default_display_msg_delay);
       #else
@@ -10579,3 +10633,27 @@ void command_alphabet_send_practice(){
 #endif //FEATURE_ALPHABET_SEND_PRACTICE
 
 
+//---------------------------------------------------------------------
+#ifdef FEATURE_PTT_INTERLOCK
+void service_ptt_interlock(){
+
+  static unsigned long last_ptt_interlock_check = 0;
+
+  if ((millis() - last_ptt_interlock_check) > ptt_interlock_check_every_ms){
+    byte ptt_interlock_read = digitalRead(ptt_interlock);
+    if (ptt_interlock == ptt_interlock_active_state){
+      if (!ptt_interlock_active){
+        ptt_interlock_active = 1;
+        #ifdef FEATURE_DISPLAY
+        lcd_center_print_timed("PTT Interlock",0,2000);
+        #endif //FEATURE_DISPLAY
+      }
+    } else {
+      if (ptt_interlock_active){
+        ptt_interlock_active = 0;
+      }
+    }
+    last_ptt_interlock_check = millis();
+  }
+}
+#endif //FEATURE_PTT_INTERLOCK
