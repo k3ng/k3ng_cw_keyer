@@ -63,6 +63,6 @@
 #endif //FEATURE_ALPHABET_SEND_PRACTICE
 
 #ifdef FEATURE_PTT_INTERLOCK
-#define ptt_interlock 22  // this pin disables PTT and TX KEY
+#define ptt_interlock 0  // this pin disables PTT and TX KEY
 #endif //FEATURE_PTT_INTERLOCK
 

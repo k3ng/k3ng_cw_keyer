@@ -263,9 +263,11 @@ New fetures in this stable release:
 
     Fixed bug in FEATURE_USB_KEYBOARD, reported by Bill, W9BEL
 
+    Fixed bug in FEATURE_PTT_INTERLOCK
+
 */
 
-#define CODE_VERSION "2.2.2015010302"
+#define CODE_VERSION "2.2.2015010401"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -3269,6 +3271,10 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
     service_usb();
     #endif //FEATURE_USB_KEYBOARD || FEATURE_USB_MOUSE
+
+    #ifdef FEATURE_PTT_INTERLOCK
+    service_ptt_interlock();
+    #endif //FEATURE_PTT_INTERLOCK
     
     if (configuration.keyer_mode != ULTIMATIC) {
       if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
@@ -10640,8 +10646,7 @@ void service_ptt_interlock(){
   static unsigned long last_ptt_interlock_check = 0;
 
   if ((millis() - last_ptt_interlock_check) > ptt_interlock_check_every_ms){
-    byte ptt_interlock_read = digitalRead(ptt_interlock);
-    if (ptt_interlock == ptt_interlock_active_state){
+    if (digitalRead(ptt_interlock) == ptt_interlock_active_state){
       if (!ptt_interlock_active){
         ptt_interlock_active = 1;
         #ifdef FEATURE_DISPLAY
