@@ -267,14 +267,13 @@ New fetures in this stable release:
 
 */
 
-#define CODE_VERSION "2.2.2015010401"
+#define CODE_VERSION "2.2.2015010403"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
 #include <EEPROM.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
-
 
 //#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
 #include "keyer_features_and_options.h"
@@ -8945,6 +8944,15 @@ void initialize_pins() {
     digitalWrite(wrong_answer_led, LOW);
   }
   #endif //FEATURE_ALPHABET_SEND_PRACTICE
+
+  #ifdef FEATURE_PTT_INTERLOCK
+  pinMode(ptt_interlock,INPUT);
+  if (ptt_interlock_active_state == HIGH){
+    digitalWrite(ptt_interlock,LOW);
+  } else {
+    digitalWrite(ptt_interlock,HIGH);
+  }
+  #endif //FEATURE_PTT_INTERLOCK
 
   
 }
