@@ -265,9 +265,11 @@ New fetures in this stable release:
 
     Fixed bug in FEATURE_PTT_INTERLOCK
 
+    #define unknown_cw_character '*'
+
 */
 
-#define CODE_VERSION "2.2.2015010403"
+#define CODE_VERSION "2.2.2015011101"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -7874,6 +7876,7 @@ int convert_cw_number_to_ascii (long number_in)
    case 21121: return 47; break;   // /
    case 2111212: return '*'; break; // BK   
    case 221122: return 44; break;  // ,
+   case 121212: return '.'; break;
    case 222222: return 92; break;  // special hack; six dahs = \ (backslash)
    //case 2222222: return '+'; break;
    case 9: return 32; break;       // special 9 = space
@@ -7885,7 +7888,7 @@ int convert_cw_number_to_ascii (long number_in)
    case 211112: return 45; break; // - // sp5iou
    case 21112: return 61; break; // = //sp5iou
    case 212122: return 33; break; // ! //sp5iou
-   case 121212: return 46; break; // . //sp5iou
+   //case 121212: return 46; break; // . //sp5iou
    case 1112112: return 36; break; // $ //sp5iou
    case 12111: return 38; break; // & // sp5iou
    //case 221122: return 44; break; // ,
@@ -7927,7 +7930,8 @@ int convert_cw_number_to_ascii (long number_in)
    #endif //OPTION_NON_ENGLISH_EXTENSIONS
 
 
-   default: return 254; break;
+   //default: return 254; break;
+   default: return unknown_cw_character; break;
  }
 
 }
