@@ -3,8 +3,6 @@
 
 //#define FEATURE_SERIAL
 //#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
-//#define FEATURE_COMMAND_BUTTONS  // do not enable unless you have the corresponding resistors connected to the analog_buttons_pin
-#define FEATURE_SAY_HI
 //#define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
 //#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is highly recommended (see documentation)
@@ -20,7 +18,6 @@
 //#define FEATURE_AUTOSPACE
 //#define FEATURE_FARNSWORTH
 //#define FEATURE_DL2SBA_BANKSWITCH       // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
-//#define FEATURE_DISPLAY                   // LCD display support (include one of the hardware options below)
 //#define FEATURE_LCD_4BIT                // classic LCD disidefplay using 4 I/O lines
 //#define FEATURE_LCD_ADAFRUIT_I2C          // Adafruit I2C LCD display using MCP23017 at addr 0x20
 //#define FEATURE_LCD_YDv1                // YourDuino I2C LCD display with old LCM 1602 V1 ic
@@ -61,3 +58,5 @@
 //#define OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED    // this option keeps PTT high if there are characters buffered from the keyboard, the serial interface, or Winkey
 //#define OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // LCD display suport for non-English (NO/DK/DE) characters - Courtesy of OZ1JHM
 //#define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
+//#define OPTION_UNKNOWN_CHARACTER_ERROR_TONE
+//#define OPTION_DO_NOT_SAY_HI

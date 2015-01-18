@@ -267,9 +267,14 @@ New fetures in this stable release:
 
     #define unknown_cw_character '*'
 
+    OPTION_UNKNOWN_CHARACTER_ERROR_TONE
+    OPTION_DO_NOT_SAY_HI (FEATURE_SAY_HI is gone)
+    FEATURE_DISPLAY no longer needs to be configured, it is automatically defined when an LCD feature is enabled
+    added keyer_dependencies.h file
+
 */
 
-#define CODE_VERSION "2.2.2015011101"
+#define CODE_VERSION "2.2.2015011801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -279,6 +284,7 @@ New fetures in this stable release:
 
 //#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
 #include "keyer_features_and_options.h"
+#include "keyer_dependencies.h"
 #include "keyer_debug.h"
 #include "keyer_pin_settings.h"
 //#include "keyer_pin_settings_nanokeyer_rev_b.h"
@@ -314,10 +320,7 @@ New fetures in this stable release:
 #include <Usb.h>    /* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
 #endif
 
-// Dependencies
-#if defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_COMMAND_BUTTONS)
-#error "When configuring both FEATURE_COMMAND_LINE_INTERFACE and FEATURE_WINKEY_EMULATION you need to also have FEATURE_COMMAND_BUTTONS"
-#endif
+
 
 // Variables and stuff
 struct config_t {  // 23 bytes
@@ -7931,7 +7934,13 @@ int convert_cw_number_to_ascii (long number_in)
 
 
    //default: return 254; break;
-   default: return unknown_cw_character; break;
+   default: 
+     #ifdef OPTION_UNKNOWN_CHARACTER_ERROR_TONE
+     boop();
+     #endif  //OPTION_UNKNOWN_CHARACTER_ERROR_TONE
+     return unknown_cw_character; 
+     break;
+
  }
 
 }
@@ -8973,8 +8982,8 @@ void initialize_debug_startup(){
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
   main_serial_port->println(F("FEATURE_COMMAND_LINE_INTERFACE"));
   #endif
-  #ifdef FEATURE_SAY_HI
-  main_serial_port->println(F("FEATURE_SAY_HI"));
+  #ifndef OPTION_DO_NOT_SAY_HI
+  main_serial_port->println(F("OPTION_DO_NOT_SAY_HI"));
   #endif
   #ifdef FEATURE_MEMORIES
   main_serial_port->println(F("FEATURE_MEMORIES"));
@@ -9571,7 +9580,7 @@ void initialize_display(){
   #endif //FEATURE_DISPLAY
 
   if (machine_mode != BEACON) {
-    #ifdef FEATURE_SAY_HI
+    #ifndef OPTION_DO_NOT_SAY_HI
     // say HI
     // store current setting (compliments of DL2SBA - http://dl2sba.com/ )
     byte oldKey = key_tx; 
@@ -9591,7 +9600,7 @@ void initialize_display(){
     
     configuration.sidetone_mode = oldSideTone; 
     key_tx = oldKey;     
-    #endif
+    #endif //OPTION_DO_NOT_SAY_HI
     
   }
 }
@@ -10674,3 +10683,6 @@ void service_ptt_interlock(){
   }
 }
 #endif //FEATURE_PTT_INTERLOCK
+
+
+
