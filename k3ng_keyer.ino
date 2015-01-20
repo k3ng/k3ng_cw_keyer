@@ -272,9 +272,11 @@ New fetures in this stable release:
     FEATURE_DISPLAY no longer needs to be configured, it is automatically defined when an LCD feature is enabled
     added keyer_dependencies.h file
 
+    Fixed administrative bug - FEATURE_COMMAND_BUTTONS disappeared in last update - oooooops!  (Thanks Peter, SM0NTR)
+
 */
 
-#define CODE_VERSION "2.2.2015011801"
+#define CODE_VERSION "2.2.2015012001"
 #define eeprom_magic_number 19
 
 #include <stdio.h>

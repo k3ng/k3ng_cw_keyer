@@ -2,6 +2,7 @@
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
 //#define FEATURE_SERIAL
+//#define FEATURE_COMMAND_BUTTONS
 //#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
 //#define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
