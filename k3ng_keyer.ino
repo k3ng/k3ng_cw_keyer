@@ -274,9 +274,15 @@ New fetures in this stable release:
 
     Fixed administrative bug - FEATURE_COMMAND_BUTTONS disappeared in last update - oooooops!  (Thanks Peter, SM0NTR)
 
+    K3NG_PS2Keyboard.h and K3NG_PS2Keyboard.cpp replace PS2Keyboard.h and PS2Keyboard.cpp
+    K3NG_PS2Keyboard.h:
+      #define OPTION_PS2_KEYBOARD_US
+      #define OPTION_PS2_KEYBOARD_GERMAN - still needs work
+      #define OPTION_PS2_KEYBOARD_FRENCH - still needs work
+
 */
 
-#define CODE_VERSION "2.2.2015012001"
+#define CODE_VERSION "2.2.2015012801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -288,15 +294,19 @@ New fetures in this stable release:
 #include "keyer_features_and_options.h"
 #include "keyer_dependencies.h"
 #include "keyer_debug.h"
-#include "keyer_pin_settings.h"
-//#include "keyer_pin_settings_nanokeyer_rev_b.h"
+//#include "keyer_pin_settings.h"
+#include "keyer_pin_settings_nanokeyer_rev_b.h"
 #include "keyer_settings.h"
 
 #if defined(FEATURE_SLEEP)
 #include <avr/sleep.h>
 #endif 
 #if defined(FEATURE_PS2_KEYBOARD)
+#ifdef OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
 #include "PS2Keyboard.h"
+#else //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
+#include "K3NG_PS2Keyboard.h"
+#endif
 #endif
 #if defined(FEATURE_LCD_4BIT)
 #include <LiquidCrystal.h>
@@ -593,7 +603,11 @@ byte usb_dah = 0;
 
 
 #if defined(FEATURE_PS2_KEYBOARD)
+#ifdef OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
 PS2Keyboard keyboard;
+#else //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
+K3NG_PS2Keyboard keyboard;
+#endif //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
 #endif
 
 #if defined(FEATURE_LCD_4BIT)
@@ -3198,9 +3212,11 @@ void tx_and_sidetone_key (int state, byte sending_type)
   }
   #else  //FEATURE_PTT_INTERLOCK
   if ((state) && (key_state == 0)) {
-    if ((key_tx) && (!ptt_interlock_active)) {
+    if (key_tx) {
       byte previous_ptt_line_activated = ptt_line_activated;
-      ptt_key();
+      if (!ptt_interlock_active) {
+        ptt_key();
+      }
       if (current_tx_key_line) {digitalWrite (current_tx_key_line, HIGH);}
       #ifdef OPTION_WINKEY_2_SUPPORT
       if ((wk2_both_tx_activated) && (tx_key_line_2)) {
@@ -3224,7 +3240,9 @@ void tx_and_sidetone_key (int state, byte sending_type)
           digitalWrite (tx_key_line_2, LOW);
         }
         #endif        
-        ptt_key();
+        if (!ptt_interlock_active) {
+          ptt_key();
+        }
       }
       if ((configuration.sidetone_mode == SIDETONE_ON) || (machine_mode == COMMAND) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
         noTone(sidetone_line);
