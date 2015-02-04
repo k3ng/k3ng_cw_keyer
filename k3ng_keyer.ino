@@ -282,7 +282,7 @@ New fetures in this stable release:
 
 */
 
-#define CODE_VERSION "2.2.2015012801"
+#define CODE_VERSION "2.2.2015020301"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -294,8 +294,8 @@ New fetures in this stable release:
 #include "keyer_features_and_options.h"
 #include "keyer_dependencies.h"
 #include "keyer_debug.h"
-//#include "keyer_pin_settings.h"
-#include "keyer_pin_settings_nanokeyer_rev_b.h"
+#include "keyer_pin_settings.h"
+//#include "keyer_pin_settings_nanokeyer_rev_b.h"
 #include "keyer_settings.h"
 
 #if defined(FEATURE_SLEEP)
