@@ -48,7 +48,7 @@
 #define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
 #define cw_echo_timing_factor 0.25
-#define potentiomenter_always_on 0
+#define potentiometer_always_on 0
 #define ptt_interlock_check_every_ms 100
 #define ptt_interlock_active_state HIGH
 #define unknown_cw_character '*'
@@ -74,6 +74,14 @@
 #define led_ring_low_limit 10
 #define led_ring_high_limit 50
 #endif //FEATURE_LED_RING
+
+#ifdef FEATURE_QLF
+#define qlf_dit_max 125
+#define qlf_dit_min 75
+#define qlf_dah_max 200
+#define qlf_dah_min 100
+#define qlf_on_by_default 0
+#endif //FEATURE_QLF
 
 // Variable macros
 #define STRAIGHT 1

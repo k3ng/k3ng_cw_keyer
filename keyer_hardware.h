@@ -1,0 +1,1 @@
+//#define HARDWARE_NANOKEYER_REV_B
