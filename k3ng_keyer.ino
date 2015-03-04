@@ -290,13 +290,17 @@ New fetures in this stable release:
     #define qlf_dah_min 100
     #define qlf_on_by_default 0
 
-    keyerhardware.h and HARDWARE_NANOKEYER_REV_B
+    keyer_hardware.h and HARDWARE_NANOKEYER_REV_B
 
     OPTION_SAVE_MEMORY_NANOKEYER
 
+    OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST
+
+    changed reset method to 'asm volatile ("jmp 0");'
+
 */
 
-#define CODE_VERSION "2.2.2015021701"
+#define CODE_VERSION "2.2.2015030401"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -5799,7 +5803,9 @@ void service_winkey(byte action) {
   }
   #endif //OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP
   
-  
+  #ifdef OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST
+  static byte ignored_first_status_request = 0;
+  #endif //OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST
   
   if (action == HOUSEKEEPING) {
     if (winkey_last_unbuffered_speed_wpm == 0) {
@@ -6055,10 +6061,8 @@ void service_winkey(byte action) {
             #endif //DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY                 
             break;
           case 0x15:  // report status
+            #ifndef OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST //--------------------
             status_byte_to_send = 0xc0|winkey_sending|winkey_xoff;
-//            if (winkey_sending) {
-//              status_byte_to_send = status_byte_to_send | 4;
-//            }
             if (send_buffer_status == SERIAL_SEND_BUFFER_TIMED_COMMAND) {
               status_byte_to_send = status_byte_to_send | 16;
             }
@@ -6066,7 +6070,26 @@ void service_winkey(byte action) {
             #ifdef DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY
             debug_port->print("service_winkey: 0x15 rpt status: ");
             debug_port->println(status_byte_to_send);
-            #endif //DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY                 
+            #endif //DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY  
+            #else //OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST ------------------------
+            if (ignored_first_status_request){
+              status_byte_to_send = 0xc0|winkey_sending|winkey_xoff;
+              if (send_buffer_status == SERIAL_SEND_BUFFER_TIMED_COMMAND) {
+                status_byte_to_send = status_byte_to_send | 16;
+              }
+              main_serial_port->write(status_byte_to_send);
+              #ifdef DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY
+              debug_port->print("service_winkey: 0x15 rpt status: ");
+              debug_port->println(status_byte_to_send);
+              #endif //DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY 
+              } else {
+                ignored_first_status_request = 1;
+                #ifdef DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY
+                debug_port->println("service_winkey: ignored first 0x15 status request");
+                #endif //DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY                
+              }
+            #endif //OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST -------------------- 
+
             break;
           case 0x16:  // Pointer operation
             winkey_status = WINKEY_POINTER_COMMAND;
@@ -6326,7 +6349,7 @@ void service_winkey(byte action) {
             debug_port->println("service_winkey: calibrate command (WINKEY_UNSUPPORTED_COMMAND) awaiting 1 parm");
             #endif //DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY            
             break;  // calibrate command
-          case 0x01: wdt_enable(WDTO_30MS); while(1) {}; break;  // reset command
+          case 0x01: asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {};*/ break;  // reset command
           case 0x02:  // host open command - send version back to host
             #ifdef OPTION_WINKEY_2_SUPPORT
             main_serial_port->write(WINKEY_2_REPORT_VERSION_NUMBER);
@@ -6793,7 +6816,7 @@ void process_serial_command() {
         
   main_serial_port->println();
   switch (incoming_serial_byte) {
-    case 126: wdt_enable(WDTO_30MS); while(1) {} ; break;  // ~ - reset unit
+    case 126: asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {} ;*/ break;  // ~ - reset unit
     case 42:                                                // * - paddle echo on / off
       if (cli_paddle_echo) {
         cli_paddle_echo = 0;
