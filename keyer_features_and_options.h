@@ -1,13 +1,11 @@
 // compile time features and options - comment or uncomment to add or delete features
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
-//#define FEATURE_SERIAL
 //#define FEATURE_COMMAND_BUTTONS
-//#define FEATURE_COMMAND_LINE_INTERFACE        // this requires FEATURE_SERIAL
+//#define FEATURE_COMMAND_LINE_INTERFACE        // (this no longer requires FEATURE_SERIAL)
 //#define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
-//#define FEATURE_WINKEY_EMULATION    // this requires FEATURE_SERIAL - disabling Automatic Software Reset is highly recommended (see documentation)
-//#define OPTION_WINKEY_2_SUPPORT     // requires FEATURE_WINKEY_EMULATION
+//#define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation) (this no longer requires FEATURE_SERIAL)
 //#define FEATURE_BEACON
 //#define FEATURE_CALLSIGN_RECEIVE_PRACTICE
 //#define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
@@ -38,15 +36,16 @@
 //#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
 #define OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
 #define OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-//#define OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // this will make Winkey emulation be the default at boot up; hold command button down at boot up to activate CLI mode
+//#define OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE simultaneously.  This will make Winkey emulation be the default at boot up; hold command button down at boot up to activate CLI mode
 //#define OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP     // if ASR is not disabled, you may need this to discard errant serial port bytes at startup
 //#define OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM // with this activated the unit will write non-volatile settings to EEPROM when set by Winkey commands
 //#define OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
 #define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
+#define OPTION_WINKEY_2_SUPPORT                      // comment out to revert to Winkey version 1 emulation
 //#define OPTION_WINKEY_EXTENDED_COMMANDS            // in development
 #define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE       // additional code to check_dit_paddle() and check_dah_paddle() to send 0xC2 status byte when paddles are hit
 #define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
-#define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET  // activate this when using Winkey 2 emulation and Win-Test
+//#define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET  // activate this when using Winkey 2 emulation and Win-Test
 //#define OPTION_WINKEY_FREQUENT_STATUS_REPORT         // activate this to make Winkey emulation play better with RUMlog and RUMped
 //#define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
 #define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode

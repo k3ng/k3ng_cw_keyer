@@ -298,9 +298,14 @@ New fetures in this stable release:
 
     changed reset method to 'asm volatile ("jmp 0");'
 
+    FEATURE_SERIAL no longer needs to be uncommented for FEATURE_COMMAND_LINE_INTERFACE or FEATURE_WINKEY_EMULATION
+    keyer_hardware.h now switches features, pins, and settings files
+    Fixed compilation issue with OPTION_WINKEY_2_SUPPORT consuming memory without FEATURE_WINKEY_EMULATION enabled
+    OPTION_WINKEY_2_SUPPORT is now enabled by default in features and options file
+
 */
 
-#define CODE_VERSION "2.2.2015030401"
+#define CODE_VERSION "2.2.2015030701"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -308,26 +313,41 @@ New fetures in this stable release:
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 #include "keyer_hardware.h"
+
 //#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
+
+#ifdef HARDWARE_NANOKEYER_REV_B
+#include "keyer_features_and_options_nanokeyer_rev_b.h"
+#endif
+
+#ifndef HARDWARE_CUSTOM
 #include "keyer_features_and_options.h"
+#endif
+
 #include "keyer_dependencies.h"
 #include "keyer_debug.h"
+
 #ifdef HARDWARE_NANOKEYER_REV_B
 #include "keyer_pin_settings_nanokeyer_rev_b.h"
-#else
+#include "keyer_settings_nanokeyer_rev_b.h"
+#endif
+
+#ifndef HARDWARE_CUSTOM
 #include "keyer_pin_settings.h"
-#endif //HARDWARE_NANOKEYER_REV_B
 #include "keyer_settings.h"
+#endif
 
 #if defined(FEATURE_SLEEP)
 #include <avr/sleep.h>
 #endif 
+
 #if defined(FEATURE_PS2_KEYBOARD)
 #ifdef OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
 #include "PS2Keyboard.h"
 #else //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
 #include "K3NG_PS2Keyboard.h"
 #endif
+
 #endif
 #if defined(FEATURE_LCD_4BIT)
 #include <LiquidCrystal.h>
@@ -438,11 +458,11 @@ byte lcdcolor = GREEN;  // default color for RGB LCD display
 #endif //FEATURE_LCD_ADAFRUIT_I2C
 
 
-#ifdef OPTION_WINKEY_2_SUPPORT
+#if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
 byte wk2_mode = 1;
 byte wk2_both_tx_activated = 0;
 byte wk2_paddle_only_sidetone = 0;
-#endif //OPTION_WINKEY_2_SUPPORT
+#endif //defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
 
 #ifdef FEATURE_DISPLAY
 byte lcd_status = LCD_CLEAR;
@@ -2753,7 +2773,7 @@ void ptt_key()
   if (ptt_line_activated == 0) {   // if PTT is currently deactivated, bring it up and insert PTT lead time delay
     if (configuration.current_ptt_line) {
       digitalWrite (configuration.current_ptt_line, HIGH);    
-      #ifdef OPTION_WINKEY_2_SUPPORT
+      #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
       if ((wk2_both_tx_activated) && (ptt_tx_2)) {
         digitalWrite (ptt_tx_2, HIGH);
       }
@@ -2771,7 +2791,7 @@ void ptt_unkey()
   if (ptt_line_activated) {
     if (configuration.current_ptt_line) {
       digitalWrite (configuration.current_ptt_line, LOW);
-      #ifdef OPTION_WINKEY_2_SUPPORT
+      #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
       if ((wk2_both_tx_activated) && (ptt_tx_2)) {
         digitalWrite (ptt_tx_2, LOW);
       }
@@ -3232,7 +3252,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
       byte previous_ptt_line_activated = ptt_line_activated;
       ptt_key();
       if (current_tx_key_line) {digitalWrite (current_tx_key_line, HIGH);}
-      #ifdef OPTION_WINKEY_2_SUPPORT
+      #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
       if ((wk2_both_tx_activated) && (tx_key_line_2)) {
         digitalWrite (tx_key_line_2, HIGH);
       }
@@ -3249,7 +3269,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
     if ((state == 0) && (key_state)) {
       if (key_tx) {
         if (current_tx_key_line) {digitalWrite (current_tx_key_line, LOW);}
-        #ifdef OPTION_WINKEY_2_SUPPORT
+        #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
         if ((wk2_both_tx_activated) && (tx_key_line_2)) {
           digitalWrite (tx_key_line_2, LOW);
         }
@@ -4457,6 +4477,8 @@ void check_command_buttons()
       }
       #ifdef FEATURE_MEMORIES
       if ((analogbuttontemp > 0) && (analogbuttontemp < (number_of_memories + 1)) && ((millis() - button_last_add_to_send_buffer_time) > 400)) {
+        
+        #ifdef FEATURE_WINKEY_EMULATION
         #ifndef OPTION_WINKEY_2_SUPPORT
         add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
         add_to_send_buffer(analogbuttontemp - 1);
@@ -4476,6 +4498,8 @@ void check_command_buttons()
           add_to_send_buffer(analogbuttontemp - 1);
         }  
         #endif //OPTION_WINKEY_2_SUPPORT
+        #endif FEATURE_WINKEY_EMULATION
+
         button_last_add_to_send_buffer_time = millis();
         #ifdef DEBUG_BUTTONS
         main_serial_port->print(F("\ncheck_buttons: add_to_send_buffer: "));
