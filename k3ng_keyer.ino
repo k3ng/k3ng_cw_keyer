@@ -304,6 +304,7 @@ New fetures in this stable release:
     OPTION_WINKEY_2_SUPPORT is now enabled by default in features and options file
 
     HARDWARE_OPEN_INTERFACE  http://remoteqth.com/open-interface.php
+    @ symbol now works in LCD display
 
 */
 
@@ -316,7 +317,7 @@ New fetures in this stable release:
 #include <avr/wdt.h>
 #include "keyer_hardware.h"
 
-#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
+//#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
 
 #ifdef HARDWARE_NANOKEYER_REV_B
 #include "keyer_features_and_options_nanokeyer_rev_b.h"
