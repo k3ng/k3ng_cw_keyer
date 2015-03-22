@@ -303,9 +303,11 @@ New fetures in this stable release:
     Fixed compilation issue with OPTION_WINKEY_2_SUPPORT consuming memory without FEATURE_WINKEY_EMULATION enabled
     OPTION_WINKEY_2_SUPPORT is now enabled by default in features and options file
 
+    HARDWARE_OPEN_INTERFACE  http://remoteqth.com/open-interface.php
+
 */
 
-#define CODE_VERSION "2.2.2015030701"
+#define CODE_VERSION "2.2.2015032201"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -314,10 +316,14 @@ New fetures in this stable release:
 #include <avr/wdt.h>
 #include "keyer_hardware.h"
 
-//#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
+#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
 
 #ifdef HARDWARE_NANOKEYER_REV_B
 #include "keyer_features_and_options_nanokeyer_rev_b.h"
+#endif
+
+#ifdef HARDWARE_OPEN_INTERFACE
+#include "keyer_features_and_options_open_interface.h"
 #endif
 
 #ifndef HARDWARE_CUSTOM
@@ -330,6 +336,11 @@ New fetures in this stable release:
 #ifdef HARDWARE_NANOKEYER_REV_B
 #include "keyer_pin_settings_nanokeyer_rev_b.h"
 #include "keyer_settings_nanokeyer_rev_b.h"
+#endif
+
+#ifdef HARDWARE_OPEN_INTERFACE
+#include "keyer_pin_settings_open_interface.h"
+#include "keyer_settings_open_interface.h"
 #endif
 
 #ifndef HARDWARE_CUSTOM
@@ -8000,11 +8011,12 @@ int convert_cw_number_to_ascii (long number_in)
    case 22111: return 55; break;
    case 22211: return 56; break;
    case 22221: return 57; break;
-   case 112211: return 63; break;  // ?
+   case 112211: return '?'; break;  // ?
    case 21121: return 47; break;   // /
    case 2111212: return '*'; break; // BK   
    case 221122: return 44; break;  // ,
    case 121212: return '.'; break;
+   case 122121: return '@'; break;
    case 222222: return 92; break;  // special hack; six dahs = \ (backslash)
    //case 2222222: return '+'; break;
    case 9: return 32; break;       // special 9 = space
@@ -8022,7 +8034,6 @@ int convert_cw_number_to_ascii (long number_in)
    //case 221122: return 44; break; // ,
    case 122221: return 39; break; // ' // sp5iou
    case 121121: return 34; break; // " // sp5iou
-   case 122121: return 64; break; // @ // sp5iou
    case 112212: return 95; break; // _ // sp5iou
    case 212121: return 59; break; // ; // sp5iou
    case 222111: return 58; break; // : // sp5iou
