@@ -306,9 +306,15 @@ New fetures in this stable release:
     HARDWARE_OPEN_INTERFACE  http://remoteqth.com/open-interface.php
     @ symbol now works in LCD display
 
+    replaced prog_char with const char to fix issue with Arduino 1.6 compilation
+
+    Fixed bug introduced in 2.2.2015030701 where memory buttons don't work unless FEATURE_WINKEY_EMULATION is compiled in (Thanks Bill, W9BEL)
+    Fixed bug with OPTION_SAVE_MEMORY_NANOKEYER where keyer didn't say hi
+    Fixed bug with OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE when Winkey is activated and user goes into command mode with button
+
 */
 
-#define CODE_VERSION "2.2.2015032201"
+#define CODE_VERSION "2.2.2015032901"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -317,7 +323,7 @@ New fetures in this stable release:
 #include <avr/wdt.h>
 #include "keyer_hardware.h"
 
-//#include "keyer.h"               // uncomment this for Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
+//#include "keyer.h" // uncomment this for pre-version October 2014 Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
 
 #ifdef HARDWARE_NANOKEYER_REV_B
 #include "keyer_features_and_options_nanokeyer_rev_b.h"
@@ -380,7 +386,7 @@ New fetures in this stable release:
 #include <BasicTerm.h>
 #endif
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
-#include <hidboot.h>
+#include <hidboot.h>  // issues with Arduino 1.6.1
 #include <usbhub.h>
 #include <Usb.h>    /* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
 #endif
@@ -552,6 +558,9 @@ unsigned long winkey_paddle_echo_buffer_decode_time = 0;
 byte winkey_sending = 0;
 byte winkey_interrupted = 0;
 byte winkey_xoff = 0;
+#ifdef OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
+byte winkey_breakin_status_byte_inhibit = 0;
+#endif //OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
 #endif //FEATURE_WINKEY_EMULATION
 
 #ifdef FEATURE_PS2_KEYBOARD
@@ -562,7 +571,7 @@ byte ps2_keyboard_command_buffer_pointer = 0;
 
 
 #ifdef FEATURE_HELL
-PROGMEM prog_char hell_font1[] = {B00111111, B11100000, B00011001, B11000000, B01100011, B00000001, B10011100, B00111111, B11100000,    // A
+PROGMEM const char hell_font1[] = {B00111111, B11100000, B00011001, B11000000, B01100011, B00000001, B10011100, B00111111, B11100000,    // A
                                    B00110000, B00110000, B11111111, B11000011, B00110011, B00001100, B11001100, B00011100, B11100000,    // B
                                    B00111111, B11110000, B11000000, B11000011, B00000011, B00001100, B00001100, B00110000, B00110000,    // C
                                    B00110000, B00110000, B11111111, B11000011, B00000011, B00001100, B00001100, B00011111, B11100000,    // D
@@ -589,7 +598,7 @@ PROGMEM prog_char hell_font1[] = {B00111111, B11100000, B00011001, B11000000, B0
                                    B00000000, B01110000, B00000111, B00000011, B11110000, B00000000, B01110000, B00000000, B01110000,
                                    B00111000, B00110000, B11111000, B11000011, B00110011, B00001100, B01111100, B00110000, B01110000};   // Z
 
-PROGMEM prog_char hell_font2[] = {B00011111, B11100000, B11000000, B11000011, B00000011, B00001100, B00001100, B00011111, B11100000,   // 0
+PROGMEM const char hell_font2[] = {B00011111, B11100000, B11000000, B11000011, B00000011, B00001100, B00001100, B00011111, B11100000,   // 0
                                    B00000000, B00000000, B00000011, B00000000, B00000110, B00001111, B11111100, B00000000, B00000000,
                                    B00111000, B01100000, B11110000, B11000011, B00110011, B00001100, B01111000, B00110000, B00000000,
                                    B11000000, B00000011, B00000000, B11000110, B00110011, B00001100, B11111100, B00011110, B00000000,
@@ -600,7 +609,7 @@ PROGMEM prog_char hell_font2[] = {B00011111, B11100000, B11000000, B11000011, B0
                                    B00111100, B11110001, B10011110, B01100110, B00110001, B10011001, B11100110, B00111100, B11110000,
                                    B00000011, B11100011, B00011000, B11000110, B01100011, B00001100, B00001100, B00011111, B11100000};  // 9
 
-PROGMEM prog_char hell_font3[]  = {B00000011, B00000000, B00001100, B00000001, B11111110, B00000000, B11000000, B00000011, B00000000,
+PROGMEM const char hell_font3[]  = {B00000011, B00000000, B00001100, B00000001, B11111110, B00000000, B11000000, B00000011, B00000000,
                                    B00000011, B00000000, B00001100, B00000000, B00110000, B00000000, B11000000, B00000011, B00000000,
                                    B00000000, B00110000, B00000000, B11001110, B01110011, B00000000, B01111100, B00000000, B00000000,
                                    B01110000, B00000000, B01110000, B00000000, B01110000, B00000000, B01110000, B00000000, B01110000,
@@ -757,9 +766,8 @@ void setup()
   initialize_serial_port();
   initialize_ps2_keyboard();
   initialize_usb();
-  #ifndef OPTION_SAVE_MEMORY_NANOKEYER
+  initialize_cw_keyboard();
   initialize_display();
-  #endif //OPTION_SAVE_MEMORY_NANOKEYER
   initialize_debug_startup();
 
 }
@@ -864,7 +872,9 @@ void loop()
     #ifdef FEATURE_PTT_INTERLOCK
     service_ptt_interlock();
     #endif //FEATURE_PTT_INTERLOCK
+
   }
+
   
 }
 
@@ -873,6 +883,18 @@ void loop()
 
 // Are you a radio artisan ?
 
+
+void initialize_cw_keyboard(){
+
+  #ifdef FEATURE_CW_COMPUTER_KEYBOARD
+  Keyboard.begin();
+  #endif //FEATURE_CW_COMPUTER_KEYBOARD
+
+}
+
+
+
+//-------------------------------------------------------------------------------------------------------
 
 #ifdef FEATURE_SLEEP
 void wakeup() {
@@ -2592,7 +2614,7 @@ void transmit_hell_char (byte hellchar)
 //-------------------------------------------------------------------------------------------------------
 
 #ifdef FEATURE_HELL
-void transmit_hell_pixels (prog_char* hell_pixels, byte hellchar)
+void transmit_hell_pixels (const char* hell_pixels, byte hellchar)
 //void transmit_hell_pixels (prog_uchar* hell_pixels, byte hellchar)
 {
 
@@ -2950,7 +2972,7 @@ void check_dit_paddle()
     dit_buffer = 1;
 
     #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
-    if (!winkey_interrupted && winkey_host_open){
+    if (!winkey_interrupted && winkey_host_open && !winkey_breakin_status_byte_inhibit){
       main_serial_port->write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
       winkey_interrupted = 1;
       // tone(sidetone_line,1000);
@@ -3015,7 +3037,7 @@ void check_dah_paddle()
     dah_buffer = 1;
 
     #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
-    if (!winkey_interrupted && winkey_host_open){
+    if (!winkey_interrupted && winkey_host_open && !winkey_breakin_status_byte_inhibit){
       main_serial_port->write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
       winkey_interrupted = 1;
       // tone(sidetone_line,1000);
@@ -3698,6 +3720,10 @@ void command_mode ()
   lcd_center_print_timed("Command Mode", 0, default_display_msg_delay);
   #endif 
 
+  #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE)
+  winkey_breakin_status_byte_inhibit = 1;
+  #endif
+
   while (stay_in_command_mode) {
     cw_char = 0;
     cw_char = get_cw_input_from_user(0);
@@ -3725,8 +3751,6 @@ void command_mode ()
           #endif          
           send_dit(AUTOMATIC_SENDING);
           break;
-
-        //xxxxxxx
         case 1: // E - announce spEed
           char c[4];
           delay(250);
@@ -3828,8 +3852,8 @@ void command_mode ()
         case 122: command_speed_mode(); break;                            // W - change wpm
         #ifdef FEATURE_MEMORIES
         case 2122: command_set_mem_repeat_delay(); break; // Y - set memory repeat delay
-        #endif
-        case 2112: stay_in_command_mode = 0; break;                       // X - exit command mode
+        #endif  
+        case 2112: stay_in_command_mode = 0; break;     // X - exit command mode
         #ifdef FEATURE_AUTOSPACE
         case 2211: // Z - Autospace
           if (configuration.autospace_active) {
@@ -3881,6 +3905,9 @@ void command_mode ()
     }
   }
   beep_boop();
+  #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE)
+  winkey_breakin_status_byte_inhibit = 0;
+  #endif  
   #ifdef command_mode_active_led
   if (command_mode_active_led) {digitalWrite(command_mode_active_led,LOW);}
   #endif //command_mode_active_led
@@ -3899,8 +3926,6 @@ void command_mode ()
 
 #ifdef FEATURE_MEMORIES
 void command_set_mem_repeat_delay() {
- 
- //ddddd
   
   byte character_count = 0;;
   int cw_char = 0;
@@ -4510,7 +4535,10 @@ void check_command_buttons()
           add_to_send_buffer(analogbuttontemp - 1);
         }  
         #endif //OPTION_WINKEY_2_SUPPORT
-        #endif FEATURE_WINKEY_EMULATION
+        #else //FEATURE_WINKEY_EMULATION
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(analogbuttontemp - 1);
+        #endif //FEATURE_WINKEY_EMULATION
 
         button_last_add_to_send_buffer_time = millis();
         #ifdef DEBUG_BUTTONS

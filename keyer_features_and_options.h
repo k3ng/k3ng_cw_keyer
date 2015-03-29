@@ -11,8 +11,9 @@
 //#define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 //#define FEATURE_SERIAL_HELP
 //#define FEATURE_HELL
-//#define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
-//#define FEATURE_USB_KEYBOARD         
+//#define FEATURE_PS2_KEYBOARD        // Use a PS2 keyboard to send code - Change keyboard layout (non-US) in K3NG_PS2Keyboard.h.  Additional options below.
+//#define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code 
+//#define FEATURE_CW_COMPUTER_KEYBOARD  // Have an Arduino Due or Leonardo act as a USB keyboard and use the paddle to "type" characters on the computer  
 //#define FEATURE_DEAD_OP_WATCHDOG
 //#define FEATURE_AUTOSPACE
 //#define FEATURE_FARNSWORTH
