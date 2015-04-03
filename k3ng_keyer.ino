@@ -312,16 +312,25 @@ New fetures in this stable release:
     Fixed bug with OPTION_SAVE_MEMORY_NANOKEYER where keyer didn't say hi
     Fixed bug with OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE when Winkey is activated and user goes into command mode with button
 
+    Working on HARDWARE_ARDUINO_DUE
+
 */
 
-#define CODE_VERSION "2.2.2015032901"
+#define CODE_VERSION "2.2.2015040401"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
-#include <EEPROM.h>
-#include <avr/pgmspace.h>
-#include <avr/wdt.h>
 #include "keyer_hardware.h"
+#ifndef HARDWARE_ARDUINO_DUE
+#include <EEPROM.h>
+#else
+#include <SPI.h>
+#endif //HARDWARE_ARDUINO_DUE
+#include <avr/pgmspace.h>
+#ifndef HARDWARE_ARDUINO_DUE
+#include <avr/wdt.h>
+#endif //HARDWARE_ARDUINO_DUE
+
 
 //#include "keyer.h" // uncomment this for pre-version October 2014 Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
 
@@ -891,6 +900,29 @@ void initialize_cw_keyboard(){
   #endif //FEATURE_CW_COMPUTER_KEYBOARD
 
 }
+
+//-------------------------------------------------------------------------------------------------------
+
+#ifdef HARDWARE_ARDUINO_DUE
+void noTone(byte tone_pin){
+
+
+
+}
+
+
+#endif //HARDWARE_ARDUINO_DUE
+
+//-------------------------------------------------------------------------------------------------------
+
+#ifdef HARDWARE_ARDUINO_DUE
+void tone(byte tone_pin, unsigned int tone_freq,unsigned int duration = 0){
+
+}
+
+
+#endif //HARDWARE_ARDUINO_DUE
+
 
 
 
@@ -2881,7 +2913,8 @@ void check_ptt_tail()
 
 //-------------------------------------------------------------------------------------------------------
 void write_settings_to_eeprom(int initialize_eeprom) {  
-  
+
+  #ifndef HARDWARE_ARDUINO_DUE  
   if (initialize_eeprom) {
     //configuration.magic_number = eeprom_magic_number;
     EEPROM.write(0,eeprom_magic_number);
@@ -2896,6 +2929,7 @@ void write_settings_to_eeprom(int initialize_eeprom) {
   for (i = 0; i < sizeof(configuration); i++){
     EEPROM.write(ee++, *p++);  
   }
+  #endif //HARDWARE_ARDUINO_DUE
   
   config_dirty = 0;
   
@@ -2907,6 +2941,8 @@ int read_settings_from_eeprom() {
 
   // returns 0 if eeprom had valid settings, returns 1 if eeprom needs initialized
   
+
+  #ifndef HARDWARE_ARDUINO_DUE
   if (EEPROM.read(0) == eeprom_magic_number){
   
     byte* p = (byte*)(void*)&configuration;
@@ -2923,6 +2959,10 @@ int read_settings_from_eeprom() {
   } else {
     return 1;
   }
+  #else //HARDWARE_ARDUINO_DUE
+  return 1;
+
+  #endif //HARDWARE_ARDUINO_DUE
 
 }
 
