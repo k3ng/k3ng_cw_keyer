@@ -316,9 +316,11 @@ New fetures in this stable release:
 
     2.2.2015040402 More work on HARDWARE_ARDUINO_DUE
 
+    2.2.2015040501 Fixed bug with O command not working when any display feature was compiled in
+
 */
 
-#define CODE_VERSION "2.2.2015040402"
+#define CODE_VERSION "2.2.2015040501"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -446,7 +448,7 @@ byte current_tx_key_line = tx_key_line_1;
 #endif //OPTION_SAVE_MEMORY_NANOKEYER
 byte manual_ptt_invoke = 0;
 byte qrss_dit_length = initial_qrss_dit_length;
-byte machine_mode = 0;   // NORMAL, BEACON, COMMAND
+byte keyer_machine_mode = NORMAL;   // NORMAL, BEACON, KEYER_COMMAND_MODE
 byte char_send_mode = 0; // CW, HELL
 byte key_tx = 0;         // 0 = tx_key_line control suppressed
 byte dit_buffer = 0;     // used for buffering paddle hits in iambic operation
@@ -700,6 +702,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 #endif
 
 #if defined(FEATURE_LCD_YDv1)
+  //LiquidCrystal_I2C lcd(0x38);
   LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
 #endif
 
@@ -800,9 +803,9 @@ void loop()
   
   #ifdef FEATURE_BEACON
   #ifdef FEATURE_MEMORIES
-  if (machine_mode == BEACON) {
+  if (keyer_machine_mode == BEACON) {
     delay(201);
-    while (machine_mode == BEACON) {  // if we're in beacon mode, just keep playing memory 1
+    while (keyer_machine_mode == BEACON) {  // if we're in beacon mode, just keep playing memory 1
       if (!send_buffer_bytes) {
         play_memory(0);
       }
@@ -818,7 +821,7 @@ void loop()
   #endif //FEATURE_MEMORIES
   #endif //FEATURE_BEACON
 
-  if (machine_mode == NORMAL) {
+  if (keyer_machine_mode == NORMAL) {
     #ifdef FEATURE_COMMAND_BUTTONS
     check_command_buttons();
     #endif //FEATURE_COMMAND_BUTTONS
@@ -2295,7 +2298,7 @@ void ps2_keyboard_program_memory(byte memory_number)
   repeat_memory = 255;
   while (looping) {
     while (keyboard.available() == 0) {
-      if (machine_mode == NORMAL) {          // might as well do something while we're waiting
+      if (keyer_machine_mode == NORMAL) {          // might as well do something while we're waiting
         check_paddles();
         service_dit_dah_buffers();
       }
@@ -2383,7 +2386,7 @@ int ps2_keyboard_get_number_input(byte places,int lower_limit, int upper_limit)
 
   while (looping) {
     if (keyboard.available() == 0) {        // wait for the next keystroke
-      if (machine_mode == NORMAL) {          // might as well do something while we're waiting
+      if (keyer_machine_mode == NORMAL) {          // might as well do something while we're waiting
         check_paddles();
         service_dit_dah_buffers();
         service_send_buffer(PRINTCHAR);
@@ -3405,7 +3408,8 @@ void tx_and_sidetone_key (int state, byte sending_type)
         delay(first_extension_time);
       }
     }
-    if ((configuration.sidetone_mode == SIDETONE_ON) || (machine_mode == COMMAND) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+
+    if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
       tone(sidetone_line, configuration.hz_sidetone);
     }
     key_state = 1;
@@ -3420,7 +3424,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
         #endif        
         ptt_key();
       }
-      if ((configuration.sidetone_mode == SIDETONE_ON) || (machine_mode == COMMAND) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+      if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
         noTone(sidetone_line);
       }
       key_state = 0;
@@ -3443,7 +3447,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
         delay(first_extension_time);
       }
     }
-    if ((configuration.sidetone_mode == SIDETONE_ON) || (machine_mode == COMMAND) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+    if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
       tone(sidetone_line, configuration.hz_sidetone);
     }
     key_state = 1;
@@ -3460,7 +3464,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
           ptt_key();
         }
       }
-      if ((configuration.sidetone_mode == SIDETONE_ON) || (machine_mode == COMMAND) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+      if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
         noTone(sidetone_line);
       }
       key_state = 0;
@@ -3567,7 +3571,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #else
     if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
     #endif
-      if (machine_mode == NORMAL) {
+      if (keyer_machine_mode == NORMAL) {
         return;
       }
     }   
@@ -3671,7 +3675,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #else
     if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
     #endif
-    if (machine_mode == NORMAL) {
+    if (keyer_machine_mode == NORMAL) {
       return;
     }
   }   
@@ -3804,7 +3808,7 @@ long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 void command_mode ()
 {
 
-  machine_mode = COMMAND;
+  keyer_machine_mode = KEYER_COMMAND_MODE;
   
   #ifdef DEBUG_COMMAND_MODE
   main_serial_port->println(F("command_mode: entering"));
@@ -3825,6 +3829,7 @@ void command_mode ()
   #ifdef command_mode_active_led
   if (command_mode_active_led) {digitalWrite(command_mode_active_led,HIGH);}
   #endif //command_mode_active_led
+
   #ifdef FEATURE_DISPLAY
   lcd.clear();
   lcd_center_print_timed("Command Mode", 0, default_display_msg_delay);
@@ -3929,18 +3934,20 @@ void command_mode ()
             main_serial_port->println(F("command_mode: SIDETONE_OFF"));
             #endif
             configuration.sidetone_mode = SIDETONE_OFF;
-           } else {
-             #ifdef FEATURE_DISPLAY
-             lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
-             #endif 
-             #ifdef DEBUG_COMMAND_MODE
-             main_serial_port->println(F("command_mode: SIDETONE_ON"));
-             #endif             
-             configuration.sidetone_mode = SIDETONE_ON;
-           }
-           config_dirty = 1;
-           send_dit(AUTOMATIC_SENDING);
-           break; 
+            //boop();
+          } else {
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+            #endif 
+            #ifdef DEBUG_COMMAND_MODE
+            main_serial_port->println(F("command_mode: SIDETONE_ON"));
+            #endif             
+            configuration.sidetone_mode = SIDETONE_ON;
+            //beep();
+          }
+          config_dirty = 1;        
+          send_dit(AUTOMATIC_SENDING);
+          break; 
         case 2: command_tuning_mode(); break;                             // T - tuning mode
         #ifdef FEATURE_POTENTIOMETER
         case 1112:  // V - toggle pot active
@@ -4018,12 +4025,16 @@ void command_mode ()
   #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE)
   winkey_breakin_status_byte_inhibit = 0;
   #endif  
+
   #ifdef command_mode_active_led
   if (command_mode_active_led) {digitalWrite(command_mode_active_led,LOW);}
   #endif //command_mode_active_led
-  machine_mode = NORMAL;
+
+  keyer_machine_mode = NORMAL;
+
   speed_mode = speed_mode_before;   // go back to whatever speed mode we were in before
   configuration.keyer_mode = keyer_mode_before;
+
   #ifdef DEBUG_COMMAND_MODE
   if (command_mode_disable_tx) {
     main_serial_port->print(F("command_mode: command_mode_disable_tx set"));
@@ -5022,7 +5033,7 @@ void serial_qrss_mode()
 
   while (looping) {
     if (main_serial_port->available() == 0) {        // wait for the next keystroke
-      if (machine_mode == NORMAL) {          // might as well do something while we're waiting
+      if (keyer_machine_mode == NORMAL) {          // might as well do something while we're waiting
         check_paddles();
         service_dit_dah_buffers();
         //check_the_memory_buttons();
@@ -7322,7 +7333,7 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit)
 
   while (looping) {
     if (main_serial_port->available() == 0) {        // wait for the next keystroke
-      if (machine_mode == NORMAL) {          // might as well do something while we're waiting
+      if (keyer_machine_mode == NORMAL) {          // might as well do something while we're waiting
         check_paddles();
         service_dit_dah_buffers();
         service_send_buffer(PRINTCHAR);
@@ -8321,7 +8332,7 @@ void serial_program_memory()
   int memory_index = 0;
 
   while (main_serial_port->available() == 0) {        // wait for the next keystroke
-    if (machine_mode == NORMAL) {          // might as well do something while we're waiting
+    if (keyer_machine_mode == NORMAL) {          // might as well do something while we're waiting
       check_paddles();
       service_dit_dah_buffers();
       //check_the_memory_buttons();
@@ -8334,7 +8345,7 @@ void serial_program_memory()
     main_serial_port->print(memory_number+1);
     while (looping) {
       while (main_serial_port->available() == 0) {
-        if (machine_mode == NORMAL) {          // might as well do something while we're waiting
+        if (keyer_machine_mode == NORMAL) {          // might as well do something while we're waiting
           check_paddles();
           service_dit_dah_buffers();
         }
@@ -8436,9 +8447,9 @@ byte memory_nonblocking_delay(unsigned long delaytime)
   while ((millis() - starttime) < delaytime) {
     check_paddles();
     #ifdef FEATURE_COMMAND_BUTTONS
-    if (((dit_buffer) || (dah_buffer) || (analogbuttonread(0))) && (machine_mode != BEACON)) {   // exit if the paddle or button0 was hit
+    if (((dit_buffer) || (dah_buffer) || (analogbuttonread(0))) && (keyer_machine_mode != BEACON)) {   // exit if the paddle or button0 was hit
     #else
-    if (((dit_buffer) || (dah_buffer)) && (machine_mode != BEACON)) {   // exit if the paddle or button0 was hit
+    if (((dit_buffer) || (dah_buffer)) && (keyer_machine_mode != BEACON)) {   // exit if the paddle or button0 was hit
     #endif
       dit_buffer = 0;
       dah_buffer = 0;
@@ -8499,7 +8510,7 @@ void play_memory(byte memory_number)
 //  memorycheck();
 //  #endif
 
-  if (machine_mode == NORMAL) {
+  if (keyer_machine_mode == NORMAL) {
     #if defined(FEATURE_SERIAL)
     #ifdef FEATURE_WINKEY_EMULATION
     if (serial_mode != SERIAL_WINKEY_EMULATION) {
@@ -8513,7 +8524,7 @@ void play_memory(byte memory_number)
   
   for (int y = (memory_start(memory_number)); (y < (memory_end(memory_number)+1)); y++) {
 
-    if (machine_mode == NORMAL) {
+    if (keyer_machine_mode == NORMAL) {
       #ifdef FEATURE_POTENTIOMETER
       check_potentiometer();
       #endif
@@ -8550,7 +8561,7 @@ void play_memory(byte memory_number)
         #endif
 
         if (eeprom_byte_read != 92) {          // do we have a backslash?
-          if (machine_mode == NORMAL) {
+          if (keyer_machine_mode == NORMAL) {
             #if defined(FEATURE_SERIAL)
             #ifndef FEATURE_WINKEY_EMULATION
             if (!cw_send_echo_inhibit) {main_serial_port->write(eeprom_byte_read);}
@@ -8594,7 +8605,7 @@ void play_memory(byte memory_number)
                 if (number_of_memories > (eeprom_byte_read-49)) {
                   memory_number = (eeprom_byte_read-49);
                   y = ((memory_start(memory_number)) - 1);
-                  if (machine_mode == NORMAL) {
+                  if (keyer_machine_mode == NORMAL) {
                     main_serial_port->println();
                   }
                 }
@@ -8608,7 +8619,7 @@ void play_memory(byte memory_number)
                     jump_back_to_memory_number = memory_number;
                     memory_number = (eeprom_byte_read-49);
                     y = ((memory_start(memory_number)) - 1);
-                    if (machine_mode == NORMAL) {main_serial_port->println();}
+                    if (keyer_machine_mode == NORMAL) {main_serial_port->println();}
                   }       
                 }           
                 break;
@@ -8869,7 +8880,7 @@ void play_memory(byte memory_number)
           }
           #endif //FEATURE_MEMORY_MACROS
         }
-        if (machine_mode != BEACON) {
+        if (keyer_machine_mode != BEACON) {
           if ((dit_buffer) || (dah_buffer) || (button0_buffer)) {   // exit if the paddle or button0 was hit
             dit_buffer = 0;
             dah_buffer = 0;
@@ -9608,7 +9619,7 @@ void initialize_default_modes(){
   
   
   // setup default modes
-  machine_mode = NORMAL;
+  keyer_machine_mode = NORMAL;
   configuration.paddle_mode = PADDLE_NORMAL;
   configuration.keyer_mode = IAMBIC_B;
   configuration.sidetone_mode = SIDETONE_ON;
@@ -9657,7 +9668,7 @@ void check_for_beacon_mode(){
   // check for beacon mode (paddle_left == low) or straight key mode (paddle_right == low)
   if (paddle_pin_read(paddle_left) == LOW) {
     #ifdef FEATURE_BEACON
-    machine_mode = BEACON;
+    keyer_machine_mode = BEACON;
     #endif
   } else {
     if (paddle_pin_read(paddle_right) == LOW) {
@@ -9835,6 +9846,8 @@ void initialize_display(){
   lcd.setBacklight(lcdcolor);
   #endif //FEATURE_LCD_ADAFRUIT_I2C
 
+
+
   #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
   // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/
 
@@ -9866,7 +9879,7 @@ void initialize_display(){
   lcd_center_print_timed("K3NG Keyer",0,4000);
   #endif //FEATURE_DISPLAY
 
-  if (machine_mode != BEACON) {
+  if (keyer_machine_mode != BEACON) {
     #ifndef OPTION_DO_NOT_SAY_HI
     // say HI
     // store current setting (compliments of DL2SBA - http://dl2sba.com/ )

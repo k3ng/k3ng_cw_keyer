@@ -95,7 +95,7 @@
 
 #define NORMAL 0
 #define BEACON 1
-#define COMMAND 2
+#define KEYER_COMMAND_MODE 2
 
 #define OMIT_LETTERSPACE 1
 
