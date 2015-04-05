@@ -312,92 +312,101 @@ New fetures in this stable release:
     Fixed bug with OPTION_SAVE_MEMORY_NANOKEYER where keyer didn't say hi
     Fixed bug with OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE when Winkey is activated and user goes into command mode with button
 
-    Working on HARDWARE_ARDUINO_DUE
+    Working on HARDWARE_ARDUINO_DUE; Arduino Due setup requires E24C1024 I2C EEPROM hardware
+
+    2.2.2015040402 More work on HARDWARE_ARDUINO_DUE
 
 */
 
-#define CODE_VERSION "2.2.2015040401"
+#define CODE_VERSION "2.2.2015040402"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
 #include "keyer_hardware.h"
+
 #ifndef HARDWARE_ARDUINO_DUE
-#include <EEPROM.h>
+  #include <avr/pgmspace.h>
+  #include <avr/wdt.h>
+  #include <EEPROM.h>
 #else
-#include <SPI.h>
-#endif //HARDWARE_ARDUINO_DUE
-#include <avr/pgmspace.h>
-#ifndef HARDWARE_ARDUINO_DUE
-#include <avr/wdt.h>
+  #include <SPI.h>
+  #include <Wire.h>
+  #include "E24C1024.h"
+  #define EEPROM EEPROM1024
+  #define tone toneDUE
+  #define noTone noToneDUE
 #endif //HARDWARE_ARDUINO_DUE
 
 
 //#include "keyer.h" // uncomment this for pre-version October 2014 Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
 
 #ifdef HARDWARE_NANOKEYER_REV_B
-#include "keyer_features_and_options_nanokeyer_rev_b.h"
+  #include "keyer_features_and_options_nanokeyer_rev_b.h"
 #endif
 
 #ifdef HARDWARE_OPEN_INTERFACE
-#include "keyer_features_and_options_open_interface.h"
+  #include "keyer_features_and_options_open_interface.h"
 #endif
 
 #ifndef HARDWARE_CUSTOM
-#include "keyer_features_and_options.h"
+  #include "keyer_features_and_options.h"
 #endif
 
 #include "keyer_dependencies.h"
 #include "keyer_debug.h"
 
 #ifdef HARDWARE_NANOKEYER_REV_B
-#include "keyer_pin_settings_nanokeyer_rev_b.h"
-#include "keyer_settings_nanokeyer_rev_b.h"
+  #include "keyer_pin_settings_nanokeyer_rev_b.h"
+  #include "keyer_settings_nanokeyer_rev_b.h"
 #endif
 
 #ifdef HARDWARE_OPEN_INTERFACE
-#include "keyer_pin_settings_open_interface.h"
-#include "keyer_settings_open_interface.h"
+  #include "keyer_pin_settings_open_interface.h"
+  #include "keyer_settings_open_interface.h"
 #endif
 
 #ifndef HARDWARE_CUSTOM
-#include "keyer_pin_settings.h"
-#include "keyer_settings.h"
+  #include "keyer_pin_settings.h"
+  #include "keyer_settings.h"
 #endif
 
 #if defined(FEATURE_SLEEP)
-#include <avr/sleep.h>
+  #include <avr/sleep.h>
 #endif 
 
 #if defined(FEATURE_PS2_KEYBOARD)
-#ifdef OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
-#include "PS2Keyboard.h"
-#else //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
-#include "K3NG_PS2Keyboard.h"
+  #ifdef OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
+    #include "PS2Keyboard.h"
+  #else //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
+    #include "K3NG_PS2Keyboard.h"
+  #endif
 #endif
 
-#endif
 #if defined(FEATURE_LCD_4BIT)
-#include <LiquidCrystal.h>
+  #include <LiquidCrystal.h>
 #endif
+
 #if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_YDv1)
-#include <Wire.h>
+  #include <Wire.h>
 #endif
+
 #if defined(FEATURE_LCD_YDv1)
-#include <LiquidCrystal_I2C.h>
+  #include <LiquidCrystal_I2C.h>
 #endif
+
 #if defined(FEATURE_LCD_ADAFRUIT_I2C)
-#include <Adafruit_MCP23017.h>
+  #include <Adafruit_MCP23017.h>
+  #include <Adafruit_RGBLCDShield.h>
 #endif
-#if defined(FEATURE_LCD_ADAFRUIT_I2C)
-#include <Adafruit_RGBLCDShield.h>
-#endif
+
 #if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
-#include <BasicTerm.h>
+  #include <BasicTerm.h>
 #endif
+
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
-#include <hidboot.h>  // issues with Arduino 1.6.1
-#include <usbhub.h>
-#include <Usb.h>    /* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
+//  #include <hidboot.h>  // issues with Arduino 1.6.1
+//  #include <usbhub.h>
+//  #include <Usb.h>    /* USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0 */
 #endif
 
 
@@ -429,11 +438,11 @@ struct config_t {  // 23 bytes
 byte command_mode_disable_tx = 0;
 byte current_tx_key_line = tx_key_line_1;
 #ifdef OPTION_SAVE_MEMORY_NANOKEYER
-unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3};
-unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3};
+  unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3};
+  unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3};
 #else //OPTION_SAVE_MEMORY_NANOKEYER
-unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3,initial_ptt_tail_time_tx4,initial_ptt_tail_time_tx5,initial_ptt_tail_time_tx6};
-unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3,initial_ptt_lead_time_tx4,initial_ptt_lead_time_tx5,initial_ptt_lead_time_tx6};
+  unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3,initial_ptt_tail_time_tx4,initial_ptt_tail_time_tx5,initial_ptt_tail_time_tx6};
+  unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3,initial_ptt_lead_time_tx4,initial_ptt_lead_time_tx5,initial_ptt_lead_time_tx6};
 #endif //OPTION_SAVE_MEMORY_NANOKEYER
 byte manual_ptt_invoke = 0;
 byte qrss_dit_length = initial_qrss_dit_length;
@@ -450,7 +459,7 @@ unsigned long ptt_time = 0;
 byte ptt_line_activated = 0;
 byte speed_mode = SPEED_NORMAL;
 #ifndef OPTION_SAVE_MEMORY_NANOKEYER
-unsigned int serial_number = 1;
+  unsigned int serial_number = 1;
 #endif //OPTION_SAVE_MEMORY_NANOKEYER
 byte pause_sending_buffer = 0;
 byte length_letterspace = default_length_letterspace;
@@ -464,78 +473,78 @@ byte iambic_flag = 0;
 unsigned long last_config_write = 0;
 
 #ifdef FEATURE_SLEEP
-unsigned long last_activity_time = 0;
+  unsigned long last_activity_time = 0;
 #endif
 
 
 #ifdef FEATURE_DISPLAY
-enum lcd_statuses {LCD_CLEAR, LCD_REVERT, LCD_TIMED_MESSAGE, LCD_SCROLL_MSG};
-#define default_display_msg_delay 1000
+  enum lcd_statuses {LCD_CLEAR, LCD_REVERT, LCD_TIMED_MESSAGE, LCD_SCROLL_MSG};
+  #define default_display_msg_delay 1000
 #endif //FEATURE_DISPLAY
 
 #ifdef FEATURE_LCD_ADAFRUIT_I2C
-#define RED 0x1
-#define YELLOW 0x3
-#define GREEN 0x2
-#define TEAL 0x6
-#define BLUE 0x4
-#define VIOLET 0x5
-#define WHITE 0x7
-byte lcdcolor = GREEN;  // default color for RGB LCD display
+  #define RED 0x1
+  #define YELLOW 0x3
+  #define GREEN 0x2
+  #define TEAL 0x6
+  #define BLUE 0x4
+  #define VIOLET 0x5
+  #define WHITE 0x7
+  byte lcdcolor = GREEN;  // default color for RGB LCD display
 #endif //FEATURE_LCD_ADAFRUIT_I2C
 
-
 #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
-byte wk2_mode = 1;
-byte wk2_both_tx_activated = 0;
-byte wk2_paddle_only_sidetone = 0;
+  byte wk2_mode = 1;
+  byte wk2_both_tx_activated = 0;
+  byte wk2_paddle_only_sidetone = 0;
 #endif //defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
 
 #ifdef FEATURE_DISPLAY
-byte lcd_status = LCD_CLEAR;
-unsigned long lcd_timed_message_clear_time = 0;
-byte lcd_previous_status = LCD_CLEAR;
-byte lcd_scroll_buffer_dirty = 0;
-String lcd_scroll_buffer[lcd_rows];
-byte lcd_scroll_flag = 0;
-byte lcd_paddle_echo = 1;
-byte lcd_send_echo = 1;
-long lcd_paddle_echo_buffer = 0;
-unsigned long lcd_paddle_echo_buffer_decode_time = 0;
+  byte lcd_status = LCD_CLEAR;
+  unsigned long lcd_timed_message_clear_time = 0;
+  byte lcd_previous_status = LCD_CLEAR;
+  byte lcd_scroll_buffer_dirty = 0;
+  String lcd_scroll_buffer[lcd_rows];
+  byte lcd_scroll_flag = 0;
+  byte lcd_paddle_echo = 1;
+  byte lcd_send_echo = 1;
+  long lcd_paddle_echo_buffer = 0;
+  unsigned long lcd_paddle_echo_buffer_decode_time = 0;
 #endif //FEATURE_DISPLAY
 
 #ifdef DEBUG_VARIABLE_DUMP
-long dit_start_time;
-long dit_end_time;
-long dah_start_time;
-long dah_end_time;
+  long dit_start_time;
+  long dit_end_time;
+  long dah_start_time;
+  long dah_end_time;
 #endif //DEBUG_VARIABLE_DUMP
 
 #ifdef FEATURE_COMMAND_BUTTONS
-int button_array_high_limit[analog_buttons_number_of_buttons];
-int button_array_low_limit[analog_buttons_number_of_buttons];
-long button_last_add_to_send_buffer_time = 0;
+  int button_array_high_limit[analog_buttons_number_of_buttons];
+  int button_array_low_limit[analog_buttons_number_of_buttons];
+  long button_last_add_to_send_buffer_time = 0;
 #endif //FEATURE_COMMAND_BUTTONS
 
 byte pot_wpm_low_value;
+
 #ifdef FEATURE_POTENTIOMETER
-byte pot_wpm_high_value;
-byte last_pot_wpm_read;
-int pot_full_scale_reading = default_pot_full_scale_reading;
+  byte pot_wpm_high_value;
+  byte last_pot_wpm_read;
+  int pot_full_scale_reading = default_pot_full_scale_reading;
 #endif //FEATURE_POTENTIOMETER
 
 #if defined(FEATURE_SERIAL)
-byte incoming_serial_byte;
-long serial_baud_rate;
-byte cw_send_echo_inhibit = 0;
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
-byte serial_backslash_command;
-byte cli_paddle_echo = 0;
-long cli_paddle_echo_buffer = 0;
-unsigned long cli_paddle_echo_buffer_decode_time = 0;
-byte cli_prosign_flag = 0;
-byte cli_wait_for_cr_to_send_cw = 0;
-#endif //FEATURE_COMMAND_LINE_INTERFACE
+  byte incoming_serial_byte;
+  long serial_baud_rate;
+  byte cw_send_echo_inhibit = 0;
+  #ifdef FEATURE_COMMAND_LINE_INTERFACE
+    byte serial_backslash_command;
+    byte cli_paddle_echo = 0;
+    long cli_paddle_echo_buffer = 0;
+    unsigned long cli_paddle_echo_buffer_decode_time = 0;
+    byte cli_prosign_flag = 0;
+    byte cli_wait_for_cr_to_send_cw = 0;
+  #endif //FEATURE_COMMAND_LINE_INTERFACE
 #endif //FEATURE_SERIAL
 
 byte send_buffer_array[send_buffer_size];
@@ -543,93 +552,93 @@ byte send_buffer_bytes = 0;
 byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
 #ifdef FEATURE_MEMORIES
-byte play_memory_prempt = 0;
-long last_memory_button_buffer_insert = 0;
-byte repeat_memory = 255;
-unsigned long last_memory_repeat_time = 0;
+  byte play_memory_prempt = 0;
+  long last_memory_button_buffer_insert = 0;
+  byte repeat_memory = 255;
+  unsigned long last_memory_repeat_time = 0;
 #endif //FEATURE_MEMORIES
 
 #if defined(FEATURE_SERIAL)
-byte serial_mode = SERIAL_NORMAL;
+  byte serial_mode = SERIAL_NORMAL;
 #endif //FEATURE_SERIAL
 
 #ifdef FEATURE_WINKEY_EMULATION
-byte winkey_serial_echo = 1;
-byte winkey_host_open = 0;
-unsigned int winkey_last_unbuffered_speed_wpm = 0;
-byte winkey_buffer_counter = 0;
-byte winkey_buffer_pointer = 0;
-byte winkey_dit_invoke = 0;
-byte winkey_dah_invoke = 0;
-long winkey_paddle_echo_buffer = 0;
-byte winkey_paddle_echo_activated = 0;
-unsigned long winkey_paddle_echo_buffer_decode_time = 0;
-byte winkey_sending = 0;
-byte winkey_interrupted = 0;
-byte winkey_xoff = 0;
-#ifdef OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
-byte winkey_breakin_status_byte_inhibit = 0;
-#endif //OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
+  byte winkey_serial_echo = 1;
+  byte winkey_host_open = 0;
+  unsigned int winkey_last_unbuffered_speed_wpm = 0;
+  byte winkey_buffer_counter = 0;
+  byte winkey_buffer_pointer = 0;
+  byte winkey_dit_invoke = 0;
+  byte winkey_dah_invoke = 0;
+  long winkey_paddle_echo_buffer = 0;
+  byte winkey_paddle_echo_activated = 0;
+  unsigned long winkey_paddle_echo_buffer_decode_time = 0;
+  byte winkey_sending = 0;
+  byte winkey_interrupted = 0;
+  byte winkey_xoff = 0;
+  #ifdef OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
+    byte winkey_breakin_status_byte_inhibit = 0;
+  #endif //OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
 #endif //FEATURE_WINKEY_EMULATION
 
 #ifdef FEATURE_PS2_KEYBOARD
-byte ps2_keyboard_mode = PS2_KEYBOARD_NORMAL;
-byte ps2_keyboard_command_buffer[25];
-byte ps2_keyboard_command_buffer_pointer = 0;
+  byte ps2_keyboard_mode = PS2_KEYBOARD_NORMAL;
+  byte ps2_keyboard_command_buffer[25];
+  byte ps2_keyboard_command_buffer_pointer = 0;
 #endif //FEATURE_PS2_KEYBOARD
 
 
 #ifdef FEATURE_HELL
-PROGMEM const char hell_font1[] = {B00111111, B11100000, B00011001, B11000000, B01100011, B00000001, B10011100, B00111111, B11100000,    // A
-                                   B00110000, B00110000, B11111111, B11000011, B00110011, B00001100, B11001100, B00011100, B11100000,    // B
-                                   B00111111, B11110000, B11000000, B11000011, B00000011, B00001100, B00001100, B00110000, B00110000,    // C
-                                   B00110000, B00110000, B11111111, B11000011, B00000011, B00001100, B00001100, B00011111, B11100000,    // D
-                                   B00111111, B11110000, B11001100, B11000011, B00110011, B00001100, B00001100, B00110000, B00110000,
-                                   B00111111, B11110000, B00001100, B11000000, B00110011, B00000000, B00001100, B00000000, B00110000,
-                                   B00111111, B11110000, B11000000, B11000011, B00000011, B00001100, B11001100, B00111111, B00110000,
-                                   B00111111, B11110000, B00001100, B00000000, B00110000, B00000000, B11000000, B00111111, B11110000,
-                                   B00000000, B00000000, B00000000, B00000011, B11111111, B00000000, B00000000, B00000000, B00000000,
-                                   B00111100, B00000000, B11000000, B00000011, B00000000, B00001100, B00000000, B00111111, B11110000,
-                                   B00111111, B11110000, B00001100, B00000000, B01110000, B00000011, B00110000, B00111000, B11100000,
-                                   B00111111, B11110000, B11000000, B00000011, B00000000, B00001100, B00000000, B00110000, B00000000,
-                                   B00111111, B11110000, B00000001, B10000000, B00001100, B00000000, B00011000, B00111111, B11110000,
-                                   B00111111, B11110000, B00000011, B10000000, B00111000, B00000011, B10000000, B00111111, B11110000,
-                                   B00111111, B11110000, B11000000, B11000011, B00000011, B00001100, B00001100, B00111111, B11110000,
-                                   B00110000, B00110000, B11111111, B11000011, B00110011, B00000000, B11001100, B00000011, B11110000,
-                                   B00111111, B11110000, B11000000, B11000011, B11000011, B00001111, B11111100, B11110000, B00000000,
-                                   B00111111, B11110000, B00001100, B11000000, B00110011, B00000011, B11001100, B00111001, B11100000,
-                                   B00110001, B11100000, B11001100, B11000011, B00110011, B00001100, B11001100, B00011110, B00110000,
-                                   B00000000, B00110000, B00000000, B11000011, B11111111, B00000000, B00001100, B00000000, B00110000,
-                                   B00111111, B11110000, B11000000, B00000011, B00000000, B00001100, B00000000, B00111111, B11110000,
-                                   B00111111, B11110000, B01110000, B00000000, B01110000, B00000000, B01110000, B00000000, B01110000,
-                                   B00011111, B11110000, B11000000, B00000001, B11110000, B00001100, B00000000, B00011111, B11110000,
-                                   B00111000, B01110000, B00110011, B00000000, B01111000, B00000011, B00110000, B00111000, B01110000,
-                                   B00000000, B01110000, B00000111, B00000011, B11110000, B00000000, B01110000, B00000000, B01110000,
-                                   B00111000, B00110000, B11111000, B11000011, B00110011, B00001100, B01111100, B00110000, B01110000};   // Z
+  PROGMEM const char hell_font1[] = {B00111111, B11100000, B00011001, B11000000, B01100011, B00000001, B10011100, B00111111, B11100000,    // A
+                                     B00110000, B00110000, B11111111, B11000011, B00110011, B00001100, B11001100, B00011100, B11100000,    // B
+                                     B00111111, B11110000, B11000000, B11000011, B00000011, B00001100, B00001100, B00110000, B00110000,    // C
+                                     B00110000, B00110000, B11111111, B11000011, B00000011, B00001100, B00001100, B00011111, B11100000,    // D
+                                     B00111111, B11110000, B11001100, B11000011, B00110011, B00001100, B00001100, B00110000, B00110000,
+                                     B00111111, B11110000, B00001100, B11000000, B00110011, B00000000, B00001100, B00000000, B00110000,
+                                     B00111111, B11110000, B11000000, B11000011, B00000011, B00001100, B11001100, B00111111, B00110000,
+                                     B00111111, B11110000, B00001100, B00000000, B00110000, B00000000, B11000000, B00111111, B11110000,
+                                     B00000000, B00000000, B00000000, B00000011, B11111111, B00000000, B00000000, B00000000, B00000000,
+                                     B00111100, B00000000, B11000000, B00000011, B00000000, B00001100, B00000000, B00111111, B11110000,
+                                     B00111111, B11110000, B00001100, B00000000, B01110000, B00000011, B00110000, B00111000, B11100000,
+                                     B00111111, B11110000, B11000000, B00000011, B00000000, B00001100, B00000000, B00110000, B00000000,
+                                     B00111111, B11110000, B00000001, B10000000, B00001100, B00000000, B00011000, B00111111, B11110000,
+                                     B00111111, B11110000, B00000011, B10000000, B00111000, B00000011, B10000000, B00111111, B11110000,
+                                     B00111111, B11110000, B11000000, B11000011, B00000011, B00001100, B00001100, B00111111, B11110000,
+                                     B00110000, B00110000, B11111111, B11000011, B00110011, B00000000, B11001100, B00000011, B11110000,
+                                     B00111111, B11110000, B11000000, B11000011, B11000011, B00001111, B11111100, B11110000, B00000000,
+                                     B00111111, B11110000, B00001100, B11000000, B00110011, B00000011, B11001100, B00111001, B11100000,
+                                     B00110001, B11100000, B11001100, B11000011, B00110011, B00001100, B11001100, B00011110, B00110000,
+                                     B00000000, B00110000, B00000000, B11000011, B11111111, B00000000, B00001100, B00000000, B00110000,
+                                     B00111111, B11110000, B11000000, B00000011, B00000000, B00001100, B00000000, B00111111, B11110000,
+                                     B00111111, B11110000, B01110000, B00000000, B01110000, B00000000, B01110000, B00000000, B01110000,
+                                     B00011111, B11110000, B11000000, B00000001, B11110000, B00001100, B00000000, B00011111, B11110000,
+                                     B00111000, B01110000, B00110011, B00000000, B01111000, B00000011, B00110000, B00111000, B01110000,
+                                     B00000000, B01110000, B00000111, B00000011, B11110000, B00000000, B01110000, B00000000, B01110000,
+                                     B00111000, B00110000, B11111000, B11000011, B00110011, B00001100, B01111100, B00110000, B01110000};   // Z
 
-PROGMEM const char hell_font2[] = {B00011111, B11100000, B11000000, B11000011, B00000011, B00001100, B00001100, B00011111, B11100000,   // 0
-                                   B00000000, B00000000, B00000011, B00000000, B00000110, B00001111, B11111100, B00000000, B00000000,
-                                   B00111000, B01100000, B11110000, B11000011, B00110011, B00001100, B01111000, B00110000, B00000000,
-                                   B11000000, B00000011, B00000000, B11000110, B00110011, B00001100, B11111100, B00011110, B00000000,
-                                   B00000111, B11111000, B00011000, B00000000, B01100000, B00001111, B11111100, B00000110, B00000000,
-                                   B00110000, B00000000, B11000000, B00000011, B00011111, B10000110, B01100110, B00001111, B00011000,
-                                   B00011111, B11110000, B11001100, B01100011, B00011000, B11001100, B01100000, B00011111, B00000000,
-                                   B01110000, B00110000, B01110000, B11000000, B01110011, B00000000, B01111100, B00000000, B01110000,
-                                   B00111100, B11110001, B10011110, B01100110, B00110001, B10011001, B11100110, B00111100, B11110000,
-                                   B00000011, B11100011, B00011000, B11000110, B01100011, B00001100, B00001100, B00011111, B11100000};  // 9
+  PROGMEM const char hell_font2[] = {B00011111, B11100000, B11000000, B11000011, B00000011, B00001100, B00001100, B00011111, B11100000,   // 0
+                                     B00000000, B00000000, B00000011, B00000000, B00000110, B00001111, B11111100, B00000000, B00000000,
+                                     B00111000, B01100000, B11110000, B11000011, B00110011, B00001100, B01111000, B00110000, B00000000,
+                                     B11000000, B00000011, B00000000, B11000110, B00110011, B00001100, B11111100, B00011110, B00000000,
+                                     B00000111, B11111000, B00011000, B00000000, B01100000, B00001111, B11111100, B00000110, B00000000,
+                                     B00110000, B00000000, B11000000, B00000011, B00011111, B10000110, B01100110, B00001111, B00011000,
+                                     B00011111, B11110000, B11001100, B01100011, B00011000, B11001100, B01100000, B00011111, B00000000,
+                                     B01110000, B00110000, B01110000, B11000000, B01110011, B00000000, B01111100, B00000000, B01110000,
+                                     B00111100, B11110001, B10011110, B01100110, B00110001, B10011001, B11100110, B00111100, B11110000,
+                                     B00000011, B11100011, B00011000, B11000110, B01100011, B00001100, B00001100, B00011111, B11100000};  // 9
 
-PROGMEM const char hell_font3[]  = {B00000011, B00000000, B00001100, B00000001, B11111110, B00000000, B11000000, B00000011, B00000000,
-                                   B00000011, B00000000, B00001100, B00000000, B00110000, B00000000, B11000000, B00000011, B00000000,
-                                   B00000000, B00110000, B00000000, B11001110, B01110011, B00000000, B01111100, B00000000, B00000000,
-                                   B01110000, B00000000, B01110000, B00000000, B01110000, B00000000, B01110000, B00000000, B01110000,
-                                   B00111000, B00000000, B11100000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
-                                   B00001100, B00000001, B11110000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
-                                   B00000000, B00111000, B00000011, B10000000, B00000000, B00000000, B00000000, B00000000, B00000000,
-                                   B00001100, B11000000, B00110011, B00000000, B11001100, B00000011, B00110000, B00001100, B11000000,
-                                   B01110000, B00111000, B01110011, B10000000, B01111000, B00000000, B00000000, B00000000, B00000000,
-                                   B00000000, B00000000, B00000000, B00000000, B01111000, B00000111, B00111000, B01110000, B00111000,
-                                   B00000000, B00000000, B01110011, B10000001, B11001110, B00000000, B00000000, B00000000, B00000000,
-                                   0, 0, 0, 0, 0, 0, 0, 0, 0};
+ PROGMEM const char hell_font3[]  = {B00000011, B00000000, B00001100, B00000001, B11111110, B00000000, B11000000, B00000011, B00000000,
+                                     B00000011, B00000000, B00001100, B00000000, B00110000, B00000000, B11000000, B00000011, B00000000,
+                                     B00000000, B00110000, B00000000, B11001110, B01110011, B00000000, B01111100, B00000000, B00000000,
+                                     B01110000, B00000000, B01110000, B00000000, B01110000, B00000000, B01110000, B00000000, B01110000,
+                                     B00111000, B00000000, B11100000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+                                     B00001100, B00000001, B11110000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+                                     B00000000, B00111000, B00000011, B10000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+                                     B00001100, B11000000, B00110011, B00000000, B11001100, B00000011, B00110000, B00001100, B11000000,
+                                     B01110000, B00111000, B01110011, B10000000, B01111000, B00000000, B00000000, B00000000, B00000000,
+                                     B00000000, B00000000, B00000000, B00000000, B01111000, B00000111, B00111000, B01110000, B00111000,
+                                     B00000000, B00000000, B01110011, B10000001, B11001110, B00000000, B00000000, B00000000, B00000000,
+                                     0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 
 #endif //FEATURE_HELL
@@ -638,113 +647,110 @@ PROGMEM const char hell_font3[]  = {B00000011, B00000000, B00001100, B00000001, 
 #define SIDETONE_HZ_HIGH_LIMIT 2001
 
 #ifdef FEATURE_DEAD_OP_WATCHDOG
-byte dead_op_watchdog_active = 1;
-byte dit_counter = 0;
-byte dah_counter = 0;
+  byte dead_op_watchdog_active = 1;
+  byte dit_counter = 0;
+  byte dah_counter = 0;
 #endif //FEATURE_DEAD_OP_WATCHDOG
 
 
 #ifdef FEATURE_ROTARY_ENCODER            // Rotary Encoder State Tables
-#ifdef OPTION_ENCODER_HALF_STEP_MODE      // Use the half-step state table (emits a code at 00 and 11)
-const unsigned char ttable[6][4] = {
-  {0x3 , 0x2, 0x1,  0x0}, {0x23, 0x0, 0x1, 0x0},
-  {0x13, 0x2, 0x0,  0x0}, {0x3 , 0x5, 0x4, 0x0},
-  {0x3 , 0x3, 0x4, 0x10}, {0x3 , 0x5, 0x3, 0x20}
-};
-#else                                      // Use the full-step state table (emits a code at 00 only)
-const unsigned char ttable[7][4] = {
-  {0x0, 0x2, 0x4,  0x0}, {0x3, 0x0, 0x1, 0x10},
-  {0x3, 0x2, 0x0,  0x0}, {0x3, 0x2, 0x1,  0x0},
-  {0x6, 0x0, 0x4,  0x0}, {0x6, 0x5, 0x0, 0x10},
-  {0x6, 0x5, 0x4,  0x0},
-};
-#endif //OPTION_ENCODER_HALF_STEP_MODE 
-unsigned char state = 0;
-#define DIR_CCW 0x10                      // CW Encoder Code (do not change)
-#define DIR_CW 0x20                       // CCW Encoder Code (do not change)
+  #ifdef OPTION_ENCODER_HALF_STEP_MODE      // Use the half-step state table (emits a code at 00 and 11)
+  const unsigned char ttable[6][4] = {
+    {0x3 , 0x2, 0x1,  0x0}, {0x23, 0x0, 0x1, 0x0},
+    {0x13, 0x2, 0x0,  0x0}, {0x3 , 0x5, 0x4, 0x0},
+    {0x3 , 0x3, 0x4, 0x10}, {0x3 , 0x5, 0x3, 0x20}
+  };
+  #else                                      // Use the full-step state table (emits a code at 00 only)
+  const unsigned char ttable[7][4] = {
+    {0x0, 0x2, 0x4,  0x0}, {0x3, 0x0, 0x1, 0x10},
+    {0x3, 0x2, 0x0,  0x0}, {0x3, 0x2, 0x1,  0x0},
+    {0x6, 0x0, 0x4,  0x0}, {0x6, 0x5, 0x0, 0x10},
+    {0x6, 0x5, 0x4,  0x0},
+  };
+  #endif //OPTION_ENCODER_HALF_STEP_MODE 
+  unsigned char state = 0;
+  #define DIR_CCW 0x10                      // CW Encoder Code (do not change)
+  #define DIR_CW 0x20                       // CCW Encoder Code (do not change)
 #endif //FEATURE_ENCODER_SUPPORT
 
 #ifdef FEATURE_USB_KEYBOARD
-unsigned long usb_keyboard_special_mode_start_time = 0;
-String keyboard_string;
+  unsigned long usb_keyboard_special_mode_start_time = 0;
+  String keyboard_string;
 #endif //FEATURE_USB_KEYBOARD
 
 #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
-byte usb_dit = 0;
-byte usb_dah = 0;
+  byte usb_dit = 0;
+  byte usb_dah = 0;
 #endif 
 
-
-
-
 #if defined(FEATURE_PS2_KEYBOARD)
-#ifdef OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
-PS2Keyboard keyboard;
-#else //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
-K3NG_PS2Keyboard keyboard;
-#endif //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
+  #ifdef OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
+    PS2Keyboard keyboard;
+  #else //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
+  K3NG_PS2Keyboard keyboard;
+  #endif //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
 #endif
 
 #if defined(FEATURE_LCD_4BIT)
-LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
+  LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
 #endif
 
 #if defined(FEATURE_LCD_ADAFRUIT_I2C)
-Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+  Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 #endif
 
 #if defined(FEATURE_LCD_YDv1)
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
+  LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
 #endif
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
-USB Usb;
-uint32_t next_time;
+  USB Usb;
+  uint32_t next_time;
 #endif
 
 #if defined(FEATURE_USB_KEYBOARD)
-class KbdRptParser : public KeyboardReportParser
-{
-  protected:
-  virtual void OnKeyDown (uint8_t mod, uint8_t key);
-  virtual void OnKeyUp (uint8_t mod, uint8_t key);
-};
-HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
-KbdRptParser KeyboardPrs;
+  class KbdRptParser : public KeyboardReportParser
+    {
+      protected:
+        virtual void OnKeyDown (uint8_t mod, uint8_t key);
+        virtual void OnKeyUp (uint8_t mod, uint8_t key);
+    };
+  HIDBoot<HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb);
+  KbdRptParser KeyboardPrs;
 #endif
 
 #if defined(FEATURE_USB_MOUSE)
-class MouseRptParser : public MouseReportParser
-{
-  protected:
-  virtual void OnMouseMove(MOUSEINFO *mi);
-  virtual void OnLeftButtonUp(MOUSEINFO *mi);
-  virtual void OnLeftButtonDown(MOUSEINFO *mi);
-  virtual void OnRightButtonUp(MOUSEINFO *mi);
-  virtual void OnRightButtonDown(MOUSEINFO *mi);
-  virtual void OnMiddleButtonUp(MOUSEINFO *mi);
-  virtual void OnMiddleButtonDown(MOUSEINFO *mi);
-};
-HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
-MouseRptParser MousePrs;
+  class MouseRptParser : public MouseReportParser 
+    {
+      protected:
+        virtual void OnMouseMove(MOUSEINFO *mi);
+        virtual void OnLeftButtonUp(MOUSEINFO *mi);
+        virtual void OnLeftButtonDown(MOUSEINFO *mi);
+        virtual void OnRightButtonUp(MOUSEINFO *mi);
+        virtual void OnRightButtonDown(MOUSEINFO *mi);
+        virtual void OnMiddleButtonUp(MOUSEINFO *mi);
+        virtual void OnMiddleButtonDown(MOUSEINFO *mi);
+     };
+  HIDBoot<HID_PROTOCOL_MOUSE> HidMouse(&Usb);
+  MouseRptParser MousePrs;
 #endif //FEATURE_USB_MOUSE
 
 #if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
-BasicTerm term(&Serial);
+  BasicTerm term(&Serial);
 #endif
 
 #if defined(DEBUG_AUX_SERIAL_PORT)
-HardwareSerial * debug_port;
+  HardwareSerial * debug_port;
 #endif
 
 HardwareSerial * main_serial_port;
 
 #ifdef FEATURE_PTT_INTERLOCK
-byte ptt_interlock_active = 0;
+  byte ptt_interlock_active = 0;
 #endif //FEATURE_PTT_INTERLOCK
 
 #ifdef FEATURE_QLF
-byte qlf_active = qlf_on_by_default;
+  byte qlf_active = qlf_on_by_default;
 #endif //FEATURE_QLF
 
 
@@ -904,26 +910,93 @@ void initialize_cw_keyboard(){
 //-------------------------------------------------------------------------------------------------------
 
 #ifdef HARDWARE_ARDUINO_DUE
-void noTone(byte tone_pin){
+//zzzzzzz
+
+/*
+
+This code from http://forum.arduino.cc/index.php?topic=136500.0
+
+Tone generator
+v1  use timer, and toggle any digital pin in ISR
+   funky duration from arduino version
+   TODO use FindMckDivisor?
+   timer selected will preclude using associated pins for PWM etc.
+    could also do timer/pwm hardware toggle where caller controls duration
+*/
 
 
+// timers TC0 TC1 TC2   channels 0-2 ids 0-2  3-5  6-8     AB 0 1
+// use TC1 channel 0 
+
+#define TONE_TIMER TC1
+#define TONE_CHNL 0
+#define TONE_IRQ TC3_IRQn
+
+// TIMER_CLOCK4   84MHz/128 with 16 bit counter give 10 Hz to 656KHz
+
+static uint8_t pinEnabled[PINS_COUNT];
+static uint8_t TCChanEnabled = 0;
+static boolean pin_state = false ;
+static Tc *chTC = TONE_TIMER;
+static uint32_t chNo = TONE_CHNL;
+
+volatile static int32_t toggle_count;
+static uint32_t tone_pin;  
+
+void toneDUE(uint32_t ulPin, uint32_t frequency, int32_t duration = 0){
+  
+  // frequency (in hertz) and duration (in milliseconds)
+  
+  const uint32_t rc = VARIANT_MCK / 256 / frequency; 
+  tone_pin = ulPin;
+  toggle_count = 0;  // strange  wipe out previous duration
+  if (duration > 0 ){
+    toggle_count = 2 * frequency * duration / 1000;
+  } else {
+    toggle_count = -1;
+  }
+  if (!TCChanEnabled) {
+    pmc_set_writeprotect(false);
+    pmc_enable_periph_clk((uint32_t)TONE_IRQ);
+    TC_Configure(chTC, chNo, TC_CMR_TCCLKS_TIMER_CLOCK4 |
+      TC_CMR_WAVE |         // Waveform mode
+      TC_CMR_WAVSEL_UP_RC ); // Counter running up and reset when equals to RC
+    chTC->TC_CHANNEL[chNo].TC_IER=TC_IER_CPCS;  // RC compare interrupt
+    chTC->TC_CHANNEL[chNo].TC_IDR=~TC_IER_CPCS;
+    NVIC_EnableIRQ(TONE_IRQ);
+    TCChanEnabled = 1;
+  }
+  if (!pinEnabled[ulPin]) {
+    pinMode(ulPin, OUTPUT);
+    pinEnabled[ulPin] = 1;
+  }
+  TC_Stop(chTC, chNo);
+  TC_SetRC(chTC, chNo, rc);    // set frequency
+  TC_Start(chTC, chNo);
+}
+
+void noToneDUE(uint32_t ulPin){
+  
+  TC_Stop(chTC, chNo);  // stop timer
+  digitalWrite(ulPin,LOW);  // no signal on pin
 
 }
 
-
-#endif //HARDWARE_ARDUINO_DUE
-
-//-------------------------------------------------------------------------------------------------------
-
-#ifdef HARDWARE_ARDUINO_DUE
-void tone(byte tone_pin, unsigned int tone_freq,unsigned int duration = 0){
-
+// timer ISR  TC1 ch 0
+void TC3_Handler ( void ) {
+  
+  TC_GetStatus(TC1, 0);
+  if (toggle_count != 0){
+    // toggle pin  TODO  better
+    digitalWrite(tone_pin,pin_state= !pin_state);
+    if (toggle_count > 0) toggle_count--;
+  } else {
+    noTone(tone_pin);
+  }
+  
 }
 
-
 #endif //HARDWARE_ARDUINO_DUE
-
-
 
 
 //-------------------------------------------------------------------------------------------------------
@@ -2913,8 +2986,8 @@ void check_ptt_tail()
 
 //-------------------------------------------------------------------------------------------------------
 void write_settings_to_eeprom(int initialize_eeprom) {  
-
-  #ifndef HARDWARE_ARDUINO_DUE  
+ 
+  
   if (initialize_eeprom) {
     //configuration.magic_number = eeprom_magic_number;
     EEPROM.write(0,eeprom_magic_number);
@@ -2929,9 +3002,9 @@ void write_settings_to_eeprom(int initialize_eeprom) {
   for (i = 0; i < sizeof(configuration); i++){
     EEPROM.write(ee++, *p++);  
   }
-  #endif //HARDWARE_ARDUINO_DUE
   
   config_dirty = 0;
+  
   
 }
 
@@ -2942,7 +3015,6 @@ int read_settings_from_eeprom() {
   // returns 0 if eeprom had valid settings, returns 1 if eeprom needs initialized
   
 
-  #ifndef HARDWARE_ARDUINO_DUE
   if (EEPROM.read(0) == eeprom_magic_number){
   
     byte* p = (byte*)(void*)&configuration;
@@ -2959,10 +3031,8 @@ int read_settings_from_eeprom() {
   } else {
     return 1;
   }
-  #else //HARDWARE_ARDUINO_DUE
+ 
   return 1;
-
-  #endif //HARDWARE_ARDUINO_DUE
 
 }
 
@@ -6453,7 +6523,13 @@ void service_winkey(byte action) {
             debug_port->println("service_winkey: calibrate command (WINKEY_UNSUPPORTED_COMMAND) awaiting 1 parm");
             #endif //DEBUG_AUX_SERIAL_PORT_DEBUG_WINKEY            
             break;  // calibrate command
-          case 0x01: asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {};*/ break;  // reset command
+          case 0x01:
+            #ifndef HARDWARE_ARDUINO_DUE
+            asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {};*/ 
+            #else //HARDWARE_ARDUINO_DUE
+            setup();
+            #endif //HARDWARE_ARDUINO_DUE
+            break;  // reset command
           case 0x02:  // host open command - send version back to host
             #ifdef OPTION_WINKEY_2_SUPPORT
             main_serial_port->write(WINKEY_2_REPORT_VERSION_NUMBER);
@@ -6920,7 +6996,13 @@ void process_serial_command() {
         
   main_serial_port->println();
   switch (incoming_serial_byte) {
-    case 126: asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {} ;*/ break;  // ~ - reset unit
+    case 126:
+      #ifndef HARDWARE_ARDUINO_DUE 
+      asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {} ;*/ 
+      #else //HARDWARE_ARDUINO_DUE
+      setup();
+      #endif //HARDWARE_ARDUINO_DUE
+      break;  // ~ - reset unit
     case 42:                                                // * - paddle echo on / off
       if (cli_paddle_echo) {
         cli_paddle_echo = 0;
