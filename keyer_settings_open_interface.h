@@ -251,3 +251,8 @@
 #define DEBUG_AUX_SERIAL_PORT &Serial1
 #define DEBUG_AUX_SERIAL_PORT_BAUD 115200
 #endif //DEBUG_AUX_SERIAL_PORT
+
+#define CW_DECODER_SCREEN_COLUMNS 40        // word wrap at this many columns
+#define CW_DECODER_SPACE_PRINT_THRESH 4.5   // print space if no tone for this many element lengths
+#define CW_DECODER_SPACE_DECODE_THRESH 2.0  // invoke character decode if no tone for this many element lengths
+#define CW_DECODER_NOISE_FILTER 20          // ignore elements shorter than this (mS)

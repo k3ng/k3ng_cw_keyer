@@ -260,30 +260,30 @@ New fetures in this stable release:
 
     Bug fix in speed_change() - lcd_center_print_timed() - Thanks Vincenzo, IZ0RUS
 
-    FEATURE_PTT_INTERLOCK
+    FEATURE_PTT_INTERLOCK (documented on web page 2014-05-06)
 
     Fixed bug in FEATURE_USB_KEYBOARD, reported by Bill, W9BEL
 
     Fixed bug in FEATURE_PTT_INTERLOCK
 
-    #define unknown_cw_character '*'
+    #define unknown_cw_character '*'  (documented on web page 2014-05-06)
 
-    OPTION_UNKNOWN_CHARACTER_ERROR_TONE
+    OPTION_UNKNOWN_CHARACTER_ERROR_TONE  (documented on web page 2014-05-06)
     OPTION_DO_NOT_SAY_HI (FEATURE_SAY_HI is gone)
     FEATURE_DISPLAY no longer needs to be configured, it is automatically defined when an LCD feature is enabled
-    added keyer_dependencies.h file
+    added keyer_dependencies.h file (documentation updated)
 
     Fixed administrative bug - FEATURE_COMMAND_BUTTONS disappeared in last update - oooooops!  (Thanks Peter, SM0NTR)
 
-    K3NG_PS2Keyboard.h and K3NG_PS2Keyboard.cpp replace PS2Keyboard.h and PS2Keyboard.cpp
-    K3NG_PS2Keyboard.h:
+    K3NG_PS2Keyboard.h and K3NG_PS2Keyboard.cpp replace PS2Keyboard.h and PS2Keyboard.cpp  (documented on web page 2014-05-06)
+    K3NG_PS2Keyboard.h: (documented on web page 2014-05-06)
       #define OPTION_PS2_KEYBOARD_US
       #define OPTION_PS2_KEYBOARD_GERMAN - still needs work
       #define OPTION_PS2_KEYBOARD_FRENCH - still needs work
 
     fixed mispelling of potentiometer_always_on
 
-    FEATURE_QLF
+    FEATURE_QLF (documented on web page 2014-05-06)
     #define qlf_dit_max 125
     #define qlf_dit_min 75
     #define qlf_dah_max 200
@@ -317,10 +317,14 @@ New fetures in this stable release:
     2.2.2015040402 More work on HARDWARE_ARDUINO_DUE
 
     2.2.2015040501 Fixed bug with O command not working when any display feature was compiled in
+    
+    2.2.2015040801 FEATURE_EEPROM_E24C1024; working on FEATURE_CW_COMPUTER_KEYBOARD
+    
+    TODO: Consolidate the three paddles echo features; update serial help text with added commands
 
 */
 
-#define CODE_VERSION "2.2.2015040501"
+#define CODE_VERSION "2.2.2015040801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -333,11 +337,14 @@ New fetures in this stable release:
 #else
   #include <SPI.h>
   #include <Wire.h>
-  #include "E24C1024.h"
-  #define EEPROM EEPROM1024
   #define tone toneDUE
   #define noTone noToneDUE
 #endif //HARDWARE_ARDUINO_DUE
+
+#ifdef FEATURE_EEPROM_E24C1024
+  #include "E24C1024.h"
+  #define EEPROM EEPROM1024
+#endif 
 
 
 //#include "keyer.h" // uncomment this for pre-version October 2014 Sublime/Stino compilation; comment out for Arduino IDE (Arduino IDE will error out)
@@ -756,6 +763,12 @@ HardwareSerial * main_serial_port;
   byte qlf_active = qlf_on_by_default;
 #endif //FEATURE_QLF
 
+#ifdef FEATURE_CW_COMPUTER_KEYBOARD
+  byte paddle_echo = 0;
+  long paddle_echo_buffer = 0;
+  unsigned long paddle_echo_buffer_decode_time = 0;
+#endif //FEATURE_CW_COMPUTER_KEYBOARD 
+
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -776,9 +789,7 @@ void setup()
   initialize_default_modes();
   initialize_watchdog();
   check_eeprom_for_initialization();
-  #ifndef OPTION_SAVE_MEMORY_NANOKEYER
   check_for_beacon_mode();
-  #endif //OPTION_SAVE_MEMORY_NANOKEYER
   check_for_debug_modes();
   initialize_analog_button_array();
   initialize_serial_port();
@@ -798,98 +809,100 @@ void loop()
   // this is where the magic happens
   
   #ifdef OPTION_WATCHDOG_TIMER
-  wdt_reset();
+    wdt_reset();
   #endif  //OPTION_WATCHDOG_TIMER
   
-  #ifdef FEATURE_BEACON
-  #ifdef FEATURE_MEMORIES
-  if (keyer_machine_mode == BEACON) {
-    delay(201);
-    while (keyer_machine_mode == BEACON) {  // if we're in beacon mode, just keep playing memory 1
-      if (!send_buffer_bytes) {
-        play_memory(0);
+  #if defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
+    if (keyer_machine_mode == BEACON) {
+      delay(201);
+      while (keyer_machine_mode == BEACON) {  // if we're in beacon mode, just keep playing memory 1
+        if (!send_buffer_bytes) {
+          play_memory(0);
+        }
+        service_send_buffer(PRINTCHAR);
+        #ifdef FEATURE_SERIAL
+          check_serial();
+        #endif
+        #ifdef OPTION_WATCHDOG_TIMER
+          wdt_reset();
+        #endif  //OPTION_WATCHDOG_TIMER      
       }
-      service_send_buffer(PRINTCHAR);
-      #if defined(FEATURE_SERIAL)
-      check_serial();
-      #endif
-      #ifdef OPTION_WATCHDOG_TIMER
-      wdt_reset();
-      #endif  //OPTION_WATCHDOG_TIMER      
     }
-  }
-  #endif //FEATURE_MEMORIES
-  #endif //FEATURE_BEACON
+  #endif //defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
 
   if (keyer_machine_mode == NORMAL) {
     #ifdef FEATURE_COMMAND_BUTTONS
-    check_command_buttons();
+      check_command_buttons();
     #endif //FEATURE_COMMAND_BUTTONS
     check_paddles();
     service_dit_dah_buffers();
 
     #if defined(FEATURE_SERIAL)       
-    check_serial();
-    check_paddles();            
-    service_dit_dah_buffers();
-    #ifdef FEATURE_COMMAND_LINE_INTERFACE  
-    service_serial_paddle_echo();
-    #endif //FEATURE_COMMAND_LINE_INTERFACE
+      check_serial();
+      check_paddles();            
+      service_dit_dah_buffers();
+      #ifdef FEATURE_COMMAND_LINE_INTERFACE  
+        service_serial_paddle_echo();
+      #endif //FEATURE_COMMAND_LINE_INTERFACE
     #endif //FEATURE_SERIAL
 
     service_send_buffer(PRINTCHAR);
     check_ptt_tail();
 
     #ifdef FEATURE_POTENTIOMETER
-    check_potentiometer();
+      check_potentiometer();
     #endif //FEATURE_POTENTIOMETER
     
     #ifdef FEATURE_ROTARY_ENCODER
-    check_rotary_encoder();
+      check_rotary_encoder();
     #endif //FEATURE_ROTARY_ENCODER
 
     #ifdef FEATURE_PS2_KEYBOARD
-    check_ps2_keyboard();
+      check_ps2_keyboard();
     #endif //FEATURE_PS2_KEYBOARD
     
     #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
-    service_usb();
+      service_usb();
     #endif //FEATURE_USB_KEYBOARD || FEATURE_USB_MOUSE   
 
     check_for_dirty_configuration();
 
     #ifdef FEATURE_DEAD_OP_WATCHDOG
-    check_for_dead_op();
+      check_for_dead_op();
     #endif //FEATURE_DEAD_OP_WATCHDOG
 
     #ifdef FEATURE_MEMORIES
-    check_memory_repeat();
+      check_memory_repeat();
     #endif //FEATURE_MEMORIES
 
     #ifdef FEATURE_DISPLAY
-    check_paddles();
-    service_dit_dah_buffers();
-    service_send_buffer(PRINTCHAR);
-    service_lcd_paddle_echo();
-    service_display();
+      check_paddles();
+      service_dit_dah_buffers();
+      service_send_buffer(PRINTCHAR);
+      service_lcd_paddle_echo();
+      service_display();
     #endif //FEATURE_DISPLAY
     
     #ifdef FEATURE_CW_DECODER
-    service_cw_decoder();
+      service_cw_decoder();
     #endif //FEATURE_CW_DECODER
     
     #ifdef FEATURE_LED_RING
-    update_led_ring();
+      update_led_ring();
     #endif //FEATURE_LED_RING
     
     
     #ifdef FEATURE_SLEEP
-    check_sleep();
+      check_sleep();
     #endif //FEATURE_SLEEP
 
     #ifdef FEATURE_PTT_INTERLOCK
-    service_ptt_interlock();
+      service_ptt_interlock();
     #endif //FEATURE_PTT_INTERLOCK
+    
+    #ifdef FEATURE_CW_COMPUTER_KEYBOARD
+      service_paddle_echo();
+    #endif    
 
   }
 
@@ -2990,6 +3003,7 @@ void check_ptt_tail()
 //-------------------------------------------------------------------------------------------------------
 void write_settings_to_eeprom(int initialize_eeprom) {  
  
+  #if !defined(HARDWARE_ARDUINO_DUE) || (defined(HARDWARE_ARDUINO_DUE) && defined(FEATURE_EEPROM_E24C1024))
   
   if (initialize_eeprom) {
     //configuration.magic_number = eeprom_magic_number;
@@ -3006,6 +3020,8 @@ void write_settings_to_eeprom(int initialize_eeprom) {
     EEPROM.write(ee++, *p++);  
   }
   
+  #endif //!defined(HARDWARE_ARDUINO_DUE) || (defined(HARDWARE_ARDUINO_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  
   config_dirty = 0;
   
   
@@ -3017,6 +3033,7 @@ int read_settings_from_eeprom() {
 
   // returns 0 if eeprom had valid settings, returns 1 if eeprom needs initialized
   
+  #if !defined(HARDWARE_ARDUINO_DUE) || (defined(HARDWARE_ARDUINO_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
   if (EEPROM.read(0) == eeprom_magic_number){
   
@@ -3034,6 +3051,8 @@ int read_settings_from_eeprom() {
   } else {
     return 1;
   }
+  
+  #endif //!defined(HARDWARE_ARDUINO_DUE) || (defined(HARDWARE_ARDUINO_DUE) && defined(FEATURE_EEPROM_E24C1024))
  
   return 1;
 
@@ -3262,19 +3281,23 @@ void send_dit(byte sending_type)
   }
   #endif
 
+  #ifdef FEATURE_CW_COMPUTER_KEYBOARD
+  if (sending_type == MANUAL_SENDING) {
+    paddle_echo_buffer = (paddle_echo_buffer * 10) + 1;
+    paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){addle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE    
+  }
+  #endif //FEATURE_CW_COMPUTER_KEYBOARD
+
   #ifdef FEATURE_AUTOSPACE
   autospace_end_of_character_flag = 0;
   #endif //FEATURE_AUTOSPACE
 
-  
   being_sent = SENDING_NOTHING;
   last_sending_type = sending_type;
-  
-//  if ((keyer_mode == IAMBIC_A) && (iambic_flag)) {
-//    iambic_flag = 0;
-//    dit_buffer = 0;
-//    dah_buffer = 0;
-//  } 
   
   check_paddles();
 
@@ -3357,7 +3380,7 @@ void send_dah(byte sending_type)
 
   }
   #endif
-
+  
   #ifdef FEATURE_DISPLAY
   if ((lcd_paddle_echo) && (sending_type == MANUAL_SENDING)) {
     lcd_paddle_echo_buffer = (lcd_paddle_echo_buffer * 10) + 2;
@@ -3366,10 +3389,19 @@ void send_dah(byte sending_type)
     #ifdef FEATURE_AUTOSPACE
     if (autospace_end_of_character_flag){lcd_paddle_echo_buffer_decode_time = 0;}
     #endif //FEATURE_AUTOSPACE    
-
-
   }
   #endif
+  
+  #ifdef FEATURE_CW_COMPUTER_KEYBOARD
+  if (sending_type == MANUAL_SENDING) {
+    paddle_echo_buffer = (paddle_echo_buffer * 10) + 2;
+    paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+
+    #ifdef FEATURE_AUTOSPACE
+    if (autospace_end_of_character_flag){paddle_echo_buffer_decode_time = 0;}
+    #endif //FEATURE_AUTOSPACE    
+  }
+  #endif //FEATURE_CW_COMPUTER_KEYBOARD 
 
   #ifdef FEATURE_AUTOSPACE
   autospace_end_of_character_flag = 0;
@@ -7238,8 +7270,7 @@ void process_serial_command() {
 #endif //FEATURE_SERIAL
 #endif //FEATURE_COMMAND_LINE_INTERFACE
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 
 void service_serial_paddle_echo()
 {
@@ -7261,12 +7292,70 @@ void service_serial_paddle_echo()
     cli_paddle_echo_space_sent = 1;
   }
 }
-#endif
-#endif
+
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
-#ifdef FEATURE_MEMORIES
+#if defined(FEATURE_CW_COMPUTER_KEYBOARD)
+
+void service_paddle_echo()
+{
+  
+  #ifdef DEBUG_LOOP
+  main_serial_port->println(F("loop: entering service_paddle_echo"));
+  #endif          
+
+  static byte paddle_echo_space_sent = 1;
+  byte character_to_send = 0;
+  static byte no_space = 0;
+ 
+
+  if ((paddle_echo_buffer) && /*(cli_paddle_echo) && */ (millis() > paddle_echo_buffer_decode_time)) {
+    switch (paddle_echo_buffer){
+      case 111111:
+      case 1111111:
+      case 11111111:
+      case 111111111:
+        Keyboard.write(KEY_BACKSPACE); // backspace
+        no_space = 1;
+        break;
+      case 1212:  // prosign AA
+        Keyboard.write(KEY_RETURN);
+        no_space = 1;   
+        break;
+      case 211222: // prosign DO        
+        Keyboard.write(KEY_CAPS_LOCK);
+        no_space = 1;       
+        break;        
+      default:
+        character_to_send = convert_cw_number_to_ascii(paddle_echo_buffer);
+        if ((character_to_send > 64) && (character_to_send < 91)) {character_to_send = character_to_send + 32;}
+        Keyboard.write(char(character_to_send));
+        break;
+    }
+    #ifdef DEBUG_CW_COMPUTER_KEYBOARD
+      main_serial_port->print("service_paddle_echo: Keyboard.write: ");
+      main_serial_port->write(character_to_send);
+      main_serial_port->println();
+    #endif //DEBUG_CW_COMPUTER_KEYBOARD
+    paddle_echo_buffer = 0;
+    paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
+    paddle_echo_space_sent = 0;
+  }
+  if ((paddle_echo_buffer == 0) && /*(cli_paddle_echo) &&*/ (millis() > (paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!paddle_echo_space_sent)) {
+    if (!no_space){
+      Keyboard.write(' ');
+      #ifdef DEBUG_CW_COMPUTER_KEYBOARD
+        main_serial_port->println("service_paddle_echo: Keyboard.write: <space>");
+      #endif //DEBUG_CW_COMPUTER_KEYBOARD 
+    }
+    no_space = 0;   
+    paddle_echo_space_sent = 1;
+  }
+}
+
+#endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
+//---------------------------------------------------------------------
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_MEMORIES)
 void serial_set_memory_repeat() {
 
   int temp_int = serial_get_number_input(5, -1, 32000);
@@ -7277,13 +7366,9 @@ void serial_set_memory_repeat() {
 
 }
 #endif
-#endif
-#endif
 //---------------------------------------------------------------------
 
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
-#ifdef FEATURE_MEMORIES
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_MEMORIES)
 void repeat_play_memory() {
 
   byte memory_number = serial_get_number_input(2,0, (number_of_memories+1));
@@ -7296,15 +7381,13 @@ void repeat_play_memory() {
   }
 
 }
-#endif
-#endif
+
 #endif
 
 //---------------------------------------------------------------------
 
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
-#ifdef FEATURE_MEMORIES
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_MEMORIES)
+
 void serial_play_memory(byte memory_number) {
 
   if (memory_number < number_of_memories) {
@@ -7315,13 +7398,10 @@ void serial_play_memory(byte memory_number) {
 
 }
 #endif
-#endif
-#endif
 
 //---------------------------------------------------------------------
 
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 int serial_get_number_input(byte places,int lower_limit, int upper_limit)
 {
   byte incoming_serial_byte = 0;
@@ -7389,12 +7469,10 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit)
   }
 }
 #endif
-#endif
 
 //---------------------------------------------------------------------
 
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_change_wordspace()
 {
   int set_wordspace_to = serial_get_number_input(2,0,100);
@@ -7406,11 +7484,9 @@ void serial_change_wordspace()
   }
 }
 #endif
-#endif
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_switch_tx()
 {
   int set_tx_to = serial_get_number_input(1,0,7);
@@ -7426,11 +7502,9 @@ void serial_switch_tx()
   }
 }
 #endif
-#endif
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_set_dit_to_dah_ratio()
 {
     int set_ratio_to = serial_get_number_input(4, 99, 1000);
@@ -7442,11 +7516,9 @@ void serial_set_dit_to_dah_ratio()
     }
 }
 #endif
-#endif
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_set_serial_number()
 {
   int set_serial_number_to = serial_get_number_input(4,0,10000);
@@ -7457,11 +7529,9 @@ void serial_set_serial_number()
   }
 }
 #endif
-#endif
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_set_sidetone_freq()
 {
   int set_sidetone_hz = serial_get_number_input(4,(SIDETONE_HZ_LOW_LIMIT-1),(SIDETONE_HZ_HIGH_LIMIT+1));
@@ -7474,11 +7544,9 @@ void serial_set_sidetone_freq()
   }
 }
 #endif
-#endif
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_wpm_set()
 {
   int set_wpm = serial_get_number_input(3,0,1000);
@@ -7490,12 +7558,9 @@ void serial_wpm_set()
   }
 }
 #endif
-#endif
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
-#ifdef FEATURE_FARNSWORTH
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_FARNSWORTH)
 void serial_set_farnsworth()
 {
   int set_farnsworth_wpm = serial_get_number_input(3,-1,1000);
@@ -7507,12 +7572,9 @@ void serial_set_farnsworth()
   }
 }
 #endif
-#endif
-#endif
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_set_weighting()
 {
   int set_weighting = serial_get_number_input(2,9,91);
@@ -7523,11 +7585,9 @@ void serial_set_weighting()
   }
 }
 #endif
-#endif
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_tune_command ()
 {
   byte incoming;
@@ -7548,7 +7608,6 @@ void serial_tune_command ()
   tx_and_sidetone_key(0,MANUAL_SENDING);
 
 }
-#endif
 #endif
 //---------------------------------------------------------------------
 #ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
@@ -7994,8 +8053,7 @@ void us_callsign_practice()
 
 //---------------------------------------------------------------------
 
-#if defined(FEATURE_SERIAL)
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_status() {
 
   main_serial_port->println();
@@ -8128,7 +8186,6 @@ void serial_status() {
   #endif 
   
 }
-#endif
 #endif
 //---------------------------------------------------------------------
 
@@ -8269,11 +8326,8 @@ void memorycheck()
 }
 #endif
 
-//***********************************************CURRENT MEMORY CODE***********************************************************
-//*****************************************************************************************************************************
-//*****************************************************************************************************************************
+//---------------------------------------------------------------------
 
-#ifndef EXPERIMENTAL_MEMORY_CODE
 #ifdef FEATURE_MEMORIES
 void initialize_eeprom_memories()
 {
@@ -8282,13 +8336,10 @@ void initialize_eeprom_memories()
   }
 }
 #endif
-#endif
 
 //---------------------------------------------------------------------
 
-#ifndef EXPERIMENTAL_MEMORY_CODE
-#ifdef FEATURE_MEMORIES
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_status_memories()
 {
   int last_memory_location;
@@ -8314,15 +8365,10 @@ void serial_status_memories()
   }
 }
 #endif
-#endif
-#endif
 
 //---------------------------------------------------------------------
 
-#if defined(FEATURE_SERIAL)
-#ifndef EXPERIMENTAL_MEMORY_CODE
-#ifdef FEATURE_MEMORIES
-#ifdef FEATURE_COMMAND_LINE_INTERFACE
+#if defined(FEATURE_SERIAL) && defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_program_memory()
 {
 
@@ -8386,14 +8432,11 @@ void serial_program_memory()
 }
 
 #endif
-#endif
-#endif
-#endif
+
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_MEMORIES
-#ifdef FEATURE_COMMAND_BUTTONS
+#if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
 void command_program_memory()
 {
   int cw_char;
@@ -8434,7 +8477,6 @@ void command_program_memory()
   }
 }
 #endif //FEATURE_COMMAND_BUTTONS
-#endif
 
 //---------------------------------------------------------------------
 
@@ -9338,10 +9380,7 @@ void initialize_debug_startup(){
  
 //--------------------------------------------------------------------- 
   
-#define CW_DECODER_SCREEN_COLUMNS 40        // word wrap at this many columns
-#define CW_DECODER_SPACE_PRINT_THRESH 4.5   // print space if no tone for this many element lengths
-#define CW_DECODER_SPACE_DECODE_THRESH 2.0  // invoke character decode if no tone for this many element lengths
-#define CW_DECODER_NOISE_FILTER 20          // ignore elements shorter than this (mS)
+
  
 #ifdef FEATURE_CW_DECODER
 void service_cw_decoder() {
@@ -9664,7 +9703,8 @@ void check_eeprom_for_initialization(){
 //--------------------------------------------------------------------- 
 
 void check_for_beacon_mode(){
-
+  
+  #ifndef OPTION_SAVE_MEMORY_NANOKEYER
   // check for beacon mode (paddle_left == low) or straight key mode (paddle_right == low)
   if (paddle_pin_read(paddle_left) == LOW) {
     #ifdef FEATURE_BEACON
@@ -9675,6 +9715,8 @@ void check_for_beacon_mode(){
       configuration.keyer_mode = STRAIGHT;
     }
   }
+  #endif //OPTION_SAVE_MEMORY_NANOKEYER
+ 
 }
 
 //--------------------------------------------------------------------- 

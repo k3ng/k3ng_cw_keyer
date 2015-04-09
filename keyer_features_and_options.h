@@ -3,7 +3,7 @@
 
 //#define FEATURE_COMMAND_BUTTONS
 //#define FEATURE_COMMAND_LINE_INTERFACE        // (this no longer requires FEATURE_SERIAL)
-//#define FEATURE_MEMORIES
+//#define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
 //#define FEATURE_MEMORY_MACROS
 //#define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation) (this no longer requires FEATURE_SERIAL)
 //#define FEATURE_BEACON
@@ -13,7 +13,7 @@
 //#define FEATURE_HELL
 //#define FEATURE_PS2_KEYBOARD        // Use a PS2 keyboard to send code - Change keyboard layout (non-US) in K3NG_PS2Keyboard.h.  Additional options below.
 //#define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code 
-//#define FEATURE_CW_COMPUTER_KEYBOARD  // Have an Arduino Due or Leonardo act as a USB keyboard and use the paddle to "type" characters on the computer  
+//#define FEATURE_CW_COMPUTER_KEYBOARD  // Have an Arduino Due or Leonardo act as a USB HID (Human Interface Device) keyboard and use the paddle to "type" characters on the computer  
 //#define FEATURE_DEAD_OP_WATCHDOG
 //#define FEATURE_AUTOSPACE
 //#define FEATURE_FARNSWORTH
@@ -33,6 +33,7 @@
 //#define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
 //#define FEATURE_PTT_INTERLOCK 
 //#define FEATURE_QLF
+//#define FEATURE_EEPROM_E24C1024
 
 //#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
 #define OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
