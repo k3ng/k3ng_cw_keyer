@@ -13,8 +13,8 @@
 #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 #define FEATURE_SERIAL_HELP
 //#define FEATURE_HELL
-//#define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
-#define FEATURE_USB_KEYBOARD         
+//#define FEATURE_PS2_KEYBOARD        // Use a PS2 keyboard to send code - Change keyboard layout (non-US) in K3NG_PS2Keyboard.h.  Additional options below.
+#define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code - Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
 //#define FEATURE_DEAD_OP_WATCHDOG
 //#define FEATURE_AUTOSPACE
 #define FEATURE_FARNSWORTH
@@ -28,7 +28,7 @@
 #define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 #define FEATURE_DIT_DAH_BUFFER_CONTROL
 //#define FEATURE_HI_PRECISION_LOOP_TIMING
-//#define FEATURE_USB_MOUSE
+//#define FEATURE_USB_MOUSE                // Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
 //#define FEATURE_CAPACITIVE_PADDLE_PINS  // remove the bypass capacitors on the paddle_left and paddle_right lines when using capactive paddles
 //#define FEATURE_LED_RING                // Mayhew Labs Led Ring support
 #define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM

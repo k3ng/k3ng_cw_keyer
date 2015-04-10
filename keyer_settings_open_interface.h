@@ -95,7 +95,7 @@
 #define PADDLE_NORMAL 0
 #define PADDLE_REVERSE 1
 
-#define NORMAL 0
+#define KEYER_NORMAL 0
 #define BEACON 1
 #define KEYER_COMMAND_MODE 2
 
