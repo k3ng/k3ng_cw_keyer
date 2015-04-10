@@ -2,7 +2,7 @@
 
  K3NG Arduino CW Keyer
 
- Copyright 1340 BC, 2010, 2011, 2012, 2013, 2014 Anthony Good, K3NG
+ Copyright 1340 BC, 2010, 2011, 2012, 2013, 2014, 2015 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
 
     
@@ -322,11 +322,11 @@ New fetures in this stable release:
     
     2.2.2015040901 updated serial help text with recently added commands, consolidated the three paddle echo features into one subroutine
     
-    
+    2.2.2015040902 Minor typos fixed
 
 */
 
-#define CODE_VERSION "2.2.2015040901"
+#define CODE_VERSION "2.2.2015040902"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -415,9 +415,9 @@ New fetures in this stable release:
 #endif
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
-  #include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) have issues with these three lines, so they are commented out
-  #include <usbhub.h>   // Uncomment the three lines if you are using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE
-  #include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
+  //#include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) have issues with these three lines, so they are commented out
+  //#include <usbhub.h>   // Uncomment the three lines if you are using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE
+  //#include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
 #endif
 
 
@@ -917,7 +917,6 @@ void initialize_cw_keyboard(){
 //-------------------------------------------------------------------------------------------------------
 
 #ifdef HARDWARE_ARDUINO_DUE
-//zzzzzzz
 
 /*
 
