@@ -366,6 +366,10 @@ New fetures in this stable release:
   #include "keyer_features_and_options_open_interface.h"
 #endif
 
+#ifdef HARDWARE_LCD1602_N07DH
+  #include "keyer_features_and_options_lcd1602_n07dh.h"
+#endif
+
 #ifndef HARDWARE_CUSTOM
   #include "keyer_features_and_options.h"
 #endif
@@ -381,6 +385,11 @@ New fetures in this stable release:
 #ifdef HARDWARE_OPEN_INTERFACE
   #include "keyer_pin_settings_open_interface.h"
   #include "keyer_settings_open_interface.h"
+#endif
+
+#ifdef HARDWARE_LCD1602_N07DH
+  #include "keyer_pin_settings_lcd1602_n07dh.h"
+  #include "keyer_settings_lcd1602_n07dh.h"
 #endif
 
 #ifndef HARDWARE_CUSTOM
