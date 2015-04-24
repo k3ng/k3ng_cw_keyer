@@ -1,4 +1,5 @@
-#define keyer_pin_settings_h
+#ifndef keyer_pin_settings_h
+
 #define paddle_left 2
 #define paddle_right 5
 #define tx_key_line_1 11        // (high = key down/tx on)
@@ -28,3 +29,5 @@
 #define ps2_keyboard_clock 3
 #define tx_key_dit 0//11
 #define tx_key_dah 0//13
+
+#endif //keyer_pin_settings_h

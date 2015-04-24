@@ -1,5 +1,6 @@
 /* Pins - you must review these and configure ! */
 #ifndef keyer_pin_settings_h
+#define keyer_pin_settings_h
 #define paddle_left 2
 #define paddle_right 5
 #define tx_key_line_1 11       // (high = key down/tx on)
@@ -35,7 +36,15 @@
 #define lcd_d6 8
 #define lcd_d7 9
 #endif //FEATURE_LCD_4BIT
-#endif //keyer_pin_settings_h
+
+#ifdef FEATURE_LCD1602_N07DH
+#define lcd_rs 8
+#define lcd_enable 9
+#define lcd_d4 4
+#define lcd_d5 5
+#define lcd_d6 6
+#define lcd_d7 7
+#endif //FEATURE_LCD1602_N07DH
 
 //ps2 keyboard pins
 #ifdef FEATURE_PS2_KEYBOARD
@@ -65,4 +74,6 @@
 #ifdef FEATURE_PTT_INTERLOCK
 #define ptt_interlock 0  // this pin disables PTT and TX KEY
 #endif //FEATURE_PTT_INTERLOCK
+
+#endif //keyer_pin_settings_h
 

@@ -24,7 +24,6 @@
 #define wpm_limit_low 5
 #define wpm_limit_high 60
 #define potentiometer_change_threshold 1 // don't change the keyer speed until pot wpm has changed more than this
-#define default_serial_baud_rate 115200
 #define send_buffer_size 150
 #define default_length_letterspace 3
 #define default_length_wordspace 7
@@ -119,7 +118,7 @@
 #define PS2_KEYBOARD_NORMAL 0
 #endif //FEATURE_PS2_KEYBOARD
 
-#define SERIAL_NORMAL 0
+#define SERIAL_CLI 0
 #define SERIAL_WINKEY_EMULATION 1
 
 #define SERIAL_SEND_BUFFER_SPECIAL_START 13
@@ -194,7 +193,7 @@
 #define WINKEY_LOAD_SETTINGS_PARM_14_COMMAND 114
 #define WINKEY_LOAD_SETTINGS_PARM_15_COMMAND 115
 
-#define HOUSEKEEPING 0
+#define WINKEY_HOUSEKEEPING 0
 #define SERVICE_SERIAL_BYTE 1
 #endif //FEATURE_WINKEY_EMULATION
 
@@ -245,12 +244,13 @@
 #define PRINTCHAR 0
 #define NOPRINT 1
 
-#define MAIN_SERIAL_PORT &Serial
+#define PRIMARY_SERIAL_PORT &Serial
+#define PRIMARY_SERIAL_PORT_BAUD 115200     // This applies only when the port is in Command Line Interface mode.  In Winkey mode it will default to 1200.
 
-#ifdef DEBUG_AUX_SERIAL_PORT
-#define DEBUG_AUX_SERIAL_PORT &Serial1
-#define DEBUG_AUX_SERIAL_PORT_BAUD 115200
-#endif //DEBUG_AUX_SERIAL_PORT
+#ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+  #define SECONDARY_SERIAL_PORT &Serial1
+  #define SECONDARY_SERIAL_PORT_BAUD 115200
+#endif
 
 #define CW_DECODER_SCREEN_COLUMNS 40        // word wrap at this many columns
 #define CW_DECODER_SPACE_PRINT_THRESH 4.5   // print space if no tone for this many element lengths
