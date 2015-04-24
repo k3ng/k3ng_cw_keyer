@@ -333,9 +333,16 @@ New fetures in this stable release:
       #define SECONDARY_SERIAL_PORT_BAUD 115200
       FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
       FEATURE_LCD1602_N07DH (Thanks Xigco for code!)
+      
+    2.2.2015042302  
+      OPTION_CW_KEYBOARD_ITALIAN (Thanks Giorgio IZ2XBZ)
+      FEATURE_CW_COMPUTER_KEYBOARD repeating backspace, fixed caps lock sounds
+
+    2.2.2015042303
+      Test of GitHub - no changes  
 */
 
-#define CODE_VERSION "2.2.2015042301"
+#define CODE_VERSION "2.2.2015042303"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -7293,6 +7300,12 @@ void service_paddle_echo()
   #endif //defined(FEATURE_DISPLAY) && defined(OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS)
 //zzzzzz
   
+  #if defined(FEATURE_CW_COMPUTER_KEYBOARD)
+    static byte backspace_flag = 0;
+    if (paddle_echo_buffer == 111111) {paddle_echo_buffer_decode_time = 0; backspace_flag = 1;}  //this is a special hack to make repeating backspace work
+  #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
+  
+  
   if ((paddle_echo_buffer) && (millis() > paddle_echo_buffer_decode_time)) {
     #if defined(FEATURE_CW_COMPUTER_KEYBOARD)
     switch (paddle_echo_buffer){
@@ -7311,7 +7324,7 @@ void service_paddle_echo()
         Keyboard.write(KEY_CAPS_LOCK);
         #ifdef OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
           if (capslock_on){
-            beep();
+            beep();delay(100);
             boop();
             capslock_on = 0;
           } else {
@@ -7321,11 +7334,74 @@ void service_paddle_echo()
           }
         #endif //OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
         no_space = 1;       
-        break;        
+        break;  
+ //zzzzzzzz 
+  
+      #ifdef OPTION_CW_KEYBOARD_ITALIAN  // courtesy of Giorgio IZ2XBZ
+        case 122121: // "@"
+          Keyboard.press(KEY_LEFT_ALT);
+          Keyboard.write(59);
+          Keyboard.releaseAll();
+          break;
+        case 112211:// "?"
+          Keyboard.write(95);
+          break;
+        case 11221: // "!"
+          Keyboard.write(33);
+          break;
+        case 21121: // "/"
+          Keyboard.write(38);
+          break;
+        case 21112: // "=" or "BT"
+          Keyboard.write(41);  
+          break;
+        case 12212: //à
+          Keyboard.write(00);  
+          break;
+        case 12112: //è
+          Keyboard.write(00);  
+          break;
+        case 12221: //ì
+          Keyboard.write(00);  
+          break;
+        case 2221: //ò
+          Keyboard.write(00);  
+          break;
+        case 21221: // (
+          Keyboard.write(00);  
+          break;
+        case 212212: // )
+          Keyboard.write(00);  
+          break;
+        case 12111: // &
+          Keyboard.write(00);  
+          break;
+        case 222111: //:
+          Keyboard.write(00);  
+          break;
+        case 212121: //;
+          Keyboard.write(00);  
+        break;
+          case 12121: //+
+          Keyboard.write(00);  
+          break;
+        case 211112: // -
+          Keyboard.write(00);  
+          break;   
+      #endif //OPTION_CW_KEYBOARD_ITALIAN
+        
       default:
         character_to_send = convert_cw_number_to_ascii(paddle_echo_buffer);
         if ((character_to_send > 64) && (character_to_send < 91)) {character_to_send = character_to_send + 32;}
-        Keyboard.write(char(character_to_send));
+        if (character_to_send=='*'){
+          no_space = 1;
+          boop();
+        } else {
+          if (!((backspace_flag) && ((paddle_echo_buffer == 1) || (paddle_echo_buffer == 11) || (paddle_echo_buffer == 111) || (paddle_echo_buffer == 1111) || (paddle_echo_buffer == 11111)))){
+            Keyboard.write(char(character_to_send));
+          }
+          backspace_flag = 0;
+        }
         break;
     }
       #ifdef DEBUG_CW_COMPUTER_KEYBOARD
