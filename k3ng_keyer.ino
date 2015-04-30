@@ -347,6 +347,9 @@ New fetures in this stable release:
 
     2.2.2015042901
       HARDWARE_NANOKEYER_REV_D
+
+    2.2.2015043001
+      Fixed compilation bug with FEATURE_COMMAND_LINE_INTERFACE when FEATURE_WINKEY_EMULATION not enabled
 */
 
 #define CODE_VERSION "2.2.2015042901"
@@ -8761,7 +8764,7 @@ void play_memory(byte memory_number)
             #if defined(FEATURE_SERIAL)
               #ifndef FEATURE_WINKEY_EMULATION
                 if (!cw_send_echo_inhibit) {
-                  winkey_port_write(eeprom_byte_read);
+                  primary_serial_port->write(eeprom_byte_read);
                   #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                   secondary_serial_port->write(eeprom_byte_read);
                   #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
