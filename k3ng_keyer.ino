@@ -327,22 +327,26 @@ New fetures in this stable release:
     2.2.2015042002 Eliminated keyer.h declaration (upgrade Stino if you're still using keyer.h)
 
     2.2.2015042301 
-      '#define PRIMARY_SERIAL_PORT &Serial' is now '#define PRIMARY_SERIAL_PORT &Serial'
-      OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION is now OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
-      '#define default_serial_baud_rate 115200' is now '#define PRIMARY_SERIAL_PORT_BAUD 115200'
-      #define SECONDARY_SERIAL_PORT_BAUD 115200
-      FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-      FEATURE_LCD1602_N07DH (Thanks Xigco for code!)
+      '#define PRIMARY_SERIAL_PORT &Serial' is now '#define PRIMARY_SERIAL_PORT &Serial' (documented on website 2015-04-25)
+      OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION is now OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION (documented on website 2015-04-25)
+      '#define default_serial_baud_rate 115200' is now '#define PRIMARY_SERIAL_PORT_BAUD 115200' (documented on website 2015-04-25)
+      #define SECONDARY_SERIAL_PORT_BAUD 115200 (documented on website 2015-04-25)
+      FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT  (documented on website 2015-04-25)
+      FEATURE_LCD1602_N07DH (Thanks Xigco for code!)  (documented on website 2015-04-25)
       
     2.2.2015042302  
-      OPTION_CW_KEYBOARD_ITALIAN (Thanks Giorgio IZ2XBZ)
+      OPTION_CW_KEYBOARD_ITALIAN (Thanks Giorgio IZ2XBZ)  (documented on website 2015-04-25)
       FEATURE_CW_COMPUTER_KEYBOARD repeating backspace, fixed caps lock sounds
 
     2.2.2015042303
       Test of GitHub - no changes  
+
+    2.2.2015042501
+      FEATURE_CW_COMPUTER_KEYBOARD update from Giorgio IZ2XBZ 
+      Website documentation up to date!  Yeahhhhhh!  :-)
 */
 
-#define CODE_VERSION "2.2.2015042303"
+#define CODE_VERSION "2.2.2015042501"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -7356,37 +7360,40 @@ void service_paddle_echo()
           Keyboard.write(41);  
           break;
         case 12212: //à
-          Keyboard.write(00);  
+          Keyboard.write(39);  
           break;
         case 12112: //è
-          Keyboard.write(00);  
+          Keyboard.write(91);  
           break;
         case 12221: //ì
-          Keyboard.write(00);  
+          Keyboard.write(61);  
           break;
         case 2221: //ò
-          Keyboard.write(00);  
+          Keyboard.write(59);  
+          break;
+          case 1122: //ù
+          Keyboard.write(92);  
           break;
         case 21221: // (
-          Keyboard.write(00);  
+          Keyboard.write(42);  
           break;
         case 212212: // )
-          Keyboard.write(00);  
+          Keyboard.write(40);  
           break;
         case 12111: // &
-          Keyboard.write(00);  
+          Keyboard.write(94);  
           break;
         case 222111: //:
-          Keyboard.write(00);  
+          Keyboard.write(62);  
           break;
         case 212121: //;
-          Keyboard.write(00);  
+          Keyboard.write(60);  
         break;
           case 12121: //+
-          Keyboard.write(00);  
+          Keyboard.write(93);  
           break;
         case 211112: // -
-          Keyboard.write(00);  
+          Keyboard.write(47);  
           break;   
       #endif //OPTION_CW_KEYBOARD_ITALIAN
         
