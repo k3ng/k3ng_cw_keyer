@@ -344,9 +344,12 @@ New fetures in this stable release:
     2.2.2015042501
       FEATURE_CW_COMPUTER_KEYBOARD update from Giorgio IZ2XBZ 
       Website documentation up to date!  Yeahhhhhh!  :-)
+
+    2.2.2015042901
+      HARDWARE_NANOKEYER_REV_D
 */
 
-#define CODE_VERSION "2.2.2015042501"
+#define CODE_VERSION "2.2.2015042901"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -373,6 +376,10 @@ New fetures in this stable release:
   #include "keyer_features_and_options_nanokeyer_rev_b.h"
 #endif
 
+#ifdef HARDWARE_NANOKEYER_REV_D
+  #include "keyer_features_and_options_nanokeyer_rev_d.h"
+#endif
+
 #ifdef HARDWARE_OPEN_INTERFACE
   #include "keyer_features_and_options_open_interface.h"
 #endif
@@ -387,6 +394,11 @@ New fetures in this stable release:
 #ifdef HARDWARE_NANOKEYER_REV_B
   #include "keyer_pin_settings_nanokeyer_rev_b.h"
   #include "keyer_settings_nanokeyer_rev_b.h"
+#endif
+
+#ifdef HARDWARE_NANOKEYER_REV_D
+  #include "keyer_pin_settings_nanokeyer_rev_d.h"
+  #include "keyer_settings_nanokeyer_rev_d.h"
 #endif
 
 #ifdef HARDWARE_OPEN_INTERFACE
