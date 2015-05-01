@@ -11,7 +11,7 @@
 #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 //#define FEATURE_SERIAL_HELP
 //#define FEATURE_HELL
-//#define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
+#define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
 //#define FEATURE_USB_KEYBOARD         
 #define FEATURE_DEAD_OP_WATCHDOG
 #define FEATURE_AUTOSPACE
@@ -45,9 +45,9 @@
 //#define OPTION_WINKEY_EXTENDED_COMMANDS            // in development
 #define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE       // additional code to check_dit_paddle() and check_dah_paddle() to send 0xC2 status byte when paddles are hit
 #define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
-//#define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET  // activate this when using Winkey 2 emulation and Win-Test
+#define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET  // activate this when using Winkey 2 emulation and Win-Test
 //#define OPTION_WINKEY_FREQUENT_STATUS_REPORT         // activate this to make Winkey emulation play better with RUMlog and RUMped
-//#define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
+#define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
 #define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode
 #define OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT         // this makes dit paddle memory interruption a little smoother
 //#define OPTION_MORE_DISPLAY_MSGS                     // additional optional display messages - comment out to save memory
