@@ -17,7 +17,8 @@
 #define ptt_tx_4 0
 #define ptt_tx_5 0
 #define ptt_tx_6 0
-#define cw_decoder_pin A5 //A3
+#define cw_decoder_pin A11 //A5 //A3  // if using OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR this must be an analog pin!
+#define cw_decoder_indicator 24
 #define tx_key_dit 0            // if defined, goes high for dit (any transmitter)
 #define tx_key_dah 0            // if defined, goes high for dah (any transmitter)
 

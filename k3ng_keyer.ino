@@ -350,9 +350,13 @@ New fetures in this stable release:
 
     2.2.2015043001
       Fixed compilation bug with FEATURE_COMMAND_LINE_INTERFACE when FEATURE_WINKEY_EMULATION not enabled
+
+    2.2.2015051201
+      OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+
 */
 
-#define CODE_VERSION "2.2.2015042901"
+#define CODE_VERSION "2.2.2015051201"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -445,6 +449,10 @@ New fetures in this stable release:
 
 #if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
   #include "BasicTerm.h"
+#endif
+
+#if defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
+  #include "goertzel.h"
 #endif
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
@@ -800,6 +808,10 @@ HardwareSerial * debug_serial_port;
   long paddle_echo_buffer = 0;
   unsigned long paddle_echo_buffer_decode_time = 0;
 #endif //FEATURE_PADDLE_ECHO 
+
+#if defined(FEATURE_CW_DECODER) && defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
+  Goertzdetector cwtonedetector;
+#endif
 
 
 
@@ -9438,46 +9450,55 @@ void initialize_pins() {
     digitalWrite (tx_key_dah, LOW);
   }
 
-
-  
   #ifdef FEATURE_CW_DECODER
-  pinMode (cw_decoder_pin, INPUT);
-  digitalWrite (cw_decoder_pin, HIGH);  
+    pinMode (cw_decoder_pin, INPUT);
+    #ifndef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+      digitalWrite (cw_decoder_pin, HIGH);
+    #else
+      digitalWrite (cw_decoder_pin, LOW);
+      cwtonedetector.init(cw_decoder_pin);
+    #endif //OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+    if (cw_decoder_indicator){
+      pinMode(cw_decoder_indicator,OUTPUT);
+      digitalWrite(cw_decoder_indicator, LOW);
+    }
   #endif //FEATURE_CW_DECODER
   
   #if defined(FEATURE_COMMAND_BUTTONS) && defined(command_mode_active_led)
-  if(command_mode_active_led) {
-    pinMode (command_mode_active_led, OUTPUT);
-    digitalWrite (command_mode_active_led,LOW);
-  }
+    if(command_mode_active_led) {
+      pinMode (command_mode_active_led, OUTPUT);
+      digitalWrite (command_mode_active_led,LOW);
+    }
   #endif //FEATURE_COMMAND_BUTTONS && command_mode_active_led
   
   
   #ifdef FEATURE_LED_RING
-  pinMode(led_ring_sdi,OUTPUT);
-  pinMode(led_ring_clk,OUTPUT);
-  pinMode(led_ring_le,OUTPUT);
+    pinMode(led_ring_sdi,OUTPUT);
+    pinMode(led_ring_clk,OUTPUT);
+    pinMode(led_ring_le,OUTPUT);
   #endif //FEATURE_LED_RING  
 
   #ifdef FEATURE_ALPHABET_SEND_PRACTICE
-  if (correct_answer_led) {
-    pinMode(correct_answer_led, OUTPUT);
-    digitalWrite(correct_answer_led, LOW);
-  }
-  if (wrong_answer_led) {
-    pinMode(wrong_answer_led, OUTPUT);
-    digitalWrite(wrong_answer_led, LOW);
-  }
+    if (correct_answer_led) {
+      pinMode(correct_answer_led, OUTPUT);
+      digitalWrite(correct_answer_led, LOW);
+    }
+    if (wrong_answer_led) {
+      pinMode(wrong_answer_led, OUTPUT);
+      digitalWrite(wrong_answer_led, LOW);
+    }
   #endif //FEATURE_ALPHABET_SEND_PRACTICE
 
   #ifdef FEATURE_PTT_INTERLOCK
-  pinMode(ptt_interlock,INPUT);
-  if (ptt_interlock_active_state == HIGH){
-    digitalWrite(ptt_interlock,LOW);
-  } else {
-    digitalWrite(ptt_interlock,HIGH);
-  }
+    pinMode(ptt_interlock,INPUT);
+    if (ptt_interlock_active_state == HIGH){
+      digitalWrite(ptt_interlock,LOW);
+    } else {
+      digitalWrite(ptt_interlock,HIGH);
+    }
   #endif //FEATURE_PTT_INTERLOCK
+
+
 
   
 }
@@ -9565,16 +9586,54 @@ void service_cw_decoder() {
   static float decode_element_tone_average = 0;
   static float decode_element_no_tone_average = 0;
   byte decode_it_flag = 0;
-  byte cd_decoder_pin_state = digitalRead(cw_decoder_pin);
+  byte cd_decoder_pin_state = HIGH;
+  
   int element_duration = 0;
   static float decoder_wpm = configuration.wpm;
   long decode_character = 0;
   static byte space_sent = 0;
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
-  static byte screen_column = 0;
-  static int last_printed_decoder_wpm = 0;
+    static byte screen_column = 0;
+    static int last_printed_decoder_wpm = 0;
+  #endif
+
+  #ifndef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+    cd_decoder_pin_state = digitalRead(cw_decoder_pin);
+  #else
+    if (cwtonedetector.detecttone() == HIGH){  // invert states
+      cd_decoder_pin_state = LOW;
+    } else {
+      cd_decoder_pin_state = HIGH;
+    }
+    
   #endif
  
+ #ifdef DEBUG_CW_DECODER_WITH_TONE
+ if (cd_decoder_pin_state == LOW){
+   tone(sidetone_line, GOERTZ_TARGET_FREQ);
+ } else {
+   noTone(sidetone_line);
+ }
+ #endif  //DEBUG_CW_DECODER 
+ 
+ if ((cw_decoder_indicator) && (cd_decoder_pin_state == LOW)){ 
+   digitalWrite(cw_decoder_indicator,HIGH);
+ } else {
+   digitalWrite(cw_decoder_indicator,LOW);      
+ }
+ 
+  #ifdef DEBUG_OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+    static unsigned long last_magnitude_debug_print = 0;
+    if ((millis() - last_magnitude_debug_print) > 250){
+      //debug_serial_port->print("service_cw_decoder: cwtonedetector magnitude: ");
+      //debug_serial_port->print(cwtonedetector.magnitudelimit_low);
+      //debug_serial_port->print("\t");
+      debug_serial_port->print(cwtonedetector.magnitudelimit);
+      debug_serial_port->print("\t");
+      debug_serial_port->println(cwtonedetector.magnitude);
+      last_magnitude_debug_print = millis();
+    }
+  #endif
  
   if  (last_transition_time == 0) { 
     if (cd_decoder_pin_state == LOW) {  // is this our first tone?
@@ -9582,13 +9641,13 @@ void service_cw_decoder() {
       last_state = LOW;
       
       #ifdef FEATURE_SLEEP
-      last_activity_time = millis(); 
+        last_activity_time = millis(); 
       #endif //FEATURE_SLEEP
       
-      #ifdef DEBUG_CW_DECODER
-      tone(sidetone_line, 1500);
-      #endif
+
+
     } else {
+
       /* FEATURE_CW_DECODER No space on LCD bug fixed by Rob, W7FJ
       if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))) { // should we send a space?
          #if defined(FEATURE_SERIAL)
@@ -9601,15 +9660,17 @@ void service_cw_decoder() {
       }
       */
 
+
+
       if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))) { // should we send a space?
          #if defined(FEATURE_SERIAL)
-         #ifdef FEATURE_COMMAND_LINE_INTERFACE
-         primary_serial_port->write(32);
-         screen_column++;
-         #endif //FEATURE_COMMAND_LINE_INTERFACE
+           #ifdef FEATURE_COMMAND_LINE_INTERFACE
+             primary_serial_port->write(32);
+             screen_column++;
+           #endif //FEATURE_COMMAND_LINE_INTERFACE
          #endif //FEATURE_SERIAL
          #ifdef FEATURE_DISPLAY
-         display_scroll_print_char(' ');
+           display_scroll_print_char(' ');
          #endif //FEATURE_DISPLAY
          space_sent = 1;
 
@@ -9621,14 +9682,6 @@ void service_cw_decoder() {
   } else {
     if (cd_decoder_pin_state != last_state) {
       // we have a transition 
-      #ifdef DEBUG_CW_DECODER
-      //debug_serial_port->println(F("service_cw_decoder: transition"));
-      if (cd_decoder_pin_state == LOW) {
-        tone(sidetone_line, 1500);
-      } else {
-        noTone(sidetone_line);
-      } 
-      #endif
       element_duration = millis() - last_transition_time;
       if (element_duration > CW_DECODER_NOISE_FILTER) {                                    // filter out noise
         if (cd_decoder_pin_state == LOW) {  // we have a tone
@@ -9675,10 +9728,7 @@ void service_cw_decoder() {
  
  
   if (decode_it_flag) {                      // are we ready to decode the element array?
-    #ifdef DEBUG_CW_DECODER
-    noTone(sidetone_line);  
-    #endif
-    
+
     // adjust the decoder wpm based on what we got
     if (decode_element_no_tone_average > 0) {
       if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 5) {
@@ -9695,12 +9745,12 @@ void service_cw_decoder() {
     }
     
     #ifdef DEBUG_CW_DECODER_WPM
-    if (abs(decoder_wpm - last_printed_decoder_wpm) > 0.9) {
-      debug_serial_port->print("<");
-      debug_serial_port->print(int(decoder_wpm));
-      debug_serial_port->print(">");
-      last_printed_decoder_wpm = decoder_wpm;
-    }
+      if (abs(decoder_wpm - last_printed_decoder_wpm) > 0.9) {
+        debug_serial_port->print("<");
+        debug_serial_port->print(int(decoder_wpm));
+        debug_serial_port->print(">");
+        last_printed_decoder_wpm = decoder_wpm;
+      }
     #endif //DEBUG_CW_DECODER_WPM
     
     for (byte x = 0;x < decode_element_pointer; x++) {
@@ -9722,24 +9772,26 @@ void service_cw_decoder() {
         }
       }
       #ifdef DEBUG_CW_DECODER
-      debug_serial_port->print(F("service_cw_decoder: decode_elements["));
-      debug_serial_port->print(x);
-      debug_serial_port->print(F("]: "));
-      debug_serial_port->println(decode_elements[x]);
+        debug_serial_port->print(F("service_cw_decoder: decode_elements["));
+        debug_serial_port->print(x);
+        debug_serial_port->print(F("]: "));
+        debug_serial_port->println(decode_elements[x]);
       #endif //DEBUG_CW_DECODER
     }
+
     #ifdef DEBUG_CW_DECODER
-    debug_serial_port->print(F("service_cw_decoder: decode_element_tone_average: "));
-    debug_serial_port->println(decode_element_tone_average);
-    debug_serial_port->print(F("service_cw_decoder: decode_element_no_tone_average: "));
-    debug_serial_port->println(decode_element_no_tone_average);
-    debug_serial_port->print(F("service_cw_decoder: decode_element_no_tone_average wpm: "));
-    debug_serial_port->println(1200/decode_element_no_tone_average);
-    debug_serial_port->print(F("service_cw_decoder: decoder_wpm: "));
-    debug_serial_port->println(decoder_wpm);
-    debug_serial_port->print(F("service_cw_decoder: decode_character: "));
-    debug_serial_port->println(decode_character);
+      debug_serial_port->print(F("service_cw_decoder: decode_element_tone_average: "));
+      debug_serial_port->println(decode_element_tone_average);
+      debug_serial_port->print(F("service_cw_decoder: decode_element_no_tone_average: "));
+      debug_serial_port->println(decode_element_no_tone_average);
+      debug_serial_port->print(F("service_cw_decoder: decode_element_no_tone_average wpm: "));
+      debug_serial_port->println(1200/decode_element_no_tone_average);
+      debug_serial_port->print(F("service_cw_decoder: decoder_wpm: "));
+      debug_serial_port->println(decoder_wpm);
+      debug_serial_port->print(F("service_cw_decoder: decode_character: "));
+      debug_serial_port->println(decode_character);
     #endif //DEBUG_CW_DECODER
+
     #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
       primary_serial_port->write(convert_cw_number_to_ascii(decode_character));
       #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
@@ -9749,8 +9801,9 @@ void service_cw_decoder() {
     #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 
     #ifdef FEATURE_DISPLAY
-    display_scroll_print_char(convert_cw_number_to_ascii(decode_character));
+      display_scroll_print_char(convert_cw_number_to_ascii(decode_character));
     #endif //FEATURE_DISPLAY
+      
     // reinitialize everything
     last_transition_time = 0;
     last_decode_time = millis();
@@ -9761,15 +9814,15 @@ void service_cw_decoder() {
   }
   
   #if defined(FEATURE_SERIAL)
-  #ifdef FEATURE_COMMAND_LINE_INTERFACE
-  if (screen_column > CW_DECODER_SCREEN_COLUMNS) {
-    primary_serial_port->println();
-    #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-      secondary_serial_port->println();
-    #endif    
-    screen_column = 0;
-  }
-  #endif //FEATURE_COMMAND_LINE_INTERFACE
+    #ifdef FEATURE_COMMAND_LINE_INTERFACE
+    if (screen_column > CW_DECODER_SCREEN_COLUMNS) {
+      primary_serial_port->println();
+      #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+        secondary_serial_port->println();
+      #endif    
+      screen_column = 0;
+    }
+    #endif //FEATURE_COMMAND_LINE_INTERFACE
   #endif //FEATURE_SERIAL
   
 }
