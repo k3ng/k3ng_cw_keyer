@@ -9,10 +9,10 @@
 
   This code comes from http://www.skovholm.com/cwdecoder , http://www.skovholm.com/decoder11.ino
 
-  Hjalmar skovholm Hansen, Oz1jhm <hjh@skovholm.com>
+  Hjalmar skovholm Hansen, OZ1JHM <hjh@skovholm.com>
 
 
-	Notes from the original code author, Oz1jhm (with edits from Goody K3NG)
+	Notes from the original code author, OZ1JHM (with edits from Goody K3NG)
 
 	GOERTZ_SAMPLING_FREQ will be 8928 on a 16 mhz without any prescaler etc., because we need the tone in the center of the bins    
 	you can set GOERTZ_TARGET_FREQ to 496, 558, 744 or 992          
@@ -31,10 +31,18 @@
 
 */
 
-#define GOERTZ_SAMPLING_FREQ 8928.0
+// Arduino Due (84 Mhz clock)
+#define GOERTZ_SAMPLING_FREQ 46872.0
+#define GOERTZ_SAMPLES 252 //168 //84
+
+// Arduino Uno, Mega (16 Mhz clock)
+//#define GOERTZ_SAMPLING_FREQ 8928.0
+//#define GOERTZ_SAMPLES 64
+
 #define GOERTZ_NOISE_BLANKER_INITIAL_MS 6
 #define GOERTZ_TARGET_FREQ 558.0  
-#define GOERTZ_SAMPLES 64
+
+
 
 #define GOERTZ_MAGNITUDE_LIMIT_LOW 100
 #define GOERTZ_MAGNITUDE_THRESHOLD	0.6 //0.6

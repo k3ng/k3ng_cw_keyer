@@ -352,11 +352,13 @@ New fetures in this stable release:
       Fixed compilation bug with FEATURE_COMMAND_LINE_INTERFACE when FEATURE_WINKEY_EMULATION not enabled
 
     2.2.2015051201
-      OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+      OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR (website updated 2015-05-12)
 
+    2.2.2015051301  
+      Improvements to FEATURE_CW_DECODER for better decoding and Goetzel settings for Arduino Due
 */
 
-#define CODE_VERSION "2.2.2015051201"
+#define CODE_VERSION "2.2.2015051301"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -9585,6 +9587,8 @@ void service_cw_decoder() {
   static byte decode_element_pointer = 0;
   static float decode_element_tone_average = 0;
   static float decode_element_no_tone_average = 0;
+  static int no_tone_count = 0;
+  static int tone_count = 0;
   byte decode_it_flag = 0;
   byte cd_decoder_pin_state = HIGH;
   
@@ -9686,6 +9690,7 @@ void service_cw_decoder() {
       if (element_duration > CW_DECODER_NOISE_FILTER) {                                    // filter out noise
         if (cd_decoder_pin_state == LOW) {  // we have a tone
           decode_elements[decode_element_pointer] = (-1 * element_duration);  // the last element was a space, so make it negative
+   no_tone_count++;
           if (decode_element_no_tone_average == 0) {
             decode_element_no_tone_average = element_duration;
           } else {
@@ -9694,7 +9699,8 @@ void service_cw_decoder() {
           decode_element_pointer++;
           last_state = LOW;
         } else {  // we have no tone
-          decode_elements[decode_element_pointer] = element_duration;  // the last element was a tone, so make it positive        
+          decode_elements[decode_element_pointer] = element_duration;  // the last element was a tone, so make it positive 
+   tone_count++;       
           if (decode_element_tone_average == 0) {
             decode_element_tone_average = element_duration;
           } else {
@@ -9730,19 +9736,25 @@ void service_cw_decoder() {
   if (decode_it_flag) {                      // are we ready to decode the element array?
 
     // adjust the decoder wpm based on what we got
-    if (decode_element_no_tone_average > 0) {
-      if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 5) {
-        decoder_wpm = (decoder_wpm + (1200/decode_element_no_tone_average))/2;
-      } else {
-        if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 10) {
-          decoder_wpm = (decoder_wpm + decoder_wpm + (1200/decode_element_no_tone_average))/3;
+    
+    if ((no_tone_count > 0) && (tone_count > 1)){ // NEW
+    
+      if (decode_element_no_tone_average > 0) {
+        if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 5) {
+          decoder_wpm = (decoder_wpm + (1200/decode_element_no_tone_average))/2;
         } else {
-          if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 20) {
-            decoder_wpm = (decoder_wpm + decoder_wpm + decoder_wpm + (1200/decode_element_no_tone_average))/4;    
-          }      
+          if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 10) {
+            decoder_wpm = (decoder_wpm + decoder_wpm + (1200/decode_element_no_tone_average))/3;
+          } else {
+            if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 20) {
+              decoder_wpm = (decoder_wpm + decoder_wpm + decoder_wpm + (1200/decode_element_no_tone_average))/4;    
+            }      
+          }
         }
       }
-    }
+    
+    
+    } // NEW
     
     #ifdef DEBUG_CW_DECODER_WPM
       if (abs(decoder_wpm - last_printed_decoder_wpm) > 0.9) {
@@ -9755,7 +9767,11 @@ void service_cw_decoder() {
     
     for (byte x = 0;x < decode_element_pointer; x++) {
       if (decode_elements[x] > 0) {  // is this a tone element?
-        if (decode_element_no_tone_average > 0) {
+      
+      /* removed 2015-05-12
+      
+        //if (decode_element_no_tone_average > 0) {
+        if ((decode_element_no_tone_average > 0) && (decode_element_pointer > 4)){
         // we have spaces to time from 
           if ((decode_elements[x]/decode_element_no_tone_average) < 2.1) {
             decode_character = (decode_character * 10) + 1; // we have a dit
@@ -9763,13 +9779,20 @@ void service_cw_decoder() {
             decode_character = (decode_character * 10) + 2; // we have a dah
           }
         } else {
+          
+          */
+          
           // we have no spaces to time from, use the current wpm
-          if ((decode_elements[x]/(1200/decoder_wpm)) < 1.3) {
+          if ((decode_elements[x]/(1200/decoder_wpm)) < 2.1 /*1.3*/) {  // changed from 1.3 to 2.1 2015-05-12
             decode_character = (decode_character * 10) + 1; // we have a dit
           } else {
             decode_character = (decode_character * 10) + 2; // we have a dah
-          }          
+          }  
+  
+  /*       removed 2015-05-12 
         }
+        
+        */
       }
       #ifdef DEBUG_CW_DECODER
         debug_serial_port->print(F("service_cw_decoder: decode_elements["));
@@ -9811,7 +9834,9 @@ void service_cw_decoder() {
     decode_element_tone_average = 0;
     decode_element_no_tone_average = 0;
     space_sent = 0;
-  }
+    no_tone_count = 0;
+    tone_count = 0;
+  } //if (decode_it_flag)
   
   #if defined(FEATURE_SERIAL)
     #ifdef FEATURE_COMMAND_LINE_INTERFACE
