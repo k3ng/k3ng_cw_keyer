@@ -1,8 +1,8 @@
 // compile time features and options - comment or uncomment to add or delete features
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
-// #define FEATURE_COMMAND_BUTTONS
-// #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
+#define FEATURE_COMMAND_BUTTONS
+#define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
 // #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
 // #define FEATURE_MEMORY_MACROS
 // #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation) (this no longer requires FEATURE_SERIAL)
@@ -73,5 +73,6 @@
 //#define OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST     // DEBUG PURPOSES ONLY!!!
 #define OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
 #define OPTION_CW_KEYBOARD_ITALIAN
-//#define OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+#define OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+//#define OPTION_INVERT_PADDLE_PIN_LOGIC
 

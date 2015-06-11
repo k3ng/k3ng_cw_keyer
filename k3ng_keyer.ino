@@ -356,9 +356,15 @@ New fetures in this stable release:
 
     2.2.2015051301  
       Improvements to FEATURE_CW_DECODER for better decoding and Goetzel settings for Arduino Due
+
+    2.2.2015061101
+      lcd_columns and lcd_rows in keyer_settings*.h files renamed to LCD_COLUMNS and LCD_ROWS
+      OPTION_INVERT_PADDLE_PIN_LOGIC - paddle closed = HIGH, paddle open = LOW
+
+        
 */
 
-#define CODE_VERSION "2.2.2015051301"
+#define CODE_VERSION "2.2.2015061101"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -557,7 +563,7 @@ unsigned long last_config_write = 0;
   unsigned long lcd_timed_message_clear_time = 0;
   byte lcd_previous_status = LCD_CLEAR;
   byte lcd_scroll_buffer_dirty = 0;
-  String lcd_scroll_buffer[lcd_rows];
+  String lcd_scroll_buffer[LCD_ROWS];
   byte lcd_scroll_flag = 0;
   byte lcd_paddle_echo = 1;
   byte lcd_send_echo = 1;
@@ -1109,7 +1115,7 @@ void service_display() {
       case LCD_CLEAR: lcd_clear(); break;
       case LCD_SCROLL_MSG:
          lcd.clear();
-         for (x = 0;x < lcd_rows;x++){
+         for (x = 0;x < LCD_ROWS;x++){
            //clear_display_row(x);
            lcd.setCursor(0,x);
            lcd.print(lcd_scroll_buffer[x]);
@@ -1131,7 +1137,7 @@ void service_display() {
             lcd.clear();
             lcd_scroll_flag = 0;
           }         
-          for (x = 0;x < lcd_rows;x++){
+          for (x = 0;x < LCD_ROWS;x++){
             //clear_display_row(x);
             lcd.setCursor(0,x);
             lcd.print(lcd_scroll_buffer[x]);
@@ -1179,11 +1185,11 @@ void display_scroll_print_char(char charin){
     lcd_status = LCD_SCROLL_MSG;
     lcd.clear();
   } 
-  if (column_pointer > (lcd_columns-1)) {
+  if (column_pointer > (LCD_COLUMNS-1)) {
     row_pointer++;
     column_pointer = 0;
-    if (row_pointer > (lcd_rows-1)) {
-      for (x = 0; x < (lcd_rows-1); x++) {
+    if (row_pointer > (LCD_ROWS-1)) {
+      for (x = 0; x < (LCD_ROWS-1); x++) {
         lcd_scroll_buffer[x] = lcd_scroll_buffer[x+1];
       }
       lcd_scroll_buffer[x] = "";     
@@ -1219,7 +1225,7 @@ void lcd_center_print_timed(String lcd_print_string, byte row_number, unsigned i
   } else {
     clear_display_row(row_number);
   }
-  lcd.setCursor(((lcd_columns - lcd_print_string.length())/2),row_number);
+  lcd.setCursor(((LCD_COLUMNS - lcd_print_string.length())/2),row_number);
   lcd.print(lcd_print_string);
   lcd_timed_message_clear_time = millis() + duration;
 }
@@ -1230,7 +1236,7 @@ void lcd_center_print_timed(String lcd_print_string, byte row_number, unsigned i
 #ifdef FEATURE_DISPLAY
 void clear_display_row(byte row_number)
 {
-  for (byte x = 0; x < lcd_columns; x++) {
+  for (byte x = 0; x < LCD_COLUMNS; x++) {
     lcd.setCursor(x,row_number);
     lcd.print(" ");
   }
@@ -2330,8 +2336,8 @@ void ps2_keyboard_program_memory(byte memory_number)
           keystroke = uppercase(keystroke);
           #ifdef FEATURE_DISPLAY
           keyboard_string.concat(char(keystroke));
-          if (keyboard_string.length() > lcd_columns) {
-            lcd_center_print_timed(keyboard_string.substring((keyboard_string.length()-lcd_columns)), 1, default_display_msg_delay);
+          if (keyboard_string.length() > LCD_COLUMNS) {
+            lcd_center_print_timed(keyboard_string.substring((keyboard_string.length()-LCD_COLUMNS)), 1, default_display_msg_delay);
           } else {         
             lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
           }
@@ -10151,7 +10157,7 @@ void ps2int_write() {
 void initialize_display(){
 
   #ifdef FEATURE_DISPLAY
-  lcd.begin(lcd_columns, lcd_rows);
+  lcd.begin(LCD_COLUMNS, LCD_ROWS);
   #ifdef FEATURE_LCD_ADAFRUIT_I2C
   lcd.setBacklight(lcdcolor);
   #endif //FEATURE_LCD_ADAFRUIT_I2C
@@ -10297,8 +10303,8 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       keystroke = uppercase(keystroke);   
       #ifdef FEATURE_DISPLAY
       keyboard_string.concat(char(keystroke));
-      if (keyboard_string.length() > lcd_columns) {
-        lcd_center_print_timed(keyboard_string.substring((keyboard_string.length()-lcd_columns)), 1, default_display_msg_delay);
+      if (keyboard_string.length() > LCD_COLUMNS) {
+        lcd_center_print_timed(keyboard_string.substring((keyboard_string.length()-LCD_COLUMNS)), 1, default_display_msg_delay);
       } else {         
         lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
       }
@@ -11196,13 +11202,17 @@ int paddle_pin_read(int pin_to_read){
 
 
   #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
-  return digitalRead(pin_to_read);
+    #ifndef OPTION_INVERT_PADDLE_PIN_LOGIC
+      return digitalRead(pin_to_read);
+    #else 
+      return !digitalRead(pin_to_read);
+    #endif
   #else
-  if (read_capacitive_pin(pin_to_read) > capacitance_threshold) {
-    return LOW;
-  } else {
-    return HIGH;
-  }
+      if (read_capacitive_pin(pin_to_read) > capacitance_threshold) {
+        return LOW;
+      } else {
+        return HIGH;
+      }
   #endif //FEATURE_CAPACITIVE_PADDLE_PINS  
 
 }
