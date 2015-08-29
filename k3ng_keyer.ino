@@ -360,11 +360,15 @@ New fetures in this stable release:
     2.2.2015061101
       lcd_columns and lcd_rows in keyer_settings*.h files renamed to LCD_COLUMNS and LCD_ROWS
       OPTION_INVERT_PADDLE_PIN_LOGIC - paddle closed = HIGH, paddle open = LOW
+      
+    2.2.2015082801  
+      Added E24C1024.h and E24C1024.cpp to git
+      Fixed compilation issue with Due involving E24C1024 library
 
         
 */
 
-#define CODE_VERSION "2.2.2015061101"
+#define CODE_VERSION "2.2.2015082801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -381,12 +385,6 @@ New fetures in this stable release:
   #define noTone noToneDUE
 #endif //HARDWARE_ARDUINO_DUE
 
-#ifdef FEATURE_EEPROM_E24C1024
-  #include "E24C1024.h"
-  #define EEPROM EEPROM1024
-#endif 
-
-
 #ifdef HARDWARE_NANOKEYER_REV_B
   #include "keyer_features_and_options_nanokeyer_rev_b.h"
 #endif
@@ -402,6 +400,11 @@ New fetures in this stable release:
 #ifndef HARDWARE_CUSTOM
   #include "keyer_features_and_options.h"
 #endif
+
+#ifdef FEATURE_EEPROM_E24C1024
+  #include "E24C1024.h"
+  #define EEPROM EEPROM1024
+#endif 
 
 #include "keyer_dependencies.h"
 #include "keyer_debug.h"
