@@ -53,33 +53,33 @@
 #define unknown_cw_character '*'
 
 #ifdef FEATURE_COMMAND_BUTTONS
-#define analog_buttons_number_of_buttons 4
-#define analog_buttons_r1 10
-#define analog_buttons_r2 1
+  #define analog_buttons_number_of_buttons 4
+  #define analog_buttons_r1 10
+  #define analog_buttons_r2 1
 #endif
 
 
 #if defined(FEATURE_COMMAND_BUTTONS) &&  !defined(FEATURE_PS2_KEYBOARD) && !defined(FEATURE_USB_KEYBOARD) && !defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(FEATURE_WINKEY_EMULATION)
-#define number_of_memories byte(analog_buttons_number_of_buttons-1)
+  #define number_of_memories byte(analog_buttons_number_of_buttons-1)
 #else
-#define number_of_memories byte(12)
+  #define number_of_memories byte(12)
 #endif
 
 #ifdef FEATURE_CAPACITIVE_PADDLE_PINS
-#define capacitance_threshold 2
+  #define capacitance_threshold 2
 #endif //FEATURE_CAPACITIVE_PADDLE_PINS
 
 #ifdef FEATURE_LED_RING
-#define led_ring_low_limit 10
-#define led_ring_high_limit 50
+  #define led_ring_low_limit 10
+  #define led_ring_high_limit 50
 #endif //FEATURE_LED_RING
 
 #ifdef FEATURE_QLF
-#define qlf_dit_max 125
-#define qlf_dit_min 75
-#define qlf_dah_max 200
-#define qlf_dah_min 100
-#define qlf_on_by_default 0
+  #define qlf_dit_max 125
+  #define qlf_dit_min 75
+  #define qlf_dah_max 200
+  #define qlf_dah_min 100
+  #define qlf_on_by_default 0
 #endif //FEATURE_QLF
 
 // Variable macros
@@ -113,7 +113,7 @@
 #define HELL 1
 
 #ifdef FEATURE_PS2_KEYBOARD
-#define PS2_KEYBOARD_NORMAL 0
+  #define PS2_KEYBOARD_NORMAL 0
 #endif //FEATURE_PS2_KEYBOARD
 
 #define SERIAL_CLI 0
@@ -255,3 +255,5 @@
 #define CW_DECODER_SPACE_PRINT_THRESH 4.5   // print space if no tone for this many element lengths
 #define CW_DECODER_SPACE_DECODE_THRESH 2.0  // invoke character decode if no tone for this many element lengths
 #define CW_DECODER_NOISE_FILTER 20          // ignore elements shorter than this (mS)
+
+#define STRAIGHT_KEY_ACTIVE_STATE LOW

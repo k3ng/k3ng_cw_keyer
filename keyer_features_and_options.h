@@ -35,6 +35,7 @@
 // #define FEATURE_PTT_INTERLOCK 
 // #define FEATURE_QLF
 // #define FEATURE_EEPROM_E24C1024
+// #define FEATURE_STRAIGHT_KEY
 
 //#define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
 #define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 

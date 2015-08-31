@@ -19,5 +19,5 @@
 // do not touch anything below this line
 
 #if defined(HARDWARE_NANOKEYER_REV_B) || defined(HARDWARE_NANOKEYER_REV_D) || defined(HARDWARE_OPEN_INTERFACE)
-#define HARDWARE_CUSTOM
+  #define HARDWARE_CUSTOM
 #endif
