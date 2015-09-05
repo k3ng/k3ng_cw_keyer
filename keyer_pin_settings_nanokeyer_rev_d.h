@@ -1,4 +1,5 @@
 #ifndef keyer_pin_settings_h
+#define keyer_pin_settings_h
 
 #define paddle_left 2
 #define paddle_right 5
@@ -16,7 +17,6 @@
 #define ptt_tx_4 0
 #define ptt_tx_5 0
 #define ptt_tx_6 0
-#define cw_decoder_pin A5
 #define analog_buttons_pin A1   // Rev D nanokeyer
 #define lcd_rs A2
 #define lcd_enable 10

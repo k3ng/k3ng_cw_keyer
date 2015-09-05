@@ -1,6 +1,7 @@
 /* Pins - you must review these and configure ! */
 #ifndef keyer_pin_settings_h
 #define keyer_pin_settings_h
+
 #define paddle_left 2
 #define paddle_right 5
 #define tx_key_line_1 11       // (high = key down/tx on)
@@ -17,8 +18,6 @@
 #define ptt_tx_4 0
 #define ptt_tx_5 0
 #define ptt_tx_6 0
-#define cw_decoder_pin A11 //A5 //A3  // if using OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR this must be an analog pin!
-#define cw_decoder_indicator 24
 #define tx_key_dit 0            // if defined, goes high for dit (any transmitter)
 #define tx_key_dah 0            // if defined, goes high for dah (any transmitter)
 
@@ -77,8 +76,16 @@
 #endif //FEATURE_PTT_INTERLOCK
 
 #ifdef FEATURE_STRAIGHT_KEY
-  #define pin_straight_key 0
+  #define pin_straight_key 52
 #endif //FEATURE_STRAIGHT_KEY
+
+#ifdef FEATURE_CW_DECODER
+  #define cw_decoder_pin A11 //A5 //A3  
+  #ifdef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+    #define cw_decoder_audio_input_pin 0 // this must be an analog pin!
+  #endif //OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+  #define cw_decoder_indicator 24
+#endif //FEATURE_CW_DECODER
 
 #endif //keyer_pin_settings_h
 

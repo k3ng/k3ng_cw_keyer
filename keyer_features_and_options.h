@@ -71,9 +71,8 @@
 //#define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 //#define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 //#define OPTION_SAVE_MEMORY_NANOKEYER
-//#define OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST     // DEBUG PURPOSES ONLY!!!
 #define OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
-#define OPTION_CW_KEYBOARD_ITALIAN
-#define OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+//#define OPTION_CW_KEYBOARD_ITALIAN
+//#define OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
 //#define OPTION_INVERT_PADDLE_PIN_LOGIC
 

@@ -64,5 +64,5 @@
 //#define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 //#define OPTION_SAVE_MEMORY_NANOKEYER
 //#define OPTION_INVERT_PADDLE_PIN_LOGIC
-//#define OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST     // DEBUG PURPOSES ONLY!!!
+
 
