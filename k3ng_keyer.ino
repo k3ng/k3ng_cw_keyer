@@ -372,10 +372,13 @@ New fetures in this stable release:
       Memories can now be programmed in commmand mode (FEATURE_COMMAND_BUTTONS) by pressing the memory button
       FEATURE_CW_DECODER now has digital input pin (cw_decoder_pin) and if OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR is enable, cw_decoder_audio_input_pin will work in parallel
 
+    2.2.2015090501_yaacwk
+      add hardware files for YAACWK Arduino Nano V3.0 based board
+      see http://i1cra.briata.org/yaacwk/ for more info
         
 */
 
-#define CODE_VERSION "2.2.2015090501"
+#define CODE_VERSION "2.2.2015090501_yaacwk"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -404,6 +407,10 @@ New fetures in this stable release:
   #include "keyer_features_and_options_open_interface.h"
 #endif
 
+#ifdef HARDWARE_YAACWK
+  #include "keyer_features_and_options_yaacwk.h"
+#endif
+
 #ifndef HARDWARE_CUSTOM
   #include "keyer_features_and_options.h"
 #endif
@@ -429,6 +436,11 @@ New fetures in this stable release:
 #ifdef HARDWARE_OPEN_INTERFACE
   #include "keyer_pin_settings_open_interface.h"
   #include "keyer_settings_open_interface.h"
+#endif
+
+#ifdef HARDWARE_YAACWK
+  #include "keyer_pin_settings_yaacwk.h"
+  #include "keyer_settings_yaacwk.h"
 #endif
 
 #ifndef HARDWARE_CUSTOM
