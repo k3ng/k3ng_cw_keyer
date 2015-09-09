@@ -372,10 +372,12 @@ New fetures in this stable release:
       Memories can now be programmed in commmand mode (FEATURE_COMMAND_BUTTONS) by pressing the memory button
       FEATURE_CW_DECODER now has digital input pin (cw_decoder_pin) and if OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR is enable, cw_decoder_audio_input_pin will work in parallel
 
+    2.2.2015090801
+      Fixed issue with FEATURE_CW_DECODER + OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR and wrong GOERTZ_SAMPLING_FREQ and GOERTZ_SAMPLES used in goertzel.h causing keyer lockups after startup
         
 */
 
-#define CODE_VERSION "2.2.2015090501"
+#define CODE_VERSION "2.2.2015090801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -9781,9 +9783,13 @@ void service_cw_decoder() {
     }  
   #endif  
  
-  #if !defined(DEBUG_CW_DECODER_WITH_TONE)
+  #if defined(DEBUG_CW_DECODER_WITH_TONE)
     if (cd_decoder_pin_state == LOW){
-     tone(sidetone_line, GOERTZ_TARGET_FREQ);
+      #if defined(GOERTZ_TARGET_FREQ)
+        tone(sidetone_line, GOERTZ_TARGET_FREQ);
+      #else
+        tone(sidetone_line, hz_sidetone);
+      #endif //defined(GOERTZ_TARGET_FREQ)
     } else {
      noTone(sidetone_line);
     }
