@@ -254,3 +254,10 @@
 #define CW_DECODER_SPACE_PRINT_THRESH 4.5   // print space if no tone for this many element lengths
 #define CW_DECODER_SPACE_DECODE_THRESH 2.0  // invoke character decode if no tone for this many element lengths
 #define CW_DECODER_NOISE_FILTER 20          // ignore elements shorter than this (mS)
+
+#ifdef FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
+  #define DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_WPM 30
+  #define DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_RATIO 300 // 300 = 3:1 ratio
+  #define DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM 70
+  #define DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_RATIO 240 // 240 = 2.4:1 ratio
+#endif //FEATURE_DYNAMIC_DAH_TO_DIT_RATIO

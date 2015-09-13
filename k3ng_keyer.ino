@@ -374,10 +374,19 @@ New fetures in this stable release:
 
     2.2.2015090801
       Fixed issue with FEATURE_CW_DECODER + OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR and wrong GOERTZ_SAMPLING_FREQ and GOERTZ_SAMPLES used in goertzel.h causing keyer lockups after startup
-        
+  
+    2.2.2015091301
+      FEATURE_DYNAMIC_DAH_TO_DIT_RATIO (code contributed by Giorgio, IZ2XBZ)
+      #ifdef FEATURE_DYNAMIC_DAH_TO_DIT_RATIO  (keyer_settings.h)
+        #define DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_WPM 30
+        #define DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_RATIO 300 // 300 = 3:1 ratio
+        #define DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM 70
+        #define DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_RATIO 240 // 240 = 2.4:1 ratio
+      #endif //FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
+
 */
 
-#define CODE_VERSION "2.2.2015090801"
+#define CODE_VERSION "2.2.2015091301"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -3746,6 +3755,8 @@ void speed_change(int change)
     speed_set(configuration.wpm + change);
   }
   
+
+
   #ifdef FEATURE_DISPLAY
     lcd_center_print_timed(String(configuration.wpm) + " wpm", 0, default_display_msg_delay);
   #endif
@@ -3753,18 +3764,26 @@ void speed_change(int change)
 
 //-------------------------------------------------------------------------------------------------------
 
-void speed_set(int wpm_set)
-{
-    configuration.wpm = wpm_set;
-    config_dirty = 1;
+void speed_set(int wpm_set){
+
+  configuration.wpm = wpm_set;
+  config_dirty = 1;
+
+  #ifdef FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
+    if ((configuration.wpm >= DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_WPM) && (configuration.wpm <= DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM)){
+      int dynamicweightvalue=map(configuration.wpm,DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_WPM,DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM,DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_RATIO,DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_RATIO);
+      configuration.dah_to_dit_ratio=dynamicweightvalue;
+    }
+  #endif //FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
+
     
-    #ifdef FEATURE_LED_RING
+  #ifdef FEATURE_LED_RING
     update_led_ring();
-    #endif //FEATURE_LED_RING
+  #endif //FEATURE_LED_RING
     
-    #ifdef FEATURE_DISPLAY
+  #ifdef FEATURE_DISPLAY
     lcd_center_print_timed(String(configuration.wpm) + " wpm", 0, default_display_msg_delay);
-    #endif
+  #endif
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -7209,9 +7228,9 @@ void process_serial_command(HardwareSerial * port_to_use) {
   switch (incoming_serial_byte) {
     case 126:
       #ifndef HARDWARE_ARDUINO_DUE 
-      asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {} ;*/ 
+        asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {} ;*/ 
       #else //HARDWARE_ARDUINO_DUE
-      setup();
+        setup();
       #endif //HARDWARE_ARDUINO_DUE
       break;  // ~ - reset unit
     case 42:                                                // * - paddle echo on / off
@@ -7223,7 +7242,7 @@ void process_serial_command(HardwareSerial * port_to_use) {
       break;
     case 43: cli_prosign_flag = 1; break;
     #if defined(FEATURE_SERIAL_HELP)
-    case 63: print_serial_help(port_to_use); break;                         // ? = print help
+      case 63: print_serial_help(port_to_use); break;                         // ? = print help
     #endif //FEATURE_SERIAL_HELP
     case 65: configuration.keyer_mode = IAMBIC_A; config_dirty = 1; port_to_use->println(F("Iambic A")); break;    // A - Iambic A mode
     case 66: configuration.keyer_mode = IAMBIC_B; config_dirty = 1; port_to_use->println(F("Iambic B")); break;    // B - Iambic B mode
@@ -7233,7 +7252,7 @@ void process_serial_command(HardwareSerial * port_to_use) {
     case 70: serial_set_sidetone_freq(port_to_use); break;                                   // F - set sidetone frequency
     case 71: configuration.keyer_mode = BUG; config_dirty = 1; port_to_use->println(F("Bug")); break;              // G - Bug mode
     #ifdef FEATURE_HELL
-    case 72: char_send_mode = HELL; port_to_use->println(F("Hell mode")); break;         // H - Hell mode
+      case 72: char_send_mode = HELL; port_to_use->println(F("Hell mode")); break;         // H - Hell mode
     #endif //FEATURE_HELL
     case 73:                                                                      // I - transmit line on/off
       port_to_use->print(F("TX o"));
@@ -7246,44 +7265,30 @@ void process_serial_command(HardwareSerial * port_to_use) {
       }
       break;
     #ifdef FEATURE_MEMORIES
-    case 33: repeat_play_memory(port_to_use); break;      // ! - repeat play
-    case 124: serial_set_memory_repeat(port_to_use); break; // | - set memory repeat time
-    
-    /*
-    case 49: serial_play_memory(0); break;     // 1 - play memory 1  (0)
-    case 50: serial_play_memory(1); break;     // 2 - play memory 2  (1)
-    case 51: serial_play_memory(2); break;     // 3 - play memory 3  (2)
-    case 52: serial_play_memory(3); break;     // 4 - play memory 4  (3)
-    case 53: serial_play_memory(4); break;     // 5 - play memory 5  (4)
-    case 54: serial_play_memory(5); break;     // 6 - play memory 6  (5)
-    case 55: serial_play_memory(6); break;     // 7 - play memory 7  (6)
-    case 56: serial_play_memory(7); break;     // 8 - play memory 8  (7)
-    case 57: serial_play_memory(8); break;     // 9 - play memory 9  (8)
-    */
-    case 48: serial_play_memory(9); break;    // 0 - play memory 10
-    case 49:                                  // 1-9 - play memory #
-    case 50:
-    case 51:
-    case 52:
-    case 53:
-    case 54: 
-    case 55:
-    case 56: 
-    case 57: serial_play_memory(incoming_serial_byte-49); break;
-    
-
-    case 80: repeat_memory = 255; serial_program_memory(port_to_use); break;                                // P - program memory
+      case 33: repeat_play_memory(port_to_use); break;      // ! - repeat play
+      case 124: serial_set_memory_repeat(port_to_use); break; // | - set memory repeat time
+      case 48: serial_play_memory(9); break;    // 0 - play memory 10
+      case 49:                                  // 1-9 - play memory #
+      case 50:
+      case 51:
+      case 52:
+      case 53:
+      case 54: 
+      case 55:
+      case 56: 
+      case 57: serial_play_memory(incoming_serial_byte-49); break;
+      case 80: repeat_memory = 255; serial_program_memory(port_to_use); break;                                // P - program memory
     #endif //FEATURE_MEMORIES
     case 81: serial_qrss_mode(); break; // Q - activate QRSS mode
     case 82: speed_mode = SPEED_NORMAL; port_to_use->println(F("QRSS Off")); break; // R - activate regular timing mode
     case 83: serial_status(port_to_use); break;                                              // S - Status command
     case 74: serial_set_dit_to_dah_ratio(port_to_use); break;                          // J - dit to dah ratio
     #ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
-    case 75: serial_cw_practice(port_to_use); break;                     // K - CW practice
+      case 75: serial_cw_practice(port_to_use); break;                     // K - CW practice
     #endif //FEATURE_CALLSIGN_RECEIVE_PRACTICE
     case 76: serial_set_weighting(port_to_use); break;
     #ifdef FEATURE_FARNSWORTH
-    case 77: serial_set_farnsworth(port_to_use); break;                                // M - set Farnsworth speed
+      case 77: serial_set_farnsworth(port_to_use); break;                                // M - set Farnsworth speed
     #endif
     case 78:                                                                // N - paddle reverse
       port_to_use->print(F("Paddles "));
@@ -7309,7 +7314,7 @@ void process_serial_command(HardwareSerial * port_to_use) {
     break; // case 79
     case 84: // T - tune
       #ifdef FEATURE_MEMORIES
-      repeat_memory = 255;
+        repeat_memory = 255;
       #endif
       serial_tune_command(port_to_use); break;
     case 85:
@@ -7325,41 +7330,41 @@ void process_serial_command(HardwareSerial * port_to_use) {
       }
       break;
     #ifdef FEATURE_POTENTIOMETER
-    case 86:                // V - toggle pot activation
-      port_to_use->print(F("Potentiometer "));
-      configuration.pot_activated = !configuration.pot_activated;
-      if (configuration.pot_activated) {
-        port_to_use->print(F("A"));
-      } else {
-        port_to_use->print(F("Dea"));
-      }
-      port_to_use->println(F("ctivated"));
-      config_dirty = 1;
-      break;
+      case 86:                // V - toggle pot activation
+        port_to_use->print(F("Potentiometer "));
+        configuration.pot_activated = !configuration.pot_activated;
+        if (configuration.pot_activated) {
+          port_to_use->print(F("A"));
+        } else {
+          port_to_use->print(F("Dea"));
+        }
+        port_to_use->println(F("ctivated"));
+        config_dirty = 1;
+        break;
     #endif
     case 87: serial_wpm_set(port_to_use);break;                                        // W - set WPM
     case 88: serial_switch_tx(port_to_use);break;                                      // X - switch transmitter
     case 89: serial_change_wordspace(port_to_use); break;
     #ifdef FEATURE_AUTOSPACE
-    case 90:
-      port_to_use->print(F("Autospace O"));
-      if (configuration.autospace_active) {
-        configuration.autospace_active = 0;
-        config_dirty = 1;
-        port_to_use->println(F("ff"));
-      } else {
-        configuration.autospace_active = 1;
-        config_dirty = 1;
-        port_to_use->println(F("n"));
-      }
-      break;
+      case 90:
+        port_to_use->print(F("Autospace O"));
+        if (configuration.autospace_active) {
+          configuration.autospace_active = 0;
+          config_dirty = 1;
+          port_to_use->println(F("ff"));
+        } else {
+          configuration.autospace_active = 1;
+          config_dirty = 1;
+          port_to_use->println(F("n"));
+        }
+        break;
     #endif
     #ifdef FEATURE_MEMORIES
-    case 92:
-      clear_send_buffer();
-      play_memory_prempt = 1;
-      repeat_memory = 255;
-      break;                           // \ - double backslash - clear serial send buffer
+      case 92:
+        clear_send_buffer();
+        play_memory_prempt = 1;
+        repeat_memory = 255;
+        break;                           // \ - double backslash - clear serial send buffer
     #endif
     case 94:                           // ^ - toggle send CW send immediately
        if (cli_wait_for_cr_to_send_cw) {
@@ -7371,65 +7376,65 @@ void process_serial_command(HardwareSerial * port_to_use) {
        }
       break;
     #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-    case '&':
-      port_to_use->print(F("CMOS Super Keyer Timing O"));
-      if (configuration.cmos_super_keyer_iambic_b_timing_on) {
-        configuration.cmos_super_keyer_iambic_b_timing_on = 0;
-        port_to_use->println(F("ff"));        
-      } else {
-        configuration.cmos_super_keyer_iambic_b_timing_on = 1;
-        port_to_use->println(F("n"));
-        configuration.keyer_mode = IAMBIC_B;
-      }
-      config_dirty = 1;
-      break;
-    case '%':
-      user_input_temp = serial_get_number_input(2,-1,100,port_to_use);
-      if ((user_input_temp >= 0) && (user_input_temp < 100)) {
-        configuration.cmos_super_keyer_iambic_b_timing_percent = user_input_temp;
-        port_to_use->println(F("CMOS Super Keyer Timing Set."));
-      }
-      config_dirty = 1;
-      break;
+      case '&':
+        port_to_use->print(F("CMOS Super Keyer Timing O"));
+        if (configuration.cmos_super_keyer_iambic_b_timing_on) {
+          configuration.cmos_super_keyer_iambic_b_timing_on = 0;
+          port_to_use->println(F("ff"));        
+        } else {
+          configuration.cmos_super_keyer_iambic_b_timing_on = 1;
+          port_to_use->println(F("n"));
+          configuration.keyer_mode = IAMBIC_B;
+        }
+        config_dirty = 1;
+        break;
+      case '%':
+        user_input_temp = serial_get_number_input(2,-1,100,port_to_use);
+        if ((user_input_temp >= 0) && (user_input_temp < 100)) {
+          configuration.cmos_super_keyer_iambic_b_timing_percent = user_input_temp;
+          port_to_use->println(F("CMOS Super Keyer Timing Set."));
+        }
+        config_dirty = 1;
+        break;
     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
     #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
-    case '.':
-      port_to_use->print(F("Dit Buffer O"));
-      if (configuration.dit_buffer_off) {
-        configuration.dit_buffer_off = 0;
-        port_to_use->println(F("n"));
-      } else {
-        configuration.dit_buffer_off = 1;
-        port_to_use->println(F("ff"));
-      }
-      config_dirty = 1;
-      break;
-    case '-':
-      port_to_use->print(F("Dah Buffer O"));
-      if (configuration.dah_buffer_off) {
-        configuration.dah_buffer_off = 0;
-        port_to_use->println(F("n"));
-      } else {
-        configuration.dah_buffer_off = 1;
-        port_to_use->println(F("ff"));
-      }
-      config_dirty = 1;    
-      break;
+      case '.':
+        port_to_use->print(F("Dit Buffer O"));
+        if (configuration.dit_buffer_off) {
+          configuration.dit_buffer_off = 0;
+          port_to_use->println(F("n"));
+        } else {
+          configuration.dit_buffer_off = 1;
+          port_to_use->println(F("ff"));
+        }
+        config_dirty = 1;
+        break;
+      case '-':
+        port_to_use->print(F("Dah Buffer O"));
+        if (configuration.dah_buffer_off) {
+          configuration.dah_buffer_off = 0;
+          port_to_use->println(F("n"));
+        } else {
+          configuration.dah_buffer_off = 1;
+          port_to_use->println(F("ff"));
+        }
+        config_dirty = 1;    
+        break;
     #endif //FEATURE_DIT_DAH_BUFFER_CONTROL
     case ':':
       if (cw_send_echo_inhibit) cw_send_echo_inhibit = 0; else cw_send_echo_inhibit = 1;
       break;
     #ifdef FEATURE_QLF
-    case '{':
-      port_to_use->print(F("QLF: O"));
-      if (qlf_active){
-          qlf_active = 0;
-          port_to_use->println(F("ff"));
-        } else {
-          qlf_active = 1;
-          port_to_use->println(F("n"));
-        }
-      break;
+      case '{':
+        port_to_use->print(F("QLF: O"));
+        if (qlf_active){
+            qlf_active = 0;
+            port_to_use->println(F("ff"));
+          } else {
+            qlf_active = 1;
+            port_to_use->println(F("n"));
+          }
+        break;
     #endif //FEATURE_QLF
     default: port_to_use->println(F("Unknown command")); break;
   }
@@ -7666,8 +7671,8 @@ void repeat_play_memory(HardwareSerial * port_to_use) {
 
   byte memory_number = serial_get_number_input(2,0, (number_of_memories+1), port_to_use);
   #ifdef DEBUG_CHECK_SERIAL
-  debug_serial_port->print(F("repeat_play_memory: memory_number:"));
-  debug_serial_port->println(memory_number);
+    debug_serial_port->print(F("repeat_play_memory: memory_number:"));
+    debug_serial_port->println(memory_number);
   #endif //DEBUG_SERIAL
   if (memory_number > -1) {
     repeat_memory = memory_number - 1;
