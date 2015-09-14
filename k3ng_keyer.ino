@@ -384,9 +384,13 @@ New fetures in this stable release:
         #define DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_RATIO 240 // 240 = 2.4:1 ratio
       #endif //FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
 
+    2.2.2015091302
+      FEATURE_COMPETITION_COMPRESSION_DETECTION - Experimental 
+      Fixed compiler error when only FEATURE_COMMAND_BUTTONS was enabled
+
 */
 
-#define CODE_VERSION "2.2.2015091301"
+#define CODE_VERSION "2.2.2015091302"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -832,7 +836,7 @@ HardwareSerial * debug_serial_port;
   byte qlf_active = qlf_on_by_default;
 #endif //FEATURE_QLF
 
-#ifdef FEATURE_PADDLE_ECHO
+#if defined(FEATURE_PADDLE_ECHO)
   byte paddle_echo = 0;
   long paddle_echo_buffer = 0;
   unsigned long paddle_echo_buffer_decode_time = 0;
@@ -841,6 +845,11 @@ HardwareSerial * debug_serial_port;
 #if defined(FEATURE_CW_DECODER) && defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
   Goertzdetector cwtonedetector;
 #endif
+
+#if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+  unsigned long compression_detection_key_down_time = 0;
+  unsigned long compression_detection_key_up_time = 0;
+#endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
 
 
 
@@ -976,6 +985,10 @@ void loop()
       service_straight_key();
     #endif //FEATURE_STRAIGHT_KEY
 
+    #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+      service_competition_compression_detection();
+    #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
+
   }
   
 }
@@ -986,32 +999,105 @@ void loop()
 // Are you a radio artisan ?
 
 
-#ifdef FEATURE_STRAIGHT_KEY
-void service_straight_key(){
+#if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+  void service_competition_compression_detection(){
 
-  static byte last_straight_key_state = 0;
-
-  if (digitalRead(pin_straight_key) == STRAIGHT_KEY_ACTIVE_STATE){
-    if (!last_straight_key_state){
-      tx_and_sidetone_key(1,MANUAL_SENDING);
-      last_straight_key_state = 1;
+#define COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE 16
+#define COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_LOWER_LIMIT 1
+#define COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_UPPER_LIMIT 6.0
+#define COMPETITION_COMPRESSION_DETECTION_AVERAGE_ALARM_THRESHOLD 3.0
 
 
-      #ifdef FEATURE_MEMORIES
-        clear_send_buffer();
-        repeat_memory = 255;
-      #endif
+    unsigned long key_up_to_key_down_time = 0;
+    static int time_array[COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE];
+    static byte time_array_index = 0;
+  
+    if ((compression_detection_key_down_time != 0) && (compression_detection_key_up_time != 0)){  // do we have a measurement waiting for us?
+      key_up_to_key_down_time = compression_detection_key_down_time - compression_detection_key_up_time;
+      #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
+       // debug_serial_port->print("service_competition_compression_detection: key_up_to_key_down_time:");
+        //debug_serial_port->println(key_up_to_key_down_time);
+      #endif 
+      // is the time within the limits of what would be inter-character time?
+      if ((key_up_to_key_down_time > ((1200/configuration.wpm)*COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_LOWER_LIMIT)) && (key_up_to_key_down_time < ((1200/configuration.wpm)*COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_UPPER_LIMIT))){
+        // add it to the array
+        if (time_array_index < COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE){
 
+          #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
+            debug_serial_port->print("service_competition_compression_detection: array entry ");
+            debug_serial_port->print(time_array_index);
+            debug_serial_port->print(":");
+            debug_serial_port->println(key_up_to_key_down_time);
+          #endif 
+
+          time_array[time_array_index] = key_up_to_key_down_time;
+          time_array_index++;
+
+        }
+
+      }
+
+      compression_detection_key_down_time = 0;
+      compression_detection_key_up_time = 0;
     }
-  } else {
-    if (last_straight_key_state){
-      tx_and_sidetone_key(0,MANUAL_SENDING);
-      last_straight_key_state = 0;
-    }
+//zzzzzz
+    #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
+      float time_average = 0;
+      if (time_array_index == COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE){
+        debug_serial_port->println("service_competition_compression_detection: time_array:");
+        for (int i = 0;i < COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE;i++){
+          debug_serial_port->println(time_array[i]);
+          time_average = time_average + time_array[i];
+        }
+        debug_serial_port->println("");
+        time_average = time_average / COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE;
+        debug_serial_port->print("service_competition_compression_detection: average: ");
+        debug_serial_port->println(time_average);
+        if (time_average < ((1200/configuration.wpm)*COMPETITION_COMPRESSION_DETECTION_AVERAGE_ALARM_THRESHOLD)){
+          debug_serial_port->println("service_competition_compression_detection: COMPRESSION DETECTED!");
+        }
+
+        time_array_index = 0; 
+       
+      }
+
+
+      //debug_serial_port->println
+
+    #endif //DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION
+
+
   }
+#endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
+
+//-------------------------------------------------------------------------------------------------------
+
+#ifdef FEATURE_STRAIGHT_KEY
+  void service_straight_key(){
+
+    static byte last_straight_key_state = 0;
+
+    if (digitalRead(pin_straight_key) == STRAIGHT_KEY_ACTIVE_STATE){
+      if (!last_straight_key_state){
+        tx_and_sidetone_key(1,MANUAL_SENDING);
+        last_straight_key_state = 1;
 
 
-}
+        #ifdef FEATURE_MEMORIES
+          clear_send_buffer();
+          repeat_memory = 255;
+        #endif
+
+      }
+    } else {
+      if (last_straight_key_state){
+        tx_and_sidetone_key(0,MANUAL_SENDING);
+        last_straight_key_state = 0;
+      }
+    }
+
+
+  }
 #endif //FEATURE_STRAIGHT_KEY
 
 //-------------------------------------------------------------------------------------------------------
@@ -3432,83 +3518,96 @@ void send_dah(byte sending_type)
 void tx_and_sidetone_key (int state, byte sending_type)
 {
 
-  #ifndef FEATURE_PTT_INTERLOCK
-  if ((state) && (key_state == 0)) {
-    if (key_tx) {
-      byte previous_ptt_line_activated = ptt_line_activated;
-      ptt_key();
-      if (current_tx_key_line) {digitalWrite (current_tx_key_line, HIGH);}
-      #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
-      if ((wk2_both_tx_activated) && (tx_key_line_2)) {
-        digitalWrite (tx_key_line_2, HIGH);
-      }
-      #endif
-      if ((first_extension_time) && (previous_ptt_line_activated == 0)) {
-        delay(first_extension_time);
-      }
+  #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+    if ((state == 0) && (key_state) && (compression_detection_key_up_time == 0) && (compression_detection_key_down_time == 0)){
+      compression_detection_key_up_time = millis();
+      //debug_serial_port->println("UP");
+    }  
+    if ((state) && (key_state == 0) && (compression_detection_key_up_time > 0) && (compression_detection_key_down_time == 0)) {
+      compression_detection_key_down_time = millis();
+      //debug_serial_port->println("DOWN");
     }
 
-    if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
-      tone(sidetone_line, configuration.hz_sidetone);
-    }
-    key_state = 1;
-  } else {
-    if ((state == 0) && (key_state)) {
+  #endif
+
+
+  #if !defined(FEATURE_PTT_INTERLOCK)
+    if ((state) && (key_state == 0)) {
       if (key_tx) {
-        if (current_tx_key_line) {digitalWrite (current_tx_key_line, LOW);}
+        byte previous_ptt_line_activated = ptt_line_activated;
+        ptt_key();
+        if (current_tx_key_line) {digitalWrite (current_tx_key_line, HIGH);}
         #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
-        if ((wk2_both_tx_activated) && (tx_key_line_2)) {
-          digitalWrite (tx_key_line_2, LOW);
+          if ((wk2_both_tx_activated) && (tx_key_line_2)) {
+            digitalWrite (tx_key_line_2, HIGH);
+          }
+        #endif
+        if ((first_extension_time) && (previous_ptt_line_activated == 0)) {
+          delay(first_extension_time);
         }
-        #endif        
-        ptt_key();
       }
+
       if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
-        noTone(sidetone_line);
+        tone(sidetone_line, configuration.hz_sidetone);
       }
-      key_state = 0;
-    }
-  }
-  #else  //FEATURE_PTT_INTERLOCK
-  if ((state) && (key_state == 0)) {
-    if (key_tx) {
-      byte previous_ptt_line_activated = ptt_line_activated;
-      if (!ptt_interlock_active) {
-        ptt_key();
-      }
-      if (current_tx_key_line) {digitalWrite (current_tx_key_line, HIGH);}
-      #ifdef OPTION_WINKEY_2_SUPPORT
-      if ((wk2_both_tx_activated) && (tx_key_line_2)) {
-        digitalWrite (tx_key_line_2, HIGH);
-      }
-      #endif
-      if ((first_extension_time) && (previous_ptt_line_activated == 0)) {
-        delay(first_extension_time);
-      }
-    }
-    if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
-      tone(sidetone_line, configuration.hz_sidetone);
-    }
-    key_state = 1;
-  } else {
-    if ((state == 0) && (key_state)) {
-      if (key_tx) {
-        if (current_tx_key_line) {digitalWrite (current_tx_key_line, LOW);}
-        #ifdef OPTION_WINKEY_2_SUPPORT
-        if ((wk2_both_tx_activated) && (tx_key_line_2)) {
-          digitalWrite (tx_key_line_2, LOW);
+      key_state = 1;
+    } else {
+      if ((state == 0) && (key_state)) {
+        if (key_tx) {
+          if (current_tx_key_line) {digitalWrite (current_tx_key_line, LOW);}
+          #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
+            if ((wk2_both_tx_activated) && (tx_key_line_2)) {
+              digitalWrite (tx_key_line_2, LOW);
+            }
+          #endif        
+          ptt_key();
         }
-        #endif        
+        if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+          noTone(sidetone_line);
+        }
+        key_state = 0;
+      }
+    }
+  #else  //FEATURE_PTT_INTERLOCK
+    if ((state) && (key_state == 0)) {
+      if (key_tx) {
+        byte previous_ptt_line_activated = ptt_line_activated;
         if (!ptt_interlock_active) {
           ptt_key();
         }
+        if (current_tx_key_line) {digitalWrite (current_tx_key_line, HIGH);}
+        #ifdef OPTION_WINKEY_2_SUPPORT
+          if ((wk2_both_tx_activated) && (tx_key_line_2)) {
+            digitalWrite (tx_key_line_2, HIGH);
+          }
+        #endif
+        if ((first_extension_time) && (previous_ptt_line_activated == 0)) {
+          delay(first_extension_time);
+        }
       }
       if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
-        noTone(sidetone_line);
+        tone(sidetone_line, configuration.hz_sidetone);
       }
-      key_state = 0;
+      key_state = 1;
+    } else {
+      if ((state == 0) && (key_state)) {
+        if (key_tx) {
+          if (current_tx_key_line) {digitalWrite (current_tx_key_line, LOW);}
+          #ifdef OPTION_WINKEY_2_SUPPORT
+            if ((wk2_both_tx_activated) && (tx_key_line_2)) {
+              digitalWrite (tx_key_line_2, LOW);
+            }
+          #endif        
+          if (!ptt_interlock_active) {
+            ptt_key();
+          }
+        }
+        if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+          noTone(sidetone_line);
+        }
+        key_state = 0;
+      }
     }
-  }
 
   #endif //FEATURE_PTT_INTERLOCK
 
@@ -3907,7 +4006,7 @@ void command_mode ()
     cw_char = 0;
  //   cw_char = get_cw_input_from_user(0);
 
-// zzzzzzz  start
+
     looping = 1;
     while (looping) {
       #ifdef FEATURE_POTENTIOMETER
@@ -4131,11 +4230,15 @@ void command_mode ()
             break;
         #endif  //FEATURE_ALPHABET_SEND_PRACTICE
         case 9: // button was hit
-          if (button_that_was_pressed == 0){  // button 0 was hit - exit
+          #if defined(FEATURE_MEMORIES)
+            if (button_that_was_pressed == 0){  // button 0 was hit - exit
+              stay_in_command_mode = 0;
+            } else {
+              program_memory(button_that_was_pressed - 1); // a button other than 0 was pressed - program a memory
+            }
+          #else 
             stay_in_command_mode = 0;
-          } else {
-            program_memory(button_that_was_pressed - 1); // a button other than 0 was pressed - program a memory
-          }
+          #endif
           break;                           
         default: // unknown command, send a ?
           #ifdef FEATURE_DISPLAY
@@ -7464,7 +7567,7 @@ void service_paddle_echo()
   #if defined(FEATURE_DISPLAY) && defined(OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS)
     byte ascii_temp = 0;
   #endif //defined(FEATURE_DISPLAY) && defined(OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS)
-//zzzzzz
+
   
   #if defined(FEATURE_CW_COMPUTER_KEYBOARD)
     static byte backspace_flag = 0;
@@ -9765,7 +9868,7 @@ void service_cw_decoder() {
     static int last_printed_decoder_wpm = 0;
   #endif
 
-/* 2015090501  zzzzzzzz
+/* 2015090501 
   #if !defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
     cd_decoder_pin_state = digitalRead(cw_decoder_pin);
   #else
