@@ -388,9 +388,16 @@ New fetures in this stable release:
       FEATURE_COMPETITION_COMPRESSION_DETECTION - Experimental 
       Fixed compiler error when only FEATURE_COMMAND_BUTTONS was enabled
 
+    2.2.2015091801
+      OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL
+      OPTION_ADVANCED_SPEED_DISPLAY (code contributed by Giorgio, IZ2XBZ)
+
+    2.2.2015091802
+      Improved handling of spaces in LCD display  
+
 */
 
-#define CODE_VERSION "2.2.2015091302"
+#define CODE_VERSION "2.2.2015091802"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -1301,6 +1308,7 @@ void display_scroll_print_char(char charin){
   
   static byte column_pointer = 0;
   static byte row_pointer = 0;
+  static byte holding_space = 0;
   byte x = 0;
 
   #ifdef DEBUG_DISPLAY_SCROLL_PRINT_CHAR
@@ -1326,6 +1334,34 @@ void display_scroll_print_char(char charin){
     lcd_status = LCD_SCROLL_MSG;
     lcd.clear();
   } 
+
+  if (charin == ' '){
+    holding_space = 1;
+    return;
+  }
+
+  if (holding_space){   // ok, I admit this is a hack.  Hold on to spaces and don't scroll until the next char comes in...
+    if (column_pointer > (LCD_COLUMNS-1)) {
+      row_pointer++;
+      column_pointer = 0;
+      if (row_pointer > (LCD_ROWS-1)) {
+        for (x = 0; x < (LCD_ROWS-1); x++) {
+          lcd_scroll_buffer[x] = lcd_scroll_buffer[x+1];
+        }
+        lcd_scroll_buffer[x] = "";     
+        row_pointer--;
+        lcd_scroll_flag = 1;
+      }    
+    } 
+    if (column_pointer > 0){ // don't put a space in the first column
+      lcd_scroll_buffer[row_pointer].concat(' ');
+      column_pointer++;
+    }
+    holding_space = 0;
+  }
+
+  
+
   if (column_pointer > (LCD_COLUMNS-1)) {
     row_pointer++;
     column_pointer = 0;
@@ -1337,9 +1373,11 @@ void display_scroll_print_char(char charin){
       row_pointer--;
       lcd_scroll_flag = 1;
     }    
-   } 
+  } 
   lcd_scroll_buffer[row_pointer].concat(charin);
   column_pointer++;
+  
+
   lcd_scroll_buffer_dirty = 1; 
 }
 
@@ -3173,24 +3211,32 @@ int read_settings_from_eeprom() {
   
   #if !defined(HARDWARE_ARDUINO_DUE) || (defined(HARDWARE_ARDUINO_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
-  if (EEPROM.read(0) == eeprom_magic_number){
-  
-    byte* p = (byte*)(void*)&configuration;
-    unsigned int i;
-    int ee = 1; // starting point of configuration struct
-    for (i = 0; i < sizeof(configuration); i++){
-      *p++ = EEPROM.read(ee++);  
+    if (EEPROM.read(0) == eeprom_magic_number){
+    
+      byte* p = (byte*)(void*)&configuration;
+      unsigned int i;
+      int ee = 1; // starting point of configuration struct
+      for (i = 0; i < sizeof(configuration); i++){
+        *p++ = EEPROM.read(ee++);  
+      }
+    
+    //if (configuration.magic_number == eeprom_magic_number) {
+      switch_to_tx_silent(configuration.current_tx);
+      config_dirty = 0;
+
+      #if defined(OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL) && defined(FEATURE_DIT_DAH_BUFFER_CONTROL)
+        configuration.dit_buffer_off = 1;
+        configuration.dah_buffer_off = 1;
+      #endif //defined(OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL) && defined(FEATURE_DIT_DAH_BUFFER_CONTROL)
+
+      return 0;
+    } else {
+      return 1;
     }
   
-  //if (configuration.magic_number == eeprom_magic_number) {
-    switch_to_tx_silent(configuration.current_tx);
-    config_dirty = 0;
-    return 0;
-  } else {
-    return 1;
-  }
-  
   #endif //!defined(HARDWARE_ARDUINO_DUE) || (defined(HARDWARE_ARDUINO_DUE) && defined(FEATURE_EEPROM_E24C1024))
+
+
  
   return 1;
 
@@ -3857,7 +3903,7 @@ void speed_change(int change)
 
 
   #ifdef FEATURE_DISPLAY
-    lcd_center_print_timed(String(configuration.wpm) + " wpm", 0, default_display_msg_delay);
+    lcd_center_print_timed_wpm();
   #endif
 }
 
@@ -3881,10 +3927,23 @@ void speed_set(int wpm_set){
   #endif //FEATURE_LED_RING
     
   #ifdef FEATURE_DISPLAY
-    lcd_center_print_timed(String(configuration.wpm) + " wpm", 0, default_display_msg_delay);
+    lcd_center_print_timed_wpm();
   #endif
 }
+//-------------------------------------------------------------------------------------------------------
+#ifdef FEATURE_DISPLAY
+  void lcd_center_print_timed_wpm(){
 
+
+    #if defined(OPTION_ADVANCED_SPEED_DISPLAY)
+      lcd_center_print_timed(String(configuration.wpm) + " wpm - " + (configuration.wpm*5) + " cpm ", 0, default_display_msg_delay);
+      lcd_center_print_timed(String(1200/configuration.wpm) + ":" + (((1200/configuration.wpm)*configuration.dah_to_dit_ratio)/100) + "ms 1:" + (float(configuration.dah_to_dit_ratio)/100.00), 1, default_display_msg_delay);
+    #else
+      lcd_center_print_timed(String(configuration.wpm) + " wpm", 0, default_display_msg_delay);
+    #endif
+
+  }
+#endif
 //-------------------------------------------------------------------------------------------------------
 
 long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
