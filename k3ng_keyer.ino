@@ -393,11 +393,20 @@ New fetures in this stable release:
       OPTION_ADVANCED_SPEED_DISPLAY (code contributed by Giorgio, IZ2XBZ)
 
     2.2.2015091802
-      Improved handling of spaces in LCD display  
+      Improved handling of spaces in LCD display 
 
+    2.2.2015092101
+      Fixed bugs in OPTION_CW_KEYBOARD_ITALIAN and OPTION_UNKNOWN_CHARACTER_ERROR_TONE (courtesy of Giorgio, IZ2XBZ) 
+
+    2.2.2015092301   
+      FEATURE_COMPETITION_COMPRESSION_DETECTION improvements
+
+    2.2.2015092401
+      #define compression_detection_pin 0
+      default potentiometer_change_threshold changed to 0.9
 */
 
-#define CODE_VERSION "2.2.2015091802"
+#define CODE_VERSION "2.2.2015092401"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -856,6 +865,8 @@ HardwareSerial * debug_serial_port;
 #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
   unsigned long compression_detection_key_down_time = 0;
   unsigned long compression_detection_key_up_time = 0;
+  int time_array[COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE];
+  byte time_array_index = 0;
 #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
 
 
@@ -1009,70 +1020,51 @@ void loop()
 #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
   void service_competition_compression_detection(){
 
-#define COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE 16
-#define COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_LOWER_LIMIT 1
-#define COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_UPPER_LIMIT 6.0
-#define COMPETITION_COMPRESSION_DETECTION_AVERAGE_ALARM_THRESHOLD 3.0
-
-
-    unsigned long key_up_to_key_down_time = 0;
-    static int time_array[COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE];
-    static byte time_array_index = 0;
-  
-    if ((compression_detection_key_down_time != 0) && (compression_detection_key_up_time != 0)){  // do we have a measurement waiting for us?
-      key_up_to_key_down_time = compression_detection_key_down_time - compression_detection_key_up_time;
-      #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
-       // debug_serial_port->print("service_competition_compression_detection: key_up_to_key_down_time:");
-        //debug_serial_port->println(key_up_to_key_down_time);
-      #endif 
-      // is the time within the limits of what would be inter-character time?
-      if ((key_up_to_key_down_time > ((1200/configuration.wpm)*COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_LOWER_LIMIT)) && (key_up_to_key_down_time < ((1200/configuration.wpm)*COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_UPPER_LIMIT))){
-        // add it to the array
-        if (time_array_index < COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE){
-
-          #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
-            debug_serial_port->print("service_competition_compression_detection: array entry ");
-            debug_serial_port->print(time_array_index);
-            debug_serial_port->print(":");
-            debug_serial_port->println(key_up_to_key_down_time);
-          #endif 
-
-          time_array[time_array_index] = key_up_to_key_down_time;
-          time_array_index++;
-
-        }
-
-      }
-
-      compression_detection_key_down_time = 0;
-      compression_detection_key_up_time = 0;
-    }
 //zzzzzz
-    #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
+
+    static byte compression_detection_indicator_on = 0;
+    static unsigned long last_compression_check_time = 0;
+
+    if ((millis() - last_compression_check_time) > 1000){
       float time_average = 0;
       if (time_array_index == COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE){
-        debug_serial_port->println("service_competition_compression_detection: time_array:");
         for (int i = 0;i < COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE;i++){
-          debug_serial_port->println(time_array[i]);
           time_average = time_average + time_array[i];
         }
-        debug_serial_port->println("");
         time_average = time_average / COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE;
-        debug_serial_port->print("service_competition_compression_detection: average: ");
-        debug_serial_port->println(time_average);
         if (time_average < ((1200/configuration.wpm)*COMPETITION_COMPRESSION_DETECTION_AVERAGE_ALARM_THRESHOLD)){
-          debug_serial_port->println("service_competition_compression_detection: COMPRESSION DETECTED!");
+          if (!compression_detection_indicator_on){
+            compression_detection_indicator_on = 1;
+            digitalWrite(compression_detection_pin,HIGH);
+            #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
+              debug_serial_port->print("service_competition_compression_detection: time_array: ");
+              for (int i = 0;i < COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE;i++){
+                debug_serial_port->print(time_array[i]);
+                debug_serial_port->print(" ");
+              }            
+              debug_serial_port->print("\n\rservice_competition_compression_detection: COMPRESSION DETECTION ON  average: ");
+              debug_serial_port->println(time_average);              
+            #endif
+          }
+
+        } else {
+          if (compression_detection_indicator_on){
+            compression_detection_indicator_on = 0;
+            digitalWrite(compression_detection_pin,LOW);
+            #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
+              debug_serial_port->print("service_competition_compression_detection: time_array: ");
+              for (int i = 0;i < COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE;i++){
+                debug_serial_port->print(time_array[i]);
+                debug_serial_port->print(" ");
+              }                 
+              debug_serial_port->print("\n\rservice_competition_compression_detection: COMPRESSION DETECTION OFF  average: ");
+              debug_serial_port->println(time_average);
+            #endif
+          }
         }
-
-        time_array_index = 0; 
-       
       }
-
-
-      //debug_serial_port->println
-
-    #endif //DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION
-
+      last_compression_check_time = millis();
+    }
 
   }
 #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
@@ -3565,6 +3557,9 @@ void tx_and_sidetone_key (int state, byte sending_type)
 {
 
   #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+
+    byte i;
+
     if ((state == 0) && (key_state) && (compression_detection_key_up_time == 0) && (compression_detection_key_down_time == 0)){
       compression_detection_key_up_time = millis();
       //debug_serial_port->println("UP");
@@ -3574,7 +3569,60 @@ void tx_and_sidetone_key (int state, byte sending_type)
       //debug_serial_port->println("DOWN");
     }
 
-  #endif
+    unsigned long key_up_to_key_down_time = 0;
+  
+    if ((compression_detection_key_down_time != 0) && (compression_detection_key_up_time != 0)){  // do we have a measurement waiting for us?
+      key_up_to_key_down_time = compression_detection_key_down_time - compression_detection_key_up_time;
+      #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
+       // debug_serial_port->print("service_competition_compression_detection: key_up_to_key_down_time:");
+        //debug_serial_port->println(key_up_to_key_down_time);
+      #endif 
+      // is the time within the limits of what would be inter-character time?
+      if ((key_up_to_key_down_time > ((1200/configuration.wpm)*COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_LOWER_LIMIT)) && (key_up_to_key_down_time < ((1200/configuration.wpm)*COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_UPPER_LIMIT))){
+        // add it to the array
+        if (time_array_index < COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE){ 
+
+          #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
+            debug_serial_port->print("tx_and_sidetone_key: service_competition_compression_detection: array entry ");
+            debug_serial_port->print(time_array_index);
+            debug_serial_port->print(":");
+            debug_serial_port->println(key_up_to_key_down_time);
+          #endif 
+
+          time_array[time_array_index] = key_up_to_key_down_time;
+          time_array_index++;
+
+        } else { // if time array is completely filled up, we do a first in, first out
+          for(i = 0;i < (COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE-1);i++){
+            time_array[i]=time_array[i+1];
+          }
+          time_array[COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE-1] = key_up_to_key_down_time;
+
+
+          #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
+            debug_serial_port->print("tx_and_sidetone_key: service_competition_compression_detection: FIFO array entry ");
+            debug_serial_port->print(time_array_index);
+            debug_serial_port->print(":");
+            debug_serial_port->println(key_up_to_key_down_time);
+          #endif 
+
+        }
+
+      } else {
+        #if defined(DEBUG_FEATURE_COMPETITION_COMPRESSION_DETECTION)
+          //debug_serial_port->print("tx_and_sidetone_key: service_competition_compression_detection: discarded entry: ");
+          //debug_serial_port->println(key_up_to_key_down_time);
+        #endif         
+      }
+      compression_detection_key_down_time = 0;
+      compression_detection_key_up_time = 0;
+    }
+
+
+
+
+
+  #endif //defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
 
 
   #if !defined(FEATURE_PTT_INTERLOCK)
@@ -7662,7 +7710,7 @@ void service_paddle_echo()
           }
         #endif //OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
         no_space = 1;       
-
+        break;
   
       #ifdef OPTION_CW_KEYBOARD_ITALIAN  // courtesy of Giorgio IZ2XBZ
         case 122121: // "@"
@@ -7685,7 +7733,7 @@ void service_paddle_echo()
         case 12212: //à
           Keyboard.write(39);  
           break;
-        case 12112: //è
+        case 11211: //è
           Keyboard.write(91);  
           break;
         case 12221: //ì
@@ -7725,7 +7773,9 @@ void service_paddle_echo()
         if ((character_to_send > 64) && (character_to_send < 91)) {character_to_send = character_to_send + 32;}
         if (character_to_send=='*'){
           no_space = 1;
-          boop();
+          #ifdef OPTION_UNKNOWN_CHARACTER_ERROR_TONE
+            boop();
+          #endif //OPTION_UNKNOWN_CHARACTER_ERROR_TONE
         } else {
           if (!((backspace_flag) && ((paddle_echo_buffer == 1) || (paddle_echo_buffer == 11) || (paddle_echo_buffer == 111) || (paddle_echo_buffer == 1111) || (paddle_echo_buffer == 11111)))){
             Keyboard.write(char(character_to_send));
@@ -8751,7 +8801,7 @@ int convert_cw_number_to_ascii (long number_in)
    //default: return 254; break;
    default: 
      #ifdef OPTION_UNKNOWN_CHARACTER_ERROR_TONE
-     boop();
+       boop();
      #endif  //OPTION_UNKNOWN_CHARACTER_ERROR_TONE
      return unknown_cw_character; 
      break;
@@ -9828,6 +9878,10 @@ void initialize_pins() {
     }
   #endif //FEATURE_STRAIGHT_KEY
 
+  #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+    pinMode(compression_detection_pin,OUTPUT);
+    digitalWrite(compression_detection_pin,LOW);
+  #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
   
 }
 

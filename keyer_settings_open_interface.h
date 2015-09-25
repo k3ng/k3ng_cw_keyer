@@ -23,7 +23,7 @@
 #define initial_pot_wpm_high_value 35    // Potentiometer WPM fully CW
 #define wpm_limit_low 5
 #define wpm_limit_high 60
-#define potentiometer_change_threshold 1 // don't change the keyer speed until pot wpm has changed more than this
+#define potentiometer_change_threshold 0.9 // don't change the keyer speed until pot wpm has changed more than this
 #define send_buffer_size 150
 #define default_length_letterspace 3
 #define default_length_wordspace 7

@@ -21,7 +21,7 @@
 #define initial_pot_wpm_high_value 35    // Potentiometer WPM fully CW
 #define wpm_limit_low 5
 #define wpm_limit_high 60
-#define potentiometer_change_threshold 1 // don't change the keyer speed until pot wpm has changed more than this
+#define potentiometer_change_threshold 0.9 // don't change the keyer speed until pot wpm has changed more than this
 #define send_buffer_size 150
 #define default_length_letterspace 3
 #define default_length_wordspace 7
@@ -264,3 +264,10 @@
   #define DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM 70
   #define DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_RATIO 240 // 240 = 2.4:1 ratio
 #endif //FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
+
+#if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+  #define COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE 16
+  #define COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_LOWER_LIMIT 1
+  #define COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_UPPER_LIMIT 6.0
+  #define COMPETITION_COMPRESSION_DETECTION_AVERAGE_ALARM_THRESHOLD 3.0
+#endif //FEATURE_COMPETITION_COMPRESSION_DETECTION

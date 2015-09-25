@@ -87,5 +87,10 @@
   #define cw_decoder_indicator 24
 #endif //FEATURE_CW_DECODER
 
+
+#if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+  #define compression_detection_pin 13
+#endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
+
 #endif //keyer_pin_settings_h
 
