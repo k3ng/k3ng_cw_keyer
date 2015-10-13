@@ -404,9 +404,12 @@ New fetures in this stable release:
     2.2.2015092401
       #define compression_detection_pin 0
       default potentiometer_change_threshold changed to 0.9
+
+    2.2.2015101201
+      Additional DEBUG_PS2_KEYBOARD code  
 */
 
-#define CODE_VERSION "2.2.2015092401"
+#define CODE_VERSION "2.2.2015101201"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -1513,6 +1516,11 @@ void check_ps2_keyboard()
     
     // read the next key
     keystroke = keyboard.read();
+
+    #if defined(DEBUG_PS2_KEYBOARD)
+    debug_serial_port->print("check_ps2_keyboard: keystroke: ");
+    debug_serial_port->println(keystroke,DEC);
+    #endif //DEBUG_PS2_KEYBOARD
     
     #ifdef FEATURE_SLEEP
     last_activity_time = millis(); 
