@@ -51,6 +51,8 @@
 #define ptt_interlock_check_every_ms 100
 #define ptt_interlock_active_state HIGH
 #define unknown_cw_character '*'
+#define cli_paddle_echo_on_at_boot 1
+#define cli_straight_key_echo_on_at_boot 1
 
 #ifdef FEATURE_COMMAND_BUTTONS
 #define analog_buttons_number_of_buttons 4

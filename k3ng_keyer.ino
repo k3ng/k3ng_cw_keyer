@@ -59,6 +59,7 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     \!##   Repeat play memory
     \|#### Set memory repeat (milliseconds)
     \*     Toggle paddle echo
+    \`     Toggle straight key echo
     \^     Toggle wait for carriage return to send CW / send CW immediately
     \&     Toggle CMOS Super Keyer Timing on/off
     \%##   Set CMOS Super Keyer Timing %     
@@ -406,10 +407,22 @@ New fetures in this stable release:
       default potentiometer_change_threshold changed to 0.9
 
     2.2.2015101201
-      Additional DEBUG_PS2_KEYBOARD code  
+      Additional DEBUG_PS2_KEYBOARD code 
+
+    2.2.2015101301
+      OPTION_STRAIGHT_KEY_ECHO
+      
+    2.2.2015101302 
+      OPTION_STRAIGHT_KEY_ECHO is now FEATURE_STRAIGHT_KEY_ECHO
+      CLI command: \`     Toggle straight key echo
+      #define cli_paddle_echo_on_at_boot 1
+      #define cli_straight_key_echo_on_at_boot 1
+      FEATURE_STRAIGHT_KEY now works with FEATURE_CW_COMPUTER_KEYBOARD
+      Straight Key can now program memories
+      
 */
 
-#define CODE_VERSION "2.2.2015101201"
+#define CODE_VERSION "2.2.2015101302"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -640,10 +653,13 @@ byte pot_wpm_low_value;
   byte cw_send_echo_inhibit = 0;
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
     byte serial_backslash_command;
-    byte cli_paddle_echo = 0;
+    byte cli_paddle_echo = cli_paddle_echo_on_at_boot;
     byte cli_prosign_flag = 0;
     byte cli_wait_for_cr_to_send_cw = 0;
-  #endif //FEATURE_COMMAND_LINE_INTERFACE
+    #if defined(FEATURE_STRAIGHT_KEY_ECHO)
+      byte cli_straight_key_echo = cli_straight_key_echo_on_at_boot;
+    #endif   
+  #endif //FEATURE_COMMAND_LINE_INTERFACE  
 #endif //FEATURE_SERIAL
 
 byte send_buffer_array[send_buffer_size];
@@ -872,6 +888,9 @@ HardwareSerial * debug_serial_port;
   byte time_array_index = 0;
 #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
 
+#if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
+  byte cw_keyboard_capslock_on = 0;
+#endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
 
 /*---------------------------------------------------------------------------------------------------------
@@ -1027,6 +1046,9 @@ void loop()
 
     static byte compression_detection_indicator_on = 0;
     static unsigned long last_compression_check_time = 0;
+    
+    
+    
 
     if ((millis() - last_compression_check_time) > 1000){
       float time_average = 0;
@@ -1075,9 +1097,12 @@ void loop()
 //-------------------------------------------------------------------------------------------------------
 
 #ifdef FEATURE_STRAIGHT_KEY
-  void service_straight_key(){
+  long service_straight_key(){
 
     static byte last_straight_key_state = 0;
+    
+  
+    
 
     if (digitalRead(pin_straight_key) == STRAIGHT_KEY_ACTIVE_STATE){
       if (!last_straight_key_state){
@@ -1097,6 +1122,344 @@ void loop()
         last_straight_key_state = 0;
       }
     }
+
+
+//zzzzzzzz
+
+  #if defined(FEATURE_STRAIGHT_KEY_DECODE)
+
+    static unsigned long last_transition_time = 0;
+    static unsigned long last_decode_time = 0;
+    static byte last_state = 0;
+    static int decode_elements[16];                  // this stores received element lengths in mS (positive = tone, minus = no tone)
+    static byte decode_element_pointer = 0;
+    static float decode_element_tone_average = 0;
+    static float decode_element_no_tone_average = 0;
+    static int no_tone_count = 0;
+    static int tone_count = 0;
+    byte decode_it_flag = 0;
+    
+    int element_duration = 0;
+    static float decoder_wpm = configuration.wpm;
+    long decode_character = 0;
+    static byte space_sent = 0;
+    #if defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_STRAIGHT_KEY_ECHO)
+      static byte screen_column = 0;
+      static int last_printed_decoder_wpm = 0;
+    #endif
+    
+    #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
+      static byte cw_keyboard_no_space = 0;
+      char cw_keyboard_character_to_send;
+      static byte cw_keyboard_backspace_flag = 0;
+    #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)       
+
+   
+    if  (last_transition_time == 0) { 
+      if (last_straight_key_state == 1) {  // is this our first tone?
+        last_transition_time = millis();
+        last_state = 1;
+        
+        #ifdef FEATURE_SLEEP
+          last_activity_time = millis(); 
+        #endif //FEATURE_SLEEP
+        
+      } else {
+        
+          if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))) { // should we send a space?
+             #if defined(FEATURE_SERIAL) && defined(FEATURE_STRAIGHT_KEY_ECHO)
+               #ifdef FEATURE_COMMAND_LINE_INTERFACE
+                 primary_serial_port->write(32);
+                 screen_column++;
+               #endif //FEATURE_COMMAND_LINE_INTERFACE
+             #endif //FEATURE_SERIAL
+             #ifdef FEATURE_DISPLAY
+               display_scroll_print_char(' ');
+             #endif //FEATURE_DISPLAY
+             space_sent = 1;
+             
+            #if defined(FEATURE_CW_COMPUTER_KEYBOARD)
+              if (!cw_keyboard_no_space){
+                Keyboard.write(' ');
+                #ifdef DEBUG_CW_COMPUTER_KEYBOARD
+                  debug_serial_port->println("service_straight_key: Keyboard.write: <space>");
+                #endif //DEBUG_CW_COMPUTER_KEYBOARD 
+              }
+              cw_keyboard_no_space = 0;   
+            #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)    
+                
+          }// should we send a space?
+      }
+    } else {
+      if (last_straight_key_state != last_state) {
+        // we have a transition 
+        element_duration = millis() - last_transition_time;
+        if (element_duration > CW_DECODER_NOISE_FILTER) {                                    // filter out noise
+          if (last_straight_key_state == 1) {  // we have a tone
+            decode_elements[decode_element_pointer] = (-1 * element_duration);  // the last element was a space, so make it negative
+            no_tone_count++;
+            if (decode_element_no_tone_average == 0) {
+              decode_element_no_tone_average = element_duration;
+            } else {
+              decode_element_no_tone_average = (element_duration + decode_element_no_tone_average) / 2;
+            }
+            decode_element_pointer++;
+            last_state = 1;
+          } else {  // we have no tone
+            decode_elements[decode_element_pointer] = element_duration;  // the last element was a tone, so make it positive 
+            tone_count++;       
+            if (decode_element_tone_average == 0) {
+              decode_element_tone_average = element_duration;
+            } else {
+              decode_element_tone_average = (element_duration + decode_element_tone_average) / 2;
+            }
+            last_state = 0;
+            decode_element_pointer++;
+          }
+          last_transition_time = millis();
+          if (decode_element_pointer == 16) { decode_it_flag = 1; }  // if we've filled up the array, go ahead and decode it
+        }
+        
+        
+      } else {
+        // no transition
+        element_duration = millis() - last_transition_time;
+        if (last_state == 0)  {
+          // we're still high (no tone) - have we reached character space yet?        
+          //if ((element_duration > (decode_element_no_tone_average * 2.5)) || (element_duration > (decode_element_tone_average * 2.5))) {
+          if (element_duration > (float(1200/decoder_wpm)*CW_DECODER_SPACE_DECODE_THRESH)) {
+            decode_it_flag = 1;
+          }
+        } else {
+          // have we had tone for an outrageous amount of time?  
+        }
+      }
+     }
+    
+   
+   
+    if (decode_it_flag) {                      // are we ready to decode the element array?
+
+      // adjust the decoder wpm based on what we got
+      
+      if ((no_tone_count > 0) && (tone_count > 1)){ // NEW
+      
+        if (decode_element_no_tone_average > 0) {
+          if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 5) {
+            decoder_wpm = (decoder_wpm + (1200/decode_element_no_tone_average))/2;
+          } else {
+            if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 10) {
+              decoder_wpm = (decoder_wpm + decoder_wpm + (1200/decode_element_no_tone_average))/3;
+            } else {
+              if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 20) {
+                decoder_wpm = (decoder_wpm + decoder_wpm + decoder_wpm + (1200/decode_element_no_tone_average))/4;    
+              }      
+            }
+          }
+        }
+      
+      
+      } // NEW
+      
+      #ifdef DEBUG_FEATURE_STRAIGHT_KEY_ECHO
+        if (abs(decoder_wpm - last_printed_decoder_wpm) > 0.9) {
+          debug_serial_port->print("<");
+          debug_serial_port->print(int(decoder_wpm));
+          debug_serial_port->print(">");
+          last_printed_decoder_wpm = decoder_wpm;
+        }
+      #endif //DEBUG_FEATURE_STRAIGHT_KEY_ECHO
+      
+      for (byte x = 0;x < decode_element_pointer; x++) {
+        if (decode_elements[x] > 0) {  // is this a tone element?          
+          // we have no spaces to time from, use the current wpm
+          if ((decode_elements[x]/(1200/decoder_wpm)) < 2.1 ) {  // changed from 1.3 to 2.1 2015-05-12
+            decode_character = (decode_character * 10) + 1; // we have a dit
+          } else {
+            decode_character = (decode_character * 10) + 2; // we have a dah
+          }  
+        }
+        #ifdef DEBUG_FEATURE_STRAIGHT_KEY_ECHO
+          debug_serial_port->print(F("service_straight_key: decode_elements["));
+          debug_serial_port->print(x);
+          debug_serial_port->print(F("]: "));
+          debug_serial_port->println(decode_elements[x]);
+        #endif //DEBUG_FEATURE_STRAIGHT_KEY_ECHO
+      }
+
+      #ifdef DEBUG_FEATURE_STRAIGHT_KEY_ECHO
+        debug_serial_port->print(F("service_straight_key: decode_element_tone_average: "));
+        debug_serial_port->println(decode_element_tone_average);
+        debug_serial_port->print(F("service_straight_key: decode_element_no_tone_average: "));
+        debug_serial_port->println(decode_element_no_tone_average);
+        debug_serial_port->print(F("service_straight_key: decode_element_no_tone_average wpm: "));
+        debug_serial_port->println(1200/decode_element_no_tone_average);
+        debug_serial_port->print(F("service_straight_key: decoder_wpm: "));
+        debug_serial_port->println(decoder_wpm);
+        debug_serial_port->print(F("service_straight_key: decode_character: "));
+        debug_serial_port->println(decode_character);
+      #endif //DEBUG_FEATURE_STRAIGHT_KEY_ECHO
+
+      #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_STRAIGHT_KEY_ECHO)
+        if (cli_straight_key_echo){
+          primary_serial_port->write(convert_cw_number_to_ascii(decode_character));
+          #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+            secondary_serial_port->write(convert_cw_number_to_ascii(decode_character));
+          #endif
+          screen_column++;
+        }
+      #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
+      #ifdef FEATURE_DISPLAY
+        if (cli_straight_key_echo){display_scroll_print_char(convert_cw_number_to_ascii(decode_character));}
+      #endif //FEATURE_DISPLAY
+        
+      #if defined(FEATURE_CW_COMPUTER_KEYBOARD)       
+        switch (decode_character){
+          case 111111:
+          case 1111111:
+          case 11111111:
+          case 111111111:
+            Keyboard.write(KEY_BACKSPACE); // backspace
+            cw_keyboard_no_space = 1;
+            break;
+          case 1212:  // prosign AA
+            Keyboard.write(KEY_RETURN);
+            cw_keyboard_no_space = 1;   
+            break;
+          case 211222: // prosign DO
+            Keyboard.write(KEY_CAPS_LOCK);
+            #ifdef OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
+              if (cw_keyboard_capslock_on){
+                beep();delay(100);
+                boop();
+                cw_keyboard_capslock_on = 0;
+              } else {
+                boop();
+                beep();
+                cw_keyboard_capslock_on = 1;
+              }
+            #endif //OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
+            cw_keyboard_no_space = 1;       
+            break;
+      
+          #ifdef OPTION_CW_KEYBOARD_ITALIAN  // courtesy of Giorgio IZ2XBZ
+            case 122121: // "@"
+              Keyboard.press(KEY_LEFT_ALT);
+              Keyboard.write(59);
+              Keyboard.releaseAll();
+              break;
+            case 112211:// "?"
+              Keyboard.write(95);
+              break;
+            case 11221: // "!"
+              Keyboard.write(33);
+              break;
+            case 21121: // "/"
+              Keyboard.write(38);
+              break;
+            case 21112: // "=" or "BT"
+              Keyboard.write(41);  
+              break;
+            case 12212: //à
+              Keyboard.write(39);  
+              break;
+            case 11211: //è
+              Keyboard.write(91);  
+              break;
+            case 12221: //ì
+              Keyboard.write(61);  
+              break;
+            case 2221: //ò
+              Keyboard.write(59);  
+              break;
+              case 1122: //ù
+              Keyboard.write(92);  
+              break;
+            case 21221: // (
+              Keyboard.write(42);  
+              break;
+            case 212212: // )
+              Keyboard.write(40);  
+              break;
+            case 12111: // &
+              Keyboard.write(94);  
+              break;
+            case 222111: //:
+              Keyboard.write(62);  
+              break;
+            case 212121: //;
+              Keyboard.write(60);  
+            break;
+              case 12121: //+
+              Keyboard.write(93);  
+              break;
+            case 211112: // -
+              Keyboard.write(47);  
+              break;   
+          #endif //OPTION_CW_KEYBOARD_ITALIAN
+            
+          default:
+            cw_keyboard_character_to_send = convert_cw_number_to_ascii(decode_character);
+            if ((cw_keyboard_character_to_send > 64) && (cw_keyboard_character_to_send < 91)) {cw_keyboard_character_to_send = cw_keyboard_character_to_send + 32;}
+            if (cw_keyboard_character_to_send=='*'){
+              cw_keyboard_no_space = 1;
+              #ifdef OPTION_UNKNOWN_CHARACTER_ERROR_TONE
+                boop();
+              #endif //OPTION_UNKNOWN_CHARACTER_ERROR_TONE
+            } else {
+              if (!((cw_keyboard_backspace_flag) && ((decode_character == 1) || (decode_character == 11) || (decode_character == 111) || (decode_character == 1111) || (decode_character == 11111)))){
+                Keyboard.write(char(cw_keyboard_character_to_send));
+              }
+              cw_keyboard_backspace_flag = 0;
+            }
+            break;
+            
+        } //switch (decode_character)
+          
+        #ifdef DEBUG_CW_COMPUTER_KEYBOARD
+          debug_serial_port->print("service_straight_key: Keyboard.write: ");
+          debug_serial_port->write(character_to_send);
+          debug_serial_port->println();
+        #endif //DEBUG_CW_COMPUTER_KEYBOARD
+       
+
+      #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD) 
+
+      
+      // reinitialize everything
+      last_transition_time = 0;
+      last_decode_time = millis();
+      decode_element_pointer = 0; 
+      decode_element_tone_average = 0;
+      decode_element_no_tone_average = 0;
+      space_sent = 0;
+      no_tone_count = 0;
+      tone_count = 0;      
+      
+    } //if (decode_it_flag)
+    
+    #if defined(FEATURE_SERIAL) && defined(FEATURE_STRAIGHT_KEY_ECHO)
+      #ifdef FEATURE_COMMAND_LINE_INTERFACE
+      if ((screen_column > CW_DECODER_SCREEN_COLUMNS) && (cli_straight_key_echo)) {    
+        #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+          secondary_serial_port->println();
+        #else
+          primary_serial_port->println();
+        #endif    
+        screen_column = 0;
+      }
+      #endif //FEATURE_COMMAND_LINE_INTERFACE
+    #endif //FEATURE_SERIAL
+
+  return(decode_character);
+
+  #endif //FEATURE_STRAIGHT_KEY_DECODE
+
+
+  
+
+
 
 
   }
@@ -1227,7 +1590,7 @@ void check_sleep(){
 
     sleep_mode();
 
-    // ZZZZZZZZ - shhhhh! we are asleep here !!
+    // shhhhh! we are asleep here !!
 
     sleep_disable();
     last_activity_time = millis();     
@@ -7417,7 +7780,12 @@ void print_serial_help(HardwareSerial * port_to_use){
     port_to_use->println(F("\\!##\t\t: Repeat play memory"));
     port_to_use->println(F("\\|####\t\t: Set memory repeat (milliseconds)"));
   #endif //FEATURE_MEMORIES
-  port_to_use->println(F("\\*\t\t: Toggle paddle echo"));
+  #if defined(FEATURE_PADDLE_ECHO)
+    port_to_use->println(F("\\*\t\t: Toggle paddle echo"));
+  #endif //FEATURE_PADDLE_ECHO
+  #if defined(FEATURE_STRAIGHT_KEY_ECHO)
+    port_to_use->println(F("\\`\t\t: Toggle straight key echo"));
+  #endif //FEATURE_STRAIGHT_KEY_ECHO  
   port_to_use->println(F("\\^\t\t: Toggle wait for carriage return to send CW / send CW immediately"));
   port_to_use->println(F("\\~\t\t: Reset unit"));
   #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
@@ -7458,6 +7826,15 @@ void process_serial_command(HardwareSerial * port_to_use) {
         cli_paddle_echo = 1;
       }
       break;
+    #if defined(FEATURE_STRAIGHT_KEY_ECHO)
+      case '`':
+        if (cli_straight_key_echo) {
+          cli_straight_key_echo = 0;
+        } else {
+          cli_straight_key_echo = 1;
+        }    
+        break;
+    #endif //FEATURE_STRAIGHT_KEY_ECHO
     case 43: cli_prosign_flag = 1; break;
     #if defined(FEATURE_SERIAL_HELP)
       case 63: print_serial_help(port_to_use); break;                         // ? = print help
@@ -7674,10 +8051,7 @@ void service_paddle_echo()
   static byte paddle_echo_space_sent = 1;
   byte character_to_send = 0;
   static byte no_space = 0;
-  
-  #if defined(FEATURE_CW_COMPUTER_KEYBOARD) && defined(OPTION_CW_KEYBOARD_CAPSLOCK_BEEP)
-    static byte capslock_on = 0;
-  #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD) && defined(OPTION_CW_KEYBOARD_CAPSLOCK_BEEP)
+
   
   #if defined(FEATURE_DISPLAY) && defined(OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS)
     byte ascii_temp = 0;
@@ -7691,6 +8065,8 @@ void service_paddle_echo()
   
   
   if ((paddle_echo_buffer) && (millis() > paddle_echo_buffer_decode_time)) {
+
+
     #if defined(FEATURE_CW_COMPUTER_KEYBOARD)
     switch (paddle_echo_buffer){
       case 111111:
@@ -7707,14 +8083,14 @@ void service_paddle_echo()
       case 211222: // prosign DO
         Keyboard.write(KEY_CAPS_LOCK);
         #ifdef OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
-          if (capslock_on){
+          if (cw_keyboard_capslock_on){
             beep();delay(100);
             boop();
-            capslock_on = 0;
+            cw_keyboard_capslock_on = 0;
           } else {
             boop();
             beep();
-            capslock_on = 1;
+            cw_keyboard_capslock_on = 1;
           }
         #endif //OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
         no_space = 1;       
@@ -7798,7 +8174,7 @@ void service_paddle_echo()
         debug_serial_port->println();
       #endif //DEBUG_CW_COMPUTER_KEYBOARD
     #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
-    
+
  
     #ifdef FEATURE_DISPLAY
       if (lcd_paddle_echo){
@@ -9570,10 +9946,10 @@ void program_memory(int memory_number)
   }
   
   #ifdef FEATURE_DISPLAY
-  String lcd_print_string;
-  lcd_print_string.concat("Pgm Memory ");
-  lcd_print_string.concat(memory_number+1);
-  lcd_center_print_timed(lcd_print_string, 0, default_display_msg_delay);
+    String lcd_print_string;
+    lcd_print_string.concat("Pgm Memory ");
+    lcd_print_string.concat(memory_number+1);
+    lcd_center_print_timed(lcd_print_string, 0, default_display_msg_delay);
   #endif
 
   send_dit(AUTOMATIC_SENDING);
@@ -9587,24 +9963,35 @@ void program_memory(int memory_number)
   byte space_count = 0;
   
   #ifdef FEATURE_MEMORY_MACROS
-  byte macro_flag = 0;
+    byte macro_flag = 0;
   #endif //FEATURE_MEMORY_MACROS
+  
+  #if defined(FEATURE_STRAIGHT_KEY)
+    long straight_key_decoded_character = 0;
+  #endif
 
   dit_buffer = 0;
   dah_buffer = 0;
-  #ifdef FEATURE_COMMAND_BUTTONS
-  while ((paddle_pin_read(paddle_left) == HIGH) && (paddle_pin_read(paddle_right) == HIGH) && (!analogbuttonread(0))) { }  // loop until user starts sending or hits the button
+  
+  #if defined(FEATURE_COMMAND_BUTTONS) && !defined(FEATURE_STRAIGHT_KEY)
+    while ((paddle_pin_read(paddle_left) == HIGH) && (paddle_pin_read(paddle_right) == HIGH) && (!analogbuttonread(0))) { }  // loop until user starts sending or hits the button
+  #endif
+
+  #if defined(FEATURE_COMMAND_BUTTONS) && defined(FEATURE_STRAIGHT_KEY)
+    while ((paddle_pin_read(paddle_left) == HIGH) && (paddle_pin_read(paddle_right) == HIGH) && (!analogbuttonread(0)) && (digitalRead(pin_straight_key) == HIGH)) { }  // loop until user starts sending or hits the button
   #endif
 
   while (loop2) {
 
     #ifdef DEBUG_MEMORY_WRITE
-    debug_serial_port->println(F("program_memory: entering loop2\r"));
+      debug_serial_port->println(F("program_memory: entering loop2\r"));
     #endif
 
     cwchar = 0;
     paddle_hit = 0;
     loop1 = 1;
+    
+
 
     while (loop1) {
        check_paddles();
@@ -9628,9 +10015,25 @@ void program_memory(int memory_number)
            debug_serial_port->write("_");
          #endif
        }
-       if ((paddle_hit) && (millis() > (last_element_time + (float(600/configuration.wpm) * length_letterspace)))) {   // this character is over
-         loop1 = 0;
-       }
+       
+//zzzzzz       
+       #if defined(FEATURE_STRAIGHT_KEY)
+         straight_key_decoded_character = service_straight_key();
+         if (straight_key_decoded_character != 0){
+           cwchar = straight_key_decoded_character;
+           paddle_hit = 1;
+         }
+       #endif       
+       
+       #if !defined(FEATURE_STRAIGHT_KEY)
+         if ((paddle_hit) && (millis() > (last_element_time + (float(600/configuration.wpm) * length_letterspace)))) {   // this character is over
+           loop1 = 0;
+         }
+       #else
+         if (((paddle_hit) && (millis() > (last_element_time + (float(600/configuration.wpm) * length_letterspace)))) || (straight_key_decoded_character != 0))  {   // this character is over
+           loop1 = 0;
+         }             
+       #endif
 
 
        #ifdef FEATURE_MEMORY_MACROS
@@ -11651,4 +12054,6 @@ void service_ptt_interlock(){
 #endif //FEATURE_PTT_INTERLOCK
 
 
+
+//---------------------------------------------------------------------
 
