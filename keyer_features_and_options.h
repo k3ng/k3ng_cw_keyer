@@ -1,10 +1,10 @@
 // compile time features and options - comment or uncomment to add or delete features
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
-#define FEATURE_COMMAND_BUTTONS
-#define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
-#define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
-#define FEATURE_MEMORY_MACROS
+// #define FEATURE_COMMAND_BUTTONS
+// #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
+// #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
+// #define FEATURE_MEMORY_MACROS
 // #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation) (this no longer requires FEATURE_SERIAL)
 // #define FEATURE_BEACON
 // #define FEATURE_CALLSIGN_RECEIVE_PRACTICE
@@ -35,7 +35,7 @@
 // #define FEATURE_PTT_INTERLOCK 
 // #define FEATURE_QLF
 // #define FEATURE_EEPROM_E24C1024
-#define FEATURE_STRAIGHT_KEY
+// #define FEATURE_STRAIGHT_KEY
 // #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
 // #define FEATURE_PADDLE_ECHO
 // #define FEATURE_STRAIGHT_KEY_ECHO

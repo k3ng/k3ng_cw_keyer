@@ -419,10 +419,13 @@ New fetures in this stable release:
       #define cli_straight_key_echo_on_at_boot 1
       FEATURE_STRAIGHT_KEY now works with FEATURE_CW_COMPUTER_KEYBOARD
       Straight Key can now program memories
+    
+    2.2.2015101401
+      Fixed compile bug with FEATURE_DISPLAY and cli_straight_key_echo
       
 */
 
-#define CODE_VERSION "2.2.2015101302"
+#define CODE_VERSION "2.2.2015101401"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -1310,7 +1313,7 @@ void loop()
         }
       #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 
-      #ifdef FEATURE_DISPLAY
+      #if defined(FEATURE_DISPLAY) && defined(FEATURE_STRAIGHT_KEY_ECHO)
         if (cli_straight_key_echo){display_scroll_print_char(convert_cw_number_to_ascii(decode_character));}
       #endif //FEATURE_DISPLAY
         
