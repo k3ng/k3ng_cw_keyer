@@ -44,6 +44,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+// K3NG Version 2015101401  
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
@@ -221,8 +223,8 @@ const PROGMEM unsigned char scan2ascii_noshift[] =
 	0, 0, 0, PS2_F7 };
   // with shift
 const PROGMEM unsigned char scan2ascii_shift[] = 	
-	{0, PS2_F9, 0, PS2_F5, PS2_F3, PS2_F1, PS2_F2, PS2_F12,
-	0, PS2_F10, PS2_F8, PS2_F6, PS2_F4, PS2_TAB, PS2_DEGREE_SIGN, 0,
+	{0, PS2_F9_SHIFT, 0, PS2_F5_SHIFT, PS2_F3_SHIFT, PS2_F1_SHIFT, PS2_F2_SHIFT, PS2_F12_SHIFT,
+	0, PS2_F10_SHIFT, PS2_F8_SHIFT, PS2_F6_SHIFT, PS2_F4_SHIFT, PS2_TAB_SHIFT, PS2_DEGREE_SIGN, 0,
 	0, 0 /*Lalt*/, 0 /*Lshift*/, 0, 0 /*Lctrl*/, 'Q', '!', 0,
 	0, 0, 'Y', 'S', 'A', 'W', '"', 0,
 	0, 'C', 'X', 'D', 'E', '$', PS2_SECTION_SIGN, 0,
@@ -236,8 +238,8 @@ const PROGMEM unsigned char scan2ascii_shift[] =
 	0, '>', 0, 0, 0, 0, PS2_BACKSPACE, 0,
 	0, '1', 0, '4', '7', 0, 0, 0,
 	'0', '.', '2', '5', '6', '8', PS2_ESC, 0 /*NumLock*/,
-	PS2_F11, '+', '3', '-', '*', '9', PS2_SCROLL, 0,
-	0, 0, 0, PS2_F7 };
+	PS2_F11_SHIFT, '+', '3', '-', '*', '9', PS2_SCROLL, 0,
+	0, 0, 0, PS2_F7_SHIFT };
 const PROGMEM unsigned char scan2ascii_ctrl[] =  // this needs to be updated!!! (it is copy of US)
 	{0, PS2_F9_CTRL, 0, PS2_F5_CTRL, PS2_F3_CTRL, PS2_F1_CTRL, PS2_F2_CTRL, PS2_F12_CTRL,
 	0, PS2_F10_CTRL, PS2_F8_CTRL, PS2_F6_CTRL, PS2_F4_CTRL, PS2_TAB_SHIFT, '~', 0,
@@ -254,12 +256,12 @@ const PROGMEM unsigned char scan2ascii_ctrl[] =  // this needs to be updated!!! 
 	0, 0, 0, 0, 0, 0, PS2_BACKSPACE_SHIFT, 0,
 	0, '1', 0, '4', '7', 0, 0, 0,
 	'0', '.', '2', '5', '6', '8', PS2_ESC, 0 /*NumLock*/,
-	PS2_F11_SHIFT, '+', '3', '-', '*', '9', PS2_SCROLL_SHIFT, 0,
-	0, 0, 0, PS2_F7_SHIFT };	
+	PS2_F11_CTRL, '+', '3', '-', '*', '9', PS2_SCROLL_SHIFT, 0,
+	0, 0, 0, PS2_F7_CTRL};	
   // with altgr
 const PROGMEM unsigned char scan2ascii_alt[] = 	
-	{0, PS2_F9, 0, PS2_F5, PS2_F3, PS2_F1, PS2_F2, PS2_F12,
-	0, PS2_F10, PS2_F8, PS2_F6, PS2_F4, PS2_TAB, 0, 0,
+	{0, PS2_F9_ALT, 0, PS2_F5_ALT, PS2_F3_ALT, PS2_F1_ALT, PS2_F2_ALT, PS2_F12_ALT,
+	0, PS2_F10_ALT, PS2_F8_ALT, PS2_F6_ALT, PS2_F4_ALT, PS2_TAB, 0, 0,
 	0, 0 /*Lalt*/, 0 /*Lshift*/, 0, 0 /*Lctrl*/, '@', 0, 0,
 	0, 0, 0, 0, 0, 0, PS2_SUPERSCRIPT_TWO, 0,
 	0, 0, 0, 0, PS2_CURRENCY_SIGN, 0, PS2_SUPERSCRIPT_THREE, 0,
@@ -273,8 +275,8 @@ const PROGMEM unsigned char scan2ascii_alt[] =
 	0, '|', 0, 0, 0, 0, PS2_BACKSPACE, 0,
 	0, '1', 0, '4', '7', 0, 0, 0,
 	'0', '.', '2', '5', '6', '8', PS2_ESC, 0 /*NumLock*/,
-	PS2_F11, '+', '3', '-', '*', '9', PS2_SCROLL, 0,
-	0, 0, 0, PS2_F7 };
+	PS2_F11_ALT, '+', '3', '-', '*', '9', PS2_SCROLL, 0,
+	0, 0, 0, PS2_F7_ALT};
 #endif //OPTION_PS2_KEYBOARD_GERMAN
 
 	//--------------------------------------------------
@@ -301,8 +303,8 @@ const PROGMEM unsigned char scan2ascii_noshift[] =
 
   // with shift
 const PROGMEM unsigned char scan2ascii_shift[] = 	
-	{0, PS2_F9, 0, PS2_F5, PS2_F3, PS2_F1, PS2_F2, PS2_F12,
-	0, PS2_F10, PS2_F8, PS2_F6, PS2_F4, PS2_TAB, 0, 0,
+	{0, PS2_F9_SHIFT, 0, PS2_F5_SHIFT, PS2_F3_SHIFT, PS2_F1_SHIFT, PS2_F2_SHIFT, PS2_F12_SHIFT,
+	0, PS2_F10_SHIFT, PS2_F8_SHIFT, PS2_F6_SHIFT, PS2_F4_SHIFT, PS2_TAB_SHIFT, 0, 0,
 	0, 0 /*Lalt*/, 0 /*Lshift*/, 0, 0 /*Lctrl*/, 'A', '1', 0,
 	0, 0, 'W', 'S', 'Q', 'Z', '2', 0,
 	0, 'C', 'X', 'D', 'E', '4', '3', 0,
@@ -316,11 +318,11 @@ const PROGMEM unsigned char scan2ascii_shift[] =
 	0, '>', 0, 0, 0, 0, PS2_BACKSPACE, 0,
 	0, '1', 0, '4', '7', 0, 0, 0,
 	'0', '.', '2', '5', '6', '8', PS2_ESC, 0 /*NumLock*/,
-	PS2_F11, '+', '3', '-', '*', '9', PS2_SCROLL, 0,
-	0, 0, 0, PS2_F7 };
+	PS2_F11_SHIFT, '+', '3', '-', '*', '9', PS2_SCROLL, 0,
+	0, 0, 0, PS2_F7_SHIFT};
 const PROGMEM unsigned char scan2ascii_ctrl[] =  // this needs to be updated!!! (it is copy of US)
 	{0, PS2_F9_CTRL, 0, PS2_F5_CTRL, PS2_F3_CTRL, PS2_F1_CTRL, PS2_F2_CTRL, PS2_F12_CTRL,
-	0, PS2_F10_CTRL, PS2_F8_CTRL, PS2_F6_CTRL, PS2_F4_CTRL, PS2_TAB_SHIFT, '~', 0,
+	0, PS2_F10_CTRL, PS2_F8_CTRL, PS2_F6_CTRL, PS2_F4_CTRL, PS2_TAB, '~', 0,
 	0, 0 /*Lalt*/, 0 /*Lshift*/, 0, 0 /*Lctrl*/, 'Q', '!', 0,
 	0, 0, PS2_Z_CTRL, 'S', PS2_A_CTRL, PS2_W_CTRL, '@', 0,
 	0, 'C', 'X', PS2_D_CTRL, PS2_E_CTRL, '$', '#', 0,
@@ -334,12 +336,12 @@ const PROGMEM unsigned char scan2ascii_ctrl[] =  // this needs to be updated!!! 
 	0, 0, 0, 0, 0, 0, PS2_BACKSPACE_SHIFT, 0,
 	0, '1', 0, '4', '7', 0, 0, 0,
 	'0', '.', '2', '5', '6', '8', PS2_ESC, 0 /*NumLock*/,
-	PS2_F11_SHIFT, '+', '3', '-', '*', '9', PS2_SCROLL_SHIFT, 0,
-	0, 0, 0, PS2_F7_SHIFT };	
+	PS2_F11_CTRL, '+', '3', '-', '*', '9', PS2_SCROLL_SHIFT, 0,
+	0, 0, 0, PS2_F7_CTRL};	
 const PROGMEM unsigned char scan2ascii_alt[] = 
   // with altgr
-	{0, PS2_F9, 0, PS2_F5, PS2_F3, PS2_F1, PS2_F2, PS2_F12,
-	0, PS2_F10, PS2_F8, PS2_F6, PS2_F4, PS2_TAB, 0, 0,
+	{0, PS2_F9_ALT, 0, PS2_F5_ALT, PS2_F3_ALT, PS2_F1_ALT, PS2_F2_ALT, PS2_F12_ALT,
+	0, PS2_F10_ALT, PS2_F8_ALT, PS2_F6_ALT, PS2_F4_ALT, PS2_TAB, 0, 0,
 	0, 0 /*Lalt*/, 0 /*Lshift*/, 0, 0 /*Lctrl*/, '@', 0, 0,
 	0, 0, 0, 0, 0, 0, '~', 0,
 	0, 0, 0, 0, 0 /*PS2_EURO_SIGN*/, '{', '#', 0,
@@ -353,8 +355,8 @@ const PROGMEM unsigned char scan2ascii_alt[] =
 	0, '|', 0, 0, 0, 0, PS2_BACKSPACE, 0,
 	0, '1', 0, '4', '7', 0, 0, 0,
 	'0', '.', '2', '5', '6', '8', PS2_ESC, 0 /*NumLock*/,
-	PS2_F11, '+', '3', '-', '*', '9', PS2_SCROLL, 0,
-	0, 0, 0, PS2_F7 };
+	PS2_F11_ALT, '+', '3', '-', '*', '9', PS2_SCROLL, 0,
+	0, 0, 0, PS2_F7_ALT};
 
 
 #endif //OPTION_PS2_KEYBOARD_FRENCH

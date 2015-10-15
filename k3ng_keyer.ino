@@ -422,10 +422,13 @@ New fetures in this stable release:
     
     2.2.2015101401
       Fixed compile bug with FEATURE_DISPLAY and cli_straight_key_echo
+
+    2.2.2015101402
+      K3NG_PS2Keyboard Library: Fixed issues with CTRL and ALT key combinations with German and French keyboards   
       
 */
 
-#define CODE_VERSION "2.2.2015101401"
+#define CODE_VERSION "2.2.2015101402"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
