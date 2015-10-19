@@ -424,11 +424,14 @@ New fetures in this stable release:
       Fixed compile bug with FEATURE_DISPLAY and cli_straight_key_echo
 
     2.2.2015101402
-      K3NG_PS2Keyboard Library: Fixed issues with CTRL and ALT key combinations with German and French keyboards   
+      K3NG_PS2Keyboard Library: Fixed issues with CTRL and ALT key combinations with German and French keyboards 
+
+    2.2.2015101801
+      OPTION_WINKEY_IGNORE_LOWERCASE    
       
 */
 
-#define CODE_VERSION "2.2.2015101402"
+#define CODE_VERSION "2.2.2015101801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -6789,20 +6792,30 @@ void service_winkey(byte action) {
 
   if (action == SERVICE_SERIAL_BYTE) {
     #ifdef DEBUG_WINKEY
-    debug_serial_port->print("Winkey Port RX: ");
-    if ((incoming_serial_byte != 13) && (incoming_serial_byte != 9) && (incoming_serial_byte != 10)){
-      debug_serial_port->write(incoming_serial_byte);
-    } else {
-      debug_serial_port->print(" ");
-    }
-    debug_serial_port->print(" [");
-    debug_serial_port->print(incoming_serial_byte);
-    debug_serial_port->println("]");
+      debug_serial_port->print("Winkey Port RX: ");
+      if ((incoming_serial_byte != 13) && (incoming_serial_byte != 9) && (incoming_serial_byte != 10)){
+        debug_serial_port->write(incoming_serial_byte);
+      } else {
+        debug_serial_port->print(" ");
+      }
+      debug_serial_port->print(" [");
+      debug_serial_port->print(incoming_serial_byte);
+      debug_serial_port->println("]");
     #endif //DEBUG_WINKEY
 
     winkey_last_activity = millis();
     if (winkey_status == WINKEY_NO_COMMAND_IN_PROGRESS) {
+
+      #if !defined(OPTION_WINKEY_IGNORE_LOWERCASE)
       if (incoming_serial_byte > 31) {
+      #else
+      if ((incoming_serial_byte > 31) && (incoming_serial_byte <97)) {
+      #endif
+
+        #if !defined(OPTION_WINKEY_IGNORE_LOWERCASE)
+        if ((incoming_serial_byte > 96) && (incoming_serial_byte < 123)){incoming_serial_byte = incoming_serial_byte - 32;}
+        #endif //!defined(OPTION_WINKEY_IGNORE_LOWERCASE)
+      
         byte serial_buffer_position_to_overwrite;
         if (winkey_buffer_pointer > 0) {
           serial_buffer_position_to_overwrite = send_buffer_bytes - (winkey_buffer_counter - winkey_buffer_pointer) - 1;
@@ -6811,20 +6824,20 @@ void service_winkey(byte action) {
           }
           winkey_buffer_pointer++;
         } else {
-            #ifdef OPTION_WINKEY_EXTENDED_COMMANDS
+          #ifdef OPTION_WINKEY_EXTENDED_COMMANDS
             if (incoming_serial_byte == 36) {         // Use the $ sign to escape command
               winkey_status = WINKEY_EXTENDED_COMMAND;
             } else {
-            #endif //OPTION_WINKEY_EXTENDED_COMMANDS
-              add_to_send_buffer(incoming_serial_byte);
-              #if defined(OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT) && defined(FEATURE_MEMORIES)
-              play_memory_prempt = 1;
-              repeat_memory = 255;
-              #endif
-              winkey_buffer_counter++;
-            #ifdef OPTION_WINKEY_EXTENDED_COMMANDS
-            }
-            #endif //OPTION_WINKEY_EXTENDED_COMMANDS
+          #endif //OPTION_WINKEY_EXTENDED_COMMANDS
+          add_to_send_buffer(incoming_serial_byte);
+          #if defined(OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT) && defined(FEATURE_MEMORIES)
+            play_memory_prempt = 1;
+            repeat_memory = 255;
+          #endif
+          winkey_buffer_counter++;
+          #ifdef OPTION_WINKEY_EXTENDED_COMMANDS
+           }
+          #endif //OPTION_WINKEY_EXTENDED_COMMANDS
         }
 
         if (!winkey_sending) {
