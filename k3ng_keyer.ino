@@ -430,11 +430,14 @@ New fetures in this stable release:
       OPTION_WINKEY_IGNORE_LOWERCASE  
 
     2.2.2015111501
-      Fixed storage of KN prosign in memory (Thank Stefan, DL1SMF)  
+      Fixed storage of KN prosign in memory (Thank Stefan, DL1SMF)
+
+    2.2.2015120401  
+      Fixed compiler warning: large integer implicitly truncated to unsigned type - jump_back_to_y = 99999;
       
 */
 
-#define CODE_VERSION "2.2.2015111501"
+#define CODE_VERSION "2.2.2015120401"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -9434,7 +9437,7 @@ void check_button0()
 void play_memory(byte memory_number)
 {
   
-  unsigned int jump_back_to_y = 99999;
+  unsigned int jump_back_to_y = 9999;
   byte jump_back_to_memory_number = 255;
 
   if (memory_number > (number_of_memories - 1)) {
@@ -9895,14 +9898,14 @@ void play_memory(byte memory_number)
         }
         
         // if we had an inserted memory, jump back to the original one
-        if (/*(y== (memory_end(memory_number)+1)) &&*/ (jump_back_to_y < 99999) && (jump_back_to_memory_number < 255)) {
+        if (/*(y== (memory_end(memory_number)+1)) &&*/ (jump_back_to_y < 9999) && (jump_back_to_memory_number < 255)) {
           #ifdef DEBUG_PLAY_MEMORY
             debug_serial_port->print(F("\nplay_memory: jump back to original memory:"));
             debug_serial_port->println(jump_back_to_memory_number);
           #endif
           y = jump_back_to_y;
           memory_number = jump_back_to_memory_number;
-          jump_back_to_y = 99999;
+          jump_back_to_y = 9999;
           jump_back_to_memory_number = 255;
         } else {        
         
