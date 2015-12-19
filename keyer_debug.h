@@ -26,7 +26,7 @@
 // #define DEBUG_USB_KEYBOARD
 // #define DEBUG_CAPACITIVE_PADDLE
 // #define DEBUG_DISPLAY_SCROLL_PRINT_CHAR
-#define DEBUG_WINKEY   // <- to use this you must have a multi-serial port Arduino and use FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+// #define DEBUG_WINKEY   // <- to use this you must have a multi-serial port Arduino and use FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
 // #define DEBUG_CW_COMPUTER_KEYBOARD
 // #define DEBUG_CW_DECODER_WITH_TONE
 // #define DEBUG_OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
