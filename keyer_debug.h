@@ -5,7 +5,7 @@
 // #define DEBUG_MEMORIES
 // #define DEBUG_PLAY_MEMORY
 // #define DEBUG_SEND_CHAR
-// #define DEBUG_MEMORY_WRITE
+#define DEBUG_MEMORY_WRITE
 // #define DEBUG_MEMORYCHECK
 // #define DEBUG_CAPTURE_COM_PORT
 // #define DEBUG_HELL_TEST

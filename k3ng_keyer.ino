@@ -434,10 +434,13 @@ New fetures in this stable release:
 
     2.2.2015120401  
       Fixed compiler warning: large integer implicitly truncated to unsigned type - jump_back_to_y = 99999;
+
+    2.2.2015121901
+      OPTION_PROSIGN_SUPPORT
       
 */
 
-#define CODE_VERSION "2.2.2015120401"
+#define CODE_VERSION "2.2.2015121901"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -1315,20 +1318,69 @@ void loop()
         debug_serial_port->println(decode_character);
       #endif //DEBUG_FEATURE_STRAIGHT_KEY_ECHO
 
-      #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_STRAIGHT_KEY_ECHO)
-        if (cli_straight_key_echo){
-          primary_serial_port->write(convert_cw_number_to_ascii(decode_character));
-          #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-            secondary_serial_port->write(convert_cw_number_to_ascii(decode_character));
-          #endif
-          screen_column++;
-        }
-      #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 
-      #if defined(FEATURE_DISPLAY) && defined(FEATURE_STRAIGHT_KEY_ECHO)
-        if (cli_straight_key_echo){display_scroll_print_char(convert_cw_number_to_ascii(decode_character));}
-      #endif //FEATURE_DISPLAY
-        
+      #if defined(OPTION_PROSIGN_SUPPORT)
+        byte cw_ascii_temp = convert_cw_number_to_ascii(decode_character);
+        static char * prosign_char = "";
+
+        if ((cw_ascii_temp > PROSIGN_START) && (cw_ascii_temp < PROSIGN_END)){  // if we have a prosign code, convert it to chars
+          prosign_char = convert_prosign(cw_ascii_temp);
+          cw_ascii_temp = 0;
+        }
+
+        #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_STRAIGHT_KEY_ECHO)
+          if (cli_straight_key_echo){
+            if (cw_ascii_temp){
+              primary_serial_port->write(cw_ascii_temp);
+            } else {
+              primary_serial_port->write(prosign_char[0]);
+              primary_serial_port->write(prosign_char[1]);
+            }
+            #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+              if (cw_ascii_temp){
+                secondary_serial_port->write(cw_ascii_temp);
+              } else {
+                secondary_serial_port->write(prosign_char[0]);
+                secondary_serial_port->write(prosign_char[1]);
+              }
+            #endif
+            screen_column++;
+          }
+        #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
+        #if defined(FEATURE_DISPLAY) && defined(FEATURE_STRAIGHT_KEY_ECHO)
+          if (cli_straight_key_echo){
+            if (cw_ascii_temp){
+              display_scroll_print_char(cw_ascii_temp);
+            } else {
+              display_scroll_print_char(prosign_char[0]);
+              display_scroll_print_char(prosign_char[1]);
+            }
+          }
+        #endif //FEATURE_DISPLAY        
+
+
+      #else //OPTION_PROSIGN_SUPPORT  
+
+        #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_STRAIGHT_KEY_ECHO)
+          if (cli_straight_key_echo){
+            primary_serial_port->write(convert_cw_number_to_ascii(decode_character));
+            #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+              secondary_serial_port->write(convert_cw_number_to_ascii(decode_character));
+            #endif
+            screen_column++;
+          }
+        #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
+        #if defined(FEATURE_DISPLAY) && defined(FEATURE_STRAIGHT_KEY_ECHO)
+          if (cli_straight_key_echo){display_scroll_print_char(convert_cw_number_to_ascii(decode_character));}
+        #endif //FEATURE_DISPLAY
+
+      #endif //OPTION_PROSIGN_SUPPORT
+ 
+
+
+
       #if defined(FEATURE_CW_COMPUTER_KEYBOARD)       
         switch (decode_character){
           case 111111:
@@ -5596,52 +5648,52 @@ void send_the_dits_and_dahs(char * cw_to_send){
 
 //-------------------------------------------------------------------------------------------------------
 
-void send_char(char cw_char, byte omit_letterspace)
+void send_char(byte cw_char, byte omit_letterspace)
 {
   #ifdef DEBUG_SEND_CHAR
-  debug_serial_port->print(F("send_char: called with cw_char:"));
-  debug_serial_port->print(cw_char);
-  if (omit_letterspace) {
-    debug_serial_port->print(F(" OMIT_LETTERSPACE"));
-  }
-  debug_serial_port->println();
+    debug_serial_port->print(F("send_char: called with cw_char:"));
+    debug_serial_port->print((byte)cw_char);
+    if (omit_letterspace) {
+      debug_serial_port->print(F(" OMIT_LETTERSPACE"));
+    }
+    debug_serial_port->println();
   #endif
 
 
   #ifdef FEATURE_SLEEP
-  last_activity_time = millis(); 
+    last_activity_time = millis(); 
   #endif //FEATURE_SLEEP
 
   if ((cw_char == 10) || (cw_char == 13)) { return; }  // don't attempt to send carriage return or line feed
 
   if (char_send_mode == CW) {
     switch (cw_char) {
-      case 'A': send_the_dits_and_dahs(".-");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case 'B': send_the_dits_and_dahs("-...");break;//send_dah(AUTOMATIC_SENDING); send_dits(3); break;
-      case 'C': send_the_dits_and_dahs("-.-.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'D': send_the_dits_and_dahs("-..");break;//send_dah(AUTOMATIC_SENDING); send_dits(2); break;
-      case 'E': send_the_dits_and_dahs(".");break;//send_dit(AUTOMATIC_SENDING); break;
-      case 'F': send_the_dits_and_dahs("..-.");break;//send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'G': send_the_dits_and_dahs("--.");break;//send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
-      case 'H': send_the_dits_and_dahs("....");break;//send_dits(4); break;
-      case 'I': send_the_dits_and_dahs("..");break;//send_dits(2); break;
-      case 'J': send_the_dits_and_dahs(".---");break;//send_dit(AUTOMATIC_SENDING); send_dahs(3); break;
-      case 'K': send_the_dits_and_dahs("-.-");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case 'L': send_the_dits_and_dahs(".-..");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); break;
-      case 'M': send_the_dits_and_dahs("--");break;//send_dahs(2); break;
-      case 'N': send_the_dits_and_dahs("-.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'O': send_the_dits_and_dahs("---");break;//send_dahs(3); break;
-      case 'P': send_the_dits_and_dahs(".--.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
-      case 'Q': send_the_dits_and_dahs("--.-");break;//send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case 'R': send_the_dits_and_dahs(".-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case 'S': send_the_dits_and_dahs("...");break;//send_dits(3); break;
-      case 'T': send_the_dits_and_dahs("-");break;//send_dah(AUTOMATIC_SENDING); break;
-      case 'U': send_the_dits_and_dahs("..-");break;//send_dits(2); send_dah(AUTOMATIC_SENDING); break;
-      case 'V': send_the_dits_and_dahs("...-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); break;
-      case 'W': send_the_dits_and_dahs(".--");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
-      case 'X': send_the_dits_and_dahs("-..-");break;//send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); break;
-      case 'Y': send_the_dits_and_dahs("-.--");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
-      case 'Z': send_the_dits_and_dahs("--..");break;//send_dahs(2); send_dits(2); break;
+      case 'A': send_the_dits_and_dahs(".-");break;
+      case 'B': send_the_dits_and_dahs("-...");break;
+      case 'C': send_the_dits_and_dahs("-.-.");break;
+      case 'D': send_the_dits_and_dahs("-..");break;
+      case 'E': send_the_dits_and_dahs(".");break;
+      case 'F': send_the_dits_and_dahs("..-.");break;
+      case 'G': send_the_dits_and_dahs("--.");break;
+      case 'H': send_the_dits_and_dahs("....");break;
+      case 'I': send_the_dits_and_dahs("..");break;
+      case 'J': send_the_dits_and_dahs(".---");break;
+      case 'K': send_the_dits_and_dahs("-.-");break;
+      case 'L': send_the_dits_and_dahs(".-..");break;
+      case 'M': send_the_dits_and_dahs("--");break;
+      case 'N': send_the_dits_and_dahs("-.");break;
+      case 'O': send_the_dits_and_dahs("---");break;
+      case 'P': send_the_dits_and_dahs(".--.");break;
+      case 'Q': send_the_dits_and_dahs("--.-");break;
+      case 'R': send_the_dits_and_dahs(".-.");break;
+      case 'S': send_the_dits_and_dahs("...");break;
+      case 'T': send_the_dits_and_dahs("-");break;
+      case 'U': send_the_dits_and_dahs("..-");break;
+      case 'V': send_the_dits_and_dahs("...-");break;
+      case 'W': send_the_dits_and_dahs(".--");break;
+      case 'X': send_the_dits_and_dahs("-..-");break;
+      case 'Y': send_the_dits_and_dahs("-.--");break;
+      case 'Z': send_the_dits_and_dahs("--..");break;
 
       case '0': send_the_dits_and_dahs("-----");break;//send_dahs(5); break;
       case '1': send_the_dits_and_dahs(".----");break;//send_dit(AUTOMATIC_SENDING); send_dahs(4); break;
@@ -5676,27 +5728,39 @@ void send_char(char cw_char, byte omit_letterspace)
       case '@': send_the_dits_and_dahs(".--.-.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
       case '<': send_the_dits_and_dahs(".-.-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;     // AR
       case '>': send_the_dits_and_dahs("...-.-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;               // SK
-      case '\n':
+      case '\n': break;
       case '\r': break;
-      
+  
+      #if defined(OPTION_PROSIGN_SUPPORT)
+        case PROSIGN_AA: send_the_dits_and_dahs(".-.-");break;
+        case PROSIGN_AS: send_the_dits_and_dahs(".-...");break;
+        case PROSIGN_BK: send_the_dits_and_dahs("-...-.-");break;
+        case PROSIGN_CL: send_the_dits_and_dahs("-.-..-..");break;
+        case PROSIGN_CT: send_the_dits_and_dahs("-.-.-");break;
+        case PROSIGN_KN: send_the_dits_and_dahs("-.--.");break;
+        case PROSIGN_NJ: send_the_dits_and_dahs("-..---");break;
+        case PROSIGN_SK: send_the_dits_and_dahs("...-.-");break;
+        case PROSIGN_SN: send_the_dits_and_dahs("...-.");break;
+      #endif 
+
       #ifdef OPTION_NON_ENGLISH_EXTENSIONS
-      case 192: send_the_dits_and_dahs(".--.-");break;//send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // 'À'
-      case 194: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Â'
-      case 197: send_the_dits_and_dahs(".--.-");break;//send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // 'Å' / 
-      case 196: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Ä'
-      case 198: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'Æ'
-      case 199: send_the_dits_and_dahs("-.-..");break;//send_dah(AUTOMATIC_SENDING);send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); break;  // 'Ç'
-      case 208: send_the_dits_and_dahs("..--.");break;//send_dits(2);send_dahs(2);send_dit(AUTOMATIC_SENDING);break;  // 'Ð'
-      case 138: send_the_dits_and_dahs("----");break;//send_dahs(4);break; // 'Š'
-      case 200: send_the_dits_and_dahs(".-..-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING);send_dits(2);send_dah(AUTOMATIC_SENDING); break; // 'È'
-      case 201: send_the_dits_and_dahs("..-..");break;//send_dits(2);send_dah(AUTOMATIC_SENDING);send_dits(2);break; // 'É'
-      case 142: send_the_dits_and_dahs("--..-.");break;//send_dahs(2);send_dits(2);send_dah(AUTOMATIC_SENDING);send_dit(AUTOMATIC_SENDING);break; // 'Ž'
-      case 209: send_the_dits_and_dahs("--.--");break;//send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dahs(2);break; // 'Ñ'
-      case 214: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ö'
-      case 216: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ø'
-      case 211: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'Ó'
-      case 220: send_the_dits_and_dahs("..--");break;//send_dits(2);send_dahs(2);break; // 'Ü'
-      case 223: send_the_dits_and_dahs("------");break;//send_dits(6);break; // 'ß'
+      case 192: send_the_dits_and_dahs(".--.-");break;// 'À'
+      case 194: send_the_dits_and_dahs(".-.-");break;// 'Â'
+      case 197: send_the_dits_and_dahs(".--.-");break;// 'Å' 
+      case 196: send_the_dits_and_dahs(".-.-");break;// 'Ä'
+      case 198: send_the_dits_and_dahs(".-.-");break;// 'Æ'
+      case 199: send_the_dits_and_dahs("-.-..");break;// 'Ç'
+      case 208: send_the_dits_and_dahs("..--.");break;// 'Ð'
+      case 138: send_the_dits_and_dahs("----");break;// 'Š'
+      case 200: send_the_dits_and_dahs(".-..-");break;// 'È'
+      case 201: send_the_dits_and_dahs("..-..");break;// 'É'
+      case 142: send_the_dits_and_dahs("--..-.");break;// 'Ž'
+      case 209: send_the_dits_and_dahs("--.--");break;// 'Ñ'
+      case 214: send_the_dits_and_dahs("---.");break;// 'Ö'
+      case 216: send_the_dits_and_dahs("---.");break;// 'Ø'
+      case 211: send_the_dits_and_dahs("---.");break;// 'Ó'
+      case 220: send_the_dits_and_dahs("..--");break;// 'Ü'
+      case 223: send_the_dits_and_dahs("------");break;// 'ß'
 
       // for English/Japanese font LCD controller which has a few European characters also (HD44780UA00) (LA3ZA code)
       case 225: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'ä' LA3ZA
@@ -5705,15 +5769,15 @@ void send_char(char cw_char, byte omit_letterspace)
       case 245: send_the_dits_and_dahs("..--");break;//send_dits(2);send_dahs(2);break; // 'ü' LA3ZA
       case 246: send_the_dits_and_dahs("----");break;//send_dahs(4);break; // almost '' or rather sigma LA3ZA
       case 252: send_the_dits_and_dahs(".--.-");break;//send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // å (sort of) LA3ZA
-      case 238: send_the_dits_and_dahs("--.--");break;//send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dahs(2);break; // 'ñ' LA3ZA
-      case 226: send_the_dits_and_dahs("------");break;//send_dits(6);break; // 'ß' LA3ZA
+      case 238: send_the_dits_and_dahs("--.--");break;// 'ñ' LA3ZA
+      case 226: send_the_dits_and_dahs("------");break;// 'ß' LA3ZA
+      #endif //OPTION_NON_ENGLISH_EXTENSIONS   
 
 
-
-      #endif //OPTION_NON_ENGLISH_EXTENSIONS      
       
       case '|': loop_element_lengths(0.5,0,configuration.wpm,AUTOMATIC_SENDING); return; break;
-      default: send_the_dits_and_dahs("..--..");break;//send_dits(2); send_dahs(2); send_dits(2); break;
+
+      default: send_the_dits_and_dahs("..--..");break;
       
     }
     if (omit_letterspace != OMIT_LETTERSPACE) {
@@ -5802,7 +5866,6 @@ void serial_qrss_mode()
     }
     qrss_dit_length = set_dit_length;
     speed_mode = SPEED_QRSS;
-    //calculate_element_length();
   }
 
 }
@@ -5813,17 +5876,7 @@ void serial_qrss_mode()
 void service_send_buffer(byte no_print)
 {
   // send one character out of the send buffer
-  // values 200 and above do special things
-  // 200 - SERIAL_SEND_BUFFER_WPM_CHANGE - next two bytes are new speed
-  // 201 - SERIAL_SEND_BUFFER_PTT_ON
-  // 202 - SERIAL_SEND_BUFFER_PTT_OFF
-  // 203 - SERIAL_SEND_BUFFER_TIMED_KEY_DOWN
-  // 204 - SERIAL_SEND_BUFFER_TIMED_WAIT
-  // 205 - SERIAL_SEND_BUFFER_NULL
-  // 206 - SERIAL_SEND_BUFFER_PROSIGN
-  // 207 - SERIAL_SEND_BUFFER_HOLD_SEND
-  // 208 - SERIAL_SEND_BUFFER_HOLD_SEND_RELEASE
-  // 210 - SERIAL_SEND_BUFFER_MEMORY_NUMBER - next byte is memory number to play
+
 
   #ifdef DEBUG_LOOP
     debug_serial_port->println(F("loop: entering service_send_buffer"));
@@ -5841,8 +5894,8 @@ void service_send_buffer(byte no_print)
       #ifdef FEATURE_SLEEP
         last_activity_time = millis(); 
       #endif //FEATURE_SLEEP
-      if ((send_buffer_array[0] > SERIAL_SEND_BUFFER_SPECIAL_START) && (send_buffer_array[0] < SERIAL_SEND_BUFFER_SPECIAL_END)) {
 
+      if ((send_buffer_array[0] > SERIAL_SEND_BUFFER_SPECIAL_START) && (send_buffer_array[0] < SERIAL_SEND_BUFFER_SPECIAL_END)) {
         if (send_buffer_array[0] == SERIAL_SEND_BUFFER_HOLD_SEND) {
           send_buffer_status = SERIAL_SEND_BUFFER_HOLD;
           remove_from_send_buffer();
@@ -5937,6 +5990,9 @@ void service_send_buffer(byte no_print)
 
           ptt_unkey();
         }
+
+
+
       } else {
         #ifdef FEATURE_WINKEY_EMULATION
           if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open) && (!no_print) && (!cw_send_echo_inhibit)){
@@ -9107,10 +9163,38 @@ void serial_status(HardwareSerial * port_to_use) {
   
 }
 #endif
+
+//---------------------------------------------------------------------
+
+
+
+#if defined(OPTION_PROSIGN_SUPPORT)
+char * convert_prosign(byte prosign_code)
+{
+
+  switch(prosign_code){
+    case PROSIGN_AA: return("AA"); break;
+    case PROSIGN_AS: return("AS"); break;
+    case PROSIGN_BK: return("BK"); break;
+    case PROSIGN_CL: return("CL"); break;
+    case PROSIGN_CT: return("CT"); break;
+    case PROSIGN_KN: return("KN"); break;
+    case PROSIGN_NJ: return("NJ"); break;
+    case PROSIGN_SK: return("SK"); break;
+    case PROSIGN_SN: return("SN"); break;
+    default: return(""); break;
+
+  }
+
+}
+#endif //OPTION_PROSIGN_SUPPORT
+
 //---------------------------------------------------------------------
 
 int convert_cw_number_to_ascii (long number_in)
 {
+
+  // number_in:  1 = dit, 2 = dah, 9 = a space
 
   switch (number_in) {
     case 12: return 65; break;         // A
@@ -9152,36 +9236,54 @@ int convert_cw_number_to_ascii (long number_in)
     case 22221: return 57; break;
     case 112211: return '?'; break;  // ?
     case 21121: return 47; break;   // /
-    case 2111212: return '*'; break; // BK   
+    #if !defined(OPTION_PROSIGN_SUPPORT)
+      case 2111212: return '*'; break; // BK 
+    #endif 
     case 221122: return 44; break;  // ,
     case 121212: return '.'; break;
     case 122121: return '@'; break;
     case 222222: return 92; break;  // special hack; six dahs = \ (backslash)
+    case 21112: return '='; break;  // BT
     //case 2222222: return '+'; break;
     case 9: return 32; break;       // special 9 = space
-   
+   //zzzzzzz
     #ifndef OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
-      case 21112: return '='; break;
       case 12121: return '+'; break;
     #else
       case 211112: return 45; break; // - // sp5iou
-      case 21112: return 61; break; // = //sp5iou
       case 212122: return 33; break; // ! //sp5iou
-      //case 121212: return 46; break; // . //sp5iou
       case 1112112: return 36; break; // $ //sp5iou
-      case 12111: return 38; break; // & // sp5iou
-      //case 221122: return 44; break; // ,
+      #if !defined(OPTION_PROSIGN_SUPPORT)
+        case 12111: return 38; break; // & // sp5iou
+      #endif  
       case 122221: return 39; break; // ' // sp5iou
       case 121121: return 34; break; // " // sp5iou
       case 112212: return 95; break; // _ // sp5iou
       case 212121: return 59; break; // ; // sp5iou
       case 222111: return 58; break; // : // sp5iou
       case 212212: return 41; break; // KK (stored as ascii ) ) // sp5iou
-      case 111212: return 62; break; // SK (stored as ascii > ) // sp5iou
+      #if !defined(OPTION_PROSIGN_SUPPORT)
+        case 111212: return 62; break; // SK (stored as ascii > ) // sp5iou
+      #endif
       case 12121: return 60; break; // AR (store as ascii < ) // sp5iou
     #endif //OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
 
-    case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou //aaaaaaa
+
+    #if defined(OPTION_PROSIGN_SUPPORT)
+      #if !defined(OPTION_NON_ENGLISH_EXTENSIONS)
+        case 1212:   return PROSIGN_AA; break;
+      #endif
+      case 12111:    return PROSIGN_AS; break;
+      case 2111212:  return PROSIGN_BK; break;
+      case 21211211: return PROSIGN_CL; break;
+      case 21212:    return PROSIGN_CT; break;
+      case 21221:    return PROSIGN_KN; break;
+      case 211222:   return PROSIGN_NJ; break;
+      case 111212:   return PROSIGN_SK; break;
+      case 11121:    return PROSIGN_SN; break;
+    #else //OPTION_PROSIGN_SUPPORT
+      case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou //aaaaaaa
+    #endif //OPTION_PROSIGN_SUPPORT
 
     #ifdef OPTION_NON_ENGLISH_EXTENSIONS
       // for English/Cyrillic/Western European font LCD controller (HD44780UA02):
@@ -9196,15 +9298,14 @@ int convert_cw_number_to_ascii (long number_in)
       case 2221: return 216; break;      // 'Ø' - OE_capital    (OZ, LA)
       case 1122: return 220; break;      // 'Ü' - U_umlaut     (D, ...)
       case 111111: return 223; break;    // beta - double S    (D?, ...)   
-      case 21211: return 199; break;   // Ç
-      case 11221: return 208; break;   // Ð
-      case 12112: return 200; break;   // È
-      case 11211: return 201; break;   // É
-      case 221121: return 142; break;  // Ž
+      case 21211: return 199; break;     // Ç
+      case 11221: return 208; break;     // Ð
+      case 12112: return 200; break;     // È
+      case 11211: return 201; break;     // É
+      case 221121: return 142; break;    // Ž
     #endif //OPTION_NON_ENGLISH_EXTENSIONS
 
 
-    //default: return 254; break;
     default: 
       #ifdef OPTION_UNKNOWN_CHARACTER_ERROR_TONE
         boop();
@@ -9261,6 +9362,11 @@ void serial_status_memories(HardwareSerial * port_to_use)
 {
   int last_memory_location;
 
+  #if defined(OPTION_PROSIGN_SUPPORT)
+    byte eeprom_temp = 0;
+    static char * prosign_temp = "";
+  #endif
+
   for (int x = 0; x < number_of_memories; x++) {
     last_memory_location = memory_end(x) + 1 ;
     port_to_use->write("Memory ");
@@ -9271,7 +9377,18 @@ void serial_status_memories(HardwareSerial * port_to_use)
     } else {
       for (int y = (memory_start(x)); (y < last_memory_location); y++) {
         if (EEPROM.read(y) < 255) {
-          port_to_use->write(EEPROM.read(y));
+          #if defined(OPTION_PROSIGN_SUPPORT)
+            eeprom_temp = EEPROM.read(y);
+            if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+              prosign_temp = convert_prosign(eeprom_temp);
+              port_to_use->print(prosign_temp[0]);
+              port_to_use->print(prosign_temp[1]);
+            } else {
+              port_to_use->write(eeprom_temp);
+            }
+          #else         
+            port_to_use->write(EEPROM.read(y));
+          #endif //OPTION_PROSIGN_SUPPORT
         } else {
           port_to_use->write("$");
           y = last_memory_location;
@@ -9440,12 +9557,17 @@ void play_memory(byte memory_number)
   unsigned int jump_back_to_y = 9999;
   byte jump_back_to_memory_number = 255;
 
+  #if defined(OPTION_PROSIGN_SUPPORT)
+    byte eeprom_temp = 0;
+    static char * prosign_temp = "";
+  #endif  
+
   if (memory_number > (number_of_memories - 1)) {
     boop();
     return;
   }
 
-  String serial_number_string;
+  static String serial_number_string;
   static byte prosign_flag = 0;
   play_memory_prempt = 0;
   byte eeprom_byte_read;
@@ -9527,29 +9649,87 @@ void play_memory(byte memory_number)
 
         if (eeprom_byte_read != 92) {          // do we have a backslash?
           if (keyer_machine_mode == KEYER_NORMAL) {
+
+            #if defined(OPTION_PROSIGN_SUPPORT)
+              eeprom_temp = eeprom_byte_read;
+              if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+                prosign_temp = convert_prosign(eeprom_temp);
+              }
+            #endif //OPTION_PROSIGN_SUPPORT
+
             #if defined(FEATURE_SERIAL)
               #ifndef FEATURE_WINKEY_EMULATION
                 if (!cw_send_echo_inhibit) {
-                  primary_serial_port->write(eeprom_byte_read);
-                  #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                  secondary_serial_port->write(eeprom_byte_read);
-                  #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                  #if defined(OPTION_PROSIGN_SUPPORT)
+                    if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+                      primary_serial_port->print(prosign_temp[0]);
+                      primary_serial_port->print(prosign_temp[1]);
+                      #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                        secondary_serial_port->print(prosign_temp[0]);
+                        secondary_serial_port->print(prosign_temp[1]);
+                      #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
+                    } else {
+                      primary_serial_port->write(eeprom_byte_read);
+                      #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                        secondary_serial_port->write(eeprom_byte_read);
+                      #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                    }
+                  #else
+                    primary_serial_port->write(eeprom_byte_read);
+                    #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                      secondary_serial_port->write(eeprom_byte_read);
+                    #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                  #endif // OPTION_PROSIGN_SUPPORT
                 }
               #else  //FEATURE_WINKEY_EMULATION
                 if (((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_paddle_echo_activated) && (winkey_host_open)) || (primary_serial_port_mode != SERIAL_WINKEY_EMULATION)) {
-                  winkey_port_write(eeprom_byte_read);
+  
+                  #if defined(OPTION_PROSIGN_SUPPORT)
+                    if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+                      winkey_port_write(prosign_temp[0]);
+                      winkey_port_write(prosign_temp[1]);                 
+                    } else {
+                      winkey_port_write(eeprom_byte_read);
+                    }
+                  #else
+                    winkey_port_write(eeprom_byte_read);
+                  #endif // OPTION_PROSIGN_SUPPORT
+
+
+
                 }
                 #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                  secondary_serial_port->write(eeprom_byte_read);
-                #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                
+                  #if defined(OPTION_PROSIGN_SUPPORT)
+                    if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+                      secondary_serial_port->print(prosign_temp[0]);
+                      secondary_serial_port->print(prosign_temp[1]);                      
+                    } else {
+                      secondary_serial_port->write(eeprom_byte_read);
+                    }
+                  #else
+                    secondary_serial_port->write(eeprom_byte_read);
+                  #endif // OPTION_PROSIGN_SUPPORT
+                #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT  
+
               #endif //FEATURE_WINKEY_EMULATION
             #endif //FEATURE_SERIAL
+
             #ifdef FEATURE_DISPLAY
               if (lcd_send_echo) {
-                display_scroll_print_char(eeprom_byte_read); 
+                #if defined(OPTION_PROSIGN_SUPPORT)
+                    if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+                      display_scroll_print_char(prosign_temp[0]);
+                      display_scroll_print_char(prosign_temp[1]);                    
+                    } else {
+                      display_scroll_print_char(eeprom_byte_read); 
+                    }
+                #else 
+                  display_scroll_print_char(eeprom_byte_read); 
+                #endif
                 service_display();
               }
-            #endif            
+            #endif    // FEATURE_DISPLAY
+
           }
 
           if (prosign_flag) {
@@ -10058,6 +10238,7 @@ void program_memory(int memory_number)
        #endif
 
 
+// TODO - need to add something here to handle straight key leading space
        #ifdef FEATURE_MEMORY_MACROS
          if ((!macro_flag) && (paddle_hit == 0) && (millis() > (last_element_time + ((float(1200/configuration.wpm) * configuration.length_wordspace)))) && (space_count < program_memory_limit_consec_spaces)) {   // we have a space
            loop1 = 0;
@@ -10094,7 +10275,7 @@ void program_memory(int memory_number)
         debug_serial_port->print(F("  memory_location_index:"));
         debug_serial_port->print(memory_location_index);
         debug_serial_port->print(F("  EEPROM location:"));
-        debug_serial_port->print(memory_start[memory_number]+memory_location_index);
+        debug_serial_port->print(memory_start(memory_number)+memory_location_index);
         debug_serial_port->print(F("   cwchar:"));
         debug_serial_port->print(cwchar);
         debug_serial_port->print(F("   ascii to write:"));
@@ -10105,15 +10286,15 @@ void program_memory(int memory_number)
       memory_location_index++;
  
       #ifdef FEATURE_MEMORY_MACROS
-      if (!macro_flag) {
-        if (convert_cw_number_to_ascii(cwchar) == '\\') {macro_flag = 1;}  // if we got the \ macro character, supress spaces
-      } else {
-         if (convert_cw_number_to_ascii(cwchar) == '+') {    // if we're building a prosign, supress the next two spaces
-           macro_flag = 2; 
-         } else {
-           macro_flag--; 
-         }
-      }
+        if (!macro_flag) {
+          if (convert_cw_number_to_ascii(cwchar) == '\\') {macro_flag = 1;}  // if we got the \ macro character, supress spaces
+        } else {
+           if (convert_cw_number_to_ascii(cwchar) == '+') {    // if we're building a prosign, supress the next two spaces
+             macro_flag = 2; 
+           } else {
+             macro_flag--; 
+           }
+        }
       #endif //FEATURE_MEMORY_MACROS
     }
 
@@ -10135,17 +10316,17 @@ void program_memory(int memory_number)
   EEPROM.write((memory_start(memory_number) + memory_location_index),255);
 
   #ifdef OPTION_PROG_MEM_TRIM_TRAILING_SPACES
-  for (int x = (memory_location_index-1); x > 0; x--) {
-    if (EEPROM.read((memory_start(memory_number) + x)) == 32) {
-      EEPROM.write((memory_start(memory_number) + x),255);
-    } else {
-      x = 0;
+    for (int x = (memory_location_index-1); x > 0; x--) {
+      if (EEPROM.read((memory_start(memory_number) + x)) == 32) {
+        EEPROM.write((memory_start(memory_number) + x),255);
+      } else {
+        x = 0;
+      }
     }
-  }
   #endif
 
   #ifdef FEATURE_DISPLAY
-  lcd_center_print_timed("Done", 0, default_display_msg_delay);
+    lcd_center_print_timed("Done", 0, default_display_msg_delay);
   #endif
 
   play_memory(memory_number);
