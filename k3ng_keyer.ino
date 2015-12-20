@@ -436,11 +436,14 @@ New fetures in this stable release:
       Fixed compiler warning: large integer implicitly truncated to unsigned type - jump_back_to_y = 99999;
 
     2.2.2015121901
-      OPTION_PROSIGN_SUPPORT
+      OPTION_PROSIGN_SUPPORT - additional prosign support for memory storage
+
+    2.2.2015122001
+      OPTION_PROSIGN_SUPPORT - updated; forgot to add functionality to paddle echo
       
 */
 
-#define CODE_VERSION "2.2.2015121901"
+#define CODE_VERSION "2.2.2015122001"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -1060,7 +1063,6 @@ void loop()
 #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
   void service_competition_compression_detection(){
 
-//zzzzzz
 
     static byte compression_detection_indicator_on = 0;
     static unsigned long last_compression_check_time = 0;
@@ -1141,8 +1143,6 @@ void loop()
       }
     }
 
-
-//zzzzzzzz
 
   #if defined(FEATURE_STRAIGHT_KEY_DECODE)
 
@@ -8133,6 +8133,10 @@ void service_paddle_echo()
   byte character_to_send = 0;
   static byte no_space = 0;
 
+  #if defined(OPTION_PROSIGN_SUPPORT)
+    byte byte_temp = 0;
+    static char * prosign_temp = "";
+  #endif
   
   #if defined(FEATURE_DISPLAY) && defined(OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS)
     byte ascii_temp = 0;
@@ -8255,37 +8259,95 @@ void service_paddle_echo()
         debug_serial_port->println();
       #endif //DEBUG_CW_COMPUTER_KEYBOARD
     #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
-
+//zzzzzz
  
     #ifdef FEATURE_DISPLAY
       if (lcd_paddle_echo){
-        #ifndef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
-          display_scroll_print_char(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
-        #else //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
-          ascii_temp = byte(convert_cw_number_to_ascii(paddle_echo_buffer));
-          switch (ascii_temp){
-            case 220: ascii_temp = 0;break; // U_umlaut  (D, ...)
-            case 214: ascii_temp = 1;break; // O_umlaut  (D, SM, OH, ...)
-            case 196: ascii_temp = 2;break; // A_umlaut  (D, SM, OH, ...)
-            case 198: ascii_temp = 3;break; // AE_capital (OZ, LA)
-            case 216: ascii_temp = 4;break; // OE_capital (OZ, LA)
-            case 197: ascii_temp = 6;break; // AA_capital (OZ, LA, SM)
-            case 209: ascii_temp = 7;break; // N-tilde (EA) 
-          }
-          display_scroll_print_char(ascii_temp);
-        #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+        #if defined(OPTION_PROSIGN_SUPPORT)
+          #ifndef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+            byte_temp = convert_cw_number_to_ascii(paddle_echo_buffer);
+            if ((byte_temp > PROSIGN_START) && (byte_temp < PROSIGN_END)){
+              prosign_temp = convert_prosign(byte_temp);
+              display_scroll_print_char(prosign_temp[0]);
+              display_scroll_print_char(prosign_temp[1]);
+            } else {
+              display_scroll_print_char(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
+            }
+          #else //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+            ascii_temp = byte(convert_cw_number_to_ascii(paddle_echo_buffer));
+            if ((ascii_temp > PROSIGN_START) && (ascii_temp < PROSIGN_END)){
+              prosign_temp = convert_prosign(ascii_temp);
+              display_scroll_print_char(prosign_temp[0]);
+              display_scroll_print_char(prosign_temp[1]);
+            } else {
+              switch (ascii_temp){
+                case 220: ascii_temp = 0;break; // U_umlaut  (D, ...)
+                case 214: ascii_temp = 1;break; // O_umlaut  (D, SM, OH, ...)
+                case 196: ascii_temp = 2;break; // A_umlaut  (D, SM, OH, ...)
+                case 198: ascii_temp = 3;break; // AE_capital (OZ, LA)
+                case 216: ascii_temp = 4;break; // OE_capital (OZ, LA)
+                case 197: ascii_temp = 6;break; // AA_capital (OZ, LA, SM)
+                case 209: ascii_temp = 7;break; // N-tilde (EA) 
+              }
+              display_scroll_print_char(ascii_temp);              
+            }
+          #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+
+        #else // ! OPTION_PROSIGN_SUPPORT
+
+          #ifndef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+            display_scroll_print_char(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
+          #else //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+            ascii_temp = byte(convert_cw_number_to_ascii(paddle_echo_buffer));
+            switch (ascii_temp){
+              case 220: ascii_temp = 0;break; // U_umlaut  (D, ...)
+              case 214: ascii_temp = 1;break; // O_umlaut  (D, SM, OH, ...)
+              case 196: ascii_temp = 2;break; // A_umlaut  (D, SM, OH, ...)
+              case 198: ascii_temp = 3;break; // AE_capital (OZ, LA)
+              case 216: ascii_temp = 4;break; // OE_capital (OZ, LA)
+              case 197: ascii_temp = 6;break; // AA_capital (OZ, LA, SM)
+              case 209: ascii_temp = 7;break; // N-tilde (EA) 
+            }
+            display_scroll_print_char(ascii_temp);
+          #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
+
+        #endif //OPTION_PROSIGN_SUPPORT
+
+
+
       }
     #endif //FEATURE_DISPLAY
     
     #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-      if (cli_paddle_echo){
-        primary_serial_port->write(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
+      #if defined(OPTION_PROSIGN_SUPPORT)
+        byte_temp = convert_cw_number_to_ascii(paddle_echo_buffer);
+        if (cli_paddle_echo){
 
-        #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-          secondary_serial_port->write(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
-        #endif
 
-      } 
+          if ((byte_temp > PROSIGN_START) && (byte_temp < PROSIGN_END)){
+            primary_serial_port->print(prosign_temp[0]);
+            primary_serial_port->print(prosign_temp[1]);
+            #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+              secondary_serial_port->print(prosign_temp[0]);
+              secondary_serial_port->print(prosign_temp[1]);
+            #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
+          } else {
+            primary_serial_port->write(byte_temp);
+            #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+              secondary_serial_port->write(byte_temp);
+            #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+          }
+
+        } 
+
+      #else  // ! OPTION_PROSIGN_SUPPORT
+        if (cli_paddle_echo){
+          primary_serial_port->write(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
+          #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+            secondary_serial_port->write(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
+          #endif
+        } 
+      #endif //OPTION_PROSIGN_SUPPORT
     #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)   
    
     paddle_echo_buffer = 0;
@@ -9246,7 +9308,7 @@ int convert_cw_number_to_ascii (long number_in)
     case 21112: return '='; break;  // BT
     //case 2222222: return '+'; break;
     case 9: return 32; break;       // special 9 = space
-   //zzzzzzz
+
     #ifndef OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
       case 12121: return '+'; break;
     #else
@@ -10217,8 +10279,7 @@ void program_memory(int memory_number)
            debug_serial_port->write("_");
          #endif
        }
-       
-//zzzzzz       
+    
        #if defined(FEATURE_STRAIGHT_KEY)
          straight_key_decoded_character = service_straight_key();
          if (straight_key_decoded_character != 0){

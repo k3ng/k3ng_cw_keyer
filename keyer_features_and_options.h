@@ -81,7 +81,7 @@
 // #define OPTION_INVERT_PADDLE_PIN_LOGIC
 // #define OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL
 // #define OPTION_ADVANCED_SPEED_DISPLAY //enables "nerd" speed visualization on display: wpm, cpm (char per min), duration of dit and dah in milliseconds and ratio (contributed by Giorgio, IZ2XBZ)
-// #define OPTION_PROSIGN_SUPPORT
+// #define OPTION_PROSIGN_SUPPORT    // additional prosign support for paddle and straight key echo on display, CLI, and in memory storage
 
 // #define FEATURE_COMPETITION_COMPRESSION_DETECTION //(Experimental)
 
