@@ -440,10 +440,13 @@ New fetures in this stable release:
 
     2.2.2015122001
       OPTION_PROSIGN_SUPPORT - updated; forgot to add functionality to paddle echo
+
+    2.2.2015122801
+      void send_the_dits_and_dahs(char * cw_to_send) compile warning fix
       
 */
 
-#define CODE_VERSION "2.2.2015122001"
+#define CODE_VERSION "2.2.2015122801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -5630,7 +5633,7 @@ void boop_beep()
 
 
 //-------------------------------------------------------------------------------------------------------
-void send_the_dits_and_dahs(char * cw_to_send){
+void send_the_dits_and_dahs(char const * cw_to_send){
 
 
   for (int x = 0;x < 12;x++){
