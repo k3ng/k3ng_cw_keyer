@@ -443,10 +443,14 @@ New fetures in this stable release:
 
     2.2.2015122801
       void send_the_dits_and_dahs(char * cw_to_send) compile warning fix
+
+    2.2.2016010301
+      Fixed compiler error when OPTION_SAVE_MEMORY_NANOKEYER and FEATURE_COMMAND_LINE_INTERFACE are enabled (Thanks, Gerd, DD4DA)
+      void play_memory (byte memory_number) near line 10049 - static String serial_number_string - removed static declration to fix compiler warning (Thanks, Gerd, DD4DA)
       
 */
 
-#define CODE_VERSION "2.2.2015122801"
+#define CODE_VERSION "2.2.2016010301"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -598,9 +602,9 @@ byte config_dirty = 0;
 unsigned long ptt_time = 0; 
 byte ptt_line_activated = 0;
 byte speed_mode = SPEED_NORMAL;
-#ifndef OPTION_SAVE_MEMORY_NANOKEYER
+#if defined(FEATURE_COMMAND_LINE_INTERFACE)
   unsigned int serial_number = 1;
-#endif //OPTION_SAVE_MEMORY_NANOKEYER
+#endif //FEATURE_COMMAND_LINE_INTERFACE
 byte pause_sending_buffer = 0;
 byte length_letterspace = default_length_letterspace;
 byte keying_compensation = default_keying_compensation;
@@ -9622,6 +9626,11 @@ void play_memory(byte memory_number)
   unsigned int jump_back_to_y = 9999;
   byte jump_back_to_memory_number = 255;
 
+  /*static*/ String serial_number_string;
+  static byte prosign_flag = 0;
+  play_memory_prempt = 0;
+  byte eeprom_byte_read;  
+
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte eeprom_temp = 0;
     static char * prosign_temp = "";
@@ -9632,10 +9641,7 @@ void play_memory(byte memory_number)
     return;
   }
 
-  static String serial_number_string;
-  static byte prosign_flag = 0;
-  play_memory_prempt = 0;
-  byte eeprom_byte_read;
+
 
   #ifdef DEBUG_PLAY_MEMORY
     debug_serial_port->print(F("play_memory: called with memory_number:"));
