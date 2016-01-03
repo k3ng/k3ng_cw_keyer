@@ -448,9 +448,11 @@ New fetures in this stable release:
       Fixed compiler error when OPTION_SAVE_MEMORY_NANOKEYER and FEATURE_COMMAND_LINE_INTERFACE are enabled (Thanks, Gerd, DD4DA)
       void play_memory (byte memory_number) near line 10049 - static String serial_number_string - removed static declration to fix compiler warning (Thanks, Gerd, DD4DA)
       
+    2.2.2016010302  
+      Winkey emulation pin config bug fix (Thanks, Gerd, DD4DA)
 */
 
-#define CODE_VERSION "2.2.2016010301"
+#define CODE_VERSION "2.2.2016010302"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -6644,20 +6646,20 @@ void winkey_admin_get_values_command() {
 
   // 14 - pin config
   #ifdef OPTION_WINKEY_2_SUPPORT
-  byte_to_send = 0;
-  if (configuration.current_ptt_line != 0) {byte_to_send = byte_to_send | 1;}
-  if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {byte_to_send | 2;}
-  if (current_tx_key_line == tx_key_line_1) {byte_to_send = byte_to_send | 4;}
-  if (current_tx_key_line == tx_key_line_2) {byte_to_send = byte_to_send | 8;}
-  if (wk2_both_tx_activated) {byte_to_send = byte_to_send | 12;}
-  if (ultimatic_mode == ULTIMATIC_DIT_PRIORITY) {byte_to_send = byte_to_send | 128;}
-  if (ultimatic_mode == ULTIMATIC_DAH_PRIORITY) {byte_to_send = byte_to_send | 64;}  
-  if (ptt_hang_time_wordspace_units == 1.33) {byte_to_send = byte_to_send | 16;}
-  if (ptt_hang_time_wordspace_units == 1.66) {byte_to_send = byte_to_send | 32;}
-  if (ptt_hang_time_wordspace_units == 2.0) {byte_to_send = byte_to_send | 64;}
-  winkey_port_write(byte_to_send);
+    byte_to_send = 0;
+    if (configuration.current_ptt_line != 0) {byte_to_send = byte_to_send | 1;}
+    if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {byte_to_send = byte_to_send | 2;}
+    if (current_tx_key_line == tx_key_line_1) {byte_to_send = byte_to_send | 4;}
+    if (current_tx_key_line == tx_key_line_2) {byte_to_send = byte_to_send | 8;}
+    if (wk2_both_tx_activated) {byte_to_send = byte_to_send | 12;}
+    if (ultimatic_mode == ULTIMATIC_DIT_PRIORITY) {byte_to_send = byte_to_send | 128;}
+    if (ultimatic_mode == ULTIMATIC_DAH_PRIORITY) {byte_to_send = byte_to_send | 64;}  
+    if (ptt_hang_time_wordspace_units == 1.33) {byte_to_send = byte_to_send | 16;}
+    if (ptt_hang_time_wordspace_units == 1.66) {byte_to_send = byte_to_send | 32;}
+    if (ptt_hang_time_wordspace_units == 2.0) {byte_to_send = byte_to_send | 64;}
+    winkey_port_write(byte_to_send);
   #else
-  winkey_port_write(5); // default value
+    winkey_port_write(5); // default value
   #endif
 
   // 15 - pot range
