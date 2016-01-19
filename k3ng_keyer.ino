@@ -2,7 +2,7 @@
 
  K3NG Arduino CW Keyer
 
- Copyright 1340 BC, 2010, 2011, 2012, 2013, 2014, 2015 Anthony Good, K3NG
+ Copyright 1340 BC, 2010, 2011, 2012, 2013, 2014, 2015, 2016 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
 
     
@@ -450,9 +450,12 @@ New fetures in this stable release:
       
     2.2.2016010302  
       Winkey emulation pin config bug fix (Thanks, Gerd, DD4DA)
+
+    2.2.2016011801
+      New and improved FEATURE_SLEEP code contributed by Graeme, ZL2APV
 */
 
-#define CODE_VERSION "2.2.2016010302"
+#define CODE_VERSION "2.2.2016011801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -1638,14 +1641,35 @@ void TC3_Handler ( void ) {
 
 //-------------------------------------------------------------------------------------------------------
 
+/*   Sleep code prior to 2016-01-18
 #ifdef FEATURE_SLEEP
 void wakeup() {
   detachInterrupt(0);
 }
 #endif //FEATURE_SLEEP
+*/
+
+#ifdef FEATURE_SLEEP     // Code contributed by Graeme, ZL2APV 2016-01-18
+void wakeup() {
+  sleep_disable();
+  detachInterrupt (0);
+}  // end of wakeup
+
+ISR (PCINT1_vect)
+  {
+  PCICR = 0;  // cancel pin change interrupts
+  sleep_disable();
+  } // end of ISR (PCINT1_vect)
+
+ISR (PCINT2_vect)
+  {
+  PCICR = 0;  // turn off all pin change interrupt ports
+  sleep_disable();
+  } // end of ISR (PCINT2_vect)
+#endif //FEATURE_SLEEP
 
 //-------------------------------------------------------------------------------------------------------
-
+/*  Sleep code prior to 2016-01-18
 #ifdef FEATURE_SLEEP
 void check_sleep(){
   
@@ -1677,6 +1701,76 @@ void check_sleep(){
   }
   
   
+}
+#endif //FEATURE_SLEEP
+*/
+
+
+#ifdef FEATURE_SLEEP   // Code contributed by Graeme, ZL2APV  2016-01-18
+void check_sleep(){
+
+  if ((millis() - last_activity_time) > (go_to_sleep_inactivity_time*60000)){
+
+    if (config_dirty) {  // force a configuration write to EEPROM if the config is dirty
+      last_config_write = 0;
+      check_for_dirty_configuration();
+    }
+
+    byte old_ADCSRA = ADCSRA;
+    // disable ADC to save power
+    ADCSRA = 0;
+
+    set_sleep_mode (SLEEP_MODE_PWR_DOWN);
+    sleep_enable();
+
+    // Do not interrupt before we go to sleep, or the ISR will detach interrupts and we won't wake.
+    noInterrupts ();
+
+    // will be called when pin D2, D5 or A1 goes low
+    attachInterrupt(0, wakeup, FALLING);
+    EIFR = bit(INTF0);  // clear flag for interrupt 0
+    PCIFR = 0; // Clear all pin change flags
+    PCICR  = 0b00000110;    //Turn on ports C and D only
+    PCMSK2 = bit(PCINT21);  //Turn on pin D5
+    PCMSK1 = bit(PCINT9);   //Turn on pin A1
+
+    // turn off brown-out enable in software
+    // BODS must be set to one and BODSE must be set to zero within four clock cycles
+    #if !defined(__AVR_ATmega2560__)
+      MCUCR = bit (BODS) | bit (BODSE);
+      // The BODS bit is automatically cleared after three clock cycles
+      MCUCR = bit (BODS);
+    #endif
+
+    #ifdef DEBUG_SLEEP
+      debug_serial_port->println(F("check_sleep: entering sleep"));
+      delay(1000);
+    #endif //DEBUG_SLEEP
+
+    interrupts();
+    sleep_cpu();
+
+    // shhhhh! we are asleep here !!
+
+    // An interrupt on digital 2 will call the wake() interrupt service routine
+    // and then return us to here while a change on D5 or A1 will vector to their
+    // interrupt handler and also return to here.
+
+    detachInterrupt (0);
+    PCICR  = 0;    //Turn off all ports
+    PCMSK2 = 0;    //Turn off pin D5
+    PCMSK1 = 0;    //Turn off pin A1
+
+    ADCSRA = old_ADCSRA;   // re-enable ADC conversion
+
+    last_activity_time = millis();
+
+    #ifdef DEBUG_SLEEP
+      debug_serial_port->println(F("check_sleep: I'm awake!"));
+    #endif //DEBUG_SLEEP
+  }
+
+
 }
 #endif //FEATURE_SLEEP
 
