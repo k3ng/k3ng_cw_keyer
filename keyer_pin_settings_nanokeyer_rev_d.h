@@ -29,4 +29,8 @@
 #define tx_key_dit 0//11
 #define tx_key_dah 0//13
 
+#if defined(FEATURE_SLEEP)
+  #define keyer_awake 13       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
+#endif
+
 #endif //keyer_pin_settings_h

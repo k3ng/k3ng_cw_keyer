@@ -92,5 +92,9 @@
   #define compression_detection_pin 13
 #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
 
+#if defined(FEATURE_SLEEP)
+  #define keyer_awake 0
+#endif
+
 #endif //keyer_pin_settings_h
 

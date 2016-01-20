@@ -453,9 +453,17 @@ New fetures in this stable release:
 
     2.2.2016011801
       New and improved FEATURE_SLEEP code contributed by Graeme, ZL2APV
+
+    2.2.2016012001
+      #Fixed compile error involving serial_number, FEATURE_PS2_KEYBOARD, and HARDWARE_NANOKEYER_REV_D (Thanks, Kari, OH6FSG)
+
+    2.2.2016012002
+      HARDWARE_TEST
+      Enhanced FEATURE_SLEEP to have pin that indicates sleep state: define keyer_awake 0 ; KEYER_AWAKE_PIN_AWAKE_STATE, KEYER_AWAKE_PIN_ASLEEP_STATE   
+
 */
 
-#define CODE_VERSION "2.2.2016011801"
+#define CODE_VERSION "2.2.2016012002"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -484,6 +492,10 @@ New fetures in this stable release:
   #include "keyer_features_and_options_open_interface.h"
 #endif
 
+#ifdef HARDWARE_TEST
+  #include "keyer_features_and_options_test.h"
+#endif    
+
 #ifndef HARDWARE_CUSTOM
   #include "keyer_features_and_options.h"
 #endif
@@ -509,6 +521,11 @@ New fetures in this stable release:
 #ifdef HARDWARE_OPEN_INTERFACE
   #include "keyer_pin_settings_open_interface.h"
   #include "keyer_settings_open_interface.h"
+#endif
+
+#ifdef HARDWARE_TEST
+  #include "keyer_pin_settings_test.h"
+  #include "keyer_settings_test.h"
 #endif
 
 #ifndef HARDWARE_CUSTOM
@@ -607,7 +624,7 @@ byte config_dirty = 0;
 unsigned long ptt_time = 0; 
 byte ptt_line_activated = 0;
 byte speed_mode = SPEED_NORMAL;
-#if defined(FEATURE_COMMAND_LINE_INTERFACE)
+#if defined(FEATURE_COMMAND_LINE_INTERFACE) || defined(FEATURE_PS2_KEYBOARD)
   unsigned int serial_number = 1;
 #endif //FEATURE_COMMAND_LINE_INTERFACE
 byte pause_sending_buffer = 0;
@@ -1747,6 +1764,10 @@ void check_sleep(){
       delay(1000);
     #endif //DEBUG_SLEEP
 
+    if (keyer_awake){
+      digitalWrite(keyer_awake,KEYER_AWAKE_PIN_ASLEEP_STATE);
+    }
+
     interrupts();
     sleep_cpu();
 
@@ -1763,7 +1784,11 @@ void check_sleep(){
 
     ADCSRA = old_ADCSRA;   // re-enable ADC conversion
 
-    last_activity_time = millis();
+    if (keyer_awake){
+      digitalWrite(keyer_awake,KEYER_AWAKE_PIN_AWAKE_STATE);
+    }
+
+    last_activity_time = millis();    
 
     #ifdef DEBUG_SLEEP
       debug_serial_port->println(F("check_sleep: I'm awake!"));
@@ -10662,6 +10687,13 @@ void initialize_pins() {
     pinMode(compression_detection_pin,OUTPUT);
     digitalWrite(compression_detection_pin,LOW);
   #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
+
+  #if defined(FEATURE_SLEEP)
+    if (keyer_awake){
+      pinMode(keyer_awake,OUTPUT);
+      digitalWrite(keyer_awake,KEYER_AWAKE_PIN_AWAKE_STATE);
+    }
+  #endif //FEATURE_SLEEP
   
 }
 
