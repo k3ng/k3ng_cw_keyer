@@ -455,15 +455,18 @@ New fetures in this stable release:
       New and improved FEATURE_SLEEP code contributed by Graeme, ZL2APV
 
     2.2.2016012001
-      #Fixed compile error involving serial_number, FEATURE_PS2_KEYBOARD, and HARDWARE_NANOKEYER_REV_D (Thanks, Kari, OH6FSG)
+      Fixed compile error involving serial_number, FEATURE_PS2_KEYBOARD, and HARDWARE_NANOKEYER_REV_D (Thanks, Kari, OH6FSG)
 
     2.2.2016012002
       HARDWARE_TEST
       Enhanced FEATURE_SLEEP to have pin that indicates sleep state: define keyer_awake 0 ; KEYER_AWAKE_PIN_AWAKE_STATE, KEYER_AWAKE_PIN_ASLEEP_STATE   
 
+    2.2.2016012003
+      Fixed compiler warning for void play_memory() and returns; (Thanks, Gerd, DD4DA)
+
 */
 
-#define CODE_VERSION "2.2.2016012002"
+#define CODE_VERSION "2.2.2016012003"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -9741,7 +9744,7 @@ void check_button0()
 //---------------------------------------------------------------------
 
 #ifdef FEATURE_MEMORIES
-void play_memory(byte memory_number)
+byte play_memory(byte memory_number)
 {
   
   unsigned int jump_back_to_y = 9999;
@@ -9759,7 +9762,7 @@ void play_memory(byte memory_number)
 
   if (memory_number > (number_of_memories - 1)) {
     boop();
-    return;
+    return 0;
   }
 
 
@@ -10046,7 +10049,7 @@ void play_memory(byte memory_number)
                   delay_result = memory_nonblocking_delay(int_from_macro*1000);
                 }
                 if (delay_result) {   // if a paddle or button0 was hit during the delay, exit
-                  return;
+                  return 0;
                 }
                 break;  // case 68
 
@@ -10161,7 +10164,7 @@ void play_memory(byte memory_number)
                   tx_and_sidetone_key(0,AUTOMATIC_SENDING);
                 }
                 if (delay_result) {   // if a paddle or button0 was hit during the delay, exit
-                  return;
+                  return 0;
                 }
                 break;  // case 84
 
@@ -10243,7 +10246,7 @@ void play_memory(byte memory_number)
               #ifdef FEATURE_COMMAND_BUTTONS
                 while (analogbuttonread(0)) {}
               #endif  
-              return;
+              return 0;
             }
           #else //FEATURE_STRAIGHT_KEY
             if ((dit_buffer) || (dah_buffer) || (button0_buffer)) {   // exit if the paddle or button0 was hit
@@ -10283,7 +10286,7 @@ void play_memory(byte memory_number)
         
         
         
-         return;
+         return 0;
         }
       }
     } else {
