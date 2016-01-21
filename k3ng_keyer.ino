@@ -464,9 +464,16 @@ New fetures in this stable release:
     2.2.2016012003
       Fixed compiler warning for void play_memory() and returns; (Thanks, Gerd, DD4DA)
 
+    2.2.2016012004
+      Modified includes so library files can be put in \libraries\ folder rather than ino directory so Arduino 1.6.7 works (thanks Giorgio, IZ2XBZ)) 
+
+
+
+  ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
+  
 */
 
-#define CODE_VERSION "2.2.2016012003"
+#define CODE_VERSION "2.2.2016012004"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -504,7 +511,7 @@ New fetures in this stable release:
 #endif
 
 #ifdef FEATURE_EEPROM_E24C1024
-  #include "E24C1024.h"
+  #include <E24C1024.h>
   #define EEPROM EEPROM1024
 #endif 
 
@@ -542,9 +549,9 @@ New fetures in this stable release:
 
 #if defined(FEATURE_PS2_KEYBOARD)
   #ifdef OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
-    #include "PS2Keyboard.h"
+    #include <PS2Keyboard.h>
   #else //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
-    #include "K3NG_PS2Keyboard.h"
+    #include <K3NG_PS2Keyboard.h>
   #endif
 #endif
 
@@ -566,11 +573,11 @@ New fetures in this stable release:
 #endif
 
 #if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
-  #include "BasicTerm.h"
+  #include <BasicTerm.h>
 #endif
 
 #if defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
-  #include "goertzel.h"
+  #include <goertzel.h>
 #endif
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
