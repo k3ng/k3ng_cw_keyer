@@ -168,9 +168,7 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 
  PS2 Keyboard Notes (FEATURE_PS2_KEYBOARD)
 
-    The original PS2Keyboard library can be found at http://www.pjrc.com/teensy/td_libs_PS2Keyboard.html .  Both PS2Keyboard.h and PS2Keyboard.cpp
-    have been modified in order to return codes for keys not originally configured in the PS2Keyboard library.  These modified files are available
-    at http://radioartisan.wordpress.com/k3ng-modified-ps2keyboard-library-files/
+    To use FEATURE_PS2_KEYBOARD you need the K3NG_PS2Keyboard.h and K3NG_PS2Keyboard.cpp library files from https://github.com/k3ng/k3ng_cw_keyer/tree/master/libraries
 
     Some keyboards may require a reset sequence upon startup.  This is activated with OPTION_PS2_KEYBOARD_RESET.
 
@@ -467,13 +465,14 @@ New fetures in this stable release:
     2.2.2016012004
       Modified includes so library files can be put in \libraries\ folder rather than ino directory so Arduino 1.6.7 works (thanks Giorgio, IZ2XBZ)) 
 
-
+    2.2.2016012101
+      Beta testing FEATURE_INTERRUPT_PADDLE_READS
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
   
 */
 
-#define CODE_VERSION "2.2.2016012004"
+#define CODE_VERSION "2.2.2016012101"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -952,6 +951,11 @@ HardwareSerial * debug_serial_port;
   byte cw_keyboard_capslock_on = 0;
 #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
+
+#if defined(FEATURE_INTERRUPT_PADDLE_READS)
+  volatile byte interrupt_paddle_left_buffer = 0;     // used for buffering paddle hits in iambic operation
+  volatile byte interrupt_paddle_right_buffer = 0;     // used for buffering paddle hits in iambic operation
+#endif //FEATURE_INTERRUPT_PADDLE_READS
 
 /*---------------------------------------------------------------------------------------------------------
 
@@ -3827,8 +3831,25 @@ void check_dit_paddle()
   }
 
 
-  pin_value = paddle_pin_read(dit_paddle);
+  //zzzzzzzzz
 
+  #if defined(FEATURE_INTERRUPT_PADDLE_READS)
+    if (dit_paddle == paddle_left){
+      if (interrupt_paddle_left_buffer) {
+        interrupt_paddle_left_buffer = 0;
+      } else {
+        pin_value = paddle_pin_read(dit_paddle);
+      }
+    } else{
+      if (interrupt_paddle_right_buffer) {
+        interrupt_paddle_right_buffer = 0;
+      } else {
+        pin_value = paddle_pin_read(dit_paddle); 
+      }
+    }
+  #else
+    pin_value = paddle_pin_read(dit_paddle);
+  #endif //FEATURE_INTERRUPT_PADDLE_READS
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
     if (usb_dit) {pin_value = 0;}
@@ -3904,7 +3925,25 @@ void check_dah_paddle()
   }
 
 
-  pin_value = paddle_pin_read(dah_paddle);
+  //zzzzzzzzz
+
+  #if defined(FEATURE_INTERRUPT_PADDLE_READS)
+    if (dah_paddle == paddle_left){
+      if (interrupt_paddle_left_buffer) {
+        interrupt_paddle_left_buffer = 0;
+      } else {
+        pin_value = paddle_pin_read(dah_paddle);
+      }
+    } else{
+      if (interrupt_paddle_right_buffer) {
+        interrupt_paddle_right_buffer = 0;
+      } else {
+        pin_value = paddle_pin_read(dah_paddle); 
+      }
+    }
+  #else
+    pin_value = paddle_pin_read(dah_paddle);
+  #endif //FEATURE_INTERRUPT_PADDLE_READS
 
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
@@ -10704,6 +10743,11 @@ void initialize_pins() {
       digitalWrite(keyer_awake,KEYER_AWAKE_PIN_AWAKE_STATE);
     }
   #endif //FEATURE_SLEEP
+
+  #if defined(FEATURE_INTERRUPT_PADDLE_READS)
+    attachInterrupt(digitalPinToInterrupt(paddle_left), service_paddle_interrupt, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(paddle_right), service_paddle_interrupt, CHANGE);
+  #endif //FEATURE_INTERRUPT_PADDLE_READS
   
 }
 
@@ -12467,4 +12511,15 @@ void service_ptt_interlock(){
 
 
 //---------------------------------------------------------------------
+#if defined(FEATURE_INTERRUPT_PADDLE_READS)
+void service_paddle_interrupt(){
 
+
+  if (paddle_pin_read(paddle_left) == 0) {interrupt_paddle_left_buffer = 1;}
+
+  if (paddle_pin_read(paddle_right) == 0) {interrupt_paddle_right_buffer = 1;}
+
+ 
+
+}
+#endif //FEATURE_INTERRUPT_PADDLE_READS
