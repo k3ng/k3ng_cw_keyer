@@ -7431,10 +7431,12 @@ void service_winkey(byte action) {
       }
 
       if (winkey_status == WINKEY_BUFFERED_HSCW_COMMAND) {
-        add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
         unsigned int send_buffer_wpm = ((incoming_serial_byte*100)/5);
-        add_to_send_buffer(highByte(send_buffer_wpm));
-        add_to_send_buffer(lowByte(send_buffer_wpm));
+        if (send_buffer_wpm){
+          add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
+          add_to_send_buffer(highByte(send_buffer_wpm));
+          add_to_send_buffer(lowByte(send_buffer_wpm));
+        }
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
 
