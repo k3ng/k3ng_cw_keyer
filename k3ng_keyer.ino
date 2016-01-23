@@ -468,11 +468,14 @@ New fetures in this stable release:
     2.2.2016012101
       Beta testing FEATURE_INTERRUPT_PADDLE_READS
 
+    2.2.2016012301
+      Fixed compilation error: 10306: error: return-statement with no value, in function returning byte (thanks Giorgio, IZ2XBZ))
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
   
 */
 
-#define CODE_VERSION "2.2.2016012101"
+#define CODE_VERSION "2.2.2016012301"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -10303,7 +10306,7 @@ byte play_memory(byte memory_number)
               #ifdef FEATURE_COMMAND_BUTTONS
                 while (analogbuttonread(0)) {}
               #endif  
-              return;
+              return 0;
             }
           #endif //FEATURE_STRAIGHT_KEY
         }
