@@ -471,11 +471,15 @@ New fetures in this stable release:
     2.2.2016012301
       Fixed compilation error: 10306: error: return-statement with no value, in function returning byte (thanks Giorgio, IZ2XBZ))
 
+    2.2.2016012302
+      Merge of bug fix from JG2RZF: Winkey - CTESTWIN sends 0x00 as "HSCW Speed Change" to keyer (thanks JG2RZF)
+
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
   
 */
 
-#define CODE_VERSION "2.2.2016012301"
+#define CODE_VERSION "2.2.2016012302"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
