@@ -27,8 +27,9 @@
 #define ptt_tx_4 0
 #define ptt_tx_5 0
 #define ptt_tx_6 0
-#define tx_key_dit 0            // if defined, goes high for dit (any transmitter)
-#define tx_key_dah 0            // if defined, goes high for dah (any transmitter)
+#define tx_key_dit 0            // if defined, goes active for dit (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
+#define tx_key_dah 0            // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
+
 
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_pin A1

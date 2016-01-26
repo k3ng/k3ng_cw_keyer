@@ -474,12 +474,18 @@ New fetures in this stable release:
     2.2.2016012302
       Merge of bug fix from JG2RZF: Winkey - CTESTWIN sends 0x00 as "HSCW Speed Change" to keyer (thanks JG2RZF)
 
+    2.2.2016012501
+      loop_element_lengths - minor change to paddle reading that may have an effect at high speeds
+
+    2.2.2016012502
+      tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state settings
+      OPTION_RUSSIAN_LANGUAGE_SEND_CLI contributed by Павел Бирюков, UA1AQC
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
   
 */
 
-#define CODE_VERSION "2.2.2016012302"
+#define CODE_VERSION "2.2.2016012502"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -585,6 +591,7 @@ New fetures in this stable release:
 #if defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
   #include <goertzel.h>
 #endif
+
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
   //#include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, so they are commented out
@@ -959,10 +966,10 @@ HardwareSerial * debug_serial_port;
 #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
 
-#if defined(FEATURE_INTERRUPT_PADDLE_READS)
-  volatile byte interrupt_paddle_left_buffer = 0;     // used for buffering paddle hits in iambic operation
-  volatile byte interrupt_paddle_right_buffer = 0;     // used for buffering paddle hits in iambic operation
-#endif //FEATURE_INTERRUPT_PADDLE_READS
+#if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
+  byte send_winkey_breakin_byte_flag = 0;
+#endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
+
 
 /*---------------------------------------------------------------------------------------------------------
 
@@ -1001,6 +1008,8 @@ void loop()
   
   // this is where the magic happens
   
+//delay(200); // testing!!!
+
   #ifdef OPTION_WATCHDOG_TIMER
     wdt_reset();
   #endif  //OPTION_WATCHDOG_TIMER
@@ -1099,6 +1108,10 @@ void loop()
     #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
       service_competition_compression_detection();
     #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
+
+    #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
+      service_winkey_breakin();
+    #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)      
 
   }
   
@@ -3375,21 +3388,21 @@ void check_potentiometer()
     byte pot_value_wpm_read = pot_value_wpm();
     if ((abs(pot_value_wpm_read - last_pot_wpm_read) > potentiometer_change_threshold)) {
       #ifdef DEBUG_POTENTIOMETER
-      debug_serial_port->print(F("check_potentiometer: speed change: "));
-      debug_serial_port->print(pot_value_wpm_read);
-      debug_serial_port->print(F(" analog read: "));
-      debug_serial_port->println(analogRead(potentiometer));
+        debug_serial_port->print(F("check_potentiometer: speed change: "));
+        debug_serial_port->print(pot_value_wpm_read);
+        debug_serial_port->print(F(" analog read: "));
+        debug_serial_port->println(analogRead(potentiometer));
       #endif
       speed_set(pot_value_wpm_read);
       last_pot_wpm_read = pot_value_wpm_read;
       #ifdef FEATURE_WINKEY_EMULATION
-      if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
-        winkey_port_write(((pot_value_wpm_read-pot_wpm_low_value)|128));
-        winkey_last_unbuffered_speed_wpm = configuration.wpm;
-      }
+        if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
+          winkey_port_write(((pot_value_wpm_read-pot_wpm_low_value)|128));
+          winkey_last_unbuffered_speed_wpm = configuration.wpm;
+        }
       #endif
       #ifdef FEATURE_SLEEP
-      last_activity_time = millis(); 
+        last_activity_time = millis(); 
       #endif //FEATURE_SLEEP
     }
   }
@@ -3825,6 +3838,9 @@ int read_settings_from_eeprom() {
 
 void check_dit_paddle()
 {
+
+
+
   byte pin_value = 0;
   byte dit_paddle = 0;
   #ifdef OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT
@@ -3837,26 +3853,8 @@ void check_dit_paddle()
     dit_paddle = paddle_right;
   }
 
+  pin_value = paddle_pin_read(dit_paddle);
 
-  //zzzzzzzzz
-
-  #if defined(FEATURE_INTERRUPT_PADDLE_READS)
-    if (dit_paddle == paddle_left){
-      if (interrupt_paddle_left_buffer) {
-        interrupt_paddle_left_buffer = 0;
-      } else {
-        pin_value = paddle_pin_read(dit_paddle);
-      }
-    } else{
-      if (interrupt_paddle_right_buffer) {
-        interrupt_paddle_right_buffer = 0;
-      } else {
-        pin_value = paddle_pin_read(dit_paddle); 
-      }
-    }
-  #else
-    pin_value = paddle_pin_read(dit_paddle);
-  #endif //FEATURE_INTERRUPT_PADDLE_READS
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
     if (usb_dit) {pin_value = 0;}
@@ -3885,11 +3883,14 @@ void check_dit_paddle()
 
     #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
       if (!winkey_interrupted && winkey_host_open && !winkey_breakin_status_byte_inhibit){
-        winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
-        winkey_interrupted = 1;
+        send_winkey_breakin_byte_flag = 1;
+        // winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+        // winkey_interrupted = 1;
+
         // tone(sidetone_line,1000);
         // delay(500);
         // noTone(sidetone_line);
+
         dit_buffer = 0;
       }   
     #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
@@ -3914,14 +3915,15 @@ void check_dit_paddle()
 
 
 
-
-
 }
 
 //-------------------------------------------------------------------------------------------------------
 
 void check_dah_paddle()
 {
+
+  
+
   byte pin_value = 0;
   byte dah_paddle;
 
@@ -3931,30 +3933,10 @@ void check_dah_paddle()
     dah_paddle = paddle_left;
   }
 
-
-  //zzzzzzzzz
-
-  #if defined(FEATURE_INTERRUPT_PADDLE_READS)
-    if (dah_paddle == paddle_left){
-      if (interrupt_paddle_left_buffer) {
-        interrupt_paddle_left_buffer = 0;
-      } else {
-        pin_value = paddle_pin_read(dah_paddle);
-      }
-    } else{
-      if (interrupt_paddle_right_buffer) {
-        interrupt_paddle_right_buffer = 0;
-      } else {
-        pin_value = paddle_pin_read(dah_paddle); 
-      }
-    }
-  #else
-    pin_value = paddle_pin_read(dah_paddle);
-  #endif //FEATURE_INTERRUPT_PADDLE_READS
-
+  pin_value = paddle_pin_read(dah_paddle);
   
   #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
-  if (usb_dah) {pin_value = 0;}
+    if (usb_dah) {pin_value = 0;}
   #endif 
   
   if (pin_value == 0) {
@@ -3968,12 +3950,14 @@ void check_dah_paddle()
 
     #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
       if (!winkey_interrupted && winkey_host_open && !winkey_breakin_status_byte_inhibit){
-        winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
-        winkey_interrupted = 1;
+        send_winkey_breakin_byte_flag = 1;
+        // winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+        // winkey_interrupted = 1;
+
         // tone(sidetone_line,1000);
         // delay(500);
         // noTone(sidetone_line);
-        //dah_buffer = 0;
+        dah_buffer = 0;
       }   
     #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
 
@@ -3986,6 +3970,8 @@ void check_dah_paddle()
     #endif
     manual_ptt_invoke = 0;
   }
+
+
 
 }
 
@@ -4009,7 +3995,7 @@ void send_dit(byte sending_type)
   #ifdef DEBUG_VARIABLE_DUMP
     dit_start_time = millis();
   #endif
-  if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,HIGH);}
+  if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,tx_key_dit_and_dah_pins_active_state);}
 
 
   #ifdef FEATURE_QLF
@@ -4024,7 +4010,7 @@ void send_dit(byte sending_type)
 
 
   
-  if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,LOW);}
+  if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,tx_key_dit_and_dah_pins_inactive_state);}
   #ifdef DEBUG_VARIABLE_DUMP
     dit_end_time = millis();
   #endif
@@ -4098,7 +4084,7 @@ void send_dah(byte sending_type)
   #ifdef DEBUG_VARIABLE_DUMP
     dah_start_time = millis();
   #endif
-  if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,HIGH);}
+  if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_active_state);}
 
   #ifdef FEATURE_QLF
     if (qlf_active){
@@ -4110,7 +4096,7 @@ void send_dah(byte sending_type)
     loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),keying_compensation,character_wpm,sending_type);
   #endif //FEATURE_QLF 
 
-  if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,LOW);}
+  if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_inactive_state);}
 
   #ifdef DEBUG_VARIABLE_DUMP
     dah_end_time = millis();
@@ -4344,6 +4330,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
       return;
     }
 
+
     float element_length;
 
     if (speed_mode == SPEED_NORMAL) {
@@ -4382,13 +4369,25 @@ void tx_and_sidetone_key (int state, byte sending_type)
         }    
      
         #ifndef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          if (being_sent == SENDING_DIT) {
-            check_dah_paddle();
-          } else {
-            if (being_sent == SENDING_DAH) {
-              check_dit_paddle();
-            }
-          }
+            // if (being_sent == SENDING_DIT) {
+            //   check_dah_paddle();
+            // } else {
+            //   if (being_sent == SENDING_DAH) {
+            //     check_dit_paddle();
+            //   }
+            // }
+
+            if (being_sent == SENDING_DIT) {
+              check_dah_paddle();
+            } else {
+              if (being_sent == SENDING_DAH) {
+                check_dit_paddle();
+              } else {
+                check_dah_paddle();
+                check_dit_paddle();                
+              }
+            }            
+
         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
           if ((float(float(millis()-starttime)/float(endtime-starttime))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
             if (being_sent == SENDING_DIT) {
@@ -4448,10 +4447,12 @@ void tx_and_sidetone_key (int state, byte sending_type)
     #endif //FEATURE_DIT_DAH_BUFFER_CONTROL
    
    
+
+
   } //void loop_element_lengths
 
 
-#else //FEATURE_HI_PRECISION_LOOP_TIMING
+#else //FEATURE_HI_PRECISION_LOOP_TIMING------------------------------------------------------------------
 
   void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in, byte sending_type){
 
@@ -4460,6 +4461,8 @@ void tx_and_sidetone_key (int state, byte sending_type)
     if ((lengths == 0) or (lengths < 0)) {
       return;
     }
+
+
 
     float element_length;
 
@@ -4493,13 +4496,25 @@ void tx_and_sidetone_key (int state, byte sending_type)
         }    
     
         #ifndef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          if (being_sent == SENDING_DIT) {
-            check_dah_paddle();
-          } else {
-            if (being_sent == SENDING_DAH) {
-              check_dit_paddle();
-            }
-          }
+          // if (being_sent == SENDING_DIT) {
+          //   check_dah_paddle();
+          // } else {
+          //   if (being_sent == SENDING_DAH) {
+          //     check_dit_paddle();
+          //   }
+          // }
+
+            if (being_sent == SENDING_DIT) {
+              check_dah_paddle();
+            } else {
+              if (being_sent == SENDING_DAH) {
+                check_dit_paddle();
+              } else {
+                check_dah_paddle();
+                check_dit_paddle();                
+              }
+            }   
+
         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
           if ((float(float(micros()-starttime)/float(endtime-starttime))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
             if (being_sent == SENDING_DIT) {
@@ -4531,12 +4546,16 @@ void tx_and_sidetone_key (int state, byte sending_type)
       #ifdef FEATURE_COMMAND_BUTTONS
         if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
           if (keyer_machine_mode == KEYER_NORMAL) {
+
+
+
             return;
           }
         }    
       #else
         if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
           if (keyer_machine_mode == KEYER_NORMAL) {
+            
             return;
           }
         }  
@@ -4557,7 +4576,8 @@ void tx_and_sidetone_key (int state, byte sending_type)
     }  
     #endif //FEATURE_DIT_DAH_BUFFER_CONTROL
    
-   
+ 
+
   } //void loop_element_lengths
 
 #endif //FEATURE_HI_PRECISION_LOOP_TIMING
@@ -5879,24 +5899,24 @@ void send_char(byte cw_char, byte omit_letterspace)
       case 'Y': send_the_dits_and_dahs("-.--");break;
       case 'Z': send_the_dits_and_dahs("--..");break;
 
-      case '0': send_the_dits_and_dahs("-----");break;//send_dahs(5); break;
-      case '1': send_the_dits_and_dahs(".----");break;//send_dit(AUTOMATIC_SENDING); send_dahs(4); break;
-      case '2': send_the_dits_and_dahs("..---");break;//send_dits(2); send_dahs(3); break;
-      case '3': send_the_dits_and_dahs("...--");break;//send_dits(3); send_dahs(2); break;
-      case '4': send_the_dits_and_dahs("....-");break;//send_dits(4); send_dah(AUTOMATIC_SENDING); break;
-      case '5': send_the_dits_and_dahs(".....");break;//send_dits(5); break;
-      case '6': send_the_dits_and_dahs("-....");break;//send_dah(AUTOMATIC_SENDING); send_dits(4); break;
-      case '7': send_the_dits_and_dahs("--...");break;//send_dahs(2); send_dits(3); break;
-      case '8': send_the_dits_and_dahs("---..");break;//send_dahs(3); send_dits(2); break;
-      case '9': send_the_dits_and_dahs("----.");break;//send_dahs(4); send_dit(AUTOMATIC_SENDING); break;
+      case '0': send_the_dits_and_dahs("-----");break;
+      case '1': send_the_dits_and_dahs(".----");break;
+      case '2': send_the_dits_and_dahs("..---");break;
+      case '3': send_the_dits_and_dahs("...--");break;
+      case '4': send_the_dits_and_dahs("....-");break;
+      case '5': send_the_dits_and_dahs(".....");break;
+      case '6': send_the_dits_and_dahs("-....");break;
+      case '7': send_the_dits_and_dahs("--...");break;
+      case '8': send_the_dits_and_dahs("---..");break;
+      case '9': send_the_dits_and_dahs("----.");break;
 
-      case '=': send_the_dits_and_dahs("-...-");break;//send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); break;
-      case '/': send_the_dits_and_dahs("-..-.");break;//send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
+      case '=': send_the_dits_and_dahs("-...-");break;
+      case '/': send_the_dits_and_dahs("-..-.");break;
       case ' ': loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm,AUTOMATIC_SENDING); break;
-      case '*': send_the_dits_and_dahs("-...-.-");break;//send_dah(AUTOMATIC_SENDING); send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;    // using asterisk for BK
+      case '*': send_the_dits_and_dahs("-...-.-");break;
       //case '&': send_dit(AUTOMATIC_SENDING); loop_element_lengths(3); send_dits(3); break;
-      case '.': send_the_dits_and_dahs(".-.-.-");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case ',': send_the_dits_and_dahs("--..--");break;//send_dahs(2); send_dits(2); send_dahs(2); break;
+      case '.': send_the_dits_and_dahs(".-.-.-");break;
+      case ',': send_the_dits_and_dahs("--..--");break;
       case '\'': send_the_dits_and_dahs(".----.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(4); send_dit(AUTOMATIC_SENDING); break;                   // apostrophe
       case '!': send_the_dits_and_dahs("-.-.--");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
       case '(': send_the_dits_and_dahs("-.--.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
@@ -5912,6 +5932,45 @@ void send_char(byte cw_char, byte omit_letterspace)
       case '@': send_the_dits_and_dahs(".--.-.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
       case '<': send_the_dits_and_dahs(".-.-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;     // AR
       case '>': send_the_dits_and_dahs("...-.-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;               // SK
+
+      #ifdef OPTION_RUSSIAN_LANGUAGE_SEND_CLI    // Contributed by Павел Бирюков, UA1AQC
+        case 192: send_the_dits_and_dahs(".-");break; //А
+        case 193: send_the_dits_and_dahs("-...");break; //Б
+        case 194: send_the_dits_and_dahs(".--");break; //В
+        case 195: send_the_dits_and_dahs("--.");break; //Г
+        case 196: send_the_dits_and_dahs("-..");break; //Д
+        case 197: send_the_dits_and_dahs(".");break; //Е
+        case 168: send_the_dits_and_dahs(".");break; //Ё
+        case 184: send_the_dits_and_dahs(".");break; //ё
+        case 198: send_the_dits_and_dahs("...-");break; //Ж
+        case 199: send_the_dits_and_dahs("--..");break; //З
+        case 200: send_the_dits_and_dahs("..");break; //И
+        case 201: send_the_dits_and_dahs(".---");break; //Й
+        case 202: send_the_dits_and_dahs("-.-");break; //К
+        case 203: send_the_dits_and_dahs(".-..");break; //Л
+        case 204: send_the_dits_and_dahs("--");break; //М
+        case 205: send_the_dits_and_dahs("-.");break; //Н
+        case 206: send_the_dits_and_dahs("---");break; //О
+        case 207: send_the_dits_and_dahs(".--.");break; //П
+        case 208: send_the_dits_and_dahs(".-.");break; //Р
+        case 209: send_the_dits_and_dahs("...");break; //С
+        case 210: send_the_dits_and_dahs("-");break; //Т
+        case 211: send_the_dits_and_dahs("..-");break; //У
+        case 212: send_the_dits_and_dahs("..-.");break; //Ф
+        case 213: send_the_dits_and_dahs("....");break; //Х
+        case 214: send_the_dits_and_dahs("-.-.");break; //Ц
+        case 215: send_the_dits_and_dahs("---.");break; //Ч
+        case 216: send_the_dits_and_dahs("----");break; //Ш
+        case 217: send_the_dits_and_dahs("--.-");break; //Щ
+        case 218: send_the_dits_and_dahs("--.--");break; //Ъ
+        case 219: send_the_dits_and_dahs("-.--");break; //Ы
+        case 220: send_the_dits_and_dahs("-..-");break; //Ь
+        case 221: send_the_dits_and_dahs("..-..");break; //Э
+        case 222: send_the_dits_and_dahs("..--");break; //Ю
+        case 223: send_the_dits_and_dahs(".-.-");break; //Я
+        case 255: send_the_dits_and_dahs(".-.-");break; //я
+      #endif //OPTION_RUSSIAN_LANGUAGE_SEND_CLI
+
       case '\n': break;
       case '\r': break;
   
@@ -8445,7 +8504,7 @@ void service_paddle_echo()
         debug_serial_port->println();
       #endif //DEBUG_CW_COMPUTER_KEYBOARD
     #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
-//zzzzzz
+
  
     #ifdef FEATURE_DISPLAY
       if (lcd_paddle_echo){
@@ -10667,11 +10726,11 @@ void initialize_pins() {
 
   if (tx_key_dit) {
     pinMode (tx_key_dit, OUTPUT);
-    digitalWrite (tx_key_dit, LOW);
+    digitalWrite (tx_key_dit, tx_key_dit_and_dah_pins_inactive_state);
   }
   if (tx_key_dah) {
     pinMode (tx_key_dah, OUTPUT);
-    digitalWrite (tx_key_dah, LOW);
+    digitalWrite (tx_key_dah, tx_key_dit_and_dah_pins_inactive_state);
   }
 
   #ifdef FEATURE_CW_DECODER
@@ -10753,10 +10812,6 @@ void initialize_pins() {
     }
   #endif //FEATURE_SLEEP
 
-  #if defined(FEATURE_INTERRUPT_PADDLE_READS)
-    attachInterrupt(digitalPinToInterrupt(paddle_left), service_paddle_interrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(paddle_right), service_paddle_interrupt, CHANGE);
-  #endif //FEATURE_INTERRUPT_PADDLE_READS
   
 }
 
@@ -12519,16 +12574,20 @@ void service_ptt_interlock(){
 
 
 
+
 //---------------------------------------------------------------------
-#if defined(FEATURE_INTERRUPT_PADDLE_READS)
-void service_paddle_interrupt(){
+
+#if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
+void service_winkey_breakin(){
 
 
-  if (paddle_pin_read(paddle_left) == 0) {interrupt_paddle_left_buffer = 1;}
-
-  if (paddle_pin_read(paddle_right) == 0) {interrupt_paddle_right_buffer = 1;}
-
- 
-
+  if (send_winkey_breakin_byte_flag){
+    winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+    winkey_interrupted = 1;
+    send_winkey_breakin_byte_flag = 0;
+  }   
+   
 }
-#endif //FEATURE_INTERRUPT_PADDLE_READS
+#endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
+
+//---------------------------------------------------------------------
