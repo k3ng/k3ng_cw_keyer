@@ -2,13 +2,13 @@
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
 #define FEATURE_COMMAND_BUTTONS
-#define FEATURE_COMMAND_LINE_INTERFACE        // (this no longer requires FEATURE_SERIAL)
-// #define FEATURE_MEMORIES
+// #define FEATURE_COMMAND_LINE_INTERFACE        // (this no longer requires FEATURE_SERIAL)
+#define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
-// #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation) (this no longer requires FEATURE_SERIAL)
+#define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation) (this no longer requires FEATURE_SERIAL)
 //#define FEATURE_BEACON
 //#define FEATURE_CALLSIGN_RECEIVE_PRACTICE
-// #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
+#define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 //#define FEATURE_SERIAL_HELP
 //#define FEATURE_HELL
 //#define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
@@ -35,7 +35,7 @@
 // #define FEATURE_EEPROM_E24C1024
 // #define FEATURE_STRAIGHT_KEY
 // #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
-#define FEATURE_PADDLE_ECHO
+// #define FEATURE_PADDLE_ECHO
 // #define FEATURE_STRAIGHT_KEY_ECHO
 
 //#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
