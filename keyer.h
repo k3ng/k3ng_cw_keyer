@@ -1,84 +1,145 @@
-void setup(void);
-void loop(void);
-void check_for_dirty_configuration(void);
-void check_memory_repeat(void);
-void check_paddles(void);
-void ptt_key(void);
-void ptt_unkey(void);
-void check_ptt_tail(void);
-void write_settings_to_eeprom(int initialize_eeprom);
-int read_settings_from_eeprom(void);
-void check_dit_paddle(void);
-void check_dah_paddle(void);
-void speed_change(int change);
-void speed_set(int wpm_set);
-long get_cw_input_from_user(unsigned int exit_time_seconds);
-void command_mode(void);
-void command_set_mem_repeat_delay(void);
-void adjust_dah_to_dit_ratio(int adjustment);
-void command_dah_to_dit_ratio_adjust(void);
-void command_tuning_mode(void);
-void sidetone_adj(int hz);
-void command_sidetone_freq_adj(void);
-void command_speed_mode(void);
-void send_tx(void);
-void check_the_memory_buttons(void);
-void initialize_analog_button_array(void);
-void check_command_buttons(void);
-void service_dit_dah_buffers(void);
-void beep(void);
-void boop(void);
-void beep_boop(void);
-void boop_beep(void);
-void send_dits(int dits);
-void send_dahs(int dahs);
-int uppercase(int charbytein);
-void serial_qrss_mode(void);
-void service_send_buffer(byte no_print);
-void clear_send_buffer(void);
-void remove_from_send_buffer(void);
-void service_command_line_interface(void);
-void check_serial(void);
-void process_serial_command(void);
-void service_serial_paddle_echo(void);
-void serial_set_memory_repeat(void);
-void repeat_play_memory(void);
-void serial_change_wordspace(void);
-void serial_switch_tx(void);
-void serial_set_dit_to_dah_ratio(void);
-void serial_set_serial_number(void);
-void serial_set_sidetone_freq(void);
-void serial_wpm_set(void);
-void serial_set_weighting(void);
-void serial_tune_command(void);
-void serial_status(void);
-int convert_cw_number_to_ascii(long number_in);
-void initialize_eeprom_memories(void);
-void serial_status_memories(void);
-void serial_program_memory(void);
-void command_program_memory(void);
-void check_button0(void);
-void program_memory(int memory_number);
-void initialize_pins(void);
-void initialize_debug_startup(void);
-void initialize_keyer_state(void);
-void initialize_potentiometer(void);
-void initialize_rotary_encoder(void);
-void initialize_default_modes(void);
-void initialize_watchdog(void);
-void check_eeprom_for_initialization(void);
-void check_for_beacon_mode(void);
-void check_for_debug_modes(void);
-void initialize_serial_port(void);
-void initialize_ps2_keyboard(void);
-void initialize_display(void);
-void initialize_usb(void);
-void add_to_send_buffer(byte);
-void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in, byte sending_type);
-void play_memory(byte memory_number);
-void serial_play_memory(byte memory_number);
-int serial_get_number_input(byte places,int lower_limit, int upper_limit);
-void wakeup(void);
-void serial_cw_practice(void);
-void serial_set_farnsworth(void);
-void us_callsign_practice(void);
+#ifndef keyer_h
+#define keyer_h
+
+// Do not change these !
+
+// Variable macros
+#define STRAIGHT 1
+#define IAMBIC_B 2
+#define IAMBIC_A 3
+#define BUG 4
+#define ULTIMATIC 5
+
+#define PADDLE_NORMAL 0
+#define PADDLE_REVERSE 1
+
+#define KEYER_NORMAL 0
+#define BEACON 1
+#define KEYER_COMMAND_MODE 2
+
+#define OMIT_LETTERSPACE 1
+
+#define SIDETONE_OFF 0
+#define SIDETONE_ON 1
+#define SIDETONE_PADDLE_ONLY 2
+
+#define SENDING_NOTHING 0
+#define SENDING_DIT 1
+#define SENDING_DAH 2
+
+#define SPEED_NORMAL 0
+#define SPEED_QRSS 1
+
+#define CW 0
+#define HELL 1
+
+#ifdef FEATURE_PS2_KEYBOARD
+  #define PS2_KEYBOARD_NORMAL 0
+#endif //FEATURE_PS2_KEYBOARD
+
+#define SERIAL_CLI 0
+#define SERIAL_WINKEY_EMULATION 1
+
+#define SERIAL_SEND_BUFFER_SPECIAL_START 13
+#define SERIAL_SEND_BUFFER_WPM_CHANGE 14        
+#define SERIAL_SEND_BUFFER_PTT_ON 15            
+#define SERIAL_SEND_BUFFER_PTT_OFF 16           
+#define SERIAL_SEND_BUFFER_TIMED_KEY_DOWN 17    
+#define SERIAL_SEND_BUFFER_TIMED_WAIT 18        
+#define SERIAL_SEND_BUFFER_NULL 19              
+#define SERIAL_SEND_BUFFER_PROSIGN 20           
+#define SERIAL_SEND_BUFFER_HOLD_SEND 21         
+#define SERIAL_SEND_BUFFER_HOLD_SEND_RELEASE 22 
+#define SERIAL_SEND_BUFFER_MEMORY_NUMBER 23
+#define SERIAL_SEND_BUFFER_TX_CHANGE 24
+#define SERIAL_SEND_BUFFER_SPECIAL_END 25
+
+#if defined(OPTION_PROSIGN_SUPPORT)
+  #define PROSIGN_START 127
+  #define PROSIGN_AA 128
+  #define PROSIGN_AS 129
+  #define PROSIGN_BK 130
+  #define PROSIGN_CL 131
+  #define PROSIGN_CT 132
+  #define PROSIGN_KN 133
+  #define PROSIGN_NJ 134
+  #define PROSIGN_SK 135
+  #define PROSIGN_SN 136
+  #define PROSIGN_END 137
+#endif
+
+#define SERIAL_SEND_BUFFER_NORMAL 0
+#define SERIAL_SEND_BUFFER_TIMED_COMMAND 1
+#define SERIAL_SEND_BUFFER_HOLD 2
+
+#ifdef FEATURE_WINKEY_EMULATION
+#define WINKEY_NO_COMMAND_IN_PROGRESS 0
+#define WINKEY_UNBUFFERED_SPEED_COMMAND 1
+#define WINKEY_UNSUPPORTED_COMMAND 2
+#define WINKEY_POINTER_COMMAND 3
+#define WINKEY_ADMIN_COMMAND 4
+#define WINKEY_PAUSE_COMMAND 5
+#define WINKEY_KEY_COMMAND 6
+#define WINKEY_SETMODE_COMMAND 7
+#define WINKEY_SIDETONE_FREQ_COMMAND 8
+#define WINKEY_ADMIN_COMMAND_ECHO 9
+#define WINKEY_BUFFERED_SPEED_COMMAND 10
+#define WINKEY_DAH_TO_DIT_RATIO_COMMAND 11
+#define WINKEY_KEYING_COMPENSATION_COMMAND 12
+#define WINKEY_FIRST_EXTENSION_COMMAND 13
+#define WINKEY_PTT_TIMES_PARM1_COMMAND 14
+#define WINKEY_PTT_TIMES_PARM2_COMMAND 15
+#define WINKEY_SET_POT_PARM1_COMMAND 16
+#define WINKEY_SET_POT_PARM2_COMMAND 17
+#define WINKEY_SET_POT_PARM3_COMMAND 18
+#define WINKEY_SOFTWARE_PADDLE_COMMAND 19
+#define WINKEY_CANCEL_BUFFERED_SPEED_COMMAND 20
+#define WINKEY_BUFFFERED_PTT_COMMMAND 21
+#define WINKEY_HSCW_COMMAND 22
+#define WINKEY_BUFFERED_HSCW_COMMAND 23
+#define WINKEY_WEIGHTING_COMMAND 24
+#define WINKEY_KEY_BUFFERED_COMMAND 25
+#define WINKEY_WAIT_BUFFERED_COMMAND 26
+#define WINKEY_POINTER_01_COMMAND 27
+#define WINKEY_POINTER_02_COMMAND 28
+#define WINKEY_POINTER_03_COMMAND 29
+#define WINKEY_FARNSWORTH_COMMAND 30
+#define WINKEY_MERGE_COMMAND 31
+#define WINKEY_MERGE_PARM_2_COMMAND 32
+#define WINKEY_SET_PINCONFIG_COMMAND 33
+#define WINKEY_EXTENDED_COMMAND 34
+#ifdef OPTION_WINKEY_2_SUPPORT
+#define WINKEY_SEND_MSG 35
+#endif //OPTION_WINKEY_2_SUPPORT
+#define WINKEY_LOAD_SETTINGS_PARM_1_COMMAND 101
+#define WINKEY_LOAD_SETTINGS_PARM_2_COMMAND 102
+#define WINKEY_LOAD_SETTINGS_PARM_3_COMMAND 103
+#define WINKEY_LOAD_SETTINGS_PARM_4_COMMAND 104
+#define WINKEY_LOAD_SETTINGS_PARM_5_COMMAND 105
+#define WINKEY_LOAD_SETTINGS_PARM_6_COMMAND 106
+#define WINKEY_LOAD_SETTINGS_PARM_7_COMMAND 107
+#define WINKEY_LOAD_SETTINGS_PARM_8_COMMAND 108
+#define WINKEY_LOAD_SETTINGS_PARM_9_COMMAND 109
+#define WINKEY_LOAD_SETTINGS_PARM_10_COMMAND 110
+#define WINKEY_LOAD_SETTINGS_PARM_11_COMMAND 111
+#define WINKEY_LOAD_SETTINGS_PARM_12_COMMAND 112
+#define WINKEY_LOAD_SETTINGS_PARM_13_COMMAND 113
+#define WINKEY_LOAD_SETTINGS_PARM_14_COMMAND 114
+#define WINKEY_LOAD_SETTINGS_PARM_15_COMMAND 115
+
+#define WINKEY_HOUSEKEEPING 0
+#define SERVICE_SERIAL_BYTE 1
+#endif //FEATURE_WINKEY_EMULATION
+
+#define AUTOMATIC_SENDING 0
+#define MANUAL_SENDING 1
+
+#define ULTIMATIC_NORMAL 0
+#define ULTIMATIC_DIT_PRIORITY 1
+#define ULTIMATIC_DAH_PRIORITY 2
+
+
+#define PRINTCHAR 0
+#define NOPRINT 1
+
+#endif //keyer_h

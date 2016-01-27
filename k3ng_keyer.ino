@@ -10635,15 +10635,6 @@ void initialize_pins() {
 
   #ifdef FEATURE_CW_DECODER
     pinMode (cw_decoder_pin, INPUT);
-
-/* 2015090501
-    #ifndef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-      digitalWrite (cw_decoder_pin, HIGH);
-    #else
-      digitalWrite (cw_decoder_pin, LOW);
-      cwtonedetector.init(cw_decoder_pin);
-    #endif //OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-*/
     digitalWrite (cw_decoder_pin, HIGH);
 
     #if defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
@@ -10810,19 +10801,6 @@ void service_cw_decoder() {
     static byte screen_column = 0;
     static int last_printed_decoder_wpm = 0;
   #endif
-
-/* 2015090501 
-  #if !defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
-    cd_decoder_pin_state = digitalRead(cw_decoder_pin);
-  #else
-    if (cwtonedetector.detecttone() == HIGH){  // invert states
-      cd_decoder_pin_state = LOW;
-    } else {
-      cd_decoder_pin_state = HIGH;
-    }
-  #endif
-
-  */
 
   cd_decoder_pin_state = digitalRead(cw_decoder_pin);
 
