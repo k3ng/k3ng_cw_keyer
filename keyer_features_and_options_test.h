@@ -11,12 +11,12 @@
 #define FEATURE_COMMAND_BUTTONS
 #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
 #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
-#define FEATURE_MEMORY_MACROS
+// #define FEATURE_MEMORY_MACROS
 // #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation) (this no longer requires FEATURE_SERIAL)
 // #define FEATURE_BEACON
 // #define FEATURE_CALLSIGN_RECEIVE_PRACTICE
 #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
-// #define FEATURE_SERIAL_HELP
+#define FEATURE_SERIAL_HELP
 // #define FEATURE_HELL
 // #define FEATURE_PS2_KEYBOARD        // Use a PS2 keyboard to send code - Change keyboard layout (non-US) in K3NG_PS2Keyboard.h.  Additional options below.
 // #define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code - Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
@@ -40,7 +40,7 @@
 // #define FEATURE_LED_RING                // Mayhew Labs Led Ring support
 // #define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
 // #define FEATURE_PTT_INTERLOCK 
-// #define FEATURE_QLF
+#define FEATURE_QLF
 // #define FEATURE_EEPROM_E24C1024
 #define FEATURE_STRAIGHT_KEY
 // #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
@@ -94,6 +94,8 @@
 #define OPTION_RUSSIAN_LANGUAGE_SEND_CLI // Russian language CLI sending support (contributed by Павел Бирюков, UA1AQC)
 
 // #define FEATURE_COMPETITION_COMPRESSION_DETECTION //(Experimental)
+
+// #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA  // only works with Mega and pins 2 and 5 - minor performance increase... maybe?
 
 
 // ######## ########  ######  ######## 

@@ -24,6 +24,8 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer/ .  Please read it before requesting help.
 
+For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
+
  Command Line Interface ("CLI") (USB Port) (Note: turn on carriage return if using Arduino Serial Monitor program)
 
     CW Keyboard: type what you want the keyer to send (all commands are preceded with a backslash ( \ )
@@ -186,132 +188,6 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
     Press the left  paddle at power up to enter and stay forever in beacon mode
 
 New fetures in this stable release:
-
-
-    fixed bug with Winkey 00 admin command which affected Win-Test program
-    no longer necessary to manually uncomment:
-      #include <avr/sleep.h>
-      #include <PS2Keyboard.h>
-      #include <LiquidCrystal.h>
-      #include <Wire.h>
-      #include <LiquidCrystal_I2C.h>
-      #include <Adafruit_MCP23017.h>
-      #include <Adafruit_RGBLCDShield.h>
-      #include <BasicTerm.h>
-      PS2Keyboard keyboard;
-      LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
-      all USB keyboard and mouse stuff
-    fixed Arduino IDE compilation errors
-    fixed issue when FEATURE_COMMAND_LINE_INTERFACE and FEATURE_WINKEY_EMULATION are compiled without FEATURE_COMMAND_BUTTONS
-    fixed compile bug involving hz_sidetone when OPTION_MORE_DISPLAY_MSGS is enabled
-    fixed compile bug with OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
-    fixed bugs with FEATURE_CAPACITIVE_PADDLE_PINS
-    fixed issue with Arduino IDE compilation and FEATURE_CAPACITIVE_PADDLE_PINS code
-    fixed issue with N command mode command - fix from LA3ZA
-    improved paddle echo and it should work better with autospace now
-    OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
-    OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code
-    OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-    // alter these to map to alternate hang time wordspace units
-      #define WINKEY_HANG_TIME_1_0 1.0
-      #define WINKEY_HANG_TIME_1_33 1.33
-      #define WINKEY_HANG_TIME_1_66 1.66
-      #define WINKEY_HANG_TIME_2_0 2.0
-    improved paddle interruption of send_char()
-    Updated OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS from OZ1JHM provided code
-    OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
-    Updates to OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
-    Update to OPTION_NON_ENGLISH_EXTENSIONS
-    DEBUG_DISPLAY_SCROLL_PRINT_CHAR
-    OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS addition code in display_scroll_print_char() 
-    fixed bug with OPTION_REVERSE_BUTTON_ORDER
-    #define WINKEY_1_REPORT_VERSION_NUMBER 10
-    #define WINKEY_2_REPORT_VERSION_NUMBER 23
-
-    S command - alphabet send practice; contributed by Ryan, KC2ZWM (documented on web page)
-
-    #define correct_answer_led 0
-    #define wrong_answer_led 0
-
-    #define DEBUG_AUX_SERIAL_PORT
-    #define DEBUG_WINKEY
-    #define MAIN_SERIAL_PORT &Serial
-    #define DEBUG_AUX_SERIAL_PORT &Serial1
-    #define DEBUG_AUX_SERIAL_PORT_BAUD 115200
-    #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET - fixes an issue with Win-Test and Winkey 2 emulation
-    /: - CW send echo inhibit toggle (documented on web page)
-
-    bug with get_cw_input_from_user(unsigned int exit_time_milliseconds) fixed (thanks Rob, W7FJ)
-
-    OPTION_WINKEY_FREQUENT_STATUS_REPORT / RUMlog and RUMped compatibility- thanks Jim W2XO for code (documented on web page)
-
-    wpm_limit_low and wpm_limit_high settings in keyer_settings.h
-
-    potentiometer_always_on setting in keyer_settings.h
-
-    Command Mode E command: announce speed  (documented on web page)
-      
-    Fixed compilation error involving OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET and FEATURE_WINKEY_EMULATION
-
-    OPTION_PS2_KEYBOARD_RESET, thanks Bill, W9BEL for the code (documented on web page 2015-01-03)
-
-    FEATURE_CW_DECODER No space on LCD bug fixed by Rob, W7FJ
-
-    Bug fix in speed_change() - lcd_center_print_timed() - Thanks Vincenzo, IZ0RUS
-
-    FEATURE_PTT_INTERLOCK (documented on web page 2014-05-06)
-
-    Fixed bug in FEATURE_USB_KEYBOARD, reported by Bill, W9BEL
-
-    Fixed bug in FEATURE_PTT_INTERLOCK
-
-    #define unknown_cw_character '*'  (documented on web page 2014-05-06)
-
-    OPTION_UNKNOWN_CHARACTER_ERROR_TONE  (documented on web page 2014-05-06)
-    OPTION_DO_NOT_SAY_HI (FEATURE_SAY_HI is gone)
-    FEATURE_DISPLAY no longer needs to be configured, it is automatically defined when an LCD feature is enabled
-    added keyer_dependencies.h file (documentation updated)
-
-    Fixed administrative bug - FEATURE_COMMAND_BUTTONS disappeared in last update - oooooops!  (Thanks Peter, SM0NTR)
-
-    K3NG_PS2Keyboard.h and K3NG_PS2Keyboard.cpp replace PS2Keyboard.h and PS2Keyboard.cpp  (documented on web page 2014-05-06)
-    K3NG_PS2Keyboard.h: (documented on web page 2014-05-06)
-      #define OPTION_PS2_KEYBOARD_US
-      #define OPTION_PS2_KEYBOARD_GERMAN - still needs work
-      #define OPTION_PS2_KEYBOARD_FRENCH - still needs work
-
-    fixed mispelling of potentiometer_always_on
-
-    FEATURE_QLF (documented on web page 2014-05-06)
-    #define qlf_dit_max 125
-    #define qlf_dit_min 75
-    #define qlf_dah_max 200
-    #define qlf_dah_min 100
-    #define qlf_on_by_default 0
-
-    keyer_hardware.h and HARDWARE_NANOKEYER_REV_B (documented on web page)
-
-    OPTION_SAVE_MEMORY_NANOKEYER
-
-    OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST
-
-    changed reset method to 'asm volatile ("jmp 0");'
-
-    FEATURE_SERIAL no longer needs to be uncommented for FEATURE_COMMAND_LINE_INTERFACE or FEATURE_WINKEY_EMULATION (documented on web page)
-    keyer_hardware.h now switches features, pins, and settings files
-    Fixed compilation issue with OPTION_WINKEY_2_SUPPORT consuming memory without FEATURE_WINKEY_EMULATION enabled
-    OPTION_WINKEY_2_SUPPORT is now enabled by default in features and options file
-
-    HARDWARE_OPEN_INTERFACE  http://remoteqth.com/open-interface.php (documented)
-    @ symbol now works in LCD display
-
-    replaced prog_char with const char to fix issue with Arduino 1.6 compilation
-
-    Fixed bug introduced in 2.2.2015030701 where memory buttons don't work unless FEATURE_WINKEY_EMULATION is compiled in (Thanks Bill, W9BEL)
-    Fixed bug with OPTION_SAVE_MEMORY_NANOKEYER where keyer didn't say hi
-    Fixed bug with OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE when Winkey is activated and user goes into command mode with button
-
-    Working on HARDWARE_ARDUINO_DUE; Arduino Due setup requires E24C1024 I2C EEPROM hardware
 
     2.2.2015040402 More work on HARDWARE_ARDUINO_DUE (documented)
 
@@ -481,15 +357,24 @@ New fetures in this stable release:
       tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state settings
       OPTION_RUSSIAN_LANGUAGE_SEND_CLI contributed by Павел Бирюков, UA1AQC
 
+    2.2.2016012601 
+      Winkey emulation support for 0x1D HSCW overloaded command to switch transmitters (thanks JG2RZF)
+      Moved stuff from keyer_settings*.h to keyer.h (no need to tweak these or have different entries for different hardware)
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
+
+  FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\K3NG_KEYER_LIBRARY_FILES\
+
+  ONLY PUT LIBRARY FILES THAT YOU NEED TO COMPILE WITH IN THE LIBRARIES DIRECTORY
   
 */
 
-#define CODE_VERSION "2.2.2016012502"
+#define CODE_VERSION "2.2.2016012601"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
 #include "keyer_hardware.h"
+
 
 #ifndef HARDWARE_ARDUINO_DUE
   #include <avr/pgmspace.h>
@@ -521,6 +406,8 @@ New fetures in this stable release:
 #ifndef HARDWARE_CUSTOM
   #include "keyer_features_and_options.h"
 #endif
+
+#include "keyer.h"
 
 #ifdef FEATURE_EEPROM_E24C1024
   #include <E24C1024.h>
@@ -647,7 +534,7 @@ byte config_dirty = 0;
 unsigned long ptt_time = 0; 
 byte ptt_line_activated = 0;
 byte speed_mode = SPEED_NORMAL;
-#if defined(FEATURE_COMMAND_LINE_INTERFACE) || defined(FEATURE_PS2_KEYBOARD)
+#if defined(FEATURE_COMMAND_LINE_INTERFACE) || defined(FEATURE_PS2_KEYBOARD) || defined(FEATURE_MEMORY_MACROS)
   unsigned int serial_number = 1;
 #endif //FEATURE_COMMAND_LINE_INTERFACE
 byte pause_sending_buffer = 0;
@@ -6183,6 +6070,16 @@ void service_send_buffer(byte no_print)
             
           }
         }
+//zzzzzz
+        if (send_buffer_array[0] == SERIAL_SEND_BUFFER_TX_CHANGE) {  // one byte for transmitter #
+          remove_from_send_buffer();
+          if (send_buffer_bytes > 1) {
+            if ((send_buffer_array[0] > 0) && (send_buffer_array[0] < 7)){
+              switch_to_tx_silent(send_buffer_array[0]);
+            }
+            remove_from_send_buffer();          
+          }
+        }
 
         if (send_buffer_array[0] == SERIAL_SEND_BUFFER_NULL) {
           remove_from_send_buffer();
@@ -7495,13 +7392,16 @@ void service_winkey(byte action) {
         add_to_send_buffer(incoming_serial_byte);
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
-
-      if (winkey_status == WINKEY_BUFFERED_HSCW_COMMAND) {
-        unsigned int send_buffer_wpm = ((incoming_serial_byte*100)/5);
-        if (send_buffer_wpm){
+//zzzzzzz
+      if (winkey_status == WINKEY_BUFFERED_HSCW_COMMAND) {   
+        if (incoming_serial_byte > 1){  // the HSCW command is overloaded; 0 = buffered TX 1, 1 = buffered TX 2, > 1 = HSCW WPM
+          unsigned int send_buffer_wpm = ((incoming_serial_byte*100)/5);
           add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
           add_to_send_buffer(highByte(send_buffer_wpm));
           add_to_send_buffer(lowByte(send_buffer_wpm));
+        } else {
+          add_to_send_buffer(SERIAL_SEND_BUFFER_TX_CHANGE);
+          add_to_send_buffer(incoming_serial_byte+1);
         }
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
@@ -12482,7 +12382,14 @@ int paddle_pin_read(int pin_to_read){
 
   #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
     #ifndef OPTION_INVERT_PADDLE_PIN_LOGIC
-      return digitalRead(pin_to_read);
+      #if defined(OPTION_DIRECT_PADDLE_PIN_READS_MEGA)
+        switch(pin_to_read){
+          case 2: return(bitRead(PINE,4));break;
+          case 5: return(bitRead(PINE,3));break;
+        }
+      #else //OPTION_DIRECT_PADDLE_READS_MEGA
+        return digitalRead(pin_to_read);
+      #endif //OPTION_DIRECT_PADDLE_READS_MEGA
     #else 
       return !digitalRead(pin_to_read);
     #endif
