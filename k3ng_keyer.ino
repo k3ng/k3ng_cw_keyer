@@ -360,6 +360,9 @@ New fetures in this stable release:
     2.2.2016012601 
       Winkey emulation support for 0x1D HSCW overloaded command to switch transmitters (thanks JG2RZF)
       Moved stuff from keyer_settings*.h to keyer.h (no need to tweak these or have different entries for different hardware)
+     
+    2.2.2016012801
+      Fixed issue with goertzel.h being required for compilation even when it wasn't needed
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -369,7 +372,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016012601"
+#define CODE_VERSION "2.2.2016012801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -475,7 +478,7 @@ New fetures in this stable release:
   #include <BasicTerm.h>
 #endif
 
-#if defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
+#if defined(FEATURE_CW_DECODER) && defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
   #include <goertzel.h>
 #endif
 
