@@ -367,6 +367,9 @@ New fetures in this stable release:
     2.2.2016012901
       Removed experimental feature  
 
+    2.2.2016012902
+      FEATURE_LCD_ADAFRUIT_BACKPACK - support for Adafruit I2C LCD Backup using MCP23008 (courtesy Josiah Ritchie, KE0BLL)
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\K3NG_KEYER_LIBRARY_FILES\
@@ -375,7 +378,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016012901"
+#define CODE_VERSION "2.2.2016012902"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
