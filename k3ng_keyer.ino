@@ -464,7 +464,7 @@ New fetures in this stable release:
   #include <LiquidCrystal.h>
 #endif
 
-#if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_YDv1)
+#if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_ADAFRUIT_BACKPACK) || defined(FEATURE_LCD_YDv1)
   #include <Wire.h>
 #endif
 
@@ -475,6 +475,10 @@ New fetures in this stable release:
 #if defined(FEATURE_LCD_ADAFRUIT_I2C)
   #include <Adafruit_MCP23017.h>
   #include <Adafruit_RGBLCDShield.h>
+#endif
+
+#if defined(FEATURE_LCD_ADAFRUIT_BACKPACK)
+  #include <Adafruit_LiquidCrystal.h>
 #endif
 
 #if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
@@ -778,6 +782,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
 #if defined(FEATURE_LCD_ADAFRUIT_I2C)
   Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+#endif
+
+#if defined(FEATURE_LCD_ADAFRUIT_BACKPACK)
+  Adafruit_LiquidCrystal lcd(0);
 #endif
 
 #if defined(FEATURE_LCD_YDv1)
@@ -11324,7 +11332,9 @@ void initialize_display(){
   #ifdef FEATURE_LCD_ADAFRUIT_I2C
   lcd.setBacklight(lcdcolor);
   #endif //FEATURE_LCD_ADAFRUIT_I2C
-
+  #ifdef FEATURE_LCD_ADAFRUIT_BACKPACK
+  lcd.setBacklight(HIGH);
+  #endif
 
 
   #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
