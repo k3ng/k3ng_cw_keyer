@@ -364,6 +364,9 @@ New fetures in this stable release:
     2.2.2016012801
       Fixed issue with goertzel.h being required for compilation even when it wasn't needed
 
+    2.2.2016012901
+      Removed experimental feature  
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\K3NG_KEYER_LIBRARY_FILES\
@@ -372,7 +375,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016012801"
+#define CODE_VERSION "2.2.2016012901"
 #define eeprom_magic_number 19
 
 #include <stdio.h>

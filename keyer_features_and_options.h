@@ -86,5 +86,4 @@
 // #define OPTION_PROSIGN_SUPPORT    // additional prosign support for paddle and straight key echo on display, CLI, and in memory storage
 // #define OPTION_RUSSIAN_LANGUAGE_SEND_CLI // Russian language CLI sending support (contributed by Павел Бирюков, UA1AQC)
 
-// #define FEATURE_COMPETITION_COMPRESSION_DETECTION //(Experimental)
 
