@@ -370,6 +370,9 @@ New fetures in this stable release:
     2.2.2016012902
       FEATURE_LCD_ADAFRUIT_BACKPACK - support for Adafruit I2C LCD Backup using MCP23008 (courtesy Josiah Ritchie, KE0BLL)
 
+    2.2.2016020801
+      PROSIGN_HH (courtesy of Vincenzo, IZ0RUS)
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\K3NG_KEYER_LIBRARY_FILES\
@@ -378,7 +381,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016012902"
+#define CODE_VERSION "2.2.2016020801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -5888,6 +5891,7 @@ void send_char(byte cw_char, byte omit_letterspace)
         case PROSIGN_NJ: send_the_dits_and_dahs("-..---");break;
         case PROSIGN_SK: send_the_dits_and_dahs("...-.-");break;
         case PROSIGN_SN: send_the_dits_and_dahs("...-.");break;
+        case PROSIGN_HH: send_the_dits_and_dahs("........");break;  // iz0rus
       #endif 
 
       #ifdef OPTION_NON_ENGLISH_EXTENSIONS
@@ -9406,6 +9410,7 @@ char * convert_prosign(byte prosign_code)
     case PROSIGN_NJ: return("NJ"); break;
     case PROSIGN_SK: return("SK"); break;
     case PROSIGN_SN: return("SN"); break;
+    case PROSIGN_HH: return("HH"); break; // iz0rus
     default: return(""); break;
 
   }
@@ -9505,6 +9510,7 @@ int convert_cw_number_to_ascii (long number_in)
       case 211222:   return PROSIGN_NJ; break;
       case 111212:   return PROSIGN_SK; break;
       case 11121:    return PROSIGN_SN; break;
+      case 11111111: return PROSIGN_HH; break;  // iz0rus
     #else //OPTION_PROSIGN_SUPPORT
       case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou //aaaaaaa
     #endif //OPTION_PROSIGN_SUPPORT
