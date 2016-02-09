@@ -372,6 +372,9 @@ New fetures in this stable release:
 
     2.2.2016020801
       PROSIGN_HH (courtesy of Vincenzo, IZ0RUS)
+    
+    2.2.2016020802
+      OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -381,7 +384,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016020801"
+#define CODE_VERSION "2.2.2016020802"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -5928,7 +5931,11 @@ void send_char(byte cw_char, byte omit_letterspace)
       
       case '|': loop_element_lengths(0.5,0,configuration.wpm,AUTOMATIC_SENDING); return; break;
 
-      default: send_the_dits_and_dahs("..--..");break;
+      default: 
+        #if !defined(OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION)
+          send_the_dits_and_dahs("..--..");
+        #endif
+        break;
       
     }
     if (omit_letterspace != OMIT_LETTERSPACE) {

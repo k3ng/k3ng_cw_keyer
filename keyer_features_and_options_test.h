@@ -39,7 +39,7 @@
 // #define FEATURE_USB_MOUSE               // Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
 // #define FEATURE_CAPACITIVE_PADDLE_PINS  // remove the bypass capacitors on the paddle_left and paddle_right lines when using capactive paddles
 // #define FEATURE_LED_RING                // Mayhew Labs Led Ring support
-// #define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
+#define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
 // #define FEATURE_PTT_INTERLOCK 
 #define FEATURE_QLF
 // #define FEATURE_EEPROM_E24C1024
@@ -93,6 +93,7 @@
 // #define OPTION_ADVANCED_SPEED_DISPLAY //enables "nerd" speed visualization on display: wpm, cpm (char per min), duration of dit and dah in milliseconds and ratio (contributed by Giorgio, IZ2XBZ)
 // #define OPTION_PROSIGN_SUPPORT    // additional prosign support for paddle and straight key echo on display, CLI, and in memory storage
 #define OPTION_RUSSIAN_LANGUAGE_SEND_CLI // Russian language CLI sending support (contributed by Павел Бирюков, UA1AQC)
+#define OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION
 
 // #define FEATURE_COMPETITION_COMPRESSION_DETECTION //(Experimental)
 
