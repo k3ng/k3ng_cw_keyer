@@ -376,6 +376,9 @@ New fetures in this stable release:
     2.2.2016020802
       OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION
 
+    2.2.2016030501
+      FEATURE_LCD_SAINSMART_I2C
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\K3NG_KEYER_LIBRARY_FILES\
@@ -384,7 +387,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016020802"
+#define CODE_VERSION "2.2.2016030501"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -473,7 +476,7 @@ New fetures in this stable release:
   #include <LiquidCrystal.h>
 #endif
 
-#if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_ADAFRUIT_BACKPACK) || defined(FEATURE_LCD_YDv1)
+#if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_ADAFRUIT_BACKPACK) || defined(FEATURE_LCD_YDv1) || defined(FEATURE_LCD_SAINSMART_I2C)
   #include <Wire.h>
 #endif
 
@@ -489,6 +492,10 @@ New fetures in this stable release:
 #if defined(FEATURE_LCD_ADAFRUIT_BACKPACK)
   #include <Adafruit_LiquidCrystal.h>
 #endif
+
+#if defined(FEATURE_LCD_SAINSMART_I2C)
+  #include <LiquidCrystal_I2C.h>
+#endif //FEATURE_SAINSMART_I2C_LCD  
 
 #if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
   #include <BasicTerm.h>
@@ -796,6 +803,19 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 #if defined(FEATURE_LCD_ADAFRUIT_BACKPACK)
   Adafruit_LiquidCrystal lcd(0);
 #endif
+
+#if defined(FEATURE_LCD_SAINSMART_I2C)
+  #define I2C_ADDR      0x27
+  #define BACKLIGHT_PIN 3
+  #define En_pin        2
+  #define Rw_pin        1
+  #define Rs_pin        0
+  #define D4_pin        4
+  #define D5_pin        5
+  #define D6_pin        6
+  #define D7_pin        7
+  LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin, BACKLIGHT_PIN, POSITIVE);  
+#endif //FEATURE_SAINSMART_I2C_LCD    
 
 #if defined(FEATURE_LCD_YDv1)
   //LiquidCrystal_I2C lcd(0x38);
