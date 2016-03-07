@@ -379,6 +379,9 @@ New fetures in this stable release:
     2.2.2016030501
       FEATURE_LCD_SAINSMART_I2C
 
+    2.2.2016030701
+      Fixed FEATURE_LCD_SAINSMART_I2C initialization
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\K3NG_KEYER_LIBRARY_FILES\
@@ -387,7 +390,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016030501"
+#define CODE_VERSION "2.2.2016030701"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -11364,67 +11367,71 @@ void ps2int_write() {
 void initialize_display(){
 
   #ifdef FEATURE_DISPLAY
-  lcd.begin(LCD_COLUMNS, LCD_ROWS);
-  #ifdef FEATURE_LCD_ADAFRUIT_I2C
-  lcd.setBacklight(lcdcolor);
-  #endif //FEATURE_LCD_ADAFRUIT_I2C
-  #ifdef FEATURE_LCD_ADAFRUIT_BACKPACK
-  lcd.setBacklight(HIGH);
-  #endif
+    lcd.begin(LCD_COLUMNS, LCD_ROWS);
+    #ifdef FEATURE_LCD_ADAFRUIT_I2C
+      lcd.setBacklight(lcdcolor);
+    #endif //FEATURE_LCD_ADAFRUIT_I2C
+
+    #ifdef FEATURE_LCD_ADAFRUIT_BACKPACK
+      lcd.setBacklight(HIGH);
+    #endif
+
+    #if defined(FEATURE_LCD_SAINSMART_I2C)
+      lcd.home();
+    #endif
+
+    #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
+      // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/
 
 
-  #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
-  // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/
+      byte U_umlaut[8] =   {B01010,B00000,B10001,B10001,B10001,B10001,B01110,B00000}; // 'Ü'  
+      byte O_umlaut[8] =   {B01010,B00000,B01110,B10001,B10001,B10001,B01110,B00000}; // 'Ö'  
+      byte A_umlaut[8] =   {B01010,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // 'Ä'    
+      byte AE_capital[8] = {B01111,B10100,B10100,B11110,B10100,B10100,B10111,B00000}; // 'Æ' 
+      byte OE_capital[8] = {B00001,B01110,B10011,B10101,B11001,B01110,B10000,B00000}; // 'Ø' 
+      byte empty[8] =      {B00000,B00000,B00000,B00000,B00000,B00000,B00000,B00000}; // empty 
+      byte AA_capital[8] = {B00100,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // 'Å'   
+      byte Ntilde[8] =     {B01101,B10010,B00000,B11001,B10101,B10011,B10001,B00000}; // 'Ñ' 
+
+      
+      
+      //     upload 8 charaters to the lcd
+      lcd.createChar(0, U_umlaut); //     German
+      lcd.createChar(1, O_umlaut); //     German, Swedish
+      lcd.createChar(2, A_umlaut); //     German, Swedish 
+      lcd.createChar(3, AE_capital); //   Danish, Norwegian
+      lcd.createChar(4, OE_capital); //   Danish, Norwegian
+      lcd.createChar(5, empty); //        For some reason this one needs to display nothing - otherwise it will display in pauses on serial interface
+      lcd.createChar(6, AA_capital); //   Danish, Norwegian, Swedish
+      lcd.createChar(7, Ntilde); //       Spanish
+      lcd.clear(); // you have to ;o)
+    #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
 
 
-  byte U_umlaut[8] =   {B01010,B00000,B10001,B10001,B10001,B10001,B01110,B00000}; // 'Ü'  
-  byte O_umlaut[8] =   {B01010,B00000,B01110,B10001,B10001,B10001,B01110,B00000}; // 'Ö'  
-  byte A_umlaut[8] =   {B01010,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // 'Ä'    
-  byte AE_capital[8] = {B01111,B10100,B10100,B11110,B10100,B10100,B10111,B00000}; // 'Æ' 
-  byte OE_capital[8] = {B00001,B01110,B10011,B10101,B11001,B01110,B10000,B00000}; // 'Ø' 
-  byte empty[8] =      {B00000,B00000,B00000,B00000,B00000,B00000,B00000,B00000}; // empty 
-  byte AA_capital[8] = {B00100,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // 'Å'   
-  byte Ntilde[8] =     {B01101,B10010,B00000,B11001,B10101,B10011,B10001,B00000}; // 'Ñ' 
-
-  
-  
-  //     upload 8 charaters to the lcd
-  lcd.createChar(0, U_umlaut); //     German
-  lcd.createChar(1, O_umlaut); //     German, Swedish
-  lcd.createChar(2, A_umlaut); //     German, Swedish 
-  lcd.createChar(3, AE_capital); //   Danish, Norwegian
-  lcd.createChar(4, OE_capital); //   Danish, Norwegian
-  lcd.createChar(5, empty); //        For some reason this one needs to display nothing - otherwise it will display in pauses on serial interface
-  lcd.createChar(6, AA_capital); //   Danish, Norwegian, Swedish
-  lcd.createChar(7, Ntilde); //       Spanish
-  lcd.clear(); // you have to ;o)
-  #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
-
-
-  lcd_center_print_timed("K3NG Keyer",0,4000);
+    lcd_center_print_timed("K3NG Keyer",0,4000);
   #endif //FEATURE_DISPLAY
 
   if (keyer_machine_mode != BEACON) {
     #ifndef OPTION_DO_NOT_SAY_HI
-    // say HI
-    // store current setting (compliments of DL2SBA - http://dl2sba.com/ )
-    byte oldKey = key_tx; 
-    byte oldSideTone = configuration.sidetone_mode;
-    key_tx = 0;
-    configuration.sidetone_mode = SIDETONE_ON;     
-    
-    //delay(201);
-    #ifdef FEATURE_DISPLAY
-    lcd_center_print_timed("h",1,4000);
-    #endif
-    send_char('H',KEYER_NORMAL);
-    #ifdef FEATURE_DISPLAY
-    lcd_center_print_timed("hi",1,4000);
-    #endif
-    send_char('I',KEYER_NORMAL);
-    
-    configuration.sidetone_mode = oldSideTone; 
-    key_tx = oldKey;     
+      // say HI
+      // store current setting (compliments of DL2SBA - http://dl2sba.com/ )
+      byte oldKey = key_tx; 
+      byte oldSideTone = configuration.sidetone_mode;
+      key_tx = 0;
+      configuration.sidetone_mode = SIDETONE_ON;     
+      
+      //delay(201);
+      #ifdef FEATURE_DISPLAY
+        lcd_center_print_timed("h",1,4000);
+      #endif
+      send_char('H',KEYER_NORMAL);
+      #ifdef FEATURE_DISPLAY
+        lcd_center_print_timed("hi",1,4000);
+      #endif
+      send_char('I',KEYER_NORMAL);
+      
+      configuration.sidetone_mode = oldSideTone; 
+      key_tx = oldKey;     
     #endif //OPTION_DO_NOT_SAY_HI
     
   }
