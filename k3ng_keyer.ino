@@ -382,15 +382,17 @@ New fetures in this stable release:
     2.2.2016030701
       Fixed FEATURE_LCD_SAINSMART_I2C initialization
 
-  ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORY AND NOT THE INO SKETCH DIRECTORY !!!!
+    2.2.2016030801
+      Fixed FEATURE_LCD_SAINSMART_I2C again
 
-  FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\K3NG_KEYER_LIBRARY_FILES\
+  ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
-  ONLY PUT LIBRARY FILES THAT YOU NEED TO COMPILE WITH IN THE LIBRARIES DIRECTORY
+  FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
+
   
 */
 
-#define CODE_VERSION "2.2.2016030701"
+#define CODE_VERSION "2.2.2016030801"
 #define eeprom_magic_number 19
 
 #include <stdio.h>
@@ -808,16 +810,17 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 #endif
 
 #if defined(FEATURE_LCD_SAINSMART_I2C)
-  #define I2C_ADDR      0x27
-  #define BACKLIGHT_PIN 3
-  #define En_pin        2
-  #define Rw_pin        1
-  #define Rs_pin        0
-  #define D4_pin        4
-  #define D5_pin        5
-  #define D6_pin        6
-  #define D7_pin        7
-  LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin, BACKLIGHT_PIN, POSITIVE);  
+  // #define I2C_ADDR      0x27
+  // #define BACKLIGHT_PIN 3
+  // #define En_pin        2
+  // #define Rw_pin        1
+  // #define Rs_pin        0
+  // #define D4_pin        4
+  // #define D5_pin        5
+  // #define D6_pin        6
+  // #define D7_pin        7
+  // LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin, BACKLIGHT_PIN, POSITIVE);  
+  LiquidCrystal_I2C lcd(0x27,20,4);
 #endif //FEATURE_SAINSMART_I2C_LCD    
 
 #if defined(FEATURE_LCD_YDv1)
@@ -11366,8 +11369,13 @@ void ps2int_write() {
 
 void initialize_display(){
 
-  #ifdef FEATURE_DISPLAY
-    lcd.begin(LCD_COLUMNS, LCD_ROWS);
+  #ifdef FEATURE_DISPLAY    
+    #if defined(FEATURE_LCD_SAINSMART_I2C)
+      lcd.begin();
+      lcd.home();
+    #else
+      lcd.begin(LCD_COLUMNS, LCD_ROWS);
+    #endif
     #ifdef FEATURE_LCD_ADAFRUIT_I2C
       lcd.setBacklight(lcdcolor);
     #endif //FEATURE_LCD_ADAFRUIT_I2C
@@ -11376,9 +11384,6 @@ void initialize_display(){
       lcd.setBacklight(HIGH);
     #endif
 
-    #if defined(FEATURE_LCD_SAINSMART_I2C)
-      lcd.home();
-    #endif
 
     #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
       // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/
