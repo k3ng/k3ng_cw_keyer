@@ -385,6 +385,27 @@ New fetures in this stable release:
     2.2.2016030801
       Fixed FEATURE_LCD_SAINSMART_I2C again
 
+    2.2.2016031801
+      Ethernet, web server and Internet linking functionality in beta / development (DEFINEs are in HARDWARE_TEST files only right now)
+
+      #define FEATURE_WEB_SERVER
+      #define FEATURE_INTERNET_LINK
+
+      #define OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN
+
+      #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address
+      #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
+
+      #define FEATURE_ETHERNET_GATEWAY {192,168,1,1}                   // default gateway
+      #define FEATURE_ETHERNET_SUBNET_MASK {255,255,255,0}                  // default subnet mask
+      #define FEATURE_ETHERNET_WEB_LISTENER_PORT 80
+      #define FEATURE_UDP_SEND_BUFFER_SIZE 128
+      #define FEATURE_UDP_RECEIVE_BUFFER_SIZE 128
+
+      #define FEATURE_INTERNET_LINK_MAX_LINKS 2
+      #define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
+      #define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500 
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -392,8 +413,8 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016030801"
-#define eeprom_magic_number 19
+#define CODE_VERSION "2.2.2016031801"
+#define eeprom_magic_number 22
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -510,6 +531,13 @@ New fetures in this stable release:
   #include <goertzel.h>
 #endif
 
+//#if defined(FEATURE_ETHERNET)
+  #include <Ethernet.h>               // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
+  #if defined(FEATURE_INTERNET_LINK)
+    #include <EthernetUdp.h>
+  #endif //FEATURE_INTERNET_LINK
+//#endif //FEATURE_ETHERNET
+
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
   //#include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, so they are commented out
@@ -520,7 +548,7 @@ New fetures in this stable release:
 
 
 // Variables and stuff
-struct config_t {  // 23 bytes
+struct config_t {
   unsigned int wpm;
   byte paddle_mode;
   byte keyer_mode;
@@ -539,6 +567,14 @@ struct config_t {  // 23 bytes
   byte dah_buffer_off;
   byte cmos_super_keyer_iambic_b_timing_percent;
   byte cmos_super_keyer_iambic_b_timing_on;
+  uint8_t ip[4];
+  uint8_t gateway[4];  
+  uint8_t subnet[4]; 
+  uint8_t link_send_ip[4][FEATURE_INTERNET_LINK_MAX_LINKS];
+  uint8_t link_send_enabled[FEATURE_INTERNET_LINK_MAX_LINKS];
+  int link_send_udp_port[FEATURE_INTERNET_LINK_MAX_LINKS];
+  int link_receive_udp_port;
+  uint8_t link_receive_enabled;
 } configuration;
 
 
@@ -906,6 +942,40 @@ HardwareSerial * debug_serial_port;
   byte send_winkey_breakin_byte_flag = 0;
 #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
 
+#if defined(FEATURE_ETHERNET)
+  uint8_t default_ip[] = FEATURE_ETHERNET_IP;                      // default IP address ("192.168.1.178")
+  uint8_t default_gateway[] = FEATURE_ETHERNET_GATEWAY;                   // default gateway
+  uint8_t default_subnet[] = FEATURE_ETHERNET_SUBNET_MASK;                  // default subnet mask
+  uint8_t mac[] = FEATURE_ETHERNET_MAC;   // default physical mac address
+  uint8_t restart_networking = 0;
+
+  #if defined(FEATURE_WEB_SERVER)
+    #define MAX_WEB_REQUEST 512  
+    String readString;
+    uint8_t valid_request = 0;
+    EthernetServer server(FEATURE_ETHERNET_WEB_LISTENER_PORT);                             // default server port 
+    #define MAX_PARSE_RESULTS 32
+    struct parse_get_result_t{
+      String parameter;
+      String value_string;
+      long value_long;
+    };
+    struct parse_get_result_t parse_get_results[MAX_PARSE_RESULTS];
+    int parse_get_results_index = 0;
+  #endif //FEATURE_WEB_SERVER
+
+  #if defined(FEATURE_UDP)
+    unsigned int udp_listener_port = FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT;
+    EthernetUDP Udp;
+    #if defined(FEATURE_INTERNET_LINK)
+      uint8_t udp_send_buffer[FEATURE_UDP_SEND_BUFFER_SIZE];
+      uint8_t udp_send_buffer_bytes = 0;
+      uint8_t udp_receive_packet_buffer[FEATURE_UDP_RECEIVE_BUFFER_SIZE];
+      uint8_t udp_receive_packet_buffer_bytes = 0;     
+    #endif //FEATURE_INTERNET_LINK
+  #endif
+#endif //FEATURE_ETHERNET
+
 
 /*---------------------------------------------------------------------------------------------------------
 
@@ -924,6 +994,7 @@ void setup()
   initialize_rotary_encoder();
   initialize_default_modes();
   initialize_watchdog();
+  initialize_ethernet_variables();
   check_eeprom_for_initialization();
   check_for_beacon_mode();
   check_for_debug_modes();
@@ -933,6 +1004,9 @@ void setup()
   initialize_usb();
   initialize_cw_keyboard();
   initialize_display();
+  initialize_ethernet();
+  initialize_udp();
+  initialize_web_server();
   initialize_debug_startup();
 
 }
@@ -1047,7 +1121,19 @@ void loop()
 
     #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
       service_winkey_breakin();
-    #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)      
+    #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)    
+
+    #if defined(FEATURE_ETHERNET)
+      check_for_network_restart();
+      #if defined(FEATURE_WEB_SERVER)
+        service_web_server();
+      #endif
+      #if defined(FEATURE_INTERNET_LINK)
+        service_udp_send_buffer();
+        service_udp_receive();
+        service_internet_link_udp_receive_buffer();
+      #endif;
+    #endif  
 
   }
   
@@ -3713,7 +3799,7 @@ void write_settings_to_eeprom(int initialize_eeprom) {
     //configuration.magic_number = eeprom_magic_number;
     EEPROM.write(0,eeprom_magic_number);
     #ifdef FEATURE_MEMORIES
-    initialize_eeprom_memories();
+      initialize_eeprom_memories();
     #endif  //FEATURE_MEMORIES    
   }
 
@@ -4249,6 +4335,10 @@ void tx_and_sidetone_key (int state, byte sending_type)
 
   #endif //FEATURE_PTT_INTERLOCK
 
+  #if defined(FEATURE_INTERNET_LINK)
+    link_key(state);
+  #endif
+
 
 }
 
@@ -4283,6 +4373,16 @@ void tx_and_sidetone_key (int state, byte sending_type)
 
     unsigned long endtime = millis() + long(element_length*lengths) + long(additional_time_ms);
     while ((millis() < endtime) && (millis() > 200)) {  // the second condition is to account for millis() rollover
+
+
+      #if defined(FEATURE_INTERNET_LINK) && !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)
+        if (millis() > 1000){
+          service_udp_send_buffer();
+          service_udp_receive();
+          service_internet_link_udp_receive_buffer();
+        }
+      #endif //FEATURE_INTERNET_LINK
+
       #ifdef OPTION_WATCHDOG_TIMER
         wdt_reset();
       #endif  //OPTION_WATCHDOG_TIMER
@@ -6124,7 +6224,7 @@ void service_send_buffer(byte no_print)
             
           }
         }
-//zzzzzz
+
         if (send_buffer_array[0] == SERIAL_SEND_BUFFER_TX_CHANGE) {  // one byte for transmitter #
           remove_from_send_buffer();
           if (send_buffer_bytes > 1) {
@@ -7446,7 +7546,7 @@ void service_winkey(byte action) {
         add_to_send_buffer(incoming_serial_byte);
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
-//zzzzzzz
+
       if (winkey_status == WINKEY_BUFFERED_HSCW_COMMAND) {   
         if (incoming_serial_byte > 1){  // the HSCW command is overloaded; 0 = buffered TX 1, 1 = buffered TX 2, > 1 = HSCW WPM
           unsigned int send_buffer_wpm = ((incoming_serial_byte*100)/5);
@@ -8035,15 +8135,16 @@ void print_serial_help(HardwareSerial * port_to_use){
   #endif //FEATURE_DIT_DAH_BUFFER_CONTROL  
   port_to_use->println(F("\nMemory Macros:"));
   port_to_use->println(F("\\#\t\t: Jump to memory #"));
-  #ifdef FEATURE_HELL
-    port_to_use->println(F("\\C\t\t: Switch to CW (from Hell mode)"));
-  #endif //FEATURE_HELL
+  port_to_use->println(F("\\C\t\t: Send serial number with cut numbers"));
   port_to_use->println(F("\\D###\t\t: Delay for ### seconds"));
   port_to_use->println(F("\\E\t\t: Send serial number"));
   port_to_use->println(F("\\F####\t\t: Set sidetone to #### hz"));
   #ifdef FEATURE_HELL
     port_to_use->println(F("\\H\t\t: Switch to Hell mode"));
   #endif //FEATURE_HELL
+  #ifdef FEATURE_HELL
+    port_to_use->println(F("\\L\t\t: Switch to CW (from Hell mode)"));
+  #endif //FEATURE_HELL    
   port_to_use->println(F("\\N\t\t: Decrement serial number"));
   port_to_use->println(F("\\Q##\t\t: Switch to QRSS with ## second dit length"));
   port_to_use->println(F("\\R\t\t: Switch to regular speed mode"));
@@ -11093,7 +11194,7 @@ void initialize_keyer_state(){
   configuration.weighting = default_weighting;
   
   #ifdef FEATURE_FARNSWORTH
-  configuration.wpm_farnsworth = initial_speed_wpm;
+    configuration.wpm_farnsworth = initial_speed_wpm;
   #endif //FEATURE_FARNSWORTH
   
   switch_to_tx_silent(1);
@@ -11104,10 +11205,10 @@ void initialize_keyer_state(){
 void initialize_potentiometer(){
 
   #ifdef FEATURE_POTENTIOMETER
-  pinMode(potentiometer,INPUT);
-  pot_wpm_high_value = initial_pot_wpm_high_value;
-  last_pot_wpm_read = pot_value_wpm();
-  configuration.pot_activated = 1;
+    pinMode(potentiometer,INPUT);
+    pot_wpm_high_value = initial_pot_wpm_high_value;
+    last_pot_wpm_read = pot_value_wpm();
+    configuration.pot_activated = 1;
   #endif
   
 }
@@ -11116,12 +11217,12 @@ void initialize_potentiometer(){
 void initialize_rotary_encoder(){  
   
   #ifdef FEATURE_ROTARY_ENCODER
-  pinMode(rotary_pin1, INPUT);
-  pinMode(rotary_pin2, INPUT);
-  #ifdef OPTION_ENCODER_ENABLE_PULLUPS
-  digitalWrite(rotary_pin1, HIGH);
-  digitalWrite(rotary_pin2, HIGH);
-  #endif //OPTION_ENCODER_ENABLE_PULLUPS
+    pinMode(rotary_pin1, INPUT);
+    pinMode(rotary_pin2, INPUT);
+    #ifdef OPTION_ENCODER_ENABLE_PULLUPS
+      digitalWrite(rotary_pin1, HIGH);
+      digitalWrite(rotary_pin2, HIGH);
+    #endif //OPTION_ENCODER_ENABLE_PULLUPS
   #endif //FEATURE_ROTARY_ENCODER
   
 }
@@ -11147,7 +11248,7 @@ void initialize_default_modes(){
 void initialize_watchdog(){
   
   #ifdef OPTION_WATCHDOG_TIMER
-  wdt_enable(WDTO_4S);
+    wdt_enable(WDTO_4S);
   #endif //OPTION_WATCHDOG_TIMER
 
 }  
@@ -12540,3 +12641,1603 @@ void service_winkey_breakin(){
 #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
 
 //---------------------------------------------------------------------
+
+void initialize_ethernet_variables(){
+
+  #if defined(FEATURE_ETHERNET)
+    for (int x = 0;x < 4;x++){
+      configuration.ip[x] = default_ip[x];
+      configuration.gateway[x] = default_gateway[x];
+      configuration.subnet[x] = default_subnet[x]; 
+      for (int y = 0;y < FEATURE_INTERNET_LINK_MAX_LINKS;y++){
+        configuration.link_send_ip[x][y] = 0;
+        configuration.link_send_enabled[y] = 0;
+        configuration.link_send_udp_port[y] = FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT;
+      }
+    }  
+    configuration.link_receive_udp_port = FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT;
+    configuration.link_receive_enabled = 0;  
+  #endif //FEATURE_ETHERNET
+}
+
+//-------------------------------------------------------------------------------------------------------
+void initialize_ethernet(){
+
+  #if defined(FEATURE_ETHERNET)
+    Ethernet.begin(mac, configuration.ip, configuration.gateway, configuration.subnet);
+  #endif
+
+}
+
+
+
+//-------------------------------------------------------------------------------------------------------
+
+void initialize_udp(){
+
+  #if defined(FEATURE_UDP)
+  int udpbegin_result = Udp.begin(udp_listener_port);
+
+    #if defined(DEBUG_UDP)
+      if (!udpbegin_result){
+        debug_serial_port->println("initialize_udp: Udp.begin error");
+      }
+    #endif
+  #endif //FEATURE_UDP
+}
+
+
+//-------------------------------------------------------------------------------------------------------
+
+
+void initialize_web_server(){
+  #if defined(FEATURE_WEB_SERVER)
+
+  server.begin();
+
+    #ifdef DEBUG_WEB_SERVER
+      debug_serial_port->print(F("initialize_web_server: server is at "));
+      debug_serial_port->println(Ethernet.localIP());
+    #endif 
+
+  #endif //FEATURE_WEB_SERVER  
+}
+
+
+//-------------------------------------------------------------------------------------------------------
+
+
+
+#if defined(FEATURE_ETHERNET)
+void check_for_network_restart(){
+
+  if (restart_networking){
+    initialize_web_server();
+    restart_networking = 0;
+  }
+}
+#endif //FEATURE_ETHERNET
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void service_web_server() {
+
+
+  // Create a client connection
+  EthernetClient client = server.available();
+  if (client) {
+
+    valid_request = 0;
+
+    while (client.connected()){   
+      if (client.available()){
+        char c = client.read();
+     
+        //read char by char HTTP request
+        if (readString.length() < MAX_WEB_REQUEST){
+          //store characters to string
+          readString += c;
+          #if defined(DEBUG_STATION_INTERLOCK)
+            debug.print(c);
+          #endif //DEBUG_STATION_INTERLOCK  
+        } else {
+          // readString = "";
+        }
+
+        //has HTTP request ended?
+        if (c == '\n'){ 
+
+          #if defined(DEBUG_STATION_INTERLOCK)
+            debug.println(readString); //print to serial monitor for debuging     
+          #endif //DEBUG_STATION_INTERLOCK
+
+          if (readString.startsWith("GET / ")){
+            valid_request = 1;
+            web_print_page_main_menu(client);
+          }
+
+          if (readString.startsWith("GET /About")){
+            valid_request = 1;
+            web_print_page_about(client);
+          }
+
+
+          if (readString.startsWith("GET /NetworkSettings")){
+            valid_request = 1;
+            // are there form results being posted?
+            if (readString.indexOf("?ip0=") > 0){
+              web_print_page_network_settings_process(client);
+            } else {
+              web_print_page_network_settings(client);
+            }
+          }
+
+          #if defined(FEATURE_INTERNET_LINK)
+            if (readString.startsWith("GET /LinkSettings")){
+              valid_request = 1;
+              // are there form results being posted?
+              if (readString.indexOf("?ip") > 0){
+                web_print_page_link_settings_process(client);
+              } else {
+                web_print_page_link_settings(client);
+              }
+            }
+          #endif //FEATURE_INTERNET_LINK
+
+          if (readString.startsWith("GET /Status")){
+            valid_request = 1;
+            web_print_page_status(client); 
+          }
+
+          if (!valid_request){
+            web_print_page_404(client);                      
+          }
+
+          delay(1);
+          client.stop();
+          readString = "";  
+         }
+       }
+    }
+  }
+
+}
+#endif //FEATURE_WEB_SERVER
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+void web_print_header(EthernetClient client){
+
+  web_client_println(client,"HTTP/1.1 200 OK");
+  web_client_println(client,"Content-Type: text/html");
+  web_client_println(client,"");     
+  web_client_println(client,"<HTML>");
+  web_client_println(client,"<HEAD>");
+  web_client_println(client,"<meta name='apple-mobile-web-app-capable' content='yes' />");
+  web_client_println(client,"<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />");
+
+
+}
+#endif //FEATURE_WEB_SERVER
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+void web_print_style_sheet(EthernetClient client){
+
+  web_client_print(client,"<style>body{margin:60px 0px; padding:0px;text-align:center;font-family:\"Trebuchet MS\", Arial, Helvetica, sans-serif;}h1{text-align: center;font-family:Arial, \"Trebuchet MS\", Helvetica,");
+  web_client_print(client,"sans-serif;}h2{text-align: center;font-family:\"Trebuchet MS\", Arial, Helvetica, sans-serif;}");
+
+  // button-looking hyperlinks
+  web_client_print(client,"a.internal{text-decoration:none;width:75px;height:50px;border-color:black;border-top:2px solid;border-bottom:2px solid;border-right:2px solid;border-left:2px solid;border-radius:10px 10px 10px;");
+  web_client_print(client,"-o-border-radius:10px 10px 10px;-webkit-border-radius:10px 10px 10px;font-family:\"Trebuchet MS\",Arial, Helvetica, sans-serif;");
+  web_client_print(client,"-moz-border-radius:10px 10px 10px;background-color:#293F5E;padding:8px;text-align:center;}");
+  web_client_print(client,"a.internal:link {color:white;} a.internal:visited {color:white;}");
+  web_client_print(client," a.internal:hover {color:white;} a.internal:active {color:white;}");
+
+  // external hyperlinks
+  web_client_print(client,"a.external{");
+  web_client_print(client,"font-family:\"Trebuchet MS\",Arial, Helvetica, sans-serif;");
+  web_client_print(client,"text-align:center;}");
+  web_client_print(client,"a.external:link {color:blue;} a.external:visited {color:purple;}");
+  web_client_println(client," a.external:hover {color:red;} a.external:active {color:green;}");
+
+  // ip address text blocks
+  web_client_println(client,".addr {width: 30px; text-align:center }");
+
+  // ip port text blocks
+  web_client_println(client,".ipprt {width: 45px; text-align:center }");
+
+  web_client_println(client,".container {display: flex;}");
+
+ /*for demo purposes only */
+  web_client_println(client,".column {flex: 1; background: #f2f2f2; border: 1px solid #e6e6e6; box-sizing: border-box;}");
+  web_client_println(client,".column-1 {order: 1;} .column-2 {order: 2;} .column-3 {order: 3;} .column-4 {order: 4;} .column-5 {order: 5;}");
+
+
+
+
+  web_client_println(client,"</style>");
+
+  // web_client_print(client,"<style>body{margin:60px 0px;padding:0px;text-align:center;font-family:\"Trebuchet MS\",Arial,");
+  // web_client_print(client,"Helvetica, sans-serif;}h1{text-align:center;font-family:Arial,\"Trebuchet MS\",Helvetica,");
+  // web_client_print(client,"sans-serif;}h2{text-align:center;font-family:\"Trebuchet MS\",Arial,Helvetica,sans-serif;}");
+
+  // // button-looking hyperlinks
+  // web_client_print(client,"a.internal{text-decoration:none;width:75px;height:50px;border-color:black;border-top:2px solid;");
+  // web_client_print(client,"border-bottom:2px solid;border-right:2px solid;border-left:2px solid;border-radius:10px 10px 10px;");
+  // web_client_print(client,"-o-border-radius:10px 10px 10px;-webkit-border-radius:10px 10px 10px;font-family:\"Trebuchet MS\",Arial,");
+  // web_client_print(client,"Helvetica,sans-serif;");
+  // web_client_print(client,"-moz-border-radius:10px 10px 10px;background-color:#293F5E;padding:8px;text-align:center;}");
+  // web_client_print(client,"a.internal:link {color:white;} a.internal:visited {color:white;}");
+  // web_client_print(client," a.internal:hover {color:white;} a.internal:active {color:white;}  ");
+
+  // // external hyperlinks
+  // web_client_print(client,"a.external{");
+  // web_client_print(client,"font-family:\"Trebuchet MS\",Arial,Helvetica,sans-serif;");
+  // web_client_print(client,"text-align:center;}");
+  // web_client_print(client,"a.external:link {color:blue;} a.external:visited {color:purple;}");
+  // web_client_println(client,"a.external:hover {color:red;} a.external:active {color:green;}");
+
+  // // ip address text blocks
+  // web_client_println(client,".addr {width: 30px; text-align:center }");
+
+  // // ip port text blocks
+  // web_client_println(client,".ipprt {width: 45px; text-align:center }");
+
+  // web_client_println(client,".container {display: flex;}");
+
+  // //for demo purposes only 
+  // web_client_println(client,".column {flex: 1;background:#f2f2f2; border:1px solid #e6e6e6;box-sizing:border-box;}");
+  // web_client_println(client,".column-1 {order: 1;} .column-2 {order: 2;} .column-3 {order: 3;} .column-4 {order: 4;} .column-5 {order: 5;}");
+
+
+
+
+  web_client_println(client,"</style>");
+
+
+
+}
+#endif //FEATURE_WEB_SERVER
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+void web_print_home_link(EthernetClient client){
+
+
+  web_client_println(client,"<br />");
+  web_client_println(client,"<a href=\"\x2F\" class=\"internal\">Home</a><br />");
+
+
+}
+#endif //FEATURE_WEB_SERVER
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+void web_print_footer(EthernetClient client){
+
+
+  web_client_println(client,"<br />");
+  web_client_println(client,"</BODY>");
+  web_client_println(client,"</HTML>");
+
+
+}
+#endif //FEATURE_WEB_SERVER
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+void web_print_title(EthernetClient client){
+
+
+  web_client_println(client,"<TITLE>K3NG CW Keyer</TITLE>");
+  web_client_println(client,"</HEAD>");
+  web_client_println(client,"<BODY>");
+
+
+}
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_page_network_settings(EthernetClient client){
+
+  web_print_header(client);
+
+  web_print_style_sheet(client);
+
+  web_print_title(client);
+
+  web_client_println(client,"<H1>Network Settings</H1>");
+  web_client_println(client,"<hr />");
+  web_client_println(client,"<br />");  
+
+  // input form
+  web_client_print(client,"<br><br><form>IP: <input type=\"text\" name=\"ip0\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.ip[0]);
+  web_client_print(client,"\"");
+  web_client_print(client,">.<input type=\"text\" name=\"ip1\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.ip[1]);
+  web_client_print(client,"\"");  
+  web_client_print(client,">.<input type=\"text\" name=\"ip2\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.ip[2]);
+  web_client_print(client,"\"");  
+  web_client_print(client,">.<input type=\"text\" name=\"ip3\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.ip[3]);
+  web_client_println(client,"\">");  
+
+
+  web_client_print(client,"<br><br>Gateway: <input type=\"text\" name=\"gw0\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.gateway[0]);
+  web_client_print(client,"\"");
+  web_client_print(client,">.<input type=\"text\" name=\"gw1\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.gateway[1]);
+  web_client_print(client,"\"");  
+  web_client_print(client,">.<input type=\"text\" name=\"gw2\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.gateway[2]);
+  web_client_print(client,"\"");  
+  web_client_print(client,">.<input type=\"text\" name=\"gw3\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.gateway[3]);
+  web_client_println(client,"\">");
+
+  web_client_print(client,"<br><br>Subnet Mask: <input type=\"text\" name=\"sn0\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.subnet[0]);
+  web_client_print(client,"\"");
+  web_client_print(client,">.<input type=\"text\" name=\"sn1\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.subnet[1]);
+  web_client_print(client,"\"");  
+  web_client_print(client,">.<input type=\"text\" name=\"sn2\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.subnet[2]);
+  web_client_print(client,"\"");  
+  web_client_print(client,">.<input type=\"text\" name=\"sn3\" class=\"addr\" value=\"");
+  web_client_print(client,configuration.subnet[3]);
+  web_client_println(client,"\">");
+
+
+  web_client_println(client,"<br><br><input type=\"submit\" value=\"Save\"></form>");
+
+  web_print_home_link(client);
+  
+  web_print_footer(client); 
+
+}
+
+
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER) && defined(FEATURE_INTERNET_LINK)
+
+void web_print_page_link_settings(EthernetClient client){
+
+  web_print_header(client);
+
+  web_print_style_sheet(client);
+
+  web_print_title(client);
+
+  web_client_println(client,"<H1>Link Settings</H1>");
+  web_client_println(client,"<hr/>");
+  web_client_println(client,"<br/>"); 
+  web_client_println(client,"<H2>Link Send Settings</H2>");
+  web_client_println(client,"<form>"); 
+
+  // input form
+  for (int x = 0;x < FEATURE_INTERNET_LINK_MAX_LINKS;x++){
+    web_client_print(client,"<br><br>Link ");
+    web_client_print(client,x+1);
+    web_client_print(client,": IP: <input type=\"text\" name=\"ip");
+    web_client_print(client,x);
+    web_client_print(client,"0\" class=\"addr\" value=\"");
+    web_client_print(client,configuration.link_send_ip[0][x]);
+    web_client_print(client,"\"");
+    web_client_print(client,">.<input type=\"text\" name=\"ip");
+    web_client_print(client,x);
+    web_client_print(client,"1\" class=\"addr\" value=\"");
+    web_client_print(client,configuration.link_send_ip[1][x]);
+    web_client_print(client,"\"");  
+    web_client_print(client,">.<input type=\"text\" name=\"ip");
+    web_client_print(client,x);
+    web_client_print(client,"2\" class=\"addr\" value=\"");
+    web_client_print(client,configuration.link_send_ip[2][x]);
+    web_client_print(client,"\"");  
+    web_client_print(client,">.<input type=\"text\" name=\"ip");
+    web_client_print(client,x);
+    web_client_print(client,"3\" class=\"addr\" value=\"");
+    web_client_print(client,configuration.link_send_ip[3][x]);
+    web_client_println(client,"\">");  
+
+    web_client_print(client," UDP Port: <input type=\"text\" name=\"sp");
+    web_client_print(client,x);
+    web_client_print(client,"\" class=\"ipprt\" value=\"");
+    web_client_print(client,configuration.link_send_udp_port[x]);
+    web_client_print(client,"\">  ");
+
+    // link active/inactive radio buttons
+    web_client_print(client,"<input type=\"radio\" name=\"act");
+    web_client_print(client,x);
+    web_client_print(client,"\" value=\"1\" ");
+    if (configuration.link_send_enabled[x]) {web_client_print(client,"checked");}
+    web_client_print(client,">Enabled <input type=\"radio\" name=\"act");
+    web_client_print(client,x);
+    web_client_print(client,"\" value=\"0\" ");
+    if (!(configuration.link_send_enabled[x])) {web_client_print(client,"checked");}
+    web_client_print(client,">Disabled<br>");
+
+  }
+//zzzzzzzzz
+  web_client_println(client,"<br/><br/>"); 
+  web_client_println(client,"<H2>Link Receive Settings</H2>");
+
+  web_client_print(client,"<br><br>UDP Receive Port: <input type=\"text\" name=\"ud\" class=\"ipprt\" value=\"");
+  web_client_print(client,configuration.link_receive_udp_port);
+  web_client_println(client,"\">");
+
+  web_client_print(client,"<input type=\"radio\" name=\"lr");
+  web_client_print(client,"\" value=\"1\" ");
+  if (configuration.link_receive_enabled) {web_client_print(client,"checked");}
+  web_client_print(client,">Enabled <input type=\"radio\" name=\"lr");
+  web_client_print(client,"\" value=\"0\" ");
+  if (!(configuration.link_receive_enabled)) {web_client_print(client,"checked");}
+  web_client_print(client,">Disabled<br>");
+
+  web_client_println(client,"<br><br><input type=\"submit\" value=\"Save\"></form>");
+
+  web_print_home_link(client);
+  
+  web_print_footer(client); 
+
+}
+
+
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_page_404(EthernetClient client){
+
+  web_client_println(client,"HTTP/1.1 404 NOT FOUND");
+  web_client_println(client,"Content-Type: text/html");
+  web_client_println(client,"");             
+  web_client_println(client,"<HTML><HEAD></HEAD>");
+  web_client_println(client,"<BODY>");
+  web_client_println(client,"Sorry, dude.  Page not found.");
+  web_print_home_link(client);            
+  web_print_footer(client); 
+
+}
+
+#endif //FEATURE_WEB_SERVER
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_page_about(EthernetClient client){
+
+  web_print_header(client);
+
+  web_client_println(client,"<meta http-equiv=\"refresh\" content=\"5\"/>");
+
+  web_print_style_sheet(client);
+
+
+  web_print_title(client);
+
+  web_client_println(client,"<H1>About</H1>");
+  web_client_println(client,"<hr />");
+  web_client_println(client,"<br />"); 
+  web_client_print(client,"Code Version: ");
+  web_client_println(client,CODE_VERSION);
+  web_client_println(client,"<br />");
+
+  void* HP = malloc(4);
+  if (HP){
+    free (HP);
+  }
+  unsigned long free = (unsigned long)SP - (unsigned long)HP;
+
+  web_client_print(client,"Heap = 0x");
+  web_client_println(client,(unsigned long)HP,HEX);
+  web_client_println(client,"<br />");           
+  web_client_print(client,"Stack = 0x");
+  web_client_println(client,(unsigned long)SP,HEX);
+  web_client_println(client,"<br />");           
+            
+  web_client_print(client,free);
+  web_client_println(client," bytes free<br/><br/>");
+
+
+  unsigned long seconds = millis() / 1000L;
+
+  int days = seconds / 86400L;
+  seconds = seconds - (long(days) * 86400L);
+  
+  int hours = seconds / 3600L;
+  seconds = seconds - (long(hours) * 3600L);
+  
+  int minutes = seconds / 60L;
+  seconds = seconds - (minutes * 60);
+
+  web_client_print(client,days);
+  web_client_print(client,":");
+  if (hours < 10) {web_client_print(client,"0");}
+  web_client_print(client,hours);
+  web_client_print(client,":");
+  if (minutes < 10) {web_client_print(client,"0");}
+  web_client_print(client,minutes);
+  web_client_print(client,":");
+  if (seconds < 10) {web_client_print(client,"0");}
+  web_client_print(client,seconds);    
+  web_client_println(client," dd:hh:mm:ss uptime<br />");
+
+  web_client_println(client,"<br/><br/><br/>Anthony Good, K3NG");
+  web_client_println(client,"<br/>anthony.good@gmail.com"); 
+  web_client_println(client,"<br/><a href=\"http://blog.radioartisan.com/\"\" class=\"external\">Radio Artisan</a><br/><br/>");
+
+
+  web_print_home_link(client);
+
+  web_print_footer(client);
+} 
+
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+void parse_get(String str){
+
+  String workstring = "";
+  String parameter = "";
+  String value = "";
+
+  for(int x = 0;x < MAX_PARSE_RESULTS;x++){
+    parse_get_results[x].parameter = "";
+    parse_get_results[x].value_string = "";
+    parse_get_results[x].value_long = 0;
+  }
+  parse_get_results_index = 0;
+
+  #if defined(DEBUG_STATION_INTERLOCK)
+    debug.print("parse_get: raw workstring: ");
+    Serial.println(str);
+  #endif  
+
+  workstring = str.substring(str.indexOf("?")+1);
+
+  #if defined(DEBUG_STATION_INTERLOCK)
+    debug.print("parse_get: workstring: ");
+    Serial.println(workstring);
+  #endif  
+
+  while(workstring.indexOf("=") > 0){
+    parameter = workstring.substring(0,workstring.indexOf("="));
+    if(workstring.indexOf("&") > 0){
+      value = workstring.substring(workstring.indexOf("=")+1,workstring.indexOf("&"));
+      workstring = workstring.substring(workstring.indexOf("&")+1);
+    } else {
+      value = workstring.substring(workstring.indexOf("=")+1,workstring.indexOf(" "));
+      // value = workstring.substring(workstring.indexOf("=")+1);
+      workstring = "";
+    }
+    #if defined(DEBUG_STATION_INTERLOCK)
+      debug.print("parse_get: parameter: ");
+      Serial.print(parameter);
+      debug.print(" value: ");
+      Serial.println(value);   
+    #endif //DEBUG_STATION_INTERLOCK
+    // value.trim();
+    // parameter.trim();
+
+    if (parse_get_results_index < MAX_PARSE_RESULTS){
+      parse_get_results[parse_get_results_index].parameter = parameter;
+      parse_get_results[parse_get_results_index].value_string = value;
+      parse_get_results[parse_get_results_index].value_long = value.toInt();
+      
+      // Serial.print(parse_get_results_index);
+      // Serial.print(":");      
+      // Serial.print(parse_get_results[parse_get_results_index].parameter);
+      // Serial.print(":");
+      // Serial.print(parse_get_results[parse_get_results_index].value_string);
+      // Serial.print(":");    
+      // Serial.print(parse_get_results[parse_get_results_index].value_long);
+      // Serial.println("$");
+
+      parse_get_results_index++;
+    }
+  }
+
+
+}
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_page_main_menu(EthernetClient client){
+
+
+  web_print_header(client);
+
+  web_print_style_sheet(client);
+
+  web_print_title(client);
+
+  web_client_println(client,"<H1>K3NG CW Keyer</H1>");
+  web_client_println(client,"<hr />");
+  web_client_println(client,"<br />");  
+
+
+  web_client_println(client,"<br />"); 
+  web_client_println(client,"<a href=\"Status\"\" class=\"internal\">Status</a><br /><br />"); 
+  web_client_println(client,"<a href=\"KeyerSettings\"\" class=\"internal\">Keyer Settings</a><br /><br />");
+  #if defined(FEATURE_INTERNET_LINK)
+    web_client_println(client,"<a href=\"LinkSettings\"\" class=\"internal\">Link Settings</a><br /><br />");
+  #endif //FEATURE_INTERNET_LINK
+  web_client_println(client,"<a href=\"NetworkSettings\"\" class=\"internal\">Network Settings</a><br /><br />");        
+  web_client_println(client,"<a href=\"About\"\" class=\"internal\">About</a><br />");
+
+  web_print_footer(client); 
+
+}
+
+#endif //FEATURE_WEB_SERVER          
+
+             
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_page_status(EthernetClient client){
+
+  uint8_t pin_read = 0;
+
+  web_print_header(client);
+
+  web_print_style_sheet(client);
+
+  web_client_println(client,"<meta http-equiv=\"refresh\" content=\"5\"/>");
+
+  web_print_title(client);
+
+  web_client_println(client,"<H1>Status</H1>");
+  web_client_println(client,"<hr/>");
+  web_client_println(client,"<br/>");  
+
+
+
+  switch (configuration.keyer_mode) {
+    case IAMBIC_A: web_client_print(client,"Iambic A"); break;
+    case IAMBIC_B: web_client_print(client,"Iambic B"); 
+      #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+        web_client_print(client," / CMOS Super Keyer Timing: O");
+        if (configuration.cmos_super_keyer_iambic_b_timing_on) {
+          web_client_print(client,"N ");
+          web_client_print(client,configuration.cmos_super_keyer_iambic_b_timing_percent);
+          web_client_print(client,"%");
+        } else {
+          web_client_print(client,"FF");
+        }
+      #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+      break;
+    case BUG: web_client_print(client,"Bug"); break;
+    case STRAIGHT: web_client_print(client,"Straightkey"); break;
+    case ULTIMATIC: web_client_print(client,"Ultimatic"); break;
+  }
+  web_client_println(client,"<br/>");
+  #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
+    web_client_print(client,"Buffers: Dit O");
+    if (configuration.dit_buffer_off){
+      web_client_print(client,"FF");
+    } else {
+      web_client_print(client,"N");
+    }
+    web_client_print(client," Dah O");
+    if (configuration.dah_buffer_off){
+      web_client_print(client,"FF");
+    } else {
+      web_client_print(client,"N");
+    }
+    web_client_println(client,"<br/>");
+  #endif //FEATURE_DIT_DAH_BUFFER_CONTROL  
+  if (speed_mode == SPEED_NORMAL) {
+    web_client_print(client,"WPM: ");
+    web_client_println(client,configuration.wpm,DEC);
+    web_client_println(client,"<br/>");
+    #ifdef FEATURE_FARNSWORTH
+      web_client_print(client,"Farnsworth WPM: ");
+      if (configuration.wpm_farnsworth < configuration.wpm) {
+        web_client_print(client,"disabled");
+      } else {
+        web_client_print(client,configuration.wpm_farnsworth);
+      }
+      web_client_println(client,"<br/>");
+    #endif //FEATURE_FARNSWORTH
+  } else {
+    web_client_print(client,"QRSS Mode Activated - Dit Length: ");
+    web_client_print(client,qrss_dit_length);
+    web_client_print(client," seconds");
+    web_client_println(client,"<br/>");
+  }
+  web_client_print(client,"Sidetone:");
+  switch (configuration.sidetone_mode) {
+    case SIDETONE_ON: web_client_print(client,"ON"); break;
+    case SIDETONE_OFF: web_client_print(client,"OFF"); break;
+    case SIDETONE_PADDLE_ONLY: web_client_print(client,"Paddle Only"); break;
+  }
+  web_client_print(client," ");
+  web_client_print(client,configuration.hz_sidetone);
+  web_client_print(client," hz");
+  web_client_println(client,"<br/>");
+  web_client_print(client,"Dah to dit: ");
+  web_client_print(client,float(configuration.dah_to_dit_ratio/100.0));
+  web_client_println(client,"<br/>");
+  web_client_print(client,"Weighting: ");
+  web_client_print(client,configuration.weighting);
+  web_client_println(client,"<br/>");
+  web_client_print(client,"Serial Number: ");
+  web_client_print(client,serial_number);
+  web_client_println(client,"<br/>");
+  #ifdef FEATURE_POTENTIOMETER
+    web_client_print(client,"Potentiometer WPM: ");
+    web_client_print(client,pot_value_wpm());
+    web_client_print(client," (");
+    if (configuration.pot_activated != 1) {
+      web_client_print(client,"not ");
+    }
+    web_client_print(client,"activated)");
+    web_client_println(client,"<br/>");
+  #endif
+  #ifdef FEATURE_AUTOSPACE
+    web_client_print(client,"Autospace O");
+    if (configuration.autospace_active) {
+      web_client_print(client,"n");
+    } else {
+      web_client_print(client,"ff");
+    }
+    web_client_println(client,"<br/>");
+  #endif
+  web_client_print(client,"Wordspace: ");
+  web_client_print(client,configuration.length_wordspace);
+  web_client_println(client,"<br/>");
+  web_client_print(client,"TX: ");
+  web_client_print(client,configuration.current_tx);  
+  web_client_println(client,"<br/>");
+
+  #ifdef FEATURE_QLF
+    web_client_print(client,"QLF: O");
+    if (qlf_active){
+      web_client_print(client,"n");
+    } else {
+      web_client_print(client,"ff");
+    }
+    web_client_println(client,"<br/>");
+  #endif //FEATURE_QLF
+
+
+  // web_client_println(client,"<br />");  
+  // web_client_println(client,"<a href=\"/Control?button1on\"\">Turn On LED</a>");
+  // web_client_println(client,"<a href=\"/Control?button1off\"\">Turn Off LED</a><br />");   
+  // web_client_println(client,"<br />");     
+  // web_client_println(client,"<br />"); 
+
+  web_print_home_link(client);
+
+  web_print_footer(client);
+
+}
+#endif //FEATURE_WEB_SERVER         
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_print(EthernetClient client,const char *str){
+
+  client.print(str);
+
+}
+
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_println(EthernetClient client,const char *str){
+
+  client.println(str);
+
+}
+
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_print(EthernetClient client,int i){
+
+  client.print(i);
+
+}
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_print(EthernetClient client,float f){
+
+  client.print(f);
+
+}
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_print(EthernetClient client,unsigned long i){
+
+  client.print(i);
+
+}
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_print(EthernetClient client,unsigned int i){
+
+  client.print(i);
+
+}
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_println(EthernetClient client,unsigned long i){
+
+  client.println(i);
+
+}
+#endif //FEATURE_WEB_SERVER
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_println(EthernetClient client,unsigned long i,int something){
+
+  client.println(i,something);
+
+}
+#endif //FEATURE_WEB_SERVER
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_write(EthernetClient client,uint8_t i){
+
+  client.write(i);
+
+}
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_page_link_settings_process(EthernetClient client){
+
+  uint8_t parsed_link_ip[4][FEATURE_INTERNET_LINK_MAX_LINKS];
+  uint8_t parsed_link_enabled[FEATURE_INTERNET_LINK_MAX_LINKS];
+  int parsed_link_send_udp_port[FEATURE_INTERNET_LINK_MAX_LINKS];
+  int parsed_link_receive_udp_port = 0;
+  uint8_t parsed_link_receive_enabled = 0;
+
+
+  uint8_t invalid_data = 0;
+
+  unsigned int ud = 0;
+
+  parse_get(readString);
+  if (parse_get_results_index){
+
+    for (int x = 0; x < parse_get_results_index; x++){   // TODO - rewrite this to scale...
+      if (parse_get_results[x].parameter == "ip00"){parsed_link_ip[0][0] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip01"){parsed_link_ip[1][0] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip02"){parsed_link_ip[2][0] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip03"){parsed_link_ip[3][0] = parse_get_results[x].value_long;}
+
+      if (parse_get_results[x].parameter == "ip10"){parsed_link_ip[0][1] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip11"){parsed_link_ip[1][1] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip12"){parsed_link_ip[2][1] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip13"){parsed_link_ip[3][1] = parse_get_results[x].value_long;}
+
+      if (parse_get_results[x].parameter == "ip20"){parsed_link_ip[0][2] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip21"){parsed_link_ip[1][2] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip22"){parsed_link_ip[2][2] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip23"){parsed_link_ip[3][2] = parse_get_results[x].value_long;}      
+
+      if (parse_get_results[x].parameter == "act0"){parsed_link_enabled[0] = parse_get_results[x].value_long;}  
+      if (parse_get_results[x].parameter == "act1"){parsed_link_enabled[1] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "act2"){parsed_link_enabled[2] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "act3"){parsed_link_enabled[3] = parse_get_results[x].value_long;}
+          
+      if (parse_get_results[x].parameter == "sp0"){parsed_link_send_udp_port[0] = parse_get_results[x].value_long;}  
+      if (parse_get_results[x].parameter == "sp1"){parsed_link_send_udp_port[1] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "sp2"){parsed_link_send_udp_port[2] = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "sp3"){parsed_link_send_udp_port[3] = parse_get_results[x].value_long;}
+
+      if (parse_get_results[x].parameter == "ud"){parsed_link_receive_udp_port = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "lr"){parsed_link_receive_enabled = parse_get_results[x].value_long;}
+
+    }
+    
+
+    // data validation
+
+    for (int x = 0;x < FEATURE_INTERNET_LINK_MAX_LINKS;x++){
+      if (parsed_link_enabled[x]){
+        for (int y = 0;y < 4;y++){
+          if ((parsed_link_ip[y][x] < 0) || (parsed_link_ip[y][x] > 255)){
+            invalid_data = 1;
+          }
+        }
+        if ((parsed_link_ip[3][x] == 0) || (parsed_link_ip[3][x] == 255) || (parsed_link_ip[0][x] == 0) || (parsed_link_ip[0][x] == 255)){
+          invalid_data = 1;
+        }
+        if ((parsed_link_send_udp_port[x] < 1) || (parsed_link_send_udp_port[x] > 65535)){
+          invalid_data = 1;
+        }
+      }
+    }
+    
+
+    if (invalid_data){
+
+      web_print_header(client);
+      web_client_print(client,"<meta http-equiv=\"refresh\" content=\"2; URL='http://");
+      web_client_print(client,configuration.ip[0]);
+      web_client_print(client,".");
+      web_client_print(client,configuration.ip[1]);
+      web_client_print(client,".");
+      web_client_print(client,configuration.ip[2]);
+      web_client_print(client,".");  
+      web_client_print(client,configuration.ip[3]);                                                    
+      web_client_println(client,"\/LinkSettings'\" />");      
+      web_print_style_sheet(client);
+      web_print_title(client);
+      web_client_println(client,"<br>Bad data!<br>");
+      web_print_home_link(client);
+      web_print_footer(client);
+
+    } else { //zzzzzzz
+
+      for (int x = 0;x < FEATURE_INTERNET_LINK_MAX_LINKS;x++){
+
+        configuration.link_send_ip[0][x] = parsed_link_ip[0][x];
+        configuration.link_send_ip[1][x] = parsed_link_ip[1][x];
+        configuration.link_send_ip[2][x] = parsed_link_ip[2][x];
+        configuration.link_send_ip[3][x] = parsed_link_ip[3][x];
+
+        configuration.link_send_udp_port[x] = parsed_link_send_udp_port[x];
+
+        configuration.link_send_enabled[x] = parsed_link_enabled[x];
+      }
+           
+      configuration.link_receive_udp_port = parsed_link_receive_udp_port;
+      configuration.link_receive_enabled = parsed_link_receive_enabled;
+           
+
+      web_print_header(client);
+      web_client_print(client,"<meta http-equiv=\"refresh\" content=\"2; URL='http://");
+      web_client_print(client,configuration.ip[0]);
+      web_client_print(client,".");
+      web_client_print(client,configuration.ip[1]);
+      web_client_print(client,".");
+      web_client_print(client,configuration.ip[2]);
+      web_client_print(client,".");  
+      web_client_print(client,configuration.ip[3]);                                                    
+      web_client_println(client,"\/LinkSettings'\" />");
+      web_print_style_sheet(client);
+      web_print_title(client);
+      web_client_println(client,"<br>Configuration saved<br><br>");
+      web_print_home_link(client);
+      web_print_footer(client);
+      config_dirty = 1;
+    }
+  }
+}
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_page_network_settings_process(EthernetClient client){
+
+  uint8_t ip0 = 0;
+  uint8_t ip1 = 0;
+  uint8_t ip2 = 0;
+  uint8_t ip3 = 0;
+  uint8_t gw0 = 0;
+  uint8_t gw1 = 0;
+  uint8_t gw2 = 0;
+  uint8_t gw3 = 0;              
+  uint8_t sn0 = 0;
+  uint8_t sn1 = 0;
+  uint8_t sn2 = 0;
+  uint8_t sn3 = 0;
+
+  uint8_t invalid_data = 0;
+
+  unsigned int ud = 0;
+
+  parse_get(readString);
+  if (parse_get_results_index){
+
+    for (int x = 0; x < parse_get_results_index; x++){
+      if (parse_get_results[x].parameter == "ip0"){ip0 = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip1"){ip1 = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip2"){ip2 = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "ip3"){ip3 = parse_get_results[x].value_long;}
+
+      if (parse_get_results[x].parameter == "gw0"){gw0 = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "gw1"){gw1 = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "gw2"){gw2 = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "gw3"){gw3 = parse_get_results[x].value_long;}
+
+      if (parse_get_results[x].parameter == "sn0"){sn0 = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "sn1"){sn1 = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "sn2"){sn2 = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "sn3"){sn3 = parse_get_results[x].value_long;} 
+
+                                 
+    }
+
+    //invalid_data = 1;
+
+
+    // data validation
+
+    if ((ip0 == 0) || (ip3 == 255) || (ip3 == 0)) {invalid_data = 1;}
+    if (((ip0 & sn0) != (gw0 & sn0)) || ((ip1 & sn1) != (gw1 & sn1)) || ((ip2 & sn2) != (gw2 & sn2)) || ((ip3 & sn3) != (gw3 & sn3))) {invalid_data = 1;}
+    if ((sn0 == 0) || (sn1 > sn0) || (sn2 > sn1) || (sn3 > sn2) || (sn3 > 252)) {invalid_data = 1;}
+
+    if (invalid_data){
+
+      web_print_header(client);
+      web_print_style_sheet(client);
+      web_print_title(client);
+      web_client_println(client,"<br>Bad data!<br>");
+      web_print_home_link(client);
+      web_print_footer(client);
+
+    } else {
+
+      configuration.ip[0] = ip0;
+      configuration.ip[1] = ip1;
+      configuration.ip[2] = ip2;
+      configuration.ip[3] = ip3; 
+
+      configuration.gateway[0] = gw0;
+      configuration.gateway[1] = gw1;
+      configuration.gateway[2] = gw2;
+      configuration.gateway[3] = gw3; 
+
+      configuration.subnet[0] = sn0;
+      configuration.subnet[1] = sn1;
+      configuration.subnet[2] = sn2;
+      configuration.subnet[3] = sn3;  
+           
+
+      web_print_header(client);
+      web_client_print(client,"<meta http-equiv=\"refresh\" content=\"5; URL='http://");
+      web_client_print(client,ip0);
+      web_client_print(client,".");
+      web_client_print(client,ip1);
+      web_client_print(client,".");
+      web_client_print(client,ip2);
+      web_client_print(client,".");  
+      web_client_print(client,ip3);                                                    
+      web_client_println(client,"'\" />");
+      web_print_style_sheet(client);
+      web_print_title(client);
+      web_client_println(client,"<br>Configuration saved<br>Restarting networking<br><br>You will be redirected to new address in 5 seconds...<br>");
+      web_print_home_link(client);
+      web_print_footer(client);
+      restart_networking = 1;
+      config_dirty = 1;
+    }
+  }
+}
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_INTERNET_LINK)
+void link_key(uint8_t link_key_state){
+
+  static unsigned long last_link_key_action_time = 0;
+  static uint8_t current_link_key_state = 0;
+  static uint8_t buffered_key_down = 0;
+  uint8_t bytes_to_send[8];
+  uint8_t bytes_to_send_counter = 0;
+
+  if (link_key_state != current_link_key_state){
+
+    if (((millis()-last_link_key_action_time) < FEATURE_INTERNET_LINK_BUFFER_TIME_MS) && (last_link_key_action_time != 0)){
+      if (link_key_state){
+        #if defined(DEBUG_INTERNET_LINKING_SEND)
+          //debug_serial_port->println("link_key: L1");
+          debug_serial_port->print("link_key: D");
+        #endif //DEBUG_INTERNET_LINKING_SEND
+        bytes_to_send[0] = 'D';
+        add_to_udp_send_buffer(bytes_to_send,1);
+      } else {
+        //debug_serial_port->println("link_key: L0");
+        if (buffered_key_down){
+          #if defined(DEBUG_INTERNET_LINKING_SEND)
+            debug_serial_port->print("link_key: V");
+          #endif //DEBUG_INTERNET_LINKING_SEND  
+          bytes_to_send[0] = 'V';
+          add_to_udp_send_buffer(bytes_to_send,1);            
+          buffered_key_down = 0;
+        } else { 
+          #if defined(DEBUG_INTERNET_LINKING_SEND)
+            debug_serial_port->print("link_key: U");
+          #endif //DEBUG_INTERNET_LINKING_SEND  
+          bytes_to_send[0] = 'U';
+          add_to_udp_send_buffer(bytes_to_send,1);            
+        }
+      }
+      #if defined(DEBUG_INTERNET_LINKING_SEND)
+        debug_serial_port->print(millis()-last_link_key_action_time);
+      #endif //DEBUG_INTERNET_LINKING_SEND  
+      unsigned int number_to_send = millis()-last_link_key_action_time;
+      if ((number_to_send / 10000) > 0){
+        bytes_to_send[0] = (number_to_send / 10000) + 48;
+        number_to_send = number_to_send % 10000;
+        bytes_to_send_counter++;
+      }
+      if ((number_to_send / 1000) > 0){
+        bytes_to_send[bytes_to_send_counter] = (number_to_send / 1000) + 48;
+        number_to_send = number_to_send % 1000;
+        bytes_to_send_counter++;
+      }
+      if ((number_to_send / 100) > 0){
+        bytes_to_send[bytes_to_send_counter] = (number_to_send / 100) + 48;
+        number_to_send = number_to_send % 100;
+        bytes_to_send_counter++;
+      }
+      if ((number_to_send / 10) > 0){
+        bytes_to_send[bytes_to_send_counter] = (number_to_send / 10) + 48;
+        number_to_send = number_to_send % 10;
+        bytes_to_send_counter++;
+      }     
+      bytes_to_send[bytes_to_send_counter] = number_to_send + 48;
+      bytes_to_send_counter++;
+      add_to_udp_send_buffer(bytes_to_send,bytes_to_send_counter);
+    } else {
+      buffered_key_down = 1;
+    }
+    #if defined(DEBUG_INTERNET_LINKING_SEND)
+      debug_serial_port->println("");
+    #endif //DEBUG_INTERNET_LINKING_SEND  
+    current_link_key_state = link_key_state;
+    last_link_key_action_time = millis();
+  }
+}
+
+
+#endif //FEATURE_INTERNET_LINK
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_INTERNET_LINK)
+void add_to_udp_send_buffer(uint8_t bytes_to_send[8],uint8_t number_of_bytes){
+
+  for (int x = 0;x < number_of_bytes;x++){
+    if (udp_send_buffer_bytes < FEATURE_UDP_SEND_BUFFER_SIZE){
+      udp_send_buffer[udp_send_buffer_bytes] = bytes_to_send[x];
+      udp_send_buffer_bytes++;
+    }
+  }
+}
+
+#endif //FEATURE_INTERNET_LINK
+
+
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_INTERNET_LINK)
+void service_udp_send_buffer(){
+
+  static uint8_t link_send_buffer[FEATURE_INTERNET_LINK_MAX_LINKS][FEATURE_UDP_SEND_BUFFER_SIZE];
+  static uint8_t link_send_buffer_bytes[FEATURE_INTERNET_LINK_MAX_LINKS];
+  static uint8_t link_send_buffer_bytes_initialized = 0;
+
+  if (!link_send_buffer_bytes_initialized){
+    for (int x = 0;x < FEATURE_INTERNET_LINK_MAX_LINKS;x++){
+      link_send_buffer_bytes[x] = 0;
+    }
+    link_send_buffer_bytes_initialized = 1;
+  }
+
+  // load up the bytes sitting in the udp_send_buffer into the individual link buffers
+  if (udp_send_buffer_bytes){
+    for (int y = 0;y < FEATURE_INTERNET_LINK_MAX_LINKS;y++){   // enumerate the individual links
+      for (int x = 0;x < udp_send_buffer_bytes;x++){           // loop through the bytes in the udp_send_buffer
+        if (configuration.link_send_enabled[y]){
+          if (link_send_buffer_bytes[y] < FEATURE_UDP_SEND_BUFFER_SIZE){
+            link_send_buffer[y][link_send_buffer_bytes[y]] = udp_send_buffer[x];
+            link_send_buffer_bytes[y]++;
+          } else {
+            #if defined(DEBUG_UDP)
+              debug_serial_port->println("service_udp_send_buffer: link_send_buffer_overflow");
+            #endif
+          }
+        }
+      }
+    }
+    udp_send_buffer_bytes = 0;
+    return;
+  }
+//zzzzzzz
+  // send out a packet for the first link that has packets in the buffer (don't do them all at once so we don't hog up the CPU)
+  for (int y = 0;y < FEATURE_INTERNET_LINK_MAX_LINKS;y++){
+    if ((configuration.link_send_enabled[y]) && (link_send_buffer_bytes[y])){
+      IPAddress ip(configuration.link_send_ip[0][y],configuration.link_send_ip[1][y],configuration.link_send_ip[2][y],configuration.link_send_ip[3][y]);
+      #if defined(DEBUG_UDP)
+        debug_serial_port->print(F("service_udp_send_buffer: beginPacket "));
+        debug_serial_port->print(configuration.link_send_ip[0][y]);
+        debug_serial_port->print(F("."));
+        debug_serial_port->print(configuration.link_send_ip[1][y]);
+        debug_serial_port->print(F("."));
+        debug_serial_port->print(configuration.link_send_ip[2][y]);
+        debug_serial_port->print(F("."));
+        debug_serial_port->print(configuration.link_send_ip[3][y]);
+        debug_serial_port->print(F(":"));   
+        debug_serial_port->println(configuration.link_send_udp_port[y]);                        
+      #endif   
+      
+      Udp.beginPacket(ip, configuration.link_send_udp_port[y]);
+
+      for (int x = 0;x < link_send_buffer_bytes[y];x++){
+        udp_write(link_send_buffer[y][x]);
+      }
+      #if defined(DEBUG_UDP)
+        debug_serial_port->print("\n\rservice_udp_send_buffer: endPacket ");
+        unsigned long beginPacket_start = millis();
+      #endif
+      int endpacket_result = Udp.endPacket();
+      #if defined(DEBUG_UDP)
+        unsigned long beginPacket_end = millis();
+        if (!endpacket_result){
+          debug_serial_port->print("error");
+        } else {
+          debug_serial_port->print("OK");
+        }
+        debug_serial_port->print(" time:");
+        debug_serial_port->print(beginPacket_end - beginPacket_start);
+        debug_serial_port->println(" mS");
+      #endif
+      link_send_buffer_bytes[y] = 0;
+      y = FEATURE_INTERNET_LINK_MAX_LINKS;  // exit after we've process one buffer with bytes
+    }
+
+  }
+
+}
+
+#endif //FEATURE_INTERNET_LINK
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_UDP)
+void udp_write(uint8_t byte_to_write){
+
+  Udp.write(byte_to_write);
+
+  #if defined(DEBUG_UDP_WRITE)
+
+    static char ascii_sent[17] = "";
+
+    debug_serial_port->print(" ");
+    if (byte_to_write < 16){
+      debug_serial_port->print("0");
+    }
+    debug_serial_port->print(byte_to_write,HEX);
+    debug_serial_port->print(" ");
+    debug_serial_port->write(byte_to_write);
+  #endif //DEBUG_UDP_WRITE
+
+}
+#endif //FEATURE_UDP
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_UDP)
+void service_udp_receive(){
+
+  char udp_char_receive_packet_buffer[FEATURE_UDP_RECEIVE_BUFFER_SIZE];
+
+
+  if (configuration.link_receive_enabled){
+    int packet_size = Udp.parsePacket();
+    if (packet_size) {
+
+      Udp.read(udp_char_receive_packet_buffer, FEATURE_UDP_RECEIVE_BUFFER_SIZE);
+
+      #if defined(DEBUG_UDP_PACKET_RECEIVE)
+        debug_serial_port->print(F("service_udp_receive: received packet: size "));
+        debug_serial_port->print(packet_size);
+        debug_serial_port->print(" from ");
+        IPAddress remote = Udp.remoteIP();
+        for (int i = 0; i < 4; i++) {
+          debug_serial_port->print(remote[i], DEC);
+          if (i < 3) {
+            debug_serial_port->print(".");
+          }
+        }
+        debug_serial_port->print(":");
+        debug_serial_port->print(Udp.remotePort());
+        debug_serial_port->print(" contents: ");
+        for (int x = 0;x < packet_size;x++){
+          debug_serial_port->print(udp_char_receive_packet_buffer[x]);
+        }
+        debug_serial_port->println("$");
+      #endif //DEBUG_UDP
+
+     if (packet_size > FEATURE_UDP_RECEIVE_BUFFER_SIZE){ packet_size = FEATURE_UDP_RECEIVE_BUFFER_SIZE;}
+
+      for (int x = 0; x < packet_size; x++){
+        if (udp_receive_packet_buffer_bytes < FEATURE_UDP_RECEIVE_BUFFER_SIZE){
+          udp_receive_packet_buffer[udp_receive_packet_buffer_bytes] = udp_char_receive_packet_buffer[x];
+          udp_receive_packet_buffer_bytes++;
+        }
+      }
+    }
+  }
+}
+
+#endif //FEATURE_UDP
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_UDP)
+uint8_t get_udp_receive_buffer_byte(){
+
+
+  if (udp_receive_packet_buffer_bytes){
+
+    uint8_t byte_to_return = udp_receive_packet_buffer[0];
+
+    udp_receive_packet_buffer_bytes--;
+
+    if (udp_receive_packet_buffer_bytes){
+      for (int x = 0; x < udp_receive_packet_buffer_bytes; x++){
+        udp_receive_packet_buffer[x] = udp_receive_packet_buffer[x+1]; 
+      }
+    }
+
+    #if defined(DEBUG_UDP_PACKET_RECEIVE)
+      debug_serial_port->print(F("get_udp_receive_buffer_byte: returning: "));
+      debug_serial_port->write(byte_to_return);
+      debug_serial_port->print(F(" udp_receive_packet_buffer_bytes: "));
+      debug_serial_port->println(udp_receive_packet_buffer_bytes);
+    #endif //DEBUG_UDP_PACKET_RECEIVE
+
+
+    return byte_to_return;
+   
+  } else {
+    return 0;
+  }
+
+
+}
+#endif //FEATURE_UDP
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_UDP)
+uint8_t get_udp_receive_buffer_link_command(uint8_t * command,unsigned int * parameter){
+
+  // this extracts received link commands from the udp_receive_packet_buffer
+
+  uint8_t incoming_byte = 0;
+  uint8_t return_value = 0;
+  static uint8_t static_return_value = 0;
+  static uint8_t command_value = 0;
+  static uint8_t hit_vdu_command = 0;
+  static unsigned int parameter_value = 0;
+  static uint8_t digits = 0;
+
+  static unsigned long last_byte_receive_time = 0;
+
+  if (((millis() - last_byte_receive_time) > 500) && (hit_vdu_command)){
+    #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+      if (static_return_value){
+        debug_serial_port->println(F("get_udp_receive_buffer_link_command: expired buffer"));
+      }
+    #endif //DEBUG_INTERNET_LINKING_RECEIVE
+    parameter_value = 0;
+    hit_vdu_command = 0;
+    digits = 0;
+    //command_value = 0;
+    static_return_value = 0;
+  }
+  
+
+  if (udp_receive_packet_buffer_bytes){
+
+    for (int x = 0;((x < udp_receive_packet_buffer_bytes) && (static_return_value == 0)); x++){
+      incoming_byte = get_udp_receive_buffer_byte();
+      last_byte_receive_time = millis();
+      #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+        // debug_serial_port->print(F("get_udp_receive_buffer_link_command: incoming_byte: "));
+        // debug_serial_port->write(incoming_byte);
+        // debug_serial_port->print(F(" hit_vdu_command: "));
+        // debug_serial_port->println(hit_vdu_command);
+      #endif //DEBUG_INTERNET_LINKING_RECEIVE      
+      if (!hit_vdu_command){
+        #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+          // debug_serial_port->println(F("get_udp_receive_buffer_link_command: looking for V D U"));
+        #endif //DEBUG_INTERNET_LINKING_RECEIVE         
+        if ((incoming_byte == 'V') || (incoming_byte == 'D') || (incoming_byte == 'U')) { 
+          command_value = incoming_byte;
+          hit_vdu_command = 1;
+          parameter_value = 0;
+          digits = 0;
+          #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+            // debug_serial_port->println(F("get_udp_receive_buffer_link_command: hit_vdu_command"));
+          #endif //DEBUG_INTERNET_LINKING_RECEIVE           
+        }
+      } else { // we've hit a V, D, or U command
+        #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+          // debug_serial_port->println(F("get_udp_receive_buffer_link_command: looking for a number"));
+        #endif //DEBUG_INTERNET_LINKING_RECEIVE         
+        if ((incoming_byte > 47) && (incoming_byte < 58)){
+          parameter_value = (parameter_value * 10) + (incoming_byte - 48);
+          digits++;
+          #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+            // debug_serial_port->print(F("get_udp_receive_buffer_link_command: parameter_value: "));
+            // debug_serial_port->print(parameter_value);
+            // debug_serial_port->print(F(" digits: "));
+            // debug_serial_port->println(digits);
+          #endif //DEBUG_INTERNET_LINKING_RECEIVE           
+          // peek at next byte to see if we're at the end
+          service_udp_receive();
+          if (((udp_receive_packet_buffer_bytes > 0) && ((udp_receive_packet_buffer[0] == 'V') || (udp_receive_packet_buffer[0] == 'D') || (udp_receive_packet_buffer[0] == 'U'))) ||
+            (udp_receive_packet_buffer_bytes == 0) || (digits > 4)) {
+            static_return_value = 1;
+          }
+        } else { //something bogus came in - reset everything
+          #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+            debug_serial_port->print(F("get_udp_receive_buffer_link_command: reset digits:"));
+            debug_serial_port->print(digits);
+            debug_serial_port->print(F(" incoming_byte:"));
+            debug_serial_port->write(incoming_byte);
+            debug_serial_port->println();
+          #endif //DEBUG_INTERNET_LINKING_RECEIVE             
+          //parameter_value = 0;
+          //digits = 0;
+          //command_value = 0;  
+          hit_vdu_command = 0;
+        }
+      }
+    }
+
+
+  } 
+
+  #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+    if (static_return_value){
+      debug_serial_port->print(F("get_udp_receive_buffer_link_command: exiting: cmd: "));
+      debug_serial_port->write(command_value);
+      debug_serial_port->print(F(" parameter: "));
+      debug_serial_port->println(parameter_value);
+    }
+  #endif //DEBUG_INTERNET_LINKING_RECEIVE
+
+  if (static_return_value){
+    *command = command_value;
+    *parameter = parameter_value;
+    //parameter_value = 0;
+    //digits = 0;
+    //command_value = 0;
+    static_return_value = 0;
+    hit_vdu_command = 0;
+    return_value = 1;
+  }
+
+  return return_value;
+
+
+}
+#endif //FEATURE_UDP
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_UDP)
+void service_internet_link_udp_receive_buffer(){
+
+  //  Vxxxxx = key down immediately, stay keyed down for xxxxx mS, then key up
+  //  Dxxxxx = key down xxxxx mS after last command
+  //  Uxxxxx = key up xxxxx mS after last command
+
+
+  #define LINK_NO_COMMAND 0
+  #define LINK_V_COMMAND_IN_PROGRESS 1
+  #define LINK_U_COMMAND_BUFFERED 2
+  #define LINK_D_COMMAND_BUFFERED 3
+
+  uint8_t incoming_link_command = 0;
+  unsigned int incoming_link_command_parameter = 0;
+
+  static uint8_t current_link_control_state = LINK_NO_COMMAND;
+  static unsigned long v_command_key_down_expire_time = 0;
+  static unsigned long last_command_completion_time = 0;
+  static unsigned long buffered_command_execution_time = 0;
+
+  // TODO : key down expire time check
+
+  switch(current_link_control_state){
+    case LINK_NO_COMMAND:
+      // is there a command in the buffer, if so read it and execute
+      if (get_udp_receive_buffer_link_command(&incoming_link_command, &incoming_link_command_parameter)){
+        #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+          debug_serial_port->print(F("service_internet_link_udp_receive_buffer: incoming_link_command: "));
+          debug_serial_port->write(incoming_link_command);
+          debug_serial_port->print(F(" incoming_link_command_parameter: "));
+          debug_serial_port->println(incoming_link_command_parameter);
+        #endif //DEBUG_INTERNET_LINKING_RECEIVE
+        if (incoming_link_command == 'V'){ // key down immediately for incoming_link_parameter mS
+          tx_and_sidetone_key(1, AUTOMATIC_SENDING);
+          #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+            debug_serial_port->println(F("service_internet_link_udp_receive_buffer: LINK_V_COMMAND_IN_PROGRESS tx_and_sidetone_key: 1"));
+          #endif //DEBUG_INTERNET_LINKING_RECEIVE
+          v_command_key_down_expire_time = millis() + incoming_link_command_parameter;
+          current_link_control_state = LINK_V_COMMAND_IN_PROGRESS;
+        }
+        if (incoming_link_command == 'U'){
+          current_link_control_state = LINK_U_COMMAND_BUFFERED;
+          buffered_command_execution_time = last_command_completion_time + incoming_link_command_parameter;
+          #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+            debug_serial_port->println(F("service_internet_link_udp_receive_buffer: LINK_U_COMMAND_BUFFERED"));
+          #endif //DEBUG_INTERNET_LINKING_RECEIVE 
+        }        
+        if (incoming_link_command == 'D'){
+          current_link_control_state = LINK_D_COMMAND_BUFFERED;
+          buffered_command_execution_time = last_command_completion_time + incoming_link_command_parameter;
+          #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+            debug_serial_port->println(F("service_internet_link_udp_receive_buffer: LINK_D_COMMAND_BUFFERED"));
+          #endif //DEBUG_INTERNET_LINKING_RECEIVE                  
+        }
+      }
+      break;
+    case LINK_U_COMMAND_BUFFERED: // key up after last command time has passed
+      if (millis() >= buffered_command_execution_time){
+        tx_and_sidetone_key(0, AUTOMATIC_SENDING);
+        last_command_completion_time = millis();
+        current_link_control_state = LINK_NO_COMMAND;     
+        #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+          debug_serial_port->println(F("service_internet_link_udp_receive_buffer: LINK_U_COMMAND_BUFFERED->LINK_NO_COMMAND tx_and_sidetone_key: 0"));
+        #endif //DEBUG_INTERNET_LINKING_RECEIVE           
+      }
+      break;
+    case LINK_D_COMMAND_BUFFERED: // key down after last command time has passed
+      if (millis() >= buffered_command_execution_time){
+        tx_and_sidetone_key(1, AUTOMATIC_SENDING);
+        last_command_completion_time = millis();
+        current_link_control_state = LINK_NO_COMMAND;  
+        #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+          debug_serial_port->println(F("service_internet_link_udp_receive_buffer: LINK_D_COMMAND_BUFFERED->LINK_NO_COMMAND tx_and_sidetone_key: 1"));
+        #endif //DEBUG_INTERNET_LINKING_RECEIVE                
+      }
+      break;
+    case LINK_V_COMMAND_IN_PROGRESS: // we're in key down, check if it time to key up and complete
+      if (millis() >= v_command_key_down_expire_time){
+        tx_and_sidetone_key(0, AUTOMATIC_SENDING);
+        v_command_key_down_expire_time = 0;
+        last_command_completion_time = millis();
+        current_link_control_state = LINK_NO_COMMAND;
+        #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
+          debug_serial_port->println(F("service_internet_link_udp_receive_buffer: LINK_V_COMMAND_IN_PROGRESS->LINK_NO_COMMAND tx_and_sidetone_key: 0"));
+        #endif //DEBUG_INTERNET_LINKING_RECEIVE          
+      }
+      break;
+
+  } //switch(current_link_control_state)
+
+}
+
+#endif //FEATURE_UDP

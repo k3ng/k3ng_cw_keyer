@@ -19,3 +19,11 @@
   #define FEATURE_STRAIGHT_KEY_DECODE
 #endif
 
+#if defined(FEATURE_WEB_SERVER) || defined(FEATURE_INTERNET_LINK)
+  #define FEATURE_ETHERNET
+#endif
+
+#if defined(FEATURE_INTERNET_LINK)
+  #define FEATURE_UDP
+#endif
+

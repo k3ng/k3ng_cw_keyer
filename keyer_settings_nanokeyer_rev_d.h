@@ -148,3 +148,20 @@
   #define KEYER_AWAKE_PIN_AWAKE_STATE HIGH
   #define KEYER_AWAKE_PIN_ASLEEP_STATE LOW
 #endif
+
+#if defined(FEATURE_ETHERNET)
+  // #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
+  // #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
+  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.178")
+  #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
+
+  #define FEATURE_ETHERNET_GATEWAY {192,168,1,1}                   // default gateway
+  #define FEATURE_ETHERNET_SUBNET_MASK {255,255,255,0}                  // default subnet mask
+  #define FEATURE_ETHERNET_WEB_LISTENER_PORT 80
+  #define FEATURE_UDP_SEND_BUFFER_SIZE 128
+  #define FEATURE_UDP_RECEIVE_BUFFER_SIZE 128
+#endif //FEATURE_ETHERNET
+
+#define FEATURE_INTERNET_LINK_MAX_LINKS 2
+#define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
+#define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500

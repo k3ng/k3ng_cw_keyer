@@ -19,7 +19,11 @@
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-#define sidetone_line 4         // connect a speaker for sidetone
+#if !defined(FEATURE_ETHERNET)
+  #define sidetone_line 4         // connect a speaker for sidetone - (pin 4 is used by Ethernet shield and will conflict with that)
+#else
+  #define sidetone_line 31
+#endif
 #define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
 #define ptt_tx_1 0              // PTT ("push to talk") lines
 #define ptt_tx_2 0              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
@@ -40,7 +44,7 @@
 //lcd pins
 #ifdef FEATURE_LCD_4BIT
   #define lcd_rs A2
-  #define lcd_enable 10
+  #define lcd_enable 10  // pin 10 is used by Ethernet shield and will conflict with that
   #define lcd_d4 6
   #define lcd_d5 7
   #define lcd_d6 8
@@ -50,7 +54,7 @@
 #ifdef FEATURE_LCD1602_N07DH
   #define lcd_rs 8
   #define lcd_enable 9
-  #define lcd_d4 4
+  #define lcd_d4 4       // pin 4 is used by Ethernet shield and will conflict with that
   #define lcd_d5 5
   #define lcd_d6 6
   #define lcd_d7 7
