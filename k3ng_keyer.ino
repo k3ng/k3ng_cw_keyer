@@ -406,6 +406,10 @@ New fetures in this stable release:
       #define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
       #define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500 
 
+    2.2.2016040501
+      Fixed bug with OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION and ? character not being sent with keyboard and Winkey operation
+      Still working on web server functionality.  
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -413,7 +417,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016031801"
+#define CODE_VERSION "2.2.2016040501"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -4375,8 +4379,8 @@ void tx_and_sidetone_key (int state, byte sending_type)
     while ((millis() < endtime) && (millis() > 200)) {  // the second condition is to account for millis() rollover
 
 
-      #if defined(FEATURE_INTERNET_LINK) && !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)
-        if (millis() > 1000){
+      #if defined(FEATURE_INTERNET_LINK) /*&& !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)*/
+        if ((millis() > 1000)  && ((endtime - millis()) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
           service_udp_send_buffer();
           service_udp_receive();
           service_internet_link_udp_receive_buffer();
@@ -6052,10 +6056,12 @@ void send_char(byte cw_char, byte omit_letterspace)
       case 238: send_the_dits_and_dahs("--.--");break;// 'ñ' LA3ZA
       case 226: send_the_dits_and_dahs("------");break;// 'ß' LA3ZA
       #endif //OPTION_NON_ENGLISH_EXTENSIONS   
-
-
       
       case '|': loop_element_lengths(0.5,0,configuration.wpm,AUTOMATIC_SENDING); return; break;
+
+      #if defined(OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION)
+        case '?': send_the_dits_and_dahs("..--..");break;
+      #endif
 
       default: 
         #if !defined(OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION)
@@ -6203,7 +6209,7 @@ void service_send_buffer(byte no_print)
           if (send_buffer_bytes > 0) {
             if (send_buffer_array[0] < number_of_memories) {
               #ifdef FEATURE_MEMORIES
-              play_memory(send_buffer_array[0]);
+                play_memory(send_buffer_array[0]);
               #endif
             }
             remove_from_send_buffer();
@@ -6219,7 +6225,7 @@ void service_send_buffer(byte no_print)
             remove_from_send_buffer();
             
             #ifdef FEATURE_LED_RING
-            update_led_ring();
+              update_led_ring();
             #endif //FEATURE_LED_RING            
             
           }
@@ -7080,23 +7086,23 @@ void service_winkey(byte action) {
   byte status_byte_to_send;
   static byte winkey_paddle_echo_space_sent = 1;
   #ifdef OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND
-  static unsigned long winkey_connect_time = 0;
+    static unsigned long winkey_connect_time = 0;
   #endif //OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND
   #ifdef OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP
   static byte winkey_discard_bytes_init_done = 0;  
-  if (!winkey_discard_bytes_init_done) {
-    if (primary_serial_port->available()) {
-      for (int z = winkey_discard_bytes_startup;z > 0;z--) {
-        while (primary_serial_port->available() == 0) {}
-        primary_serial_port->read();
+    if (!winkey_discard_bytes_init_done) {
+      if (primary_serial_port->available()) {
+        for (int z = winkey_discard_bytes_startup;z > 0;z--) {
+          while (primary_serial_port->available() == 0) {}
+          primary_serial_port->read();
+        }
+        winkey_discard_bytes_init_done = 1;
       }
-      winkey_discard_bytes_init_done = 1;
     }
-  }
   #endif //OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP
   
   #ifdef OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST
-  static byte ignored_first_status_request = 0;
+    static byte ignored_first_status_request = 0;
   #endif //OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST
   
   if (action == WINKEY_HOUSEKEEPING) {
@@ -7118,7 +7124,7 @@ void service_winkey(byte action) {
       //if ((winkey_host_open) && (winkey_sending) && (send_buffer_bytes < 1) && ((millis() - winkey_last_activity) > winkey_c0_wait_time)) {
       if ((primary_serial_port->available() == 0) && (winkey_host_open) && (winkey_sending) && (send_buffer_bytes < 1) && ((millis() - winkey_last_activity) > winkey_c0_wait_time)) {
         #ifdef OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
-        send_char(' ',KEYER_NORMAL);
+          send_char(' ',KEYER_NORMAL);
         #endif
         //add_to_send_buffer(' ');    // this causes a 0x20 to get echoed back to host - doesn't seem to effect N1MM program
         winkey_sending = 0;
@@ -7163,13 +7169,13 @@ void service_winkey(byte action) {
     if (winkey_status == WINKEY_NO_COMMAND_IN_PROGRESS) {
 
       #if !defined(OPTION_WINKEY_IGNORE_LOWERCASE)
-      if (incoming_serial_byte > 31) {
+        if (incoming_serial_byte > 31) {
       #else
-      if ((incoming_serial_byte > 31) && (incoming_serial_byte <97)) {
+        if ((incoming_serial_byte > 31) && (incoming_serial_byte <97)) {
       #endif
 
         #if !defined(OPTION_WINKEY_IGNORE_LOWERCASE)
-        if ((incoming_serial_byte > 96) && (incoming_serial_byte < 123)){incoming_serial_byte = incoming_serial_byte - 32;}
+          if ((incoming_serial_byte > 96) && (incoming_serial_byte < 123)){incoming_serial_byte = incoming_serial_byte - 32;}
         #endif //!defined(OPTION_WINKEY_IGNORE_LOWERCASE)
       
         byte serial_buffer_position_to_overwrite;
@@ -12763,6 +12769,18 @@ void service_web_server() {
           }
 
 
+
+          if (readString.startsWith("GET /KeyerSettings")){
+            valid_request = 1;
+            // are there form results being posted?
+            if (readString.indexOf("?") > 0){
+              //web_print_page_keyer_settings_process(client);
+            } else {
+              web_print_page_keyer_settings(client);
+            }
+          }
+
+
           if (readString.startsWith("GET /NetworkSettings")){
             valid_request = 1;
             // are there form results being posted?
@@ -12785,9 +12803,9 @@ void service_web_server() {
             }
           #endif //FEATURE_INTERNET_LINK
 
-          if (readString.startsWith("GET /Status")){
+          if (readString.startsWith("GET /Control")){
             valid_request = 1;
-            web_print_page_status(client); 
+            web_print_page_control(client); 
           }
 
           if (!valid_request){
@@ -12852,49 +12870,7 @@ void web_print_style_sheet(EthernetClient client){
   web_client_println(client,".column {flex: 1; background: #f2f2f2; border: 1px solid #e6e6e6; box-sizing: border-box;}");
   web_client_println(client,".column-1 {order: 1;} .column-2 {order: 2;} .column-3 {order: 3;} .column-4 {order: 4;} .column-5 {order: 5;}");
 
-
-
-
   web_client_println(client,"</style>");
-
-  // web_client_print(client,"<style>body{margin:60px 0px;padding:0px;text-align:center;font-family:\"Trebuchet MS\",Arial,");
-  // web_client_print(client,"Helvetica, sans-serif;}h1{text-align:center;font-family:Arial,\"Trebuchet MS\",Helvetica,");
-  // web_client_print(client,"sans-serif;}h2{text-align:center;font-family:\"Trebuchet MS\",Arial,Helvetica,sans-serif;}");
-
-  // // button-looking hyperlinks
-  // web_client_print(client,"a.internal{text-decoration:none;width:75px;height:50px;border-color:black;border-top:2px solid;");
-  // web_client_print(client,"border-bottom:2px solid;border-right:2px solid;border-left:2px solid;border-radius:10px 10px 10px;");
-  // web_client_print(client,"-o-border-radius:10px 10px 10px;-webkit-border-radius:10px 10px 10px;font-family:\"Trebuchet MS\",Arial,");
-  // web_client_print(client,"Helvetica,sans-serif;");
-  // web_client_print(client,"-moz-border-radius:10px 10px 10px;background-color:#293F5E;padding:8px;text-align:center;}");
-  // web_client_print(client,"a.internal:link {color:white;} a.internal:visited {color:white;}");
-  // web_client_print(client," a.internal:hover {color:white;} a.internal:active {color:white;}  ");
-
-  // // external hyperlinks
-  // web_client_print(client,"a.external{");
-  // web_client_print(client,"font-family:\"Trebuchet MS\",Arial,Helvetica,sans-serif;");
-  // web_client_print(client,"text-align:center;}");
-  // web_client_print(client,"a.external:link {color:blue;} a.external:visited {color:purple;}");
-  // web_client_println(client,"a.external:hover {color:red;} a.external:active {color:green;}");
-
-  // // ip address text blocks
-  // web_client_println(client,".addr {width: 30px; text-align:center }");
-
-  // // ip port text blocks
-  // web_client_println(client,".ipprt {width: 45px; text-align:center }");
-
-  // web_client_println(client,".container {display: flex;}");
-
-  // //for demo purposes only 
-  // web_client_println(client,".column {flex: 1;background:#f2f2f2; border:1px solid #e6e6e6;box-sizing:border-box;}");
-  // web_client_println(client,".column-1 {order: 1;} .column-2 {order: 2;} .column-3 {order: 3;} .column-4 {order: 4;} .column-5 {order: 5;}");
-
-
-
-
-  web_client_println(client,"</style>");
-
-
 
 }
 #endif //FEATURE_WEB_SERVER
@@ -12902,10 +12878,7 @@ void web_print_style_sheet(EthernetClient client){
 #if defined(FEATURE_WEB_SERVER)
 void web_print_home_link(EthernetClient client){
 
-
-  web_client_println(client,"<br />");
-  web_client_println(client,"<a href=\"\x2F\" class=\"internal\">Home</a><br />");
-
+  web_client_println(client,"<br/><a href=\"\x2F\" class=\"internal\">Home</a><br />");
 
 }
 #endif //FEATURE_WEB_SERVER
@@ -12914,9 +12887,7 @@ void web_print_home_link(EthernetClient client){
 void web_print_footer(EthernetClient client){
 
 
-  web_client_println(client,"<br />");
-  web_client_println(client,"</BODY>");
-  web_client_println(client,"</HTML>");
+  web_client_println(client,"<br/></BODY></HTML>");
 
 
 }
@@ -13062,7 +13033,7 @@ void web_print_page_link_settings(EthernetClient client){
     web_client_print(client,">Disabled<br>");
 
   }
-//zzzzzzzzz
+
   web_client_println(client,"<br/><br/>"); 
   web_client_println(client,"<H2>Link Receive Settings</H2>");
 
@@ -13098,9 +13069,7 @@ void web_print_page_404(EthernetClient client){
   web_client_println(client,"HTTP/1.1 404 NOT FOUND");
   web_client_println(client,"Content-Type: text/html");
   web_client_println(client,"");             
-  web_client_println(client,"<HTML><HEAD></HEAD>");
-  web_client_println(client,"<BODY>");
-  web_client_println(client,"Sorry, dude.  Page not found.");
+  web_client_println(client,"<HTML><HEAD></HEAD><BODY>Sorry, dude.  Page not found.");
   web_print_home_link(client);            
   web_print_footer(client); 
 
@@ -13119,15 +13088,11 @@ void web_print_page_about(EthernetClient client){
 
   web_print_style_sheet(client);
 
-
   web_print_title(client);
 
-  web_client_println(client,"<H1>About</H1>");
-  web_client_println(client,"<hr />");
-  web_client_println(client,"<br />"); 
-  web_client_print(client,"Code Version: ");
+  web_client_println(client,"<H1>About</H1><hr/><br/>");
   web_client_println(client,CODE_VERSION);
-  web_client_println(client,"<br />");
+  web_client_println(client,"<br/>");
 
   void* HP = malloc(4);
   if (HP){
@@ -13135,12 +13100,12 @@ void web_print_page_about(EthernetClient client){
   }
   unsigned long free = (unsigned long)SP - (unsigned long)HP;
 
-  web_client_print(client,"Heap = 0x");
-  web_client_println(client,(unsigned long)HP,HEX);
-  web_client_println(client,"<br />");           
-  web_client_print(client,"Stack = 0x");
-  web_client_println(client,(unsigned long)SP,HEX);
-  web_client_println(client,"<br />");           
+  // web_client_print(client,"Heap = 0x");
+  // web_client_println(client,(unsigned long)HP,HEX);
+  // web_client_println(client,"<br />");           
+  // web_client_print(client,"Stack = 0x");
+  // web_client_println(client,(unsigned long)SP,HEX);
+  // web_client_println(client,"<br />");           
             
   web_client_print(client,free);
   web_client_println(client," bytes free<br/><br/>");
@@ -13167,7 +13132,7 @@ void web_print_page_about(EthernetClient client){
   web_client_print(client,":");
   if (seconds < 10) {web_client_print(client,"0");}
   web_client_print(client,seconds);    
-  web_client_println(client," dd:hh:mm:ss uptime<br />");
+  web_client_println(client," dd:hh:mm:ss uptime<br/>");
 
   web_client_println(client,"<br/><br/><br/>Anthony Good, K3NG");
   web_client_println(client,"<br/>anthony.good@gmail.com"); 
@@ -13196,15 +13161,15 @@ void parse_get(String str){
   }
   parse_get_results_index = 0;
 
-  #if defined(DEBUG_STATION_INTERLOCK)
-    debug.print("parse_get: raw workstring: ");
+  #if defined(DEBUG_WEB_PARSE_GET)
+    debug_serial_port->print("parse_get: raw workstring: ");
     Serial.println(str);
   #endif  
 
   workstring = str.substring(str.indexOf("?")+1);
 
-  #if defined(DEBUG_STATION_INTERLOCK)
-    debug.print("parse_get: workstring: ");
+  #if defined(DEBUG_WEB_PARSE_GET)
+    debug_serial_port->print("parse_get: workstring: ");
     Serial.println(workstring);
   #endif  
 
@@ -13218,14 +13183,12 @@ void parse_get(String str){
       // value = workstring.substring(workstring.indexOf("=")+1);
       workstring = "";
     }
-    #if defined(DEBUG_STATION_INTERLOCK)
-      debug.print("parse_get: parameter: ");
-      Serial.print(parameter);
-      debug.print(" value: ");
-      Serial.println(value);   
-    #endif //DEBUG_STATION_INTERLOCK
-    // value.trim();
-    // parameter.trim();
+    #if defined(DEBUG_WEB_PARSE_GET)
+      debug_serial_port->print("parse_get: parameter: ");
+      debug_serial_port->print(parameter);
+      debug_serial_port->print(" value: ");
+      debug_serial_port->println(value);   
+    #endif //DEBUG_WEB_PARSE_GET
 
     if (parse_get_results_index < MAX_PARSE_RESULTS){
       parse_get_results[parse_get_results_index].parameter = parameter;
@@ -13261,19 +13224,14 @@ void web_print_page_main_menu(EthernetClient client){
 
   web_print_title(client);
 
-  web_client_println(client,"<H1>K3NG CW Keyer</H1>");
-  web_client_println(client,"<hr />");
-  web_client_println(client,"<br />");  
-
-
-  web_client_println(client,"<br />"); 
-  web_client_println(client,"<a href=\"Status\"\" class=\"internal\">Status</a><br /><br />"); 
-  web_client_println(client,"<a href=\"KeyerSettings\"\" class=\"internal\">Keyer Settings</a><br /><br />");
+  web_client_println(client,"<H1>K3NG CW Keyer</H1><hr/><br/><br/>"); 
+  web_client_println(client,"<a href=\"Control\"\" class=\"internal\">Control</a><br /><br />"); 
+  web_client_println(client,"<a href=\"KeyerSettings\"\" class=\"internal\">Keyer Settings</a><br/><br/>");
   #if defined(FEATURE_INTERNET_LINK)
-    web_client_println(client,"<a href=\"LinkSettings\"\" class=\"internal\">Link Settings</a><br /><br />");
+    web_client_println(client,"<a href=\"LinkSettings\"\" class=\"internal\">Link Settings</a><br/><br/>");
   #endif //FEATURE_INTERNET_LINK
-  web_client_println(client,"<a href=\"NetworkSettings\"\" class=\"internal\">Network Settings</a><br /><br />");        
-  web_client_println(client,"<a href=\"About\"\" class=\"internal\">About</a><br />");
+  web_client_println(client,"<a href=\"NetworkSettings\"\" class=\"internal\">Network Settings</a><br/><br/>");        
+  web_client_println(client,"<a href=\"About\"\" class=\"internal\">About</a><br/>");
 
   web_print_footer(client); 
 
@@ -13281,11 +13239,183 @@ void web_print_page_main_menu(EthernetClient client){
 
 #endif //FEATURE_WEB_SERVER          
 
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_control_radio(EthernetClient client,const char *name,int value,uint8_t checked,const char *caption){
+
+  web_client_print(client,"<label><input type=\"radio\" name=\"");
+  web_client_print(client,name);
+  web_client_print(client,"\" value=\"");
+  web_client_print(client,value);
+  web_client_print(client,"\" ");
+  if (checked) {web_client_print(client,"checked");}
+  web_client_print(client,">");
+  web_client_print(client,caption);
+  web_client_print(client,"</label>");
+
+}
+#endif //FEATURE_WEB_SERVER 
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_control_checkbox(EthernetClient client,const char *name,uint8_t checked,const char *caption){
+
+    web_client_print(client,"<label><input type=\"checkbox\" id=\"");
+    web_client_print(client,name);
+    web_client_print(client,"\" ");
+    if (checked) {web_client_print(client,"checked");}
+    web_client_print(client,">");
+    web_client_print(client,caption);
+    web_client_print(client,"</label>");
+
+}
+#endif //FEATURE_WEB_SERVER 
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_control_textbox(EthernetClient client,const char *name,const char *textbox_class,int textbox_value,const char *front_caption,const char *back_caption){
+
+  web_client_print(client,"<label>");
+  web_client_print(client,front_caption);
+  web_client_print(client,"<input type=\"text\" name=\"");
+  web_client_print(client,name);
+  web_client_print(client,"\" class=\"");
+  web_client_print(client,textbox_class);
+  web_client_print(client,"\" value=\"");
+  web_client_print(client,textbox_value);
+  web_client_print(client,"\">");
+  web_client_print(client,back_caption);
+  web_client_print(client,"</label>");
+
+}
+#endif //FEATURE_WEB_SERVER 
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_control_textbox(EthernetClient client,const char *name,const char *textbox_class,float textbox_value,const char *front_caption,const char *back_caption){
+
+  web_client_print(client,"<label>");
+  web_client_print(client,front_caption);
+  web_client_print(client,"<input type=\"text\" name=\"");
+  web_client_print(client,name);
+  web_client_print(client,"\" class=\"");
+  web_client_print(client,textbox_class);
+  web_client_print(client,"\" value=\"");
+  web_client_print(client,textbox_value);
+  web_client_print(client,"\">");
+  web_client_print(client,back_caption);
+  web_client_print(client,"</label>");
+
+}
+#endif //FEATURE_WEB_SERVER 
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_page_keyer_settings(EthernetClient client){
+
+  uint8_t pin_read = 0;
+
+  web_print_header(client);
+
+  web_print_style_sheet(client);
+
+  web_print_title(client);
+
+  web_client_println(client,"<H1>Keyer Settings</H1><hr/><br/><form>");
+
+  web_print_control_radio(client,"md",IAMBIC_A,(configuration.keyer_mode == IAMBIC_A)?1:0,"Iambic A ");
+  web_print_control_radio(client,"md",IAMBIC_B,(configuration.keyer_mode == IAMBIC_B)?1:0,"Iambic B ");
+  web_print_control_radio(client,"md",BUG,(configuration.keyer_mode == BUG)?1:0,"Bug ");
+  web_print_control_radio(client,"md",STRAIGHT,(configuration.keyer_mode == STRAIGHT)?1:0,"Straight Key");
+  web_print_control_radio(client,"md",ULTIMATIC,(configuration.keyer_mode == ULTIMATIC)?1:0,"Ultimatic");
+  web_client_println(client,"<br/>");  
+
+    
+  #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+    web_print_control_checkbox(client,"cs",(configuration.cmos_super_keyer_iambic_b_timing_on)?1:0," CMOS Superkeyer Iambic B Timing ");
+    web_print_control_textbox(client,"cp","addr",configuration.cmos_super_keyer_iambic_b_timing_percent,"","%");
+    web_client_println(client,"<br/>");
+  #endif
+  
+
+  #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
+    web_print_control_checkbox(client,"di",(!configuration.dit_buffer_off)?1:0," Dit Buffer ");
+    web_print_control_checkbox(client,"da",(!configuration.dah_buffer_off)?1:0," Dah Buffer<br/>");
+  #endif //FEATURE_DIT_DAH_BUFFER_CONTROL 
+
+//zzzzzzzz
+
+  web_print_control_radio(client,"sm",SPEED_NORMAL,(speed_mode == SPEED_NORMAL)?1:0,"Normal Speed Mode ");
+
+  web_print_control_textbox(client,"wp","addr",(int)configuration.wpm,""," WPM ");
+
+  #ifdef FEATURE_FARNSWORTH
+    web_print_control_textbox(client,"fw","addr",(int)configuration.wpm_farnsworth,""," Farnsworth WPM");
+  #endif //FEATURE_FARNSWORTH
+
+  web_client_println(client,"<br/>");
+
+  web_print_control_radio(client,"sm",SPEED_QRSS,(speed_mode == SPEED_QRSS)?1:0,"QRSS Mode   Dit Length ");
+  web_client_print(client,"<label><input type=\"text\" name=\"qd\" class=\"addr\" value=\"");
+  web_client_println(client,qrss_dit_length);
+  web_client_print(client,"\"> s</label>");
+  web_client_println(client,"<br/>");
+
+  web_client_print(client,"Sidetone: ");
+  web_print_control_radio(client,"st",SIDETONE_ON,(configuration.sidetone_mode == SIDETONE_ON)?1:0,"On ");
+  web_print_control_radio(client,"st",SIDETONE_OFF,(configuration.sidetone_mode == SIDETONE_OFF)?1:0,"Off ");
+  web_print_control_radio(client,"st",SIDETONE_PADDLE_ONLY,(configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)?1:0,"Paddle Only ");
+  web_print_control_textbox(client,"hz","addr",(int)configuration.hz_sidetone,""," hz");
+  web_client_println(client,"<br/>");
+
+  web_print_control_textbox(client,"dd","addr",float(configuration.dah_to_dit_ratio/100.0),""," Dah/Dit Ratio");
+  web_client_println(client,"<br/>");
+
+  web_print_control_textbox(client,"wt","addr",(int)configuration.weighting,"Weighting ","");
+  web_client_println(client,"<br/>");
+
+  web_print_control_textbox(client,"sn","addr",(int)serial_number,"Serial # ","");
+  web_client_println(client,"<br/>");
+
+  #ifdef FEATURE_POTENTIOMETER
+    web_print_control_textbox(client,"po","addr",(int)pot_value_wpm(),"Potentiometer "," WPM ");
+    web_print_control_checkbox(client,"pa",(configuration.pot_activated)?1:0," Active");
+    web_client_println(client,"<br/>");
+  #endif
+
+  #ifdef FEATURE_AUTOSPACE
+    web_print_control_checkbox(client,"as",(configuration.autospace_active)?1:0," Autospace<br/>");
+  #endif //FEATURE_AUTOSPACE
+
+  web_print_control_textbox(client,"ws","addr",(int)configuration.length_wordspace,"Wordspace ","");
+  web_client_println(client,"<br/>");
+
+  web_print_control_textbox(client,"tx","addr",(int)configuration.current_tx,"TX ","");
+  web_client_println(client,"<br/>");
+
+  #ifdef FEATURE_QLF
+    web_print_control_checkbox(client,"ql",(qlf_active)?1:0," QLF<br/>");
+  #endif //FEATURE_QLF
+
+  web_client_println(client,"<br><br><input type=\"submit\" value=\"Save\"></form>");
+
+  web_print_home_link(client);
+
+  web_print_footer(client);
+
+}
+#endif //FEATURE_WEB_SERVER 
              
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_page_status(EthernetClient client){
+void web_print_page_control(EthernetClient client){
 
   uint8_t pin_read = 0;
 
@@ -13297,126 +13427,13 @@ void web_print_page_status(EthernetClient client){
 
   web_print_title(client);
 
-  web_client_println(client,"<H1>Status</H1>");
-  web_client_println(client,"<hr/>");
+  web_client_println(client,"<H1>Control</H1><hr/><br/>");
+ 
   web_client_println(client,"<br/>");  
-
-
-
-  switch (configuration.keyer_mode) {
-    case IAMBIC_A: web_client_print(client,"Iambic A"); break;
-    case IAMBIC_B: web_client_print(client,"Iambic B"); 
-      #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-        web_client_print(client," / CMOS Super Keyer Timing: O");
-        if (configuration.cmos_super_keyer_iambic_b_timing_on) {
-          web_client_print(client,"N ");
-          web_client_print(client,configuration.cmos_super_keyer_iambic_b_timing_percent);
-          web_client_print(client,"%");
-        } else {
-          web_client_print(client,"FF");
-        }
-      #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-      break;
-    case BUG: web_client_print(client,"Bug"); break;
-    case STRAIGHT: web_client_print(client,"Straightkey"); break;
-    case ULTIMATIC: web_client_print(client,"Ultimatic"); break;
-  }
-  web_client_println(client,"<br/>");
-  #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
-    web_client_print(client,"Buffers: Dit O");
-    if (configuration.dit_buffer_off){
-      web_client_print(client,"FF");
-    } else {
-      web_client_print(client,"N");
-    }
-    web_client_print(client," Dah O");
-    if (configuration.dah_buffer_off){
-      web_client_print(client,"FF");
-    } else {
-      web_client_print(client,"N");
-    }
-    web_client_println(client,"<br/>");
-  #endif //FEATURE_DIT_DAH_BUFFER_CONTROL  
-  if (speed_mode == SPEED_NORMAL) {
-    web_client_print(client,"WPM: ");
-    web_client_println(client,configuration.wpm,DEC);
-    web_client_println(client,"<br/>");
-    #ifdef FEATURE_FARNSWORTH
-      web_client_print(client,"Farnsworth WPM: ");
-      if (configuration.wpm_farnsworth < configuration.wpm) {
-        web_client_print(client,"disabled");
-      } else {
-        web_client_print(client,configuration.wpm_farnsworth);
-      }
-      web_client_println(client,"<br/>");
-    #endif //FEATURE_FARNSWORTH
-  } else {
-    web_client_print(client,"QRSS Mode Activated - Dit Length: ");
-    web_client_print(client,qrss_dit_length);
-    web_client_print(client," seconds");
-    web_client_println(client,"<br/>");
-  }
-  web_client_print(client,"Sidetone:");
-  switch (configuration.sidetone_mode) {
-    case SIDETONE_ON: web_client_print(client,"ON"); break;
-    case SIDETONE_OFF: web_client_print(client,"OFF"); break;
-    case SIDETONE_PADDLE_ONLY: web_client_print(client,"Paddle Only"); break;
-  }
-  web_client_print(client," ");
-  web_client_print(client,configuration.hz_sidetone);
-  web_client_print(client," hz");
-  web_client_println(client,"<br/>");
-  web_client_print(client,"Dah to dit: ");
-  web_client_print(client,float(configuration.dah_to_dit_ratio/100.0));
-  web_client_println(client,"<br/>");
-  web_client_print(client,"Weighting: ");
-  web_client_print(client,configuration.weighting);
-  web_client_println(client,"<br/>");
-  web_client_print(client,"Serial Number: ");
-  web_client_print(client,serial_number);
-  web_client_println(client,"<br/>");
-  #ifdef FEATURE_POTENTIOMETER
-    web_client_print(client,"Potentiometer WPM: ");
-    web_client_print(client,pot_value_wpm());
-    web_client_print(client," (");
-    if (configuration.pot_activated != 1) {
-      web_client_print(client,"not ");
-    }
-    web_client_print(client,"activated)");
-    web_client_println(client,"<br/>");
-  #endif
-  #ifdef FEATURE_AUTOSPACE
-    web_client_print(client,"Autospace O");
-    if (configuration.autospace_active) {
-      web_client_print(client,"n");
-    } else {
-      web_client_print(client,"ff");
-    }
-    web_client_println(client,"<br/>");
-  #endif
-  web_client_print(client,"Wordspace: ");
-  web_client_print(client,configuration.length_wordspace);
-  web_client_println(client,"<br/>");
-  web_client_print(client,"TX: ");
-  web_client_print(client,configuration.current_tx);  
-  web_client_println(client,"<br/>");
-
-  #ifdef FEATURE_QLF
-    web_client_print(client,"QLF: O");
-    if (qlf_active){
-      web_client_print(client,"n");
-    } else {
-      web_client_print(client,"ff");
-    }
-    web_client_println(client,"<br/>");
-  #endif //FEATURE_QLF
-
-
-  // web_client_println(client,"<br />");  
-  // web_client_println(client,"<a href=\"/Control?button1on\"\">Turn On LED</a>");
-  // web_client_println(client,"<a href=\"/Control?button1off\"\">Turn Off LED</a><br />");   
-  // web_client_println(client,"<br />");     
-  // web_client_println(client,"<br />"); 
+  web_client_println(client,"<a href=\"/Control?button1on\"\" class=\"internal\">Key</a>");
+  web_client_println(client,"<a href=\"/Control?button1off\"\" class=\"internal\">Unkey</a><br/>");   
+  web_client_println(client,"<br/>");     
+  web_client_println(client,"<br/>"); 
 
   web_print_home_link(client);
 
@@ -13456,6 +13473,8 @@ void web_client_print(EthernetClient client,int i){
 
 }
 #endif //FEATURE_WEB_SERVER
+
+
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -13588,14 +13607,7 @@ void web_print_page_link_settings_process(EthernetClient client){
     if (invalid_data){
 
       web_print_header(client);
-      web_client_print(client,"<meta http-equiv=\"refresh\" content=\"2; URL='http://");
-      web_client_print(client,configuration.ip[0]);
-      web_client_print(client,".");
-      web_client_print(client,configuration.ip[1]);
-      web_client_print(client,".");
-      web_client_print(client,configuration.ip[2]);
-      web_client_print(client,".");  
-      web_client_print(client,configuration.ip[3]);                                                    
+      web_print_meta_refresh(client,configuration.ip[0],configuration.ip[1],configuration.ip[2],configuration.ip[3],2);                                                   
       web_client_println(client,"\/LinkSettings'\" />");      
       web_print_style_sheet(client);
       web_print_title(client);
@@ -13603,7 +13615,7 @@ void web_print_page_link_settings_process(EthernetClient client){
       web_print_home_link(client);
       web_print_footer(client);
 
-    } else { //zzzzzzz
+    } else { 
 
       for (int x = 0;x < FEATURE_INTERNET_LINK_MAX_LINKS;x++){
 
@@ -13622,14 +13634,7 @@ void web_print_page_link_settings_process(EthernetClient client){
            
 
       web_print_header(client);
-      web_client_print(client,"<meta http-equiv=\"refresh\" content=\"2; URL='http://");
-      web_client_print(client,configuration.ip[0]);
-      web_client_print(client,".");
-      web_client_print(client,configuration.ip[1]);
-      web_client_print(client,".");
-      web_client_print(client,configuration.ip[2]);
-      web_client_print(client,".");  
-      web_client_print(client,configuration.ip[3]);                                                    
+      web_print_meta_refresh(client,configuration.ip[0],configuration.ip[1],configuration.ip[2],configuration.ip[3],5);                                                   
       web_client_println(client,"\/LinkSettings'\" />");
       web_print_style_sheet(client);
       web_print_title(client);
@@ -13723,14 +13728,7 @@ void web_print_page_network_settings_process(EthernetClient client){
            
 
       web_print_header(client);
-      web_client_print(client,"<meta http-equiv=\"refresh\" content=\"5; URL='http://");
-      web_client_print(client,ip0);
-      web_client_print(client,".");
-      web_client_print(client,ip1);
-      web_client_print(client,".");
-      web_client_print(client,ip2);
-      web_client_print(client,".");  
-      web_client_print(client,ip3);                                                    
+      web_print_meta_refresh(client,ip0,ip1,ip2,ip3,5);
       web_client_println(client,"'\" />");
       web_print_style_sheet(client);
       web_print_title(client);
@@ -13744,6 +13742,24 @@ void web_print_page_network_settings_process(EthernetClient client){
 }
 #endif //FEATURE_WEB_SERVER
 
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_meta_refresh(EthernetClient client,uint8_t ip0,uint8_t ip1,uint8_t ip2,uint8_t ip3,uint8_t refresh_time){
+
+  web_client_print(client,"<meta http-equiv=\"refresh\" content=\"");
+  web_client_print(client,refresh_time);
+  web_client_print(client,"; URL='http://");
+  web_client_print(client,ip0);
+  web_client_print(client,".");
+  web_client_print(client,ip1);
+  web_client_print(client,".");
+  web_client_print(client,ip2);
+  web_client_print(client,".");  
+  web_client_print(client,ip3);                                                    
+
+}
+#endif //FEATURE_WEB_SERVER
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_INTERNET_LINK)
@@ -13760,13 +13776,11 @@ void link_key(uint8_t link_key_state){
     if (((millis()-last_link_key_action_time) < FEATURE_INTERNET_LINK_BUFFER_TIME_MS) && (last_link_key_action_time != 0)){
       if (link_key_state){
         #if defined(DEBUG_INTERNET_LINKING_SEND)
-          //debug_serial_port->println("link_key: L1");
           debug_serial_port->print("link_key: D");
         #endif //DEBUG_INTERNET_LINKING_SEND
         bytes_to_send[0] = 'D';
         add_to_udp_send_buffer(bytes_to_send,1);
       } else {
-        //debug_serial_port->println("link_key: L0");
         if (buffered_key_down){
           #if defined(DEBUG_INTERNET_LINKING_SEND)
             debug_serial_port->print("link_key: V");
@@ -13836,9 +13850,6 @@ void add_to_udp_send_buffer(uint8_t bytes_to_send[8],uint8_t number_of_bytes){
 }
 
 #endif //FEATURE_INTERNET_LINK
-
-
-
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_INTERNET_LINK)
 void service_udp_send_buffer(){
@@ -13873,7 +13884,7 @@ void service_udp_send_buffer(){
     udp_send_buffer_bytes = 0;
     return;
   }
-//zzzzzzz
+
   // send out a packet for the first link that has packets in the buffer (don't do them all at once so we don't hog up the CPU)
   for (int y = 0;y < FEATURE_INTERNET_LINK_MAX_LINKS;y++){
     if ((configuration.link_send_enabled[y]) && (link_send_buffer_bytes[y])){
