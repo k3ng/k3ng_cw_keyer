@@ -98,6 +98,7 @@
 
 
 #ifdef FEATURE_WINKEY_EMULATION
+  #define WINKEY_DEFAULT_BAUD 1200
 // alter these below to map alternate sidetones for Winkey interface protocol emulation
 #ifdef OPTION_WINKEY_2_SUPPORT
 	#define WINKEY_SIDETONE_1 3759
@@ -187,7 +188,7 @@
 #define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
 #define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500            // increase this time if you have greater than 500 ms latency on your link
 #define FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS 20
-
+#define FEATURE_INTERNET_LINK_KEY_DOWN_TIMEOUT_SECS 8
 
 // ######## ########  ######  ######## 
 //    ##    ##       ##    ##    ##    

@@ -88,6 +88,7 @@
 
 
 #ifdef FEATURE_WINKEY_EMULATION
+  #define WINKEY_DEFAULT_BAUD 1200
 // alter these below to map alternate sidetones for Winkey interface protocol emulation
 #ifdef OPTION_WINKEY_2_SUPPORT
 	#define WINKEY_SIDETONE_1 3759

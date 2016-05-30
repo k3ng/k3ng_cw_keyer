@@ -46,7 +46,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     \m###  Set Farnsworth speed
     \n     Toggle paddle reverse
     \o     Toggle sidetone on/off
-    \p#    Program memory #  ( 1 - 9, 0 = memory 10)
+    \p#(#) Program memory #
     \q##   Switch to QRSS mode, dit length ## seconds
     \r     Switch to regular speed mode
     \s     Status
@@ -387,7 +387,6 @@ New fetures in this stable release:
 
     2.2.2016031801
       Ethernet, web server and Internet linking functionality in beta / development (DEFINEs are in HARDWARE_TEST files only right now)
-
       #define FEATURE_WEB_SERVER
       #define FEATURE_INTERNET_LINK
 
@@ -408,7 +407,17 @@ New fetures in this stable release:
 
     2.2.2016040501
       Fixed bug with OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION and ? character not being sent with keyboard and Winkey operation
-      Still working on web server functionality.  
+      Still working on web server functionality
+
+    2.2.2016042601
+      More web server functionality work   
+      #define FEATURE_INTERNET_LINK_KEY_DOWN_TIMEOUT_SECS 8 
+      \P command now can program memories above #10
+
+    2.2.2016053001
+      Additional DEBUG_WINKEY messages for Winkeyer troubleshooting  
+      #define WINKEY_DEFAULT_BAUD 1200 (added setting for UCXLog 9600 baud Winkey setting)
+      Fixed minor Winkey emulation bug with recognizing byte 0x7C as a half dit space when OPTION_WINKEY_IGNORE_LOWERCASE is enabled
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -417,7 +426,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016040501"
+#define CODE_VERSION "2.2.2016053001"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -1022,7 +1031,6 @@ void loop()
   
   // this is where the magic happens
   
-//delay(200); // testing!!!
 
   #ifdef OPTION_WATCHDOG_TIMER
     wdt_reset();
@@ -1209,9 +1217,6 @@ void loop()
   long service_straight_key(){
 
     static byte last_straight_key_state = 0;
-    
-  
-    
 
     if (digitalRead(pin_straight_key) == STRAIGHT_KEY_ACTIVE_STATE){
       if (!last_straight_key_state){
@@ -3826,6 +3831,10 @@ void write_settings_to_eeprom(int initialize_eeprom) {
 int read_settings_from_eeprom() {
 
   // returns 0 if eeprom had valid settings, returns 1 if eeprom needs initialized
+
+  #if defined(DEBUG_FORCE_RESET)
+    return 1;
+  #endif
   
   #if !defined(HARDWARE_ARDUINO_DUE) || (defined(HARDWARE_ARDUINO_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
@@ -5707,16 +5716,14 @@ void check_command_buttons()
               dit_buffer = 0;
               
               #ifdef DEBUG_BUTTONS
-              debug_serial_port->println(F("\ncheck_buttons: speed_change(1)"));
+                debug_serial_port->println(F("\ncheck_buttons: speed_change(1)"));
               #endif //DEBUG_BUTTONS            
 
-              #ifdef FEATURE_WINKEY_EMULATION
-              #ifdef FEATURE_POTENTIOMETER
-              if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
-                winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128));
-                winkey_last_unbuffered_speed_wpm = configuration.wpm;
-              }
-              #endif
+              #if defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_POTENTIOMETER)
+                if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
+                  winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128));
+                  winkey_last_unbuffered_speed_wpm = configuration.wpm;
+                }
               #endif
 
             }
@@ -5730,16 +5737,14 @@ void check_command_buttons()
               dah_buffer = 0;
 
               #ifdef DEBUG_BUTTONS
-              debug_serial_port->println(F("\ncheck_buttons: speed_change(-1)"));
+                debug_serial_port->println(F("\ncheck_buttons: speed_change(-1)"));
               #endif //DEBUG_BUTTONS            
 
-              #ifdef FEATURE_WINKEY_EMULATION
-              #ifdef FEATURE_POTENTIOMETER
-              if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
-                winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128));
-                winkey_last_unbuffered_speed_wpm = configuration.wpm;
-              }
-              #endif
+              #if defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_POTENTIOMETER)
+                if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
+                  winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128));
+                  winkey_last_unbuffered_speed_wpm = configuration.wpm;
+                }
               #endif
             }
          }
@@ -5749,12 +5754,12 @@ void check_command_buttons()
          while (analogbuttonpressed() == analogbuttontemp) {
             if (((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW)) && (analogbuttontemp < (number_of_memories + 1))){
               #ifdef FEATURE_MEMORIES
-              repeat_memory = analogbuttontemp - 1;
-              last_memory_repeat_time = 0;
-              #ifdef DEBUG_BUTTONS
-              debug_serial_port->print(F("\ncheck_buttons: repeat_memory:"));
-              debug_serial_port->println(repeat_memory);
-              #endif //DEBUG_BUTTONS                    
+                repeat_memory = analogbuttontemp - 1;
+                last_memory_repeat_time = 0;
+                #ifdef DEBUG_BUTTONS
+                  debug_serial_port->print(F("\ncheck_buttons: repeat_memory:"));
+                  debug_serial_port->println(repeat_memory);
+                #endif //DEBUG_BUTTONS                    
               #endif
               paddle_was_hit = 1;
             }
@@ -5772,7 +5777,7 @@ void check_command_buttons()
     }
     last_button_action = millis();
     #ifdef FEATURE_SLEEP
-    last_activity_time = millis(); 
+      last_activity_time = millis(); 
     #endif //FEATURE_SLEEP
   }
 }
@@ -5783,7 +5788,7 @@ void check_command_buttons()
 void service_dit_dah_buffers()
 {
   #ifdef DEBUG_LOOP
-  debug_serial_port->println(F("loop: entering service_dit_dah_buffers"));
+    debug_serial_port->println(F("loop: entering service_dit_dah_buffers"));
   #endif      
       
   if ((configuration.keyer_mode == IAMBIC_A) || (configuration.keyer_mode == IAMBIC_B) || (configuration.keyer_mode == ULTIMATIC)) {
@@ -5814,7 +5819,7 @@ void service_dit_dah_buffers()
         tx_and_sidetone_key(0,MANUAL_SENDING);
       }
       #ifdef FEATURE_DEAD_OP_WATCHDOG
-      dah_counter = 0;
+        dah_counter = 0;
       #endif
     } else {
       if (configuration.keyer_mode == STRAIGHT) {
@@ -5825,7 +5830,7 @@ void service_dit_dah_buffers()
           tx_and_sidetone_key(0,MANUAL_SENDING);
         }
         #ifdef FEATURE_DEAD_OP_WATCHDOG
-        dit_counter = 0;
+          dit_counter = 0;
         #endif
       }
     }
@@ -6432,10 +6437,10 @@ void add_to_send_buffer(byte incoming_serial_byte)
         send_buffer_array[send_buffer_bytes - 1] = incoming_serial_byte;
         
         #ifdef FEATURE_WINKEY_EMULATION
-        if ((send_buffer_bytes>winkey_xoff_threshold) && winkey_host_open) {
-          winkey_xoff=1;
-          winkey_port_write(0xc0|winkey_sending|winkey_xoff); //send XOFF status         
-        }
+          if ((send_buffer_bytes>winkey_xoff_threshold) && winkey_host_open) {
+            winkey_xoff=1;
+            winkey_port_write(0xc0|winkey_sending|winkey_xoff); //send XOFF status         
+          }
         #endif
               
       } else {  // we got a backspace
@@ -6459,11 +6464,11 @@ void winkey_unbuffered_speed_command(byte incoming_serial_byte) {
     winkey_last_unbuffered_speed_wpm = configuration.wpm;
     //calculate_element_length();
     #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
-    config_dirty = 1;
+      config_dirty = 1;
     #endif
     
     #ifdef FEATURE_LED_RING
-    update_led_ring();
+      update_led_ring();
     #endif //FEATURE_LED_RING    
     
   }
@@ -6476,9 +6481,9 @@ void winkey_unbuffered_speed_command(byte incoming_serial_byte) {
 void winkey_farnsworth_command(byte incoming_serial_byte) {
 
   #ifdef FEATURE_FARNSWORTH
-  if ((incoming_serial_byte > 9) && (incoming_serial_byte < 100)) {
-    configuration.wpm_farnsworth = incoming_serial_byte;
-  }
+    if ((incoming_serial_byte > 9) && (incoming_serial_byte < 100)) {
+      configuration.wpm_farnsworth = incoming_serial_byte;
+    }
   #endif //FEATURE_FFARNSWORTH
 
 }
@@ -6779,48 +6784,92 @@ void winkey_load_settings_command(byte winkey_status,byte incoming_serial_byte) 
 
   switch(winkey_status) {
      case WINKEY_LOAD_SETTINGS_PARM_1_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_1_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_setmode_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_2_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_2_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_unbuffered_speed_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_3_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_3_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_sidetone_freq_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_4_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_4_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_weighting_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_5_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_5_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_ptt_times_parm1_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_6_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_6_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_ptt_times_parm2_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_7_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_7_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_set_pot_parm1_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_8_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_8_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_set_pot_parm2_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_9_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_9_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_first_extension_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_10_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_10_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_keying_compensation_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_11_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_11_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_farnsworth_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_12_COMMAND:  // paddle switchpoint - don't need to support
-
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_12_COMMAND");
+       #endif //DEBUG_WINKEY  
        break;
      case WINKEY_LOAD_SETTINGS_PARM_13_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_13_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_dah_to_dit_ratio_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_14_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_14_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_set_pinconfig_command(incoming_serial_byte);
        break;
      case WINKEY_LOAD_SETTINGS_PARM_15_COMMAND:
+       #ifdef DEBUG_WINKEY
+         debug_serial_port->println("winkey_load_settings_command: WINKEY_LOAD_SETTINGS_PARM_15_COMMAND");
+       #endif //DEBUG_WINKEY       
        winkey_set_pot_parm3_command(incoming_serial_byte);
        break;
   }
@@ -7051,13 +7100,16 @@ void winkey_port_write(byte byte_to_send){
   primary_serial_port->write(byte_to_send);
   #ifdef DEBUG_WINKEY
     debug_serial_port->print("Winkey Port TX: ");    
-    if ((byte_to_send != 13) && (byte_to_send != 9) && (byte_to_send != 10)){
+    // if ((byte_to_send != 13) && (byte_to_send != 9) && (byte_to_send != 10)){
+    if ((byte_to_send > 31) && (byte_to_send < 127)){
       debug_serial_port->write(byte_to_send);
     } else {
-      debug_serial_port->print(" ");
+      debug_serial_port->print(".");
     }
     debug_serial_port->print(" [");
     debug_serial_port->print(byte_to_send);
+    debug_serial_port->print("] [0x");
+    debug_serial_port->print(byte_to_send,HEX);
     debug_serial_port->println("]");
   #endif
 }
@@ -7089,16 +7141,16 @@ void service_winkey(byte action) {
     static unsigned long winkey_connect_time = 0;
   #endif //OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND
   #ifdef OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP
-  static byte winkey_discard_bytes_init_done = 0;  
-    if (!winkey_discard_bytes_init_done) {
-      if (primary_serial_port->available()) {
-        for (int z = winkey_discard_bytes_startup;z > 0;z--) {
-          while (primary_serial_port->available() == 0) {}
-          primary_serial_port->read();
+    static byte winkey_discard_bytes_init_done = 0;  
+      if (!winkey_discard_bytes_init_done) {
+        if (primary_serial_port->available()) {
+          for (int z = winkey_discard_bytes_startup;z > 0;z--) {
+            while (primary_serial_port->available() == 0) {}
+            primary_serial_port->read();
+          }
+          winkey_discard_bytes_init_done = 1;
         }
-        winkey_discard_bytes_init_done = 1;
       }
-    }
   #endif //OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP
   
   #ifdef OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST
@@ -7109,10 +7161,14 @@ void service_winkey(byte action) {
     if (winkey_last_unbuffered_speed_wpm == 0) {
       winkey_last_unbuffered_speed_wpm = configuration.wpm;
     }
+
     // Winkey interface emulation housekeeping items
     // check to see if we were sending stuff and the buffer is clear
     if (winkey_interrupted) {   // if Winkey sending was interrupted by the paddle, look at PTT line rather than timing out to send 0xc0
       if (ptt_line_activated == 0) {
+        #ifdef DEBUG_WINKEY
+          debug_serial_port->println("service_winkey: sending unsolicited status byte due to paddle interrupt...");
+        #endif //DEBUG_WINKEY         
         winkey_sending = 0;
         winkey_interrupted = 0;
         //winkey_port_write(0xc2|winkey_sending|winkey_xoff);  <- this makes N1MM get borked
@@ -7127,6 +7183,9 @@ void service_winkey(byte action) {
           send_char(' ',KEYER_NORMAL);
         #endif
         //add_to_send_buffer(' ');    // this causes a 0x20 to get echoed back to host - doesn't seem to effect N1MM program
+        #ifdef DEBUG_WINKEY
+          debug_serial_port->println("service_winkey: sending unsolicited status byte...");
+        #endif //DEBUG_WINKEY           
         winkey_sending = 0;
         winkey_port_write(0xc0|winkey_sending|winkey_xoff);    // tell the host we've sent everything
         winkey_buffer_counter = 0;
@@ -7135,18 +7194,27 @@ void service_winkey(byte action) {
     }
     // failsafe check - if we've been in some command status for awhile waiting for something, clear things out
     if ((winkey_status != WINKEY_NO_COMMAND_IN_PROGRESS) && ((millis() - winkey_last_activity) > winkey_command_timeout_ms)) {
+      #ifdef DEBUG_WINKEY
+        debug_serial_port->println("service_winkey: command timeout! ->WINKEY_NO_COMMAND_IN_PROGRESS");
+      #endif //DEBUG_WINKEY      
       winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       winkey_buffer_counter = 0;
       winkey_buffer_pointer = 0;
       winkey_port_write(0xc0|winkey_sending|winkey_xoff);    //send a status byte back for giggles
     }  
     if ((winkey_host_open) && (winkey_paddle_echo_buffer) && (winkey_paddle_echo_activated) && (millis() > winkey_paddle_echo_buffer_decode_time)) {
+      #ifdef DEBUG_WINKEY
+        debug_serial_port->println("service_winkey: sending paddle echo char...");
+      #endif //DEBUG_WINKEY       
       winkey_port_write(byte(convert_cw_number_to_ascii(winkey_paddle_echo_buffer)));
       winkey_paddle_echo_buffer = 0;
       winkey_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
       winkey_paddle_echo_space_sent = 0;
     }
     if ((winkey_host_open) && (winkey_paddle_echo_buffer == 0) && (winkey_paddle_echo_activated) && (millis() > (winkey_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!winkey_paddle_echo_space_sent)) {
+      #ifdef DEBUG_WINKEY
+        debug_serial_port->println("service_winkey: sending paddle echo space...");
+      #endif //DEBUG_WINKEY        
       winkey_port_write(' ');
       winkey_paddle_echo_space_sent = 1;
     }
@@ -7155,14 +7223,17 @@ void service_winkey(byte action) {
   if (action == SERVICE_SERIAL_BYTE) {
     #ifdef DEBUG_WINKEY
       debug_serial_port->print("Winkey Port RX: ");
-      if ((incoming_serial_byte != 13) && (incoming_serial_byte != 9) && (incoming_serial_byte != 10)){
+      if ((incoming_serial_byte > 31) && (incoming_serial_byte < 127)){
         debug_serial_port->write(incoming_serial_byte);
       } else {
-        debug_serial_port->print(" ");
+        debug_serial_port->print(".");
       }
       debug_serial_port->print(" [");
       debug_serial_port->print(incoming_serial_byte);
-      debug_serial_port->println("]");
+      debug_serial_port->print("]");
+      debug_serial_port->print(" [0x");
+      debug_serial_port->print(incoming_serial_byte,HEX);
+      debug_serial_port->println("]");      
     #endif //DEBUG_WINKEY
 
     winkey_last_activity = millis();
@@ -7171,7 +7242,7 @@ void service_winkey(byte action) {
       #if !defined(OPTION_WINKEY_IGNORE_LOWERCASE)
         if (incoming_serial_byte > 31) {
       #else
-        if ((incoming_serial_byte > 31) && (incoming_serial_byte <97)) {
+        if (((incoming_serial_byte > 31) && (incoming_serial_byte < 97)) || (incoming_serial_byte == 124)) {  // 124 = ascii | = half dit
       #endif
 
         #if !defined(OPTION_WINKEY_IGNORE_LOWERCASE)
@@ -7179,6 +7250,7 @@ void service_winkey(byte action) {
         #endif //!defined(OPTION_WINKEY_IGNORE_LOWERCASE)
       
         byte serial_buffer_position_to_overwrite;
+
         if (winkey_buffer_pointer > 0) {
           serial_buffer_position_to_overwrite = send_buffer_bytes - (winkey_buffer_counter - winkey_buffer_pointer) - 1;
           if ((send_buffer_bytes > 0) && (serial_buffer_position_to_overwrite < send_buffer_bytes )) {
@@ -7186,23 +7258,25 @@ void service_winkey(byte action) {
           }
           winkey_buffer_pointer++;
         } else {
-          #ifdef OPTION_WINKEY_EXTENDED_COMMANDS
-            if (incoming_serial_byte == 36) {         // Use the $ sign to escape command
-              winkey_status = WINKEY_EXTENDED_COMMAND;
-            } else {
-          #endif //OPTION_WINKEY_EXTENDED_COMMANDS
+
+
+          #ifdef DEBUG_WINKEY
+            // debug_serial_port->println("service_winkey: adding char to send buffer");
+          #endif //DEBUG_WINKEY      
+
           add_to_send_buffer(incoming_serial_byte);
           #if defined(OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT) && defined(FEATURE_MEMORIES)
             play_memory_prempt = 1;
             repeat_memory = 255;
           #endif
           winkey_buffer_counter++;
-          #ifdef OPTION_WINKEY_EXTENDED_COMMANDS
-           }
-          #endif //OPTION_WINKEY_EXTENDED_COMMANDS
+
         }
 
         if (!winkey_sending) {
+          #ifdef DEBUG_WINKEY
+            debug_serial_port->println("service_winkey: status byte: starting to send...");
+          #endif //DEBUG_WINKEY          
           winkey_sending=0x04;
           winkey_port_write(0xc4|winkey_sending|winkey_xoff);  // tell the client we're starting to send
           #ifdef FEATURE_MEMORIES
@@ -7219,54 +7293,54 @@ void service_winkey(byte action) {
           case 0x00:
             winkey_status = WINKEY_ADMIN_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND");
             #endif //DEBUG_WINKEY
             break;
           case 0x01:
             winkey_status = WINKEY_SIDETONE_FREQ_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_SIDETONE_FREQ_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_SIDETONE_FREQ_COMMAND");
             #endif //DEBUG_WINKEY               
             break;
           case 0x02:  // speed command - unbuffered
             winkey_status = WINKEY_UNBUFFERED_SPEED_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_UNBUFFERED_SPEED_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_UNBUFFERED_SPEED_COMMAND");
             #endif //DEBUG_WINKEY               
             break;
           case 0x03:  // weighting
             winkey_status = WINKEY_WEIGHTING_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_WEIGHTING_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_WEIGHTING_COMMAND");
             #endif //DEBUG_WINKEY               
             break;
           case 0x04: // PTT lead and tail time
             winkey_status = WINKEY_PTT_TIMES_PARM1_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_PTT_TIMES_PARM1_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_PTT_TIMES_PARM1_COMMAND");
             #endif //DEBUG_WINKEY               
             break;
           case 0x05:     // speed pot set
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_SET_POT_PARM1_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_SET_POT_PARM1_COMMAND");
             #endif //DEBUG_WINKEY
             winkey_status = WINKEY_SET_POT_PARM1_COMMAND;
             break;
           case 0x06:
             winkey_status = WINKEY_PAUSE_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_PAUSE_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_PAUSE_COMMAND");
             #endif //DEBUG_WINKEY               
             break;
           case 0x07:
             #ifdef FEATURE_POTENTIOMETER
-            winkey_port_write(((pot_value_wpm()-pot_wpm_low_value)|128));
+              winkey_port_write(((pot_value_wpm()-pot_wpm_low_value)|128));
             #endif
             #ifndef FEATURE_POTENTIOMETER
-            winkey_port_write((byte(configuration.wpm-pot_wpm_low_value)|128));
+              winkey_port_write((byte(configuration.wpm-pot_wpm_low_value)|128));
             #endif
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: report pot");
+              debug_serial_port->println("service_winkey: report pot");
             #endif //DEBUG_WINKEY               
             break;
           case 0x08:    // backspace command
@@ -7274,25 +7348,28 @@ void service_winkey(byte action) {
               send_buffer_bytes--;
             }
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: backspace");
+              debug_serial_port->println("service_winkey: backspace");
             #endif //DEBUG_WINKEY               
             break;
           case 0x09:
             #ifdef OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND     // this is a hack; if someone hits TAB in the send CW Window in N1MM, it sends a 0x09
-            if ((millis() - winkey_connect_time) < 10000) {  // which according to the standard should be interpreted as a pinconfig command
-              winkey_status = WINKEY_SET_PINCONFIG_COMMAND;  // if we've been connected for more than 10 seconds, ignore the 0x09 byte
-            }
-            #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_SET_PINCONFIG_COMMAND (N1MM bug workaround)");
-            #endif //DEBUG_WINKEY             
+              if ((millis() - winkey_connect_time) < 10000) {  // which according to the standard should be interpreted as a pinconfig command
+                winkey_status = WINKEY_SET_PINCONFIG_COMMAND;  // if we've been connected for more than 10 seconds, ignore the 0x09 byte
+              }
+              #ifdef DEBUG_WINKEY
+                debug_serial_port->println("service_winkey: WINKEY_SET_PINCONFIG_COMMAND (N1MM bug workaround)");
+              #endif //DEBUG_WINKEY             
             #else
-            #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_SET_PINCONFIG_COMMAND");
-            #endif //DEBUG_WINKEY             
-            winkey_status = WINKEY_SET_PINCONFIG_COMMAND;
+              #ifdef DEBUG_WINKEY
+                debug_serial_port->println("service_winkey: WINKEY_SET_PINCONFIG_COMMAND");
+              #endif //DEBUG_WINKEY             
+              winkey_status = WINKEY_SET_PINCONFIG_COMMAND;
             #endif
             break;
           case 0x0a:                 // 0A - clear buffer - no parms
+            #ifdef DEBUG_WINKEY
+              debug_serial_port->println("service_winkey: 0A clear buffer");
+            #endif //DEBUG_WINKEY             
             if (winkey_sending) {
               clear_send_buffer();
               winkey_sending = 0;
@@ -7302,163 +7379,161 @@ void service_winkey(byte action) {
             winkey_buffer_counter = 0;
             winkey_buffer_pointer = 0;
             #ifdef FEATURE_MEMORIES
-            repeat_memory = 255;
+              repeat_memory = 255;
             #endif
             tx_and_sidetone_key(0,AUTOMATIC_SENDING);  // N1MM program needs this for the CTRL-T tune command to work right since it issues a 0x0a
                                      // rather than 0x0b 0x00 to clear a key down - doesn't follow protocol spec
-            #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: 0A clear buffer");
-            #endif //DEBUG_WINKEY                                      
+                                   
             break;
           case 0x0b:
             winkey_status = WINKEY_KEY_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_KEY_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_KEY_COMMAND");
             #endif //DEBUG_WINKEY              
             break;
           case 0x0c:
             winkey_status = WINKEY_HSCW_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_HSCW_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_HSCW_COMMAND");
             #endif //DEBUG_WINKEY                 
             break;
           case 0x0d:
             winkey_status = WINKEY_FARNSWORTH_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_FARNSWORTH_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_FARNSWORTH_COMMAND");
             #endif //DEBUG_WINKEY                 
             break;
           case 0x0e:
             winkey_status = WINKEY_SETMODE_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_SETMODE_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_SETMODE_COMMAND");
             #endif //DEBUG_WINKEY                 
             break;
           case 0x0f:  // bulk load of defaults
             winkey_status = WINKEY_LOAD_SETTINGS_PARM_1_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_LOAD_SETTINGS_PARM_1_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_LOAD_SETTINGS_PARM_1_COMMAND");
             #endif //DEBUG_WINKEY                 
             break;
           case 0x10:
             winkey_status = WINKEY_FIRST_EXTENSION_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_FIRST_EXTENSION_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_FIRST_EXTENSION_COMMAND");
             #endif //DEBUG_WINKEY                 
             break;
           case 0x11:
             winkey_status = WINKEY_KEYING_COMPENSATION_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_KEYING_COMPENSATION_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_KEYING_COMPENSATION_COMMAND");
             #endif //DEBUG_WINKEY                 
             break;
           case 0x12:
             winkey_status = WINKEY_UNSUPPORTED_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: 0x12 unsupported");
+              debug_serial_port->println("service_winkey: 0x12 unsupported");
             #endif //DEBUG_WINKEY     
             winkey_parmcount = 1;
             break;
           case 0x13:  // NULL command
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: 0x13 null");
+              debug_serial_port->println("service_winkey: 0x13 null");
             #endif //DEBUG_WINKEY               
             break;
           case 0x14:
             winkey_status = WINKEY_SOFTWARE_PADDLE_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_SOFTWARE_PADDLE_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_SOFTWARE_PADDLE_COMMAND");
             #endif //DEBUG_WINKEY                 
             break;
           case 0x15:  // report status
             #ifndef OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST //--------------------
-            status_byte_to_send = 0xc0|winkey_sending|winkey_xoff;
-            if (send_buffer_status == SERIAL_SEND_BUFFER_TIMED_COMMAND) {
-              status_byte_to_send = status_byte_to_send | 16;
-            }
-            winkey_port_write(status_byte_to_send);
-            #ifdef DEBUG_WINKEY
-            debug_serial_port->print("service_winkey: 0x15 rpt status: ");
-            debug_serial_port->println(status_byte_to_send);
-            #endif //DEBUG_WINKEY  
-            #else //OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST ------------------------
-            if (ignored_first_status_request){
               status_byte_to_send = 0xc0|winkey_sending|winkey_xoff;
               if (send_buffer_status == SERIAL_SEND_BUFFER_TIMED_COMMAND) {
                 status_byte_to_send = status_byte_to_send | 16;
               }
               winkey_port_write(status_byte_to_send);
               #ifdef DEBUG_WINKEY
-              debug_serial_port->print("service_winkey: 0x15 rpt status: ");
-              debug_serial_port->println(status_byte_to_send);
-              #endif //DEBUG_WINKEY 
-              } else {
-                ignored_first_status_request = 1;
+                debug_serial_port->print("service_winkey: 0x15 rpt status: ");
+                debug_serial_port->println(status_byte_to_send);
+              #endif //DEBUG_WINKEY  
+            #else //OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST ------------------------
+              if (ignored_first_status_request){
+                status_byte_to_send = 0xc0|winkey_sending|winkey_xoff;
+                if (send_buffer_status == SERIAL_SEND_BUFFER_TIMED_COMMAND) {
+                  status_byte_to_send = status_byte_to_send | 16;
+                }
+                winkey_port_write(status_byte_to_send);
                 #ifdef DEBUG_WINKEY
-                debug_serial_port->println("service_winkey: ignored first 0x15 status request");
-                #endif //DEBUG_WINKEY                
-              }
+                debug_serial_port->print("service_winkey: 0x15 rpt status: ");
+                debug_serial_port->println(status_byte_to_send);
+                #endif //DEBUG_WINKEY 
+                } else {
+                  ignored_first_status_request = 1;
+                  #ifdef DEBUG_WINKEY
+                  debug_serial_port->println("service_winkey: ignored first 0x15 status request");
+                  #endif //DEBUG_WINKEY                
+                }
             #endif //OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST -------------------- 
 
             break;
           case 0x16:  // Pointer operation
             winkey_status = WINKEY_POINTER_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_POINTER_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_POINTER_COMMAND");
             #endif //DEBUG_WINKEY                 
             break;
           case 0x17:  // dit to dah ratio
             winkey_status = WINKEY_DAH_TO_DIT_RATIO_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_DAH_TO_DIT_RATIO_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_DAH_TO_DIT_RATIO_COMMAND");
             #endif //DEBUG_WINKEY                 
             break;
           // start of buffered commands ------------------------------
           case 0x18:   //buffer PTT on/off
             winkey_status = WINKEY_BUFFFERED_PTT_COMMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_BUFFFERED_PTT_COMMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_BUFFFERED_PTT_COMMMAND");
             #endif //DEBUG_WINKEY            
             break;
           case 0x19:
             winkey_status = WINKEY_KEY_BUFFERED_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_KEY_BUFFERED_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_KEY_BUFFERED_COMMAND");
             #endif //DEBUG_WINKEY            
             break;
           case 0x1a:
             winkey_status = WINKEY_WAIT_BUFFERED_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_WAIT_BUFFERED_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_WAIT_BUFFERED_COMMAND");
             #endif //DEBUG_WINKEY            
             break;
           case 0x1b:
             winkey_status = WINKEY_MERGE_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_MERGE_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_MERGE_COMMAND");
             #endif //DEBUG_WINKEY            
             break;
           case 0x1c:      // speed command - buffered
              winkey_status = WINKEY_BUFFERED_SPEED_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_BUFFERED_SPEED_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_BUFFERED_SPEED_COMMAND");
             #endif //DEBUG_WINKEY             
             break;
           case 0x1d:
             winkey_status = WINKEY_BUFFERED_HSCW_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_BUFFERED_HSCW_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_BUFFERED_HSCW_COMMAND");
             #endif //DEBUG_WINKEY            
             break;
           case 0x1e:  // cancel buffered speed command - buffered
             winkey_status = WINKEY_CANCEL_BUFFERED_SPEED_COMMAND;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_CANCEL_BUFFERED_SPEED_COMMAND");
+              debug_serial_port->println("service_winkey: WINKEY_CANCEL_BUFFERED_SPEED_COMMAND");
             #endif //DEBUG_WINKEY            
             break;
           case 0x1f:  // buffered NOP - no need to do anything
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: 1F NOP");
+              debug_serial_port->println("service_winkey: 1F NOP");
             #endif //DEBUG_WINKEY          
             break;
         } //switch (incoming_serial_byte)
@@ -7473,15 +7548,15 @@ void service_winkey(byte action) {
       if (winkey_status == WINKEY_UNSUPPORTED_COMMAND) {
         winkey_parmcount--;
         #ifdef DEBUG_WINKEY
-        debug_serial_port->print("service_winkey: WINKEY_UNSUPPORTED_COMMAND winkey_parmcount:");
-        debug_serial_port->println(winkey_parmcount);
+          debug_serial_port->print("service_winkey: WINKEY_UNSUPPORTED_COMMAND winkey_parmcount:");
+          debug_serial_port->println(winkey_parmcount);
         #endif //DEBUG_WINKEY          
         if (winkey_parmcount == 0) {
           winkey_port_write(0xc0|winkey_sending|winkey_xoff);           
           winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
           #ifdef DEBUG_WINKEY
-          debug_serial_port->print("service_winkey: WINKEY_UNSUPPORTED_COMMAND: WINKEY_NO_COMMAND_IN_PROGRESS");
-          debug_serial_port->println(winkey_parmcount);
+            debug_serial_port->print("service_winkey: WINKEY_UNSUPPORTED_COMMAND: WINKEY_NO_COMMAND_IN_PROGRESS");
+            debug_serial_port->println(winkey_parmcount);
           #endif //DEBUG_WINKEY          
         }
 
@@ -7493,6 +7568,9 @@ void service_winkey(byte action) {
         winkey_status++;
         if (winkey_status > 115) {
           winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+         #ifdef DEBUG_WINKEY
+           debug_serial_port->println("service_winkey: WINKEY_LOAD_SETTINGS_PARM_15 -> WINKEY_NO_COMMAND_IN_PROGRESS");
+         #endif //DEBUG_WINKEY            
         }
       }
 
@@ -7510,7 +7588,7 @@ void service_winkey(byte action) {
 
       if (winkey_status == WINKEY_MERGE_COMMAND) {
         #ifdef FEATURE_MEMORIES
-        repeat_memory = 255;
+          repeat_memory = 255;
         #endif
         add_to_send_buffer(SERIAL_SEND_BUFFER_PROSIGN);
         add_to_send_buffer(incoming_serial_byte);
@@ -7629,15 +7707,27 @@ void service_winkey(byte action) {
             break;
           case 0x01:
             winkey_status = WINKEY_POINTER_01_COMMAND;
+            #ifdef DEBUG_WINKEY
+              debug_serial_port->println("service_winkey: WINKEY_POINTER_01_COMMAND");
+            #endif //DEBUG_WINKEY              
             break;
           case 0x02:
             winkey_status = WINKEY_POINTER_02_COMMAND;  // move to new position in append mode
+            #ifdef DEBUG_WINKEY
+              debug_serial_port->println("service_winkey: WINKEY_POINTER_02_COMMAND");
+            #endif //DEBUG_WINKEY            
             break;
           case 0x03:
             winkey_status = WINKEY_POINTER_03_COMMAND;
+            #ifdef DEBUG_WINKEY
+              debug_serial_port->println("service_winkey: WINKEY_POINTER_03_COMMAND");
+            #endif //DEBUG_WINKEY            
             break;
           default:
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+            #ifdef DEBUG_WINKEY
+              debug_serial_port->println("service_winkey: WINKEY_POINTER_COMMAND -> WINKEY_NO_COMMAND_IN_PROGRESS");
+            #endif //DEBUG_WINKEY            
             break;
         }
       }
@@ -7648,7 +7738,7 @@ void service_winkey(byte action) {
           add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
           add_to_send_buffer(incoming_serial_byte - 1);
           #ifdef FEATURE_MEMORIES
-          repeat_memory = 255;
+            repeat_memory = 255;
           #endif
         }
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;  
@@ -7661,29 +7751,32 @@ void service_winkey(byte action) {
             winkey_status = WINKEY_UNSUPPORTED_COMMAND;
             winkey_parmcount = 1;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: calibrate command (WINKEY_UNSUPPORTED_COMMAND) awaiting 1 parm");
+              debug_serial_port->println("service_winkey: calibrate command (WINKEY_UNSUPPORTED_COMMAND) awaiting 1 parm");
             #endif //DEBUG_WINKEY            
             break;  // calibrate command
           case 0x01:
+            #ifdef DEBUG_WINKEY
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND 0x01");
+            #endif //DEBUG_WINKEY          
             #ifndef HARDWARE_ARDUINO_DUE
-            asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {};*/ 
+              asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {};*/ 
             #else //HARDWARE_ARDUINO_DUE
-            setup();
+              setup();
             #endif //HARDWARE_ARDUINO_DUE
             break;  // reset command
           case 0x02:  // host open command - send version back to host
             #ifdef OPTION_WINKEY_2_SUPPORT
-            winkey_port_write(WINKEY_2_REPORT_VERSION_NUMBER);
+              winkey_port_write(WINKEY_2_REPORT_VERSION_NUMBER);
             #else //OPTION_WINKEY_2_SUPPORT
-            winkey_port_write(WINKEY_1_REPORT_VERSION_NUMBER);
+              winkey_port_write(WINKEY_1_REPORT_VERSION_NUMBER);
             #endif //OPTION_WINKEY_2_SUPPORT
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             winkey_host_open = 1;
             #ifdef OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND
-            winkey_connect_time = millis();
+              winkey_connect_time = millis();
             #endif
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND host open");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND host open");
             #endif //DEBUG_WINKEY  
             boop_beep();             
             break;
@@ -7691,47 +7784,50 @@ void service_winkey(byte action) {
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             winkey_host_open = 0;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND host close");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND host close");
             #endif //DEBUG_WINKEY                  
             beep_boop();
             #if defined(OPTION_WINKEY_2_SUPPORT) && !defined(OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET)
-            primary_serial_port->end();
-            primary_serial_port->begin(1200);
+              primary_serial_port->end();
+              primary_serial_port->begin(1200);
             #endif
             break;
           case 0x04:  // echo command
             winkey_status = WINKEY_ADMIN_COMMAND_ECHO;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND_ECHO");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND_ECHO");
             #endif //DEBUG_WINKEY              
             break;
           case 0x05: // paddle A2D
             winkey_port_write(zero);
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: paddle A2D");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND paddle A2D");
             #endif //DEBUG_WINKEY              
             break;
           case 0x06: // speed A2D
             winkey_port_write(zero);
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: speed A2D");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND speed A2D");
             #endif //DEBUG_WINKEY              
             break;
           case 0x07: // Get values
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: winkey_admin_get_values");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND winkey_admin_get_values");
             #endif //DEBUG_WINKEY             
             winkey_admin_get_values_command();
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
           case 0x08: // reserved
+            #ifdef DEBUG_WINKEY
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND 0x08 reserved - WTF?");
+            #endif //DEBUG_WINKEY              
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;  
           case 0x09: // get cal
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: get cal");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND get cal");
             #endif //DEBUG_WINKEY           
             winkey_port_write(zero);
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
@@ -7741,12 +7837,12 @@ void service_winkey(byte action) {
             wk2_mode = 1;
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: wk2_mode = 1");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND wk2_mode = 1");
             #endif //DEBUG_WINKEY              
             break;
           case 0x0b: // set wk2 mode
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: wk2_mode = 2");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND wk2_mode = 2");
             #endif //DEBUG_WINKEY              
             beep();
             beep();
@@ -7755,21 +7851,21 @@ void service_winkey(byte action) {
             break;            
           case 0x0c: // download EEPPROM 256 bytes
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: winkey_eeprom_download");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND winkey_eeprom_download");
             #endif //DEBUG_WINKEY           
             winkey_eeprom_download();
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;  
           case 0x0d:
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: upload EEPROM");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND upload EEPROM");
             #endif //DEBUG_WINKEY           
             winkey_status = WINKEY_UNSUPPORTED_COMMAND;  // upload EEPROM 256 bytes
             winkey_parmcount = 256;
             break;       
           case 0x0e:
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: WINKEY_SEND_MSG");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND WINKEY_SEND_MSG");
             #endif //DEBUG_WINKEY          
             winkey_status = WINKEY_SEND_MSG;
             break;
@@ -7777,7 +7873,7 @@ void service_winkey(byte action) {
             winkey_status = WINKEY_UNSUPPORTED_COMMAND;
             winkey_parmcount = 1;
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: load xmode");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND load xmode");
             #endif //DEBUG_WINKEY            
             break;            
           case 0x10: // reserved
@@ -7786,7 +7882,7 @@ void service_winkey(byte action) {
             break;
           case 0x11: // set high baud rate
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: set high baud rate");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND set high baud rate");
             #endif //DEBUG_WINKEY            
             primary_serial_port->end();
             primary_serial_port->begin(9600);
@@ -7794,7 +7890,7 @@ void service_winkey(byte action) {
             break;
           case 0x12: // set low baud rate
             #ifdef DEBUG_WINKEY
-            debug_serial_port->println("service_winkey: set low baud rate");
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND set low baud rate");
             #endif //DEBUG_WINKEY           
             primary_serial_port->end();
             primary_serial_port->begin(1200);
@@ -7803,32 +7899,50 @@ void service_winkey(byte action) {
           #endif //OPTION_WINKEY_2_SUPPORT  
           default:
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+            #ifdef DEBUG_WINKEY
+              debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND -> WINKEY_NO_COMMAND_IN_PROGRESS");
+            #endif //DEBUG_WINKEY             
             break;
           }
       } else {
         if (winkey_status == WINKEY_ADMIN_COMMAND_ECHO) {
+          #ifdef DEBUG_WINKEY
+            debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND echoing a byte...");
+          #endif //DEBUG_WINKEY  
           winkey_port_write(incoming_serial_byte);
           winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
         }
       }
 
       if (winkey_status == WINKEY_KEYING_COMPENSATION_COMMAND) {
+        #ifdef DEBUG_WINKEY
+          debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND WINKEY_KEYING_COMPENSATION_COMMAND byte");
+        #endif //DEBUG_WINKEY         
         keying_compensation = incoming_serial_byte;
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
 
       if (winkey_status == WINKEY_FIRST_EXTENSION_COMMAND) {
+        #ifdef DEBUG_WINKEY
+          debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND WINKEY_FIRST_EXTENSION_COMMAND byte");
+        #endif //DEBUG_WINKEY              
         first_extension_time = incoming_serial_byte;
         #ifdef DEBUG_WINKEY_PROTOCOL
-        send_char('X',KEYER_NORMAL);
+          send_char('X',KEYER_NORMAL);
         #endif
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
 
       if (winkey_status == WINKEY_PAUSE_COMMAND) {
         if (incoming_serial_byte) {
+          #ifdef DEBUG_WINKEY
+            debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND WINKEY_PAUSE_COMMAND pause");
+          #endif //DEBUG_WINKEY           
           pause_sending_buffer = 1;
         } else {
+          #ifdef DEBUG_WINKEY
+            debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND WINKEY_PAUSE_COMMAND unpause");
+          #endif //DEBUG_WINKEY             
           pause_sending_buffer = 0;
         }
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
@@ -7956,8 +8070,8 @@ void service_command_line_interface(HardwareSerial * port_to_use) {
     }
   } else { // (serial_backslash_command == 0) -- we already got a backslash
       //incoming_serial_byte = primary_serial_port->read();
-      port_to_use->write(incoming_serial_byte);
       incoming_serial_byte = uppercase(incoming_serial_byte);
+      port_to_use->write(incoming_serial_byte);
       process_serial_command(port_to_use);
       serial_backslash_command = 0;
       port_to_use->println();
@@ -8197,7 +8311,7 @@ void process_serial_command(HardwareSerial * port_to_use) {
   
   int user_input_temp = 0;
         
-  port_to_use->println();
+  //port_to_use->println();
   switch (incoming_serial_byte) {
     case 126:
       #ifndef HARDWARE_ARDUINO_DUE 
@@ -9776,62 +9890,149 @@ void serial_status_memories(HardwareSerial * port_to_use)
 void serial_program_memory(HardwareSerial * port_to_use)
 {
 
-  byte incoming_serial_byte;
-  byte memory_number;
-  byte looping = 1;
-  int memory_index = 0;
 
-  while (port_to_use->available() == 0) {        // wait for the next keystroke
+  uint8_t incoming_serial_byte;
+  uint8_t memory_number;
+  uint8_t looping = 1;
+  int memory_index = 0;
+  uint8_t memory_number_entered = 0;
+  uint8_t memory_data_entered = 0;
+  uint8_t error_flag = 0;
+  uint8_t memory_1_or_1x_flag = 0;
+
+
+
+  while (looping){
     if (keyer_machine_mode == KEYER_NORMAL) {          // might as well do something while we're waiting
       check_paddles();
       service_dit_dah_buffers();
-      //check_the_memory_buttons();
     }
-  }
-  incoming_serial_byte = port_to_use->read();
-  if (incoming_serial_byte == 48) {incoming_serial_byte = 58;} // 0 = memory 10
-  if ((incoming_serial_byte > 48) && (incoming_serial_byte < (49 + number_of_memories))) {    
-    memory_number = incoming_serial_byte - 49;
-    port_to_use->print(memory_number+1);
-    while (looping) {
-      while (port_to_use->available() == 0) {
-        if (keyer_machine_mode == KEYER_NORMAL) {          // might as well do something while we're waiting
-          check_paddles();
-          service_dit_dah_buffers();
-        }
+    if (port_to_use->available()){
+      incoming_serial_byte = uppercase(port_to_use->read());
+      port_to_use->write(incoming_serial_byte); 
+
+      if ((memory_1_or_1x_flag) && ((incoming_serial_byte < 48) || (incoming_serial_byte > 57))){  // do we have something other than a number?
+        memory_1_or_1x_flag = 0;
+        memory_number_entered = 1;
       }
-      incoming_serial_byte = port_to_use->read();
-      if (incoming_serial_byte == 13) {        // did we get a carriage return?
-        looping = 0;
-      } else {
-        port_to_use->write(incoming_serial_byte);
-        incoming_serial_byte = uppercase(incoming_serial_byte);
-        EEPROM.write((memory_start(memory_number)+memory_index),incoming_serial_byte);
-        #ifdef DEBUG_EEPROM
-        debug_serial_port->print(F("serial_program_memory: wrote "));
-        debug_serial_port->print(incoming_serial_byte);
-        debug_serial_port->print(F(" to location "));
-        debug_serial_port->println((memory_start(memory_number)+memory_index));
-        #endif
-        memory_index++;
-        if ((memory_start(memory_number) + memory_index) == memory_end(memory_number)) {    // are we at last memory location?
+
+      if (!memory_number_entered) {
+        if ((incoming_serial_byte > 47) && (incoming_serial_byte < 58)) {  // do we have a number?
+          if (memory_1_or_1x_flag){    
+            memory_number = incoming_serial_byte - 48 + 10;
+            memory_1_or_1x_flag = 0;
+            memory_number_entered = 1;
+          } else {
+            memory_number = incoming_serial_byte - 48;
+            if ((memory_number == 1) && (number_of_memories > 9)) {
+              memory_1_or_1x_flag = 1;
+            } else {
+              memory_number_entered = 1;
+            }
+          }
+          // memory number out of range check
+          if (memory_number > number_of_memories){
+            looping = 0;
+            error_flag = 1;
+          }
+        } else {
           looping = 0;
-          port_to_use->println(F("Memory full, truncating."));
+          error_flag = 1;
         }
-      }
-    }  //while (looping)
-    // write terminating 255
-    EEPROM.write((memory_start(memory_number)+memory_index),255);
-    #ifdef DEBUG_EEPROM
-      debug_serial_port->print(F("serial_program_memory: wrote 255 to location "));
-      debug_serial_port->println((memory_start(memory_number)+memory_index));
-    #endif
-    port_to_use->print(F("\n\rWrote memory #"));
-    port_to_use->print(memory_number+1);
-    port_to_use->println();
+
+      } else {
+
+        if (incoming_serial_byte == 13){  // we got a carriage return
+          looping = 0;
+
+        } else {  // looking for memory data
+          memory_data_entered = 1;
+          EEPROM.write((memory_start(memory_number-1)+memory_index),incoming_serial_byte);
+          EEPROM.write((memory_start(memory_number-1)+memory_index+1),255);
+          #ifdef DEBUG_EEPROM
+            debug_serial_port->print(F("serial_program_memory: wrote "));
+            debug_serial_port->print(incoming_serial_byte);
+            debug_serial_port->print(F(" to location "));
+            debug_serial_port->println((memory_start(memory_number-1)+memory_index));
+          #endif
+          memory_index++;
+          if ((memory_start(memory_number-1) + memory_index) > (memory_end(memory_number-1)-2)) {    // are we at last memory location?
+            looping = 0;
+            port_to_use->println(F("Memory full, truncating."));
+          }
+
+        }
+
+      } //
+    }
+
+  }
+
+  if ((memory_number_entered) && (memory_data_entered) && (!error_flag)){
+    port_to_use->print(F("\n\rWrote memory "));
+    port_to_use->println(memory_number);
   } else {
     port_to_use->println(F("\n\rError"));
   }
+
+
+
+
+  // byte incoming_serial_byte;
+  // byte memory_number;
+  // byte looping = 1;
+  // int memory_index = 0;
+
+  // while (port_to_use->available() == 0) {        // wait for the next keystroke
+  //   if (keyer_machine_mode == KEYER_NORMAL) {          // might as well do something while we're waiting
+  //     check_paddles();
+  //     service_dit_dah_buffers();
+  //   }
+  // }
+  // incoming_serial_byte = port_to_use->read();
+  // if (incoming_serial_byte == 48) {incoming_serial_byte = 58;} // 0 = memory 10
+  // if ((incoming_serial_byte > 48) && (incoming_serial_byte < (49 + number_of_memories))) {    
+  //   memory_number = incoming_serial_byte - 49;
+  //   port_to_use->print(memory_number+1);
+  //   while (looping) {
+  //     while (port_to_use->available() == 0) {
+  //       if (keyer_machine_mode == KEYER_NORMAL) {          // might as well do something while we're waiting
+  //         check_paddles();
+  //         service_dit_dah_buffers();
+  //       }
+  //     }
+  //     incoming_serial_byte = port_to_use->read();
+  //     if (incoming_serial_byte == 13) {        // did we get a carriage return?
+  //       looping = 0;
+  //     } else {
+  //       incoming_serial_byte = uppercase(incoming_serial_byte);
+  //       port_to_use->write(incoming_serial_byte); 
+  //       EEPROM.write((memory_start(memory_number)+memory_index),incoming_serial_byte);
+  //       #ifdef DEBUG_EEPROM
+  //         debug_serial_port->print(F("serial_program_memory: wrote "));
+  //         debug_serial_port->print(incoming_serial_byte);
+  //         debug_serial_port->print(F(" to location "));
+  //         debug_serial_port->println((memory_start(memory_number)+memory_index));
+  //       #endif
+  //       memory_index++;
+  //       if ((memory_start(memory_number) + memory_index) == memory_end(memory_number)) {    // are we at last memory location?
+  //         looping = 0;
+  //         port_to_use->println(F("Memory full, truncating."));
+  //       }
+  //     }
+  //   }  //while (looping)
+  //   // write terminating 255
+  //   EEPROM.write((memory_start(memory_number)+memory_index),255);
+  //   #ifdef DEBUG_EEPROM
+  //     debug_serial_port->print(F("serial_program_memory: wrote 255 to location "));
+  //     debug_serial_port->println((memory_start(memory_number)+memory_index));
+  //   #endif
+  //   port_to_use->print(F("\n\rWrote memory "));
+  //   port_to_use->println(memory_number+1);
+  //   //port_to_use->println();
+  // } else {
+  //   port_to_use->println(F("\n\rError"));
+  // }
 
 }
 
@@ -11305,12 +11506,12 @@ void check_for_beacon_mode(){
 void check_for_debug_modes(){
 
   #ifdef DEBUG_CAPTURE_COM_PORT
-  primary_serial_port->begin(primary_serial_port_baud_rate);
-  debug_capture();
+    primary_serial_port->begin(primary_serial_port_baud_rate);
+    debug_capture();
   #endif
 
   #ifdef DEBUG_HELL_TEST
-  hell_test();
+    hell_test();
   #endif
 }
 
@@ -11330,12 +11531,12 @@ void initialize_serial_ports(){
             primary_serial_port_baud_rate = PRIMARY_SERIAL_PORT_BAUD;
           #else
             primary_serial_port_mode = SERIAL_WINKEY_EMULATION;
-            primary_serial_port_baud_rate = 1200;
+            primary_serial_port_baud_rate = WINKEY_DEFAULT_BAUD;
           #endif  //ifndef OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
         } else {    
           #ifdef OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
             primary_serial_port_mode = SERIAL_WINKEY_EMULATION;
-            primary_serial_port_baud_rate = 1200;
+            primary_serial_port_baud_rate = WINKEY_DEFAULT_BAUD;
           #else
             primary_serial_port_mode = SERIAL_CLI;
             primary_serial_port_baud_rate = PRIMARY_SERIAL_PORT_BAUD;
@@ -11345,7 +11546,7 @@ void initialize_serial_ports(){
       #else //FEATURE_COMMAND_BUTTONS  
         #ifdef OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION
           primary_serial_port_mode = SERIAL_WINKEY_EMULATION;
-          primary_serial_port_baud_rate = 1200;
+          primary_serial_port_baud_rate = WINKEY_DEFAULT_BAUD;
         #else
           primary_serial_port_mode = SERIAL_CLI;
           primary_serial_port_baud_rate = PRIMARY_SERIAL_PORT_BAUD;
@@ -11360,7 +11561,7 @@ void initialize_serial_ports(){
 
     #if defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_COMMAND_LINE_INTERFACE)
       primary_serial_port_mode = SERIAL_WINKEY_EMULATION;
-      primary_serial_port_baud_rate = 1200;
+      primary_serial_port_baud_rate = WINKEY_DEFAULT_BAUD;
     #endif //defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_COMMAND_LINE_INTERFACE)
     
     primary_serial_port = PRIMARY_SERIAL_PORT;
@@ -12802,8 +13003,7 @@ void service_web_server() {
               }
             }
           #endif //FEATURE_INTERNET_LINK
-
-          if (readString.startsWith("GET /Control")){
+          if (readString.startsWith("GET /ctrl")){
             valid_request = 1;
             web_print_page_control(client); 
           }
@@ -12824,16 +13024,18 @@ void service_web_server() {
 #endif //FEATURE_WEB_SERVER
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
+void web_print_200OK(EthernetClient client){
+
+  web_client_print(client,F("HTTP/1.1 200 OK\nContent-Type: text/html\n\n"));  
+
+}
+#endif //FEATURE_WEB_SERVER
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_WEB_SERVER)
 void web_print_header(EthernetClient client){
 
-  web_client_println(client,"HTTP/1.1 200 OK");
-  web_client_println(client,"Content-Type: text/html");
-  web_client_println(client,"");     
-  web_client_println(client,"<HTML>");
-  web_client_println(client,"<HEAD>");
-  web_client_println(client,"<meta name='apple-mobile-web-app-capable' content='yes' />");
-  web_client_println(client,"<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />");
-
+  web_print_200OK(client);  
+  web_client_println(client,F("<HTML><HEAD><meta name='apple-mobile-web-app-capable' content='yes' /><meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />"));
 
 }
 #endif //FEATURE_WEB_SERVER
@@ -12841,36 +13043,43 @@ void web_print_header(EthernetClient client){
 #if defined(FEATURE_WEB_SERVER)
 void web_print_style_sheet(EthernetClient client){
 
-  web_client_print(client,"<style>body{margin:60px 0px; padding:0px;text-align:center;font-family:\"Trebuchet MS\", Arial, Helvetica, sans-serif;}h1{text-align: center;font-family:Arial, \"Trebuchet MS\", Helvetica,");
-  web_client_print(client,"sans-serif;}h2{text-align: center;font-family:\"Trebuchet MS\", Arial, Helvetica, sans-serif;}");
+  web_client_print(client,F("<style>body{margin:60px 0px; padding:0px;text-align:center;font-family:\"Trebuchet MS\", Arial, Helvetica, sans-serif;}h1{text-align: center;font-family:Arial, \"Trebuchet MS\", Helvetica,"));
+  web_client_print(client,F("sans-serif;}h2{text-align: center;font-family:\"Trebuchet MS\", Arial, Helvetica, sans-serif;}"));
 
-  // button-looking hyperlinks
-  web_client_print(client,"a.internal{text-decoration:none;width:75px;height:50px;border-color:black;border-top:2px solid;border-bottom:2px solid;border-right:2px solid;border-left:2px solid;border-radius:10px 10px 10px;");
-  web_client_print(client,"-o-border-radius:10px 10px 10px;-webkit-border-radius:10px 10px 10px;font-family:\"Trebuchet MS\",Arial, Helvetica, sans-serif;");
-  web_client_print(client,"-moz-border-radius:10px 10px 10px;background-color:#293F5E;padding:8px;text-align:center;}");
-  web_client_print(client,"a.internal:link {color:white;} a.internal:visited {color:white;}");
-  web_client_print(client," a.internal:hover {color:white;} a.internal:active {color:white;}");
+  // internal hyperlinks
+  web_client_print(client,F("a.internal{text-decoration:none;width:75px;height:50px;border-color:black;border-top:2px solid;border-bottom:2px solid;border-right:2px solid;border-left:2px solid;border-radius:10px 10px 10px;"));
+  web_client_print(client,F("-o-border-radius:10px 10px 10px;-webkit-border-radius:10px 10px 10px;font-family:\"Trebuchet MS\",Arial, Helvetica, sans-serif;"));
+  web_client_print(client,F("-moz-border-radius:10px 10px 10px;background-color:#293F5E;padding:8px;text-align:center;}"));
+  web_client_print(client,F("a.internal:link {color:white;} a.internal:visited {color:white;}"));
+  web_client_print(client,F(" a.internal:hover {color:white;} a.internal:active {color:white;}"));
+
+  // control screen buttons
+  web_client_print(client,F("a.ctrl{text-decoration:none;width:75px;height:50px;border-color:black;border-top:2px solid;border-bottom:2px solid;border-right:2px solid;border-left:2px solid;border-radius:10px 10px 10px;"));
+  web_client_print(client,F("-o-border-radius:10px 10px 10px;-webkit-border-radius:10px 10px 10px;font-family:\"Trebuchet MS\",Arial, Helvetica, sans-serif;"));
+  web_client_print(client,F("-moz-border-radius:10px 10px 10px;background-color:#293F5E;padding:15px;text-align:center;}"));
+  web_client_print(client,F("a.ctrl:link {color:white;} a.ctrl:visited {color:white;}"));
+  web_client_print(client,F(" a.ctrl:hover {color:white;} a.ctrl:active {color:white;}"));
 
   // external hyperlinks
-  web_client_print(client,"a.external{");
-  web_client_print(client,"font-family:\"Trebuchet MS\",Arial, Helvetica, sans-serif;");
-  web_client_print(client,"text-align:center;}");
-  web_client_print(client,"a.external:link {color:blue;} a.external:visited {color:purple;}");
-  web_client_println(client," a.external:hover {color:red;} a.external:active {color:green;}");
+  web_client_print(client,F("a.external{"));
+  web_client_print(client,F("font-family:\"Trebuchet MS\",Arial, Helvetica, sans-serif;"));
+  web_client_print(client,F("text-align:center;}"));
+  web_client_print(client,F("a.external:link {color:blue;} a.external:visited {color:purple;}"));
+  web_client_println(client,F(" a.external:hover {color:red;} a.external:active {color:green;}"));
 
   // ip address text blocks
-  web_client_println(client,".addr {width: 30px; text-align:center }");
+  web_client_println(client,F(".addr {width: 30px; text-align:center }"));
 
   // ip port text blocks
-  web_client_println(client,".ipprt {width: 45px; text-align:center }");
+  web_client_println(client,F(".ipprt {width: 45px; text-align:center }"));
 
-  web_client_println(client,".container {display: flex;}");
+  web_client_println(client,F(".container {display: flex;}"));
 
  /*for demo purposes only */
-  web_client_println(client,".column {flex: 1; background: #f2f2f2; border: 1px solid #e6e6e6; box-sizing: border-box;}");
-  web_client_println(client,".column-1 {order: 1;} .column-2 {order: 2;} .column-3 {order: 3;} .column-4 {order: 4;} .column-5 {order: 5;}");
+  // web_client_println(client,F(".column {flex: 1; background: #f2f2f2; border: 1px solid #e6e6e6; box-sizing: border-box;}"));
+  // web_client_println(client,F(".column-1 {order: 1;} .column-2 {order: 2;} .column-3 {order: 3;} .column-4 {order: 4;} .column-5 {order: 5;}"));
 
-  web_client_println(client,"</style>");
+  web_client_println(client,F("</style>"));
 
 }
 #endif //FEATURE_WEB_SERVER
@@ -12878,7 +13087,7 @@ void web_print_style_sheet(EthernetClient client){
 #if defined(FEATURE_WEB_SERVER)
 void web_print_home_link(EthernetClient client){
 
-  web_client_println(client,"<br/><a href=\"\x2F\" class=\"internal\">Home</a><br />");
+  web_client_println(client,F("<br><a href=\"\x2F\" class=\"internal\">Home</a><br />"));
 
 }
 #endif //FEATURE_WEB_SERVER
@@ -12887,7 +13096,7 @@ void web_print_home_link(EthernetClient client){
 void web_print_footer(EthernetClient client){
 
 
-  web_client_println(client,"<br/></BODY></HTML>");
+  web_client_println(client,F("<br></BODY></HTML>"));
 
 
 }
@@ -12897,10 +13106,7 @@ void web_print_footer(EthernetClient client){
 void web_print_title(EthernetClient client){
 
 
-  web_client_println(client,"<TITLE>K3NG CW Keyer</TITLE>");
-  web_client_println(client,"</HEAD>");
-  web_client_println(client,"<BODY>");
-
+  web_client_println(client,F("<TITLE>K3NG CW Keyer</TITLE></HEAD><BODY>"));
 
 }
 #endif //FEATURE_WEB_SERVER
@@ -12916,53 +13122,40 @@ void web_print_page_network_settings(EthernetClient client){
 
   web_print_title(client);
 
-  web_client_println(client,"<H1>Network Settings</H1>");
-  web_client_println(client,"<hr />");
-  web_client_println(client,"<br />");  
+  web_client_println(client,F("<H1>Network Settings</H1><hr><br>"));
 
   // input form
-  web_client_print(client,"<br><br><form>IP: <input type=\"text\" name=\"ip0\" class=\"addr\" value=\"");
+  web_client_print(client,F("<br><br><form>IP: <input type=\"text\" name=\"ip0\" class=\"addr\" value=\""));
   web_client_print(client,configuration.ip[0]);
-  web_client_print(client,"\"");
-  web_client_print(client,">.<input type=\"text\" name=\"ip1\" class=\"addr\" value=\"");
-  web_client_print(client,configuration.ip[1]);
-  web_client_print(client,"\"");  
-  web_client_print(client,">.<input type=\"text\" name=\"ip2\" class=\"addr\" value=\"");
+  web_client_print(client,F("\">.<input type=\"text\" name=\"ip1\" class=\"addr\" value=\""));
+  web_client_print(client,configuration.ip[1]);  
+  web_client_print(client,F("\">.<input type=\"text\" name=\"ip2\" class=\"addr\" value=\""));
   web_client_print(client,configuration.ip[2]);
-  web_client_print(client,"\"");  
-  web_client_print(client,">.<input type=\"text\" name=\"ip3\" class=\"addr\" value=\"");
+  web_client_print(client,F("\">.<input type=\"text\" name=\"ip3\" class=\"addr\" value=\""));
   web_client_print(client,configuration.ip[3]);
   web_client_println(client,"\">");  
 
 
-  web_client_print(client,"<br><br>Gateway: <input type=\"text\" name=\"gw0\" class=\"addr\" value=\"");
+  web_client_print(client,F("<br><br>Gateway: <input type=\"text\" name=\"gw0\" class=\"addr\" value=\""));
   web_client_print(client,configuration.gateway[0]);
-  web_client_print(client,"\"");
-  web_client_print(client,">.<input type=\"text\" name=\"gw1\" class=\"addr\" value=\"");
-  web_client_print(client,configuration.gateway[1]);
-  web_client_print(client,"\"");  
-  web_client_print(client,">.<input type=\"text\" name=\"gw2\" class=\"addr\" value=\"");
-  web_client_print(client,configuration.gateway[2]);
-  web_client_print(client,"\"");  
-  web_client_print(client,">.<input type=\"text\" name=\"gw3\" class=\"addr\" value=\"");
+  web_client_print(client,F("\">.<input type=\"text\" name=\"gw1\" class=\"addr\" value=\""));
+  web_client_print(client,configuration.gateway[1]); 
+  web_client_print(client,F("\">.<input type=\"text\" name=\"gw2\" class=\"addr\" value=\""));
+  web_client_print(client,configuration.gateway[2]);  
+  web_client_print(client,F("\">.<input type=\"text\" name=\"gw3\" class=\"addr\" value=\""));
   web_client_print(client,configuration.gateway[3]);
   web_client_println(client,"\">");
 
-  web_client_print(client,"<br><br>Subnet Mask: <input type=\"text\" name=\"sn0\" class=\"addr\" value=\"");
+  web_client_print(client,F("<br><br>Subnet Mask: <input type=\"text\" name=\"sn0\" class=\"addr\" value=\""));
   web_client_print(client,configuration.subnet[0]);
-  web_client_print(client,"\"");
-  web_client_print(client,">.<input type=\"text\" name=\"sn1\" class=\"addr\" value=\"");
-  web_client_print(client,configuration.subnet[1]);
-  web_client_print(client,"\"");  
-  web_client_print(client,">.<input type=\"text\" name=\"sn2\" class=\"addr\" value=\"");
+  web_client_print(client,F("\">.<input type=\"text\" name=\"sn1\" class=\"addr\" value=\""));
+  web_client_print(client,configuration.subnet[1]); 
+  web_client_print(client,F("\">.<input type=\"text\" name=\"sn2\" class=\"addr\" value=\""));
   web_client_print(client,configuration.subnet[2]);
-  web_client_print(client,"\"");  
-  web_client_print(client,">.<input type=\"text\" name=\"sn3\" class=\"addr\" value=\"");
+  web_client_print(client,F("\">.<input type=\"text\" name=\"sn3\" class=\"addr\" value=\""));
   web_client_print(client,configuration.subnet[3]);
-  web_client_println(client,"\">");
+  web_client_println(client,"\"><br><br><input type=\"submit\" value=\"Save\"></form>");
 
-
-  web_client_println(client,"<br><br><input type=\"submit\" value=\"Save\"></form>");
 
   web_print_home_link(client);
   
@@ -12984,11 +13177,8 @@ void web_print_page_link_settings(EthernetClient client){
 
   web_print_title(client);
 
-  web_client_println(client,"<H1>Link Settings</H1>");
-  web_client_println(client,"<hr/>");
-  web_client_println(client,"<br/>"); 
-  web_client_println(client,"<H2>Link Send Settings</H2>");
-  web_client_println(client,"<form>"); 
+  web_client_println(client,F("<H1>Link Settings</H1><hr><br><H2>Link Send Settings</H2><form>"));
+
 
   // input form
   for (int x = 0;x < FEATURE_INTERNET_LINK_MAX_LINKS;x++){
@@ -13034,10 +13224,7 @@ void web_print_page_link_settings(EthernetClient client){
 
   }
 
-  web_client_println(client,"<br/><br/>"); 
-  web_client_println(client,"<H2>Link Receive Settings</H2>");
-
-  web_client_print(client,"<br><br>UDP Receive Port: <input type=\"text\" name=\"ud\" class=\"ipprt\" value=\"");
+  web_client_print(client,F("<br><br><H2>Link Receive Settings</H2><br><br>UDP Receive Port: <input type=\"text\" name=\"ud\" class=\"ipprt\" value=\""));
   web_client_print(client,configuration.link_receive_udp_port);
   web_client_println(client,"\">");
 
@@ -13066,10 +13253,9 @@ void web_print_page_link_settings(EthernetClient client){
 
 void web_print_page_404(EthernetClient client){
 
-  web_client_println(client,"HTTP/1.1 404 NOT FOUND");
-  web_client_println(client,"Content-Type: text/html");
-  web_client_println(client,"");             
-  web_client_println(client,"<HTML><HEAD></HEAD><BODY>Sorry, dude.  Page not found.");
+  web_client_println(client,F("HTTP/1.1 404 NOT FOUND"));
+  web_client_println(client,F("Content-Type: text/html\n"));            
+  web_client_println(client,F("<HTML><HEAD></HEAD><BODY>Sorry, dude.  Page not found."));
   web_print_home_link(client);            
   web_print_footer(client); 
 
@@ -13084,15 +13270,15 @@ void web_print_page_about(EthernetClient client){
 
   web_print_header(client);
 
-  web_client_println(client,"<meta http-equiv=\"refresh\" content=\"5\"/>");
+  web_client_println(client,F("<meta http-equiv=\"refresh\" content=\"5\"/>"));
 
   web_print_style_sheet(client);
 
   web_print_title(client);
 
-  web_client_println(client,"<H1>About</H1><hr/><br/>");
+  web_client_println(client,F("<H1>About</H1><hr><br>"));
   web_client_println(client,CODE_VERSION);
-  web_client_println(client,"<br/>");
+  web_client_println(client,"<br>");
 
   void* HP = malloc(4);
   if (HP){
@@ -13108,7 +13294,7 @@ void web_print_page_about(EthernetClient client){
   // web_client_println(client,"<br />");           
             
   web_client_print(client,free);
-  web_client_println(client," bytes free<br/><br/>");
+  web_client_println(client,F(" bytes free<br><br>"));
 
 
   unsigned long seconds = millis() / 1000L;
@@ -13132,12 +13318,9 @@ void web_print_page_about(EthernetClient client){
   web_client_print(client,":");
   if (seconds < 10) {web_client_print(client,"0");}
   web_client_print(client,seconds);    
-  web_client_println(client," dd:hh:mm:ss uptime<br/>");
+  web_client_println(client,F(" dd:hh:mm:ss uptime<br>"));
 
-  web_client_println(client,"<br/><br/><br/>Anthony Good, K3NG");
-  web_client_println(client,"<br/>anthony.good@gmail.com"); 
-  web_client_println(client,"<br/><a href=\"http://blog.radioartisan.com/\"\" class=\"external\">Radio Artisan</a><br/><br/>");
-
+  web_client_println(client,F("<br><br><br>Anthony Good, K3NG<br>anthony.good@gmail.com<br><a href=\"http://blog.radioartisan.com/\"\" class=\"external\">Radio Artisan</a><br><br>"));
 
   web_print_home_link(client);
 
@@ -13224,14 +13407,11 @@ void web_print_page_main_menu(EthernetClient client){
 
   web_print_title(client);
 
-  web_client_println(client,"<H1>K3NG CW Keyer</H1><hr/><br/><br/>"); 
-  web_client_println(client,"<a href=\"Control\"\" class=\"internal\">Control</a><br /><br />"); 
-  web_client_println(client,"<a href=\"KeyerSettings\"\" class=\"internal\">Keyer Settings</a><br/><br/>");
+  web_client_println(client,F("<H1>K3NG CW Keyer</H1><hr><br><br><a href=\"ctrl\"\" class=\"internal\">Control</a><br><br><a href=\"KeyerSettings\"\" class=\"internal\">Keyer Settings</a><br><br>")); 
   #if defined(FEATURE_INTERNET_LINK)
-    web_client_println(client,"<a href=\"LinkSettings\"\" class=\"internal\">Link Settings</a><br/><br/>");
+    web_client_println(client,F("<a href=\"LinkSettings\"\" class=\"internal\">Link Settings</a><br><br>"));
   #endif //FEATURE_INTERNET_LINK
-  web_client_println(client,"<a href=\"NetworkSettings\"\" class=\"internal\">Network Settings</a><br/><br/>");        
-  web_client_println(client,"<a href=\"About\"\" class=\"internal\">About</a><br/>");
+  web_client_println(client,F("<a href=\"NetworkSettings\"\" class=\"internal\">Network Settings</a><br><br><a href=\"About\"\" class=\"internal\">About</a><br>"));        
 
   web_print_footer(client); 
 
@@ -13245,15 +13425,15 @@ void web_print_page_main_menu(EthernetClient client){
 
 void web_print_control_radio(EthernetClient client,const char *name,int value,uint8_t checked,const char *caption){
 
-  web_client_print(client,"<label><input type=\"radio\" name=\"");
+  web_client_print(client,F("<label><input type=\"radio\" name=\""));
   web_client_print(client,name);
-  web_client_print(client,"\" value=\"");
+  web_client_print(client,F("\" value=\""));
   web_client_print(client,value);
   web_client_print(client,"\" ");
-  if (checked) {web_client_print(client,"checked");}
+  if (checked) {web_client_print(client,F("checked"));}
   web_client_print(client,">");
   web_client_print(client,caption);
-  web_client_print(client,"</label>");
+  web_client_print(client,F("</label>"));
 
 }
 #endif //FEATURE_WEB_SERVER 
@@ -13263,13 +13443,13 @@ void web_print_control_radio(EthernetClient client,const char *name,int value,ui
 
 void web_print_control_checkbox(EthernetClient client,const char *name,uint8_t checked,const char *caption){
 
-    web_client_print(client,"<label><input type=\"checkbox\" id=\"");
+    web_client_print(client,F("<label><input type=\"checkbox\" id=\""));
     web_client_print(client,name);
-    web_client_print(client,"\" ");
-    if (checked) {web_client_print(client,"checked");}
-    web_client_print(client,">");
+    web_client_print(client,F("\" "));
+    if (checked) {web_client_print(client,F("checked"));}
+    web_client_print(client,F(">"));
     web_client_print(client,caption);
-    web_client_print(client,"</label>");
+    web_client_print(client,F("</label>"));
 
 }
 #endif //FEATURE_WEB_SERVER 
@@ -13279,17 +13459,17 @@ void web_print_control_checkbox(EthernetClient client,const char *name,uint8_t c
 
 void web_print_control_textbox(EthernetClient client,const char *name,const char *textbox_class,int textbox_value,const char *front_caption,const char *back_caption){
 
-  web_client_print(client,"<label>");
+  web_client_print(client,F("<label>"));
   web_client_print(client,front_caption);
-  web_client_print(client,"<input type=\"text\" name=\"");
+  web_client_print(client,F("<input type=\"text\" name=\""));
   web_client_print(client,name);
-  web_client_print(client,"\" class=\"");
+  web_client_print(client,F("\" class=\""));
   web_client_print(client,textbox_class);
-  web_client_print(client,"\" value=\"");
+  web_client_print(client,F("\" value=\""));
   web_client_print(client,textbox_value);
-  web_client_print(client,"\">");
+  web_client_print(client,F("\">"));
   web_client_print(client,back_caption);
-  web_client_print(client,"</label>");
+  web_client_print(client,F("</label>"));
 
 }
 #endif //FEATURE_WEB_SERVER 
@@ -13299,17 +13479,17 @@ void web_print_control_textbox(EthernetClient client,const char *name,const char
 
 void web_print_control_textbox(EthernetClient client,const char *name,const char *textbox_class,float textbox_value,const char *front_caption,const char *back_caption){
 
-  web_client_print(client,"<label>");
+  web_client_print(client,F("<label>"));
   web_client_print(client,front_caption);
-  web_client_print(client,"<input type=\"text\" name=\"");
+  web_client_print(client,F("<input type=\"text\" name=\""));
   web_client_print(client,name);
-  web_client_print(client,"\" class=\"");
+  web_client_print(client,F("\" class=\""));
   web_client_print(client,textbox_class);
-  web_client_print(client,"\" value=\"");
+  web_client_print(client,F("\" value=\""));
   web_client_print(client,textbox_value);
-  web_client_print(client,"\">");
+  web_client_print(client,F("\">"));
   web_client_print(client,back_caption);
-  web_client_print(client,"</label>");
+  web_client_print(client,F("</label>"));
 
 }
 #endif //FEATURE_WEB_SERVER 
@@ -13327,29 +13507,29 @@ void web_print_page_keyer_settings(EthernetClient client){
 
   web_print_title(client);
 
-  web_client_println(client,"<H1>Keyer Settings</H1><hr/><br/><form>");
+  web_client_println(client,F("<H1>Keyer Settings</H1><hr><br><form>"));
+
+  web_client_println(client,F("<br><br>This is under construction - save does not work yet...<br><br>"));
 
   web_print_control_radio(client,"md",IAMBIC_A,(configuration.keyer_mode == IAMBIC_A)?1:0,"Iambic A ");
   web_print_control_radio(client,"md",IAMBIC_B,(configuration.keyer_mode == IAMBIC_B)?1:0,"Iambic B ");
   web_print_control_radio(client,"md",BUG,(configuration.keyer_mode == BUG)?1:0,"Bug ");
   web_print_control_radio(client,"md",STRAIGHT,(configuration.keyer_mode == STRAIGHT)?1:0,"Straight Key");
   web_print_control_radio(client,"md",ULTIMATIC,(configuration.keyer_mode == ULTIMATIC)?1:0,"Ultimatic");
-  web_client_println(client,"<br/>");  
+  web_client_println(client,"<br>");  
 
     
   #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-    web_print_control_checkbox(client,"cs",(configuration.cmos_super_keyer_iambic_b_timing_on)?1:0," CMOS Superkeyer Iambic B Timing ");
+    web_print_control_checkbox(client,"cs",(configuration.cmos_super_keyer_iambic_b_timing_on)?1:0,F(" CMOS Superkeyer Iambic B Timing "));
     web_print_control_textbox(client,"cp","addr",configuration.cmos_super_keyer_iambic_b_timing_percent,"","%");
-    web_client_println(client,"<br/>");
+    web_client_println(client,"<br>");
   #endif
   
 
   #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
     web_print_control_checkbox(client,"di",(!configuration.dit_buffer_off)?1:0," Dit Buffer ");
-    web_print_control_checkbox(client,"da",(!configuration.dah_buffer_off)?1:0," Dah Buffer<br/>");
+    web_print_control_checkbox(client,"da",(!configuration.dah_buffer_off)?1:0," Dah Buffer<br>");
   #endif //FEATURE_DIT_DAH_BUFFER_CONTROL 
-
-//zzzzzzzz
 
   web_print_control_radio(client,"sm",SPEED_NORMAL,(speed_mode == SPEED_NORMAL)?1:0,"Normal Speed Mode ");
 
@@ -13359,51 +13539,53 @@ void web_print_page_keyer_settings(EthernetClient client){
     web_print_control_textbox(client,"fw","addr",(int)configuration.wpm_farnsworth,""," Farnsworth WPM");
   #endif //FEATURE_FARNSWORTH
 
-  web_client_println(client,"<br/>");
+  web_client_println(client,"<br>");
 
   web_print_control_radio(client,"sm",SPEED_QRSS,(speed_mode == SPEED_QRSS)?1:0,"QRSS Mode   Dit Length ");
-  web_client_print(client,"<label><input type=\"text\" name=\"qd\" class=\"addr\" value=\"");
+  web_client_print(client,F("<label><input type=\"text\" name=\"qd\" class=\"addr\" value=\""));
   web_client_println(client,qrss_dit_length);
-  web_client_print(client,"\"> s</label>");
-  web_client_println(client,"<br/>");
+  web_client_print(client,F("\"> s</label>"));
+  web_client_println(client,F("<br>"));
 
-  web_client_print(client,"Sidetone: ");
+  web_client_print(client,F("Sidetone: "));
   web_print_control_radio(client,"st",SIDETONE_ON,(configuration.sidetone_mode == SIDETONE_ON)?1:0,"On ");
   web_print_control_radio(client,"st",SIDETONE_OFF,(configuration.sidetone_mode == SIDETONE_OFF)?1:0,"Off ");
   web_print_control_radio(client,"st",SIDETONE_PADDLE_ONLY,(configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)?1:0,"Paddle Only ");
   web_print_control_textbox(client,"hz","addr",(int)configuration.hz_sidetone,""," hz");
-  web_client_println(client,"<br/>");
+  web_client_println(client,F("<br>"));
 
   web_print_control_textbox(client,"dd","addr",float(configuration.dah_to_dit_ratio/100.0),""," Dah/Dit Ratio");
-  web_client_println(client,"<br/>");
+  web_client_println(client,F("<br>"));
 
   web_print_control_textbox(client,"wt","addr",(int)configuration.weighting,"Weighting ","");
-  web_client_println(client,"<br/>");
+  web_client_println(client,F("<br>"));
 
-  web_print_control_textbox(client,"sn","addr",(int)serial_number,"Serial # ","");
-  web_client_println(client,"<br/>");
+  #ifdef FEATURE_COMMAND_LINE_INTERFACE
+    web_print_control_textbox(client,"sn","addr",(int)serial_number,"Serial # ","");
+    web_client_println(client,F("<br>"));;
+  #endif 
 
   #ifdef FEATURE_POTENTIOMETER
     web_print_control_textbox(client,"po","addr",(int)pot_value_wpm(),"Potentiometer "," WPM ");
     web_print_control_checkbox(client,"pa",(configuration.pot_activated)?1:0," Active");
-    web_client_println(client,"<br/>");
+    web_client_println(client,F("<br>"));
   #endif
 
   #ifdef FEATURE_AUTOSPACE
-    web_print_control_checkbox(client,"as",(configuration.autospace_active)?1:0," Autospace<br/>");
+    web_print_control_checkbox(client,"as",(configuration.autospace_active)?1:0," Autospace<br>");
   #endif //FEATURE_AUTOSPACE
 
   web_print_control_textbox(client,"ws","addr",(int)configuration.length_wordspace,"Wordspace ","");
-  web_client_println(client,"<br/>");
+  web_client_println(client,F("<br>"));
 
   web_print_control_textbox(client,"tx","addr",(int)configuration.current_tx,"TX ","");
-  web_client_println(client,"<br/>");
+  web_client_println(client,F("<br>"));
 
   #ifdef FEATURE_QLF
-    web_print_control_checkbox(client,"ql",(qlf_active)?1:0," QLF<br/>");
+    web_print_control_checkbox(client,"ql",(qlf_active)?1:0," QLF<br>");
   #endif //FEATURE_QLF
 
-  web_client_println(client,"<br><br><input type=\"submit\" value=\"Save\"></form>");
+  web_client_println(client,F("<br><br><input type=\"submit\" value=\"Save\"></form>"));
 
   web_print_home_link(client);
 
@@ -13417,30 +13599,173 @@ void web_print_page_keyer_settings(EthernetClient client){
 
 void web_print_page_control(EthernetClient client){
 
+  /*
+
+    /ctrl - regular page
+
+    /ctrlnd - no display
+
+    /strlnd?st<TEXTTOSEND>/
+
+
+  */
+
   uint8_t pin_read = 0;
 
-  web_print_header(client);
+  #if defined(FEATURE_MEMORIES)
+    uint8_t memory_number_to_send = 0;
+  #endif //FEATURE_MEMORIES
 
-  web_print_style_sheet(client);
+  int search_string_start_position = 0;
 
-  web_client_println(client,"<meta http-equiv=\"refresh\" content=\"5\"/>");
+  String url_sub_string; 
 
-  web_print_title(client);
+  if ((readString.indexOf("ctrl?") > 0) || (readString.indexOf("ctrlnd?") > 0)){
+    url_sub_string = readString;
+    if (url_sub_string.length() > 14){url_sub_string.remove(14);}
+    if (url_sub_string.indexOf("?ky") > 0){
+      tx_and_sidetone_key(1,AUTOMATIC_SENDING);
+    }
+    if (url_sub_string.indexOf("?uk") > 0){
+      tx_and_sidetone_key(0,AUTOMATIC_SENDING);
+    }
+    if (url_sub_string.indexOf("?wn") > 0){
+      speed_change(-2);
+    }
+    if (url_sub_string.indexOf("?wp") > 0){
+      speed_change(2);
+    }
+    #if defined(FEATURE_MEMORIES)
+    if ((readString.indexOf("?m") > 0) & (readString.length() > (readString.indexOf("?m")+2))) {
+      memory_number_to_send = ((readString.charAt(readString.indexOf("m")+1)-48)*10) + (readString.charAt(readString.indexOf("m")+2)-48);
+      add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+      add_to_send_buffer(memory_number_to_send-1);
+    }
+    #endif //FEATURE_MEMORIES
+    if (url_sub_string.indexOf("?st") > 0){
+      for (int x = (readString.indexOf("st")+2);x < readString.length();x++){
+        if (readString.charAt(x) == '/'){
+          x = readString.length();      
+        } else {
+          if (readString.charAt(x) == '%'){  // do we have a http hex code?
+            add_to_send_buffer((((uint8_t)readString.charAt(x+1)-48)<<4)+((uint8_t)readString.charAt(x+2)-48));
+            x = x + 2;
+          } else {
+            add_to_send_buffer(uppercase(readString.charAt(x)));
+          }
+        }
+      }
+    }
+  }
 
-  web_client_println(client,"<H1>Control</H1><hr/><br/>");
- 
-  web_client_println(client,"<br/>");  
-  web_client_println(client,"<a href=\"/Control?button1on\"\" class=\"internal\">Key</a>");
-  web_client_println(client,"<a href=\"/Control?button1off\"\" class=\"internal\">Unkey</a><br/>");   
-  web_client_println(client,"<br/>");     
-  web_client_println(client,"<br/>"); 
+  
 
-  web_print_home_link(client);
+  if (readString.indexOf("nd") > 0){ // no display option
 
-  web_print_footer(client);
+    web_print_200OK(client);
+
+  } else {
+
+    web_print_header(client);
+
+    web_print_style_sheet(client);
+
+    web_print_title(client);
+
+    web_client_println(client,F("<H1>Control</H1><hr><br>"));
+  //zzzzzzz
+
+// web_client_print(client,"readString: ");
+// web_client_print(client,readString);
+// web_client_print(client,"url_sub_string: ");
+// web_client_print(client,url_sub_string);
+// web_client_println(client,F("<br><br>"));
+
+    #if defined(FEATURE_MEMORIES)
+    web_client_print(client,F("<br><br>"));
+    for(int i = 0;i < number_of_memories;i++){
+      web_client_print(client,F("<a href=\"/ctrl?m"));
+      if(i < 9){web_client_print(client,"0");}
+      web_client_print(client,i+1);
+      web_client_print(client,"\" class=\"ctrl\">");
+      web_client_print(client,i+1);
+      web_client_print(client,"</a>");
+      if (number_of_memories > 4){
+        if (((i+1) % 4) == 0){web_client_print(client,"<br><br><br>");}
+      }
+    }
+
+    web_client_print(client,F("<br>"));
+
+    #endif //FEATURE_MEMORIES
+    
+    web_client_println(client,F("<br><a href=\"/ctrl?wn\" class=\"ctrl\">WPM -2</a><a href=\"/ctrl?wp\" class=\"ctrl\">WPM +2</a><br><br><br>"));  
+
+    web_client_println(client,F("<br><a href=\"/ctrl?ky\" class=\"ctrl\">Key</a><a href=\"/ctrl?uk\" class=\"ctrl\">Unkey</a><br><br><br>"));  
+
+    web_print_home_link(client);
+
+    web_print_footer(client);
+
+  }
+
+  
 
 }
 #endif //FEATURE_WEB_SERVER         
+
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_println(EthernetClient client,const __FlashStringHelper *str){
+
+  web_client_print(client,str);
+  client.println();
+
+}
+
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_print(EthernetClient client,const __FlashStringHelper *str){
+
+  char c;
+  if(!str) return;
+  char charstring[255] = "";
+  int charstringindex = 0;
+  
+  /* since str is a const we can't increment it, so do this instead */
+  char *p = (char *)str;
+  
+  /* keep going until we find the null */
+  while((c = pgm_read_byte(p++))){
+    if (charstringindex < 254){
+      charstring[charstringindex] = c;
+      charstringindex++;
+    }
+
+  }
+  charstring[charstringindex] = 0;
+  client.print(charstring);
+
+}
+
+#endif //FEATURE_WEB_SERVER
+
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_WEB_SERVER)
+void web_client_print(EthernetClient client,String str){
+
+  client.print(str);
+
+}
+
+#endif //FEATURE_WEB_SERVER
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -13608,10 +13933,10 @@ void web_print_page_link_settings_process(EthernetClient client){
 
       web_print_header(client);
       web_print_meta_refresh(client,configuration.ip[0],configuration.ip[1],configuration.ip[2],configuration.ip[3],2);                                                   
-      web_client_println(client,"\/LinkSettings'\" />");      
+      web_client_println(client,F("\/LinkSettings'\" />"));      
       web_print_style_sheet(client);
       web_print_title(client);
-      web_client_println(client,"<br>Bad data!<br>");
+      web_client_println(client,F("<br>Bad data!<br>"));
       web_print_home_link(client);
       web_print_footer(client);
 
@@ -13635,10 +13960,10 @@ void web_print_page_link_settings_process(EthernetClient client){
 
       web_print_header(client);
       web_print_meta_refresh(client,configuration.ip[0],configuration.ip[1],configuration.ip[2],configuration.ip[3],5);                                                   
-      web_client_println(client,"\/LinkSettings'\" />");
+      web_client_println(client,F("\/LinkSettings'\" />"));
       web_print_style_sheet(client);
       web_print_title(client);
-      web_client_println(client,"<br>Configuration saved<br><br>");
+      web_client_println(client,F("<br>Configuration saved<br><br>"));
       web_print_home_link(client);
       web_print_footer(client);
       config_dirty = 1;
@@ -13705,7 +14030,7 @@ void web_print_page_network_settings_process(EthernetClient client){
       web_print_header(client);
       web_print_style_sheet(client);
       web_print_title(client);
-      web_client_println(client,"<br>Bad data!<br>");
+      web_client_println(client,F("<br>Bad data!<br>"));
       web_print_home_link(client);
       web_print_footer(client);
 
@@ -13729,10 +14054,10 @@ void web_print_page_network_settings_process(EthernetClient client){
 
       web_print_header(client);
       web_print_meta_refresh(client,ip0,ip1,ip2,ip3,5);
-      web_client_println(client,"'\" />");
+      web_client_println(client,F("'\" />"));
       web_print_style_sheet(client);
       web_print_title(client);
-      web_client_println(client,"<br>Configuration saved<br>Restarting networking<br><br>You will be redirected to new address in 5 seconds...<br>");
+      web_client_println(client,F("<br>Configuration saved<br>Restarting networking<br><br>You will be redirected to new address in 5 seconds...<br>"));
       web_print_home_link(client);
       web_print_footer(client);
       restart_networking = 1;
@@ -13747,9 +14072,9 @@ void web_print_page_network_settings_process(EthernetClient client){
 
 void web_print_meta_refresh(EthernetClient client,uint8_t ip0,uint8_t ip1,uint8_t ip2,uint8_t ip3,uint8_t refresh_time){
 
-  web_client_print(client,"<meta http-equiv=\"refresh\" content=\"");
+  web_client_print(client,F("<meta http-equiv=\"refresh\" content=\""));
   web_client_print(client,refresh_time);
-  web_client_print(client,"; URL='http://");
+  web_client_print(client,F("; URL='http://"));
   web_client_print(client,ip0);
   web_client_print(client,".");
   web_client_print(client,ip1);
@@ -14178,8 +14503,14 @@ void service_internet_link_udp_receive_buffer(){
   static unsigned long v_command_key_down_expire_time = 0;
   static unsigned long last_command_completion_time = 0;
   static unsigned long buffered_command_execution_time = 0;
+  static unsigned long key_down_time = 0;
 
   // TODO : key down expire time check
+  if ((key_down_time > 0) && ((millis()-key_down_time) > (FEATURE_INTERNET_LINK_KEY_DOWN_TIMEOUT_SECS * 1000))){
+    tx_and_sidetone_key(0, AUTOMATIC_SENDING);
+    key_down_time = 0;
+  }
+
 
   switch(current_link_control_state){
     case LINK_NO_COMMAND:
@@ -14193,6 +14524,7 @@ void service_internet_link_udp_receive_buffer(){
         #endif //DEBUG_INTERNET_LINKING_RECEIVE
         if (incoming_link_command == 'V'){ // key down immediately for incoming_link_parameter mS
           tx_and_sidetone_key(1, AUTOMATIC_SENDING);
+          key_down_time = millis();
           #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
             debug_serial_port->println(F("service_internet_link_udp_receive_buffer: LINK_V_COMMAND_IN_PROGRESS tx_and_sidetone_key: 1"));
           #endif //DEBUG_INTERNET_LINKING_RECEIVE
@@ -14218,6 +14550,7 @@ void service_internet_link_udp_receive_buffer(){
     case LINK_U_COMMAND_BUFFERED: // key up after last command time has passed
       if (millis() >= buffered_command_execution_time){
         tx_and_sidetone_key(0, AUTOMATIC_SENDING);
+        key_down_time = 0;
         last_command_completion_time = millis();
         current_link_control_state = LINK_NO_COMMAND;     
         #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
@@ -14228,6 +14561,7 @@ void service_internet_link_udp_receive_buffer(){
     case LINK_D_COMMAND_BUFFERED: // key down after last command time has passed
       if (millis() >= buffered_command_execution_time){
         tx_and_sidetone_key(1, AUTOMATIC_SENDING);
+        key_down_time = millis();
         last_command_completion_time = millis();
         current_link_control_state = LINK_NO_COMMAND;  
         #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
@@ -14238,6 +14572,7 @@ void service_internet_link_udp_receive_buffer(){
     case LINK_V_COMMAND_IN_PROGRESS: // we're in key down, check if it time to key up and complete
       if (millis() >= v_command_key_down_expire_time){
         tx_and_sidetone_key(0, AUTOMATIC_SENDING);
+        key_down_time = 0;
         v_command_key_down_expire_time = 0;
         last_command_completion_time = millis();
         current_link_control_state = LINK_NO_COMMAND;
