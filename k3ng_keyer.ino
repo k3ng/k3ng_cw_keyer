@@ -70,6 +70,12 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     \~     Reset unit
     \:     Toggle cw send echo
     \{     QLF mode on/off
+    \>     Send serial number, then increment
+    \<     Send current serial number
+    \(     Send current serial number in cut numbers
+    \)     Send serial number with cut numbers, then increment
+  
+
 
  Buttons
     button 0: command mode / command mode exit
@@ -419,6 +425,14 @@ New fetures in this stable release:
       #define WINKEY_DEFAULT_BAUD 1200 (added setting for UCXLog 9600 baud Winkey setting)
       Fixed minor Winkey emulation bug with recognizing byte 0x7C as a half dit space when OPTION_WINKEY_IGNORE_LOWERCASE is enabled
 
+    2.2.2016062101
+      New CLI commands:
+        \>     Send serial number, then increment
+        \<     Send current serial number
+        \(     Send current serial number in cut numbers
+        \)     Send serial number with cut numbers, then increment
+
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -426,7 +440,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016053001"
+#define CODE_VERSION "2.2.2016062101"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -8532,6 +8546,21 @@ void process_serial_command(HardwareSerial * port_to_use) {
           }
         break;
     #endif //FEATURE_QLF
+
+
+    case '>':
+      send_serial_number(0,1);
+      break;
+    case '<': 
+      send_serial_number(0,0);
+      break;
+    case '(':
+      send_serial_number(1,0);
+      break;
+    case ')':
+      send_serial_number(1,1);
+      break;
+
     default: port_to_use->println(F("Unknown command")); break;
   }
 
@@ -8877,17 +8906,18 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit,Hardwar
 
         check_ptt_tail();
         #ifdef FEATURE_POTENTIOMETER
-        if (configuration.pot_activated) {
-          check_potentiometer();
-        }
+          if (configuration.pot_activated) {
+            check_potentiometer();
+          }
         #endif
         
         #ifdef FEATURE_ROTARY_ENCODER
-        check_rotary_encoder();
+          check_rotary_encoder();
         #endif //FEATURE_ROTARY_ENCODER        
       }
     } else {
       incoming_serial_byte = port_to_use->read();
+      port_to_use->write(incoming_serial_byte);
       if ((incoming_serial_byte > 47) && (incoming_serial_byte < 58)) {    // ascii 48-57 = "0" - "9")
         numberstring = numberstring + incoming_serial_byte;
         numbers[numberindex] = incoming_serial_byte;
@@ -8981,7 +9011,7 @@ void serial_set_serial_number(HardwareSerial * port_to_use)
   int set_serial_number_to = serial_get_number_input(4,0,10000, port_to_use);
   if (set_serial_number_to > 0) {
     serial_number = set_serial_number_to;
-    port_to_use->print(F("Setting serial number to "));
+    port_to_use->print(F("\nSetting serial number to "));
     port_to_use->println(serial_number);
   }
 }
@@ -10120,7 +10150,44 @@ void check_button0()
 }
 
 //---------------------------------------------------------------------
+#if defined(FEATURE_MEMORIES) || defined(FEATURE_COMMAND_LINE_INTERFACE)
+void send_serial_number(byte cut_numbers,int increment_serial_number){
 
+  String serial_number_string;
+
+  serial_number_string = String(serial_number, DEC);
+  if (serial_number_string.length() < 3 ) {
+    if (cut_numbers){
+      send_char('T',KEYER_NORMAL);
+    } else {
+      send_char('0',KEYER_NORMAL);
+    }
+  }
+  if (serial_number_string.length() == 1) {
+    if (cut_numbers){
+      send_char('T',KEYER_NORMAL);
+    } else {
+      send_char('0',KEYER_NORMAL);
+    }
+  }
+  for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
+    if ((serial_number_string[a] == '0') && (cut_numbers)){
+      send_char('T',KEYER_NORMAL);
+    } else {
+     if ((serial_number_string[a] == '9') && (cut_numbers)) {
+       send_char('N',KEYER_NORMAL);
+     } else {
+       send_char(serial_number_string[a],KEYER_NORMAL);
+     }
+    }
+  }
+
+  serial_number = serial_number + increment_serial_number;
+
+}
+
+#endif
+//---------------------------------------------------------------------
 #ifdef FEATURE_MEMORIES
 byte play_memory(byte memory_number)
 {
@@ -10128,7 +10195,7 @@ byte play_memory(byte memory_number)
   unsigned int jump_back_to_y = 9999;
   byte jump_back_to_memory_number = 255;
 
-  /*static*/ String serial_number_string;
+  /*static*/ //String serial_number_string;
   static byte prosign_flag = 0;
   play_memory_prempt = 0;
   byte eeprom_byte_read;  
@@ -10381,25 +10448,26 @@ byte play_memory(byte memory_number)
                 break;  // case 84
 
               case 67:                       // C - play serial number with cut numbers T and N, then increment
-                  serial_number_string = String(serial_number, DEC);
-                  if (serial_number_string.length() < 3 ) {
-                    send_char('T',KEYER_NORMAL);
-                  }
-                  if (serial_number_string.length() == 1) {
-                    send_char('T',KEYER_NORMAL);
-                  }
-                  for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
-                    if (serial_number_string[a] == '0') {
-                      send_char('T',KEYER_NORMAL);
-                    } else {
-                     if (serial_number_string[a] == '9') {
-                       send_char('N',KEYER_NORMAL);
-                     } else {
-                       send_char(serial_number_string[a],KEYER_NORMAL);
-                     }
-                    }
-                  }
-                  serial_number++;
+                  send_serial_number(1,1);
+                  // serial_number_string = String(serial_number, DEC);
+                  // if (serial_number_string.length() < 3 ) {
+                  //   send_char('T',KEYER_NORMAL);
+                  // }
+                  // if (serial_number_string.length() == 1) {
+                  //   send_char('T',KEYER_NORMAL);
+                  // }
+                  // for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
+                  //   if (serial_number_string[a] == '0') {
+                  //     send_char('T',KEYER_NORMAL);
+                  //   } else {
+                  //    if (serial_number_string[a] == '9') {
+                  //      send_char('N',KEYER_NORMAL);
+                  //    } else {
+                  //      send_char(serial_number_string[a],KEYER_NORMAL);
+                  //    }
+                  //   }
+                  // }
+                  // serial_number++;
                 break;
 
               case 68:                      // D - delay for ### seconds
@@ -10432,11 +10500,12 @@ byte play_memory(byte memory_number)
                 break;  // case 68
 
               case 69:                       // E - play serial number, then increment
-                  serial_number_string = String(serial_number, DEC);
-                  for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
-                    send_char(serial_number_string[a],KEYER_NORMAL);
-                  }
-                  serial_number++;
+                  send_serial_number(0,1);
+                  // serial_number_string = String(serial_number, DEC);
+                  // for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
+                  //   send_char(serial_number_string[a],KEYER_NORMAL);
+                  // }
+                  // serial_number++;
                 break;
 
               case 70:                       // F - change sidetone frequency
