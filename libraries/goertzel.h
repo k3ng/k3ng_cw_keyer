@@ -31,13 +31,15 @@
 
 */
 
-// Arduino Due (84 Mhz clock)
-#define GOERTZ_SAMPLING_FREQ 46872.0
-#define GOERTZ_SAMPLES 252 //168 //84
-
-// Arduino Uno, Mega (16 Mhz clock)
-//#define GOERTZ_SAMPLING_FREQ 8928.0
-//#define GOERTZ_SAMPLES 64
+#if defined(_VARIANT_ARDUINO_DUE_X_)
+  // Arduino Due (84 Mhz clock)
+  #define GOERTZ_SAMPLING_FREQ 46872.0
+  #define GOERTZ_SAMPLES 252 //168 //84
+#else
+  // Arduino Uno, Mega (16 Mhz clock)
+  #define GOERTZ_SAMPLING_FREQ 8928.0
+  #define GOERTZ_SAMPLES 64
+#endif
 
 #define GOERTZ_NOISE_BLANKER_INITIAL_MS 6
 #define GOERTZ_TARGET_FREQ 558.0  
