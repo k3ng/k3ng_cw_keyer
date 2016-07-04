@@ -1,0 +1,28 @@
+PCBNEW-LibDoc----V1  7/6/2006-00:22:45
+#
+$MODULE Mini_din3
+Li Mini_din3
+Kw MINI DIN
+$EndMODULE
+#
+$MODULE Mini_din4
+Li Mini_din4
+Kw MINI DIN
+$EndMODULE
+#
+$MODULE Mini_din5
+Li Mini_din5
+Kw MINI DIN
+$EndMODULE
+#
+$MODULE Mini_din6
+Li Mini_din6
+Kw MINI DIN
+$EndMODULE
+#
+$MODULE Mini_din7
+Li Mini_din7
+Kw MINI DIN
+$EndMODULE
+#
+$EndLIBDOC

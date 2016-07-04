@@ -1,0 +1,69 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP DB-100
+K CONN
+$ENDCMP
+#
+$CMP DB-15
+K CONN
+$ENDCMP
+#
+$CMP DB-25
+K CONN
+$ENDCMP
+#
+$CMP DB-26
+K CONN
+$ENDCMP
+#
+$CMP DB-28
+K CONN
+$ENDCMP
+#
+$CMP DB-37
+K CONN
+$ENDCMP
+#
+$CMP DB-50
+K CONN
+$ENDCMP
+#
+$CMP DB-68
+K CONN
+$ENDCMP
+#
+$CMP DB-9
+K CONN
+$ENDCMP
+#
+$CMP STM32F0_Discovery_Header
+D STM32F0 Discovery Header
+$ENDCMP
+#
+$CMP STM32F3_Discovery_Header
+D STM32F3 Discovery Header
+$ENDCMP
+#
+$CMP STM32F4_Discovery_Header
+D STM32F4 Discovery Header
+$ENDCMP
+#
+$CMP STM32VL_Discovery_Header
+D STM32VL Discovery Header
+$ENDCMP
+#
+$CMP USB-B
+D USB B-TYPE connector
+K USB
+$ENDCMP
+#
+$CMP dc_jack
+D DC power jack
+$ENDCMP
+#
+$CMP rj45_wurth-7499211122a
+D RJ45 + Transformer 10/100BaseT PoE
+F /home/walter/Documenti/Elettronica/DATA_SHEET/Meccanici/Connettori/altro/WURTH_7499211122A.pdf
+$ENDCMP
+#
+#End Doc Library

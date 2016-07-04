@@ -1,0 +1,21 @@
+PCBNEW-LibDoc----V1  13.07.2010 10:01:48
+#
+$MODULE IC-Socket_UniversalDIP8-SO8_RevB_Date05Jul2010
+Li IC-Socket_UniversalDIP8-SO8_RevB_Date05Jul2010
+Cd IC-Socket, Universal, DIP8 und SO8, RevB, Date 05Jul2010,
+Kw IC-Socket, Universal, DIP8 und SO8, DIL, SO, RevB, Date 05Jul2010,
+$EndMODULE
+#
+$MODULE IC-Socket_UniversalDIP8-SO8_RevA_Date29062010
+Li IC-Socket_UniversalDIP8-SO8_RevA_Date29062010
+Cd IC-Socket, Universal, DIP8 und SO8,
+Kw IC-Socket, Universal, DIP8,  SO8, DIL, SO,
+$EndMODULE
+#
+$MODULE IC-Socket_UniversalDIP8-SO8_Connected_RevA_Date29062010
+Li IC-Socket_UniversalDIP8-SO8_Connected_RevA_Date29062010
+Cd IC-Socket, Universal, DIP8 und SO8, Connected, RevA, Date 29Jun2010,
+Kw IC-Socket, Universal, DIP8 und SO8, DIL, SO, Connected, RevA, Date 29Jun2010,
+$EndMODULE
+#
+$EndLIBDOC
