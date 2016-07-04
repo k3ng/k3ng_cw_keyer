@@ -2,7 +2,7 @@
 #ifndef keyer_pin_settings_h
 #define keyer_pin_settings_h
 
-#define paddle_left 2
+#define paddle_left 3
 #define paddle_right 5
 #define tx_key_line_1 11       // (high = key down/tx on)
 #define tx_key_line_2 0
@@ -29,12 +29,12 @@
 
 //lcd pins
 #ifdef FEATURE_LCD_4BIT
-  #define lcd_rs A2
-  #define lcd_enable 10
+  #define lcd_rs 26 // A2
+  #define lcd_enable 20
   #define lcd_d4 6
   #define lcd_d5 7
-  #define lcd_d6 8
-  #define lcd_d7 9
+  #define lcd_d6 13
+  #define lcd_d7 14
 #endif //FEATURE_LCD_4BIT
 
 #ifdef FEATURE_LCD1602_N07DH
@@ -49,7 +49,7 @@
 //ps2 keyboard pins
 #ifdef FEATURE_PS2_KEYBOARD
   #define ps2_keyboard_data A3
-  #define ps2_keyboard_clock 3    // this must be on an interrupt capable pin!
+  #define ps2_keyboard_clock 2    // this must be on an interrupt capable pin!
 #endif //FEATURE_PS2_KEYBOARD
 
 // rotary encoder pins and options - rotary encoder code from Jim Balls M0CKE
@@ -78,9 +78,9 @@
 #ifdef FEATURE_CW_DECODER
   #define cw_decoder_pin A5 //A11 //A3  
   #ifdef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-    #define cw_decoder_audio_input_pin 0 // this must be an analog pin!
+    #define cw_decoder_audio_input_pin A5 // this must be an analog pin!
   #endif //OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-  #define cw_decoder_indicator 24
+  #define cw_decoder_indicator 30 //A6
 #endif //FEATURE_CW_DECODER
 
 #endif //keyer_pin_settings_h

@@ -13,15 +13,16 @@
 //#define FEATURE_HELL
 #define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
 //#define FEATURE_USB_KEYBOARD         
+//#define FEATURE_CW_COMPUTER_KEYBOARD  // Have an Arduino Due or Leonardo act as a USB HID (Human Interface Device) keyboard and use the paddle to "type" characters on the computer  
 #define FEATURE_DEAD_OP_WATCHDOG
 #define FEATURE_AUTOSPACE
 //#define FEATURE_FARNSWORTH
 //#define FEATURE_DL2SBA_BANKSWITCH       // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
-//#define FEATURE_LCD_4BIT                // classic LCD disidefplay using 4 I/O lines
+#define FEATURE_LCD_4BIT                // classic LCD disidefplay using 4 I/O lines
 //#define FEATURE_LCD_ADAFRUIT_I2C          // Adafruit I2C LCD display using MCP23017 at addr 0x20
 //#define FEATURE_LCD_YDv1                // YourDuino I2C LCD display with old LCM 1602 V1 ic
 //#define FEATURE_LCD1602_N07DH      // http://linksprite.com/wiki/index.php5?title=16_X_2_LCD_Keypad_Shield_for_Arduino
-//#define FEATURE_CW_DECODER
+#define FEATURE_CW_DECODER
 //#define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE)
 //#define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
 //#define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
@@ -33,11 +34,17 @@
 //#define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
 //#define FEATURE_PTT_INTERLOCK 
 //#define FEATURE_QLF
+//#define FEATURE_EEPROM_E24C1024
+//#define FEATURE_STRAIGHT_KEY
+
+//#define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
+//#define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 
+                                                             //    simultaneously.  This will make Winkey emulation be the default at boot up; 
+                                                             //    hold command button down at boot up to activate CLI mode
 
 //#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
 #define OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
 #define OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-//#define OPTION_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE simultaneously.  This will make Winkey emulation be the default at boot up; hold command button down at boot up to activate CLI mode
 //#define OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP     // if ASR is not disabled, you may need this to discard errant serial port bytes at startup
 //#define OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM // with this activated the unit will write non-volatile settings to EEPROM when set by Winkey commands
 //#define OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
@@ -51,7 +58,7 @@
 //#define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
 #define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode
 #define OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT         // this makes dit paddle memory interruption a little smoother
-//#define OPTION_MORE_DISPLAY_MSGS                     // additional optional display messages - comment out to save memory
+#define OPTION_MORE_DISPLAY_MSGS                     // additional optional display messages - comment out to save memory
 //#define OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND        // enable this to ignore the TAB key in the Send CW window (this breaks SO2R functionality in N1MM)
 //#define OPTION_WATCHDOG_TIMER                        // this enables a four second ATmega48/88/168/328 watchdog timer; use for unattended/remote operation only
 //#define OPTION_MOUSE_MOVEMENT_PADDLE               // experimental (just fooling around) - mouse movement will act like a paddle
@@ -64,7 +71,8 @@
 //#define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 //#define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 //#define OPTION_SAVE_MEMORY_NANOKEYER
-//#define OPTION_INVERT_PADDLE_PIN_LOGIC
+//#define OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
 #define OPTION_CW_KEYBOARD_ITALIAN
 //#define OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+//#define OPTION_INVERT_PADDLE_PIN_LOGIC
 
