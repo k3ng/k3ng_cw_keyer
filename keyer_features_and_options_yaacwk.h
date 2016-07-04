@@ -22,7 +22,7 @@
 //#define FEATURE_LCD_YDv1                // YourDuino I2C LCD display with old LCM 1602 V1 ic
 //#define FEATURE_LCD1602_N07DH      // http://linksprite.com/wiki/index.php5?title=16_X_2_LCD_Keypad_Shield_for_Arduino
 //#define FEATURE_CW_DECODER
-#define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE)
+//#define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE)
 //#define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
 //#define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 //#define FEATURE_DIT_DAH_BUFFER_CONTROL
@@ -65,5 +65,6 @@
 //#define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 //#define OPTION_SAVE_MEMORY_NANOKEYER
 //#define OPTION_INVERT_PADDLE_PIN_LOGIC
-
+#define OPTION_CW_KEYBOARD_ITALIAN
+//#define OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
 

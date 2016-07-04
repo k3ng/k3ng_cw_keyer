@@ -75,10 +75,6 @@
   #define ptt_interlock 0  // this pin disables PTT and TX KEY
 #endif //FEATURE_PTT_INTERLOCK
 
-#ifdef FEATURE_STRAIGHT_KEY
-  #define pin_straight_key 52
-#endif //FEATURE_STRAIGHT_KEY
-
 #ifdef FEATURE_CW_DECODER
   #define cw_decoder_pin A5 //A11 //A3  
   #ifdef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
