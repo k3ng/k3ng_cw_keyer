@@ -514,6 +514,7 @@ New fetures in this stable release:
 #ifdef HARDWARE_YAACWK
   #include "keyer_pin_settings_yaacwk.h"
   #include "keyer_settings_yaacwk.h"
+#endif
 
 #ifdef HARDWARE_TEST
   #include "keyer_pin_settings_test.h"
