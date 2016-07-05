@@ -253,6 +253,10 @@ New fetures in this stable release:
       Memories can now be programmed in commmand mode (FEATURE_COMMAND_BUTTONS) by pressing the memory button
       FEATURE_CW_DECODER now has digital input pin (cw_decoder_pin) and if OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR is enable, cw_decoder_audio_input_pin will work in parallel
 
+    Add Yaacwk support
+      add hardware files for YAACWK Arduino Nano V3.0 based board
+      see http://i1cra.briata.org/yaacwk/ for more info
+
     2.2.2015090801
       Fixed issue with FEATURE_CW_DECODER + OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR and wrong GOERTZ_SAMPLING_FREQ and GOERTZ_SAMPLES used in goertzel.h causing keyer lockups after startup
   
@@ -470,6 +474,10 @@ New fetures in this stable release:
   #include "keyer_features_and_options_open_interface.h"
 #endif
 
+#ifdef HARDWARE_YAACWK
+  #include "keyer_features_and_options_yaacwk.h"
+#endif
+
 #ifdef HARDWARE_TEST
   #include "keyer_features_and_options_test.h"
 #endif    
@@ -502,6 +510,10 @@ New fetures in this stable release:
   #include "keyer_pin_settings_open_interface.h"
   #include "keyer_settings_open_interface.h"
 #endif
+
+#ifdef HARDWARE_YAACWK
+  #include "keyer_pin_settings_yaacwk.h"
+  #include "keyer_settings_yaacwk.h"
 
 #ifdef HARDWARE_TEST
   #include "keyer_pin_settings_test.h"
