@@ -32,6 +32,9 @@
 //#define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
 //#define FEATURE_PTT_INTERLOCK 
 //#define FEATURE_QLF
+//#define FEATURE_EEPROM_E24C1024
+//#define FEATURE_STRAIGHT_KEY
+//#define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
 
 //#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
 #define OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
@@ -42,11 +45,11 @@
 //#define OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
 #define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
 #define OPTION_WINKEY_2_SUPPORT                      // comment out to revert to Winkey version 1 emulation
-//#define OPTION_WINKEY_EXTENDED_COMMANDS            // in development
 #define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE       // additional code to check_dit_paddle() and check_dah_paddle() to send 0xC2 status byte when paddles are hit
 #define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
 #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET  // activate this when using Winkey 2 emulation and Win-Test
 //#define OPTION_WINKEY_FREQUENT_STATUS_REPORT         // activate this to make Winkey emulation play better with RUMlog and RUMped
+#define OPTION_WINKEY_IGNORE_LOWERCASE               // Enable for typical K1EL Winkeyer behavior (use for SkookumLogger version 1.10.14 and prior to workaround bug)
 #define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
 #define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode
 #define OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT         // this makes dit paddle memory interruption a little smoother
@@ -64,5 +67,7 @@
 //#define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 //#define OPTION_SAVE_MEMORY_NANOKEYER
 //#define OPTION_INVERT_PADDLE_PIN_LOGIC
-
-
+//#define OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL
+//#define OPTION_ADVANCED_SPEED_DISPLAY //enables "nerd" speed visualization on display: wpm, cpm (char per min), duration of dit and dah in milliseconds and ratio (contributed by Giorgio, IZ2XBZ)
+//#define OPTION_RUSSIAN_LANGUAGE_SEND_CLI // Russian language CLI sending support (contributed by Павел Бирюков, UA1AQC)
+#define OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION

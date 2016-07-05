@@ -1,4 +1,13 @@
-/* Pins - you must review these and configure ! */
+
+// ######## ########  ######  ######## 
+//    ##    ##       ##    ##    ##    
+//    ##    ##       ##          ##    
+//    ##    ######    ######     ##    
+//    ##    ##             ##    ##    
+//    ##    ##       ##    ##    ##    
+//    ##    ########  ######     ##    
+
+
 #ifndef keyer_pin_settings_h
 #define keyer_pin_settings_h
 
@@ -10,7 +19,11 @@
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-#define sidetone_line 4         // connect a speaker for sidetone
+#if !defined(FEATURE_ETHERNET)
+  #define sidetone_line 4         // connect a speaker for sidetone - (pin 4 is used by Ethernet shield and will conflict with that)
+#else
+  #define sidetone_line 31
+#endif
 #define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
 #define ptt_tx_1 0              // PTT ("push to talk") lines
 #define ptt_tx_2 0              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
@@ -21,6 +34,7 @@
 #define tx_key_dit 0            // if defined, goes active for dit (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 #define tx_key_dah 0            // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 
+
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_pin A1
   #define command_mode_active_led 0
@@ -30,7 +44,7 @@
 //lcd pins
 #ifdef FEATURE_LCD_4BIT
   #define lcd_rs A2
-  #define lcd_enable 10
+  #define lcd_enable 10  // pin 10 is used by Ethernet shield and will conflict with that
   #define lcd_d4 6
   #define lcd_d5 7
   #define lcd_d6 8
@@ -40,7 +54,7 @@
 #ifdef FEATURE_LCD1602_N07DH
   #define lcd_rs 8
   #define lcd_enable 9
-  #define lcd_d4 4
+  #define lcd_d4 4       // pin 4 is used by Ethernet shield and will conflict with that
   #define lcd_d5 5
   #define lcd_d6 6
   #define lcd_d7 7
@@ -76,7 +90,7 @@
 #endif //FEATURE_PTT_INTERLOCK
 
 #ifdef FEATURE_STRAIGHT_KEY
-  #define pin_straight_key 52
+  #define pin_straight_key A5 //52   // pin 52 doesn't work right when FEATURE_WEB_SERVER is active.  don't know why 2016-04-26
 #endif //FEATURE_STRAIGHT_KEY
 
 #ifdef FEATURE_CW_DECODER
@@ -93,8 +107,17 @@
 #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
 
 #if defined(FEATURE_SLEEP)
-  #define keyer_awake 0
+  #define keyer_awake 13       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
 #endif
 
 #endif //keyer_pin_settings_h
+
+
+// ######## ########  ######  ######## 
+//    ##    ##       ##    ##    ##    
+//    ##    ##       ##          ##    
+//    ##    ######    ######     ##    
+//    ##    ##             ##    ##    
+//    ##    ##       ##    ##    ##    
+//    ##    ########  ######     ##    
 

@@ -20,8 +20,8 @@
 #define ptt_tx_4 0
 #define ptt_tx_5 0
 #define ptt_tx_6 0
-#define tx_key_dit 0            // if defined, goes high for dit (any transmitter)
-#define tx_key_dah 0            // if defined, goes high for dah (any transmitter)
+#define tx_key_dit 0            // if defined, goes active for dit (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
+#define tx_key_dah 0            // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 
 #ifdef FEATURE_COMMAND_BUTTONS
 	#define analog_buttons_pin A1
@@ -76,4 +76,13 @@
   #define cw_decoder_indicator 24
 #endif //FEATURE_CW_DECODER
 
+#if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+  #define compression_detection_pin 0
+#endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
+
+#if defined(FEATURE_SLEEP)
+  #define keyer_awake 13       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
+#endif
+
 #endif //keyer_pin_settings_h
+

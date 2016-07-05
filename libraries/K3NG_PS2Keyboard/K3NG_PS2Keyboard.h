@@ -28,15 +28,27 @@
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+K3NG Updates
+
+  2015101401
+    Fixed issues with CTRL and ALT key combinations with German and French keyboards
+
+
 */
 
+
+
+
+
+// K3NG Version 2015101401
 
 #ifndef K3NG_PS2Keyboard_h
 #define K3NG_PS2Keyboard_h
 
 #define OPTION_PS2_KEYBOARD_US
-//#define OPTION_PS2_KEYBOARD_GERMAN
-//#define OPTION_PS2_KEYBOARD_FRENCH
+// #define OPTION_PS2_KEYBOARD_GERMAN
+// #define OPTION_PS2_KEYBOARD_FRENCH
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
