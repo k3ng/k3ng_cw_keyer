@@ -83,5 +83,13 @@
   #define cw_decoder_indicator 30 //A6
 #endif //FEATURE_CW_DECODER
 
+#if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+  #define compression_detection_pin 0
+#endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
+
+#if defined(FEATURE_SLEEP)
+  #define keyer_awake 0
+#endif
+
 #endif //keyer_pin_settings_h
 
