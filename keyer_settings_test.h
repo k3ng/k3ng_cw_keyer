@@ -65,6 +65,7 @@
 #define cli_straight_key_echo_on_at_boot 1
 #define tx_key_dit_and_dah_pins_active_state LOW
 #define tx_key_dit_and_dah_pins_inactive_state HIGH
+#define potentiometer_check_interval_ms 150
 
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_number_of_buttons 4

@@ -436,6 +436,9 @@ New fetures in this stable release:
     2.2.2016070701
       Corrected Nanokeyer Rev B and Rev D configurations
 
+    2.2.2016070702
+      Setting for speed potentiometer check interval: #define potentiometer_check_interval_ms 150  
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -443,7 +446,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016070701"
+#define CODE_VERSION "2.2.2016070702"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -570,9 +573,9 @@ New fetures in this stable release:
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
-  //#include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, so they are commented out
-  //#include <usbhub.h>   // Uncomment the three lines if you are using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE
-  //#include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
+  // #include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, so they are commented out
+  // #include <usbhub.h>   // Uncomment the three lines if you are using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE
+  // #include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
 #endif
 
 
@@ -3431,8 +3434,10 @@ void check_potentiometer()
   #ifdef DEBUG_LOOP
   debug_serial_port->println(F("loop: entering check_potentiometer")); 
   #endif
+
+  static unsigned long last_pot_check_time = 0;
     
-  if (configuration.pot_activated || potentiometer_always_on) {
+  if ((configuration.pot_activated || potentiometer_always_on) && ((millis() - last_pot_check_time) > potentiometer_check_interval_ms)) {
     byte pot_value_wpm_read = pot_value_wpm();
     if ((abs(pot_value_wpm_read - last_pot_wpm_read) > potentiometer_change_threshold)) {
       #ifdef DEBUG_POTENTIOMETER
@@ -3453,6 +3458,7 @@ void check_potentiometer()
         last_activity_time = millis(); 
       #endif //FEATURE_SLEEP
     }
+    last_pot_check_time = millis();
   }
 }
 
@@ -12489,12 +12495,12 @@ void initialize_usb()
     if (Usb.Init() == -1) {
       #ifdef DEBUG_USB
       debug_serial_port->println(F("\rinitialize_usb: OSC did not start."));
-      #endif DEBUG_USB
+      #endif //DEBUG_USB
       return;
     } else {
       #ifdef DEBUG_USB
       debug_serial_port->println(F("\rinitialize_usb: initializing"));
-      #endif DEBUG_USB
+      #endif //DEBUG_USB
     }      
     delay(200);
     next_time = millis() + 5000;
