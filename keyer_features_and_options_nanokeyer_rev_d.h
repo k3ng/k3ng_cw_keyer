@@ -11,7 +11,7 @@
 #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 //#define FEATURE_SERIAL_HELP
 //#define FEATURE_HELL
-#define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
+// #define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
 //#define FEATURE_USB_KEYBOARD         
 #define FEATURE_DEAD_OP_WATCHDOG
 #define FEATURE_AUTOSPACE
@@ -65,7 +65,7 @@
 //#define OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB //use version 2.1 PS2Keyboard.h and PS2Keyboard.cpp for FEATURE_PS2_KEYBOARD
 //#define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 //#define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
-//#define OPTION_SAVE_MEMORY_NANOKEYER
+#define OPTION_SAVE_MEMORY_NANOKEYER
 //#define OPTION_INVERT_PADDLE_PIN_LOGIC
 //#define OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL
 //#define OPTION_ADVANCED_SPEED_DISPLAY //enables "nerd" speed visualization on display: wpm, cpm (char per min), duration of dit and dah in milliseconds and ratio (contributed by Giorgio, IZ2XBZ)

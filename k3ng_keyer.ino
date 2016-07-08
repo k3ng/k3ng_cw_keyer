@@ -433,6 +433,9 @@ New fetures in this stable release:
         \)     Send serial number with cut numbers, then increment
 
 
+    2.2.2016070701
+      Corrected Nanokeyer Rev B and Rev D configurations
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -440,7 +443,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016062101"
+#define CODE_VERSION "2.2.2016070701"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -628,7 +631,7 @@ byte config_dirty = 0;
 unsigned long ptt_time = 0; 
 byte ptt_line_activated = 0;
 byte speed_mode = SPEED_NORMAL;
-#if defined(FEATURE_COMMAND_LINE_INTERFACE) || defined(FEATURE_PS2_KEYBOARD) || defined(FEATURE_MEMORY_MACROS)
+#if defined(FEATURE_COMMAND_LINE_INTERFACE) || defined(FEATURE_PS2_KEYBOARD) || defined(FEATURE_MEMORY_MACROS) || defined(FEATURE_MEMORIES)
   unsigned int serial_number = 1;
 #endif //FEATURE_COMMAND_LINE_INTERFACE
 byte pause_sending_buffer = 0;
