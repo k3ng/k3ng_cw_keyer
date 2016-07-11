@@ -89,7 +89,11 @@
 
 
 #ifdef FEATURE_WINKEY_EMULATION
-  #define WINKEY_DEFAULT_BAUD 1200
+  #ifdef OPTION_WINKEY_UCXLOG_9600_BAUD
+    #define WINKEY_DEFAULT_BAUD 9600
+  #else
+    #define WINKEY_DEFAULT_BAUD 1200
+  #endif //OPTION_WINKEY_UCXLOG_9600_BAUD
 // alter these below to map alternate sidetones for Winkey interface protocol emulation
 #ifdef OPTION_WINKEY_2_SUPPORT
 	#define WINKEY_SIDETONE_1 3759

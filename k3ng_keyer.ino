@@ -439,6 +439,9 @@ New fetures in this stable release:
     2.2.2016070702
       Setting for speed potentiometer check interval: #define potentiometer_check_interval_ms 150  
 
+    2.2.2016071001
+      OPTION_WINKEY_UCXLOG_9600_BAUD for UCXLog 9600 baud support (I can't get UCXlog to work at 1200 baud)
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -446,7 +449,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016070702"
+#define CODE_VERSION "2.2.2016071001"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
