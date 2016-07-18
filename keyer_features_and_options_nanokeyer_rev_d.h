@@ -13,8 +13,8 @@
 //#define FEATURE_HELL
 // #define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
 //#define FEATURE_USB_KEYBOARD         
-#define FEATURE_DEAD_OP_WATCHDOG
-#define FEATURE_AUTOSPACE
+//#define FEATURE_DEAD_OP_WATCHDOG
+//#define FEATURE_AUTOSPACE
 //#define FEATURE_FARNSWORTH
 //#define FEATURE_DL2SBA_BANKSWITCH       // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
 //#define FEATURE_LCD_4BIT                // classic LCD disidefplay using 4 I/O lines

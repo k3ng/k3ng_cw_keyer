@@ -441,6 +441,9 @@ New fetures in this stable release:
 
     2.2.2016071001
       OPTION_WINKEY_UCXLOG_9600_BAUD for UCXLog 9600 baud support (I can't get UCXlog to work at 1200 baud)
+    
+    2.2.2016071801
+      Now have FEATURE_AUTOSPACE and FEATURE_DEAD_OP_WATCHDOG disabled by default for HARDWARE_NANOKEYER_REV_D
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -449,7 +452,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016071001"
+#define CODE_VERSION "2.2.2016071801"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
