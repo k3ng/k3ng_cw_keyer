@@ -84,5 +84,9 @@
   #define keyer_awake 13       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
 #endif
 
+#if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
+  #define capactive_paddle_pin_inhibit_pin 0     // if this pin is defined and is set high, the capacitive paddle pins will switch to normal (non-capacitive) sensing mode
+#endif
+
 #endif //keyer_pin_settings_h
 

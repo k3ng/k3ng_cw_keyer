@@ -445,6 +445,13 @@ New fetures in this stable release:
     2.2.2016071801
       Now have FEATURE_AUTOSPACE and FEATURE_DEAD_OP_WATCHDOG disabled by default for HARDWARE_NANOKEYER_REV_D
 
+    2.2.2016071802
+      FEATURE_CAPACITIVE_PADDLE_PINS: capactive_paddle_pin_inhibit_pin
+
+    2.2.2016072301
+      Added dependency check for FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+      More Winkey emulation debugging; working on strange issues with UcxLog interoperability.  UcxLog working with normal 1200 baud mode today.  Hmmm.
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -452,7 +459,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016071801"
+#define CODE_VERSION "2.2.2016072301"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -2117,7 +2124,7 @@ void check_for_dead_op()
 {
   
   #ifdef DEBUG_LOOP
-  debug_serial_port->println(F("loop: entering check_for_dead_op"));
+    debug_serial_port->println(F("loop: entering check_for_dead_op"));
   #endif    
     
   if (dead_op_watchdog_active && ((dit_counter > 100) || (dah_counter > 100))) {
@@ -2132,11 +2139,11 @@ void check_for_dead_op()
 void repeat_memory_msg(byte memory_number){
   
   #ifdef FEATURE_MEMORIES
-  repeat_memory = memory_number;
-  #ifdef FEATURE_DISPLAY
-  lcd_center_print_timed("Repeat Memory " + String(memory_number+1), 0, default_display_msg_delay); 
-  service_display();
-  #endif //FEATURE_DISPLAY
+    repeat_memory = memory_number;
+    #ifdef FEATURE_DISPLAY
+      lcd_center_print_timed("Repeat Memory " + String(memory_number+1), 0, default_display_msg_delay); 
+      service_display();
+    #endif //FEATURE_DISPLAY
   #endif //FEATURE_MEMORIES
 }
 
@@ -2149,7 +2156,7 @@ void check_ps2_keyboard()
 {
 
   #ifdef DEBUG_LOOP
-  debug_serial_port->println(F("loop: entering check_ps2_keyboard"));
+    debug_serial_port->println(F("loop: entering check_ps2_keyboard"));
   #endif    
   
   static byte keyboard_tune_on = 0;
@@ -2167,12 +2174,12 @@ void check_ps2_keyboard()
     keystroke = keyboard.read();
 
     #if defined(DEBUG_PS2_KEYBOARD)
-    debug_serial_port->print("check_ps2_keyboard: keystroke: ");
-    debug_serial_port->println(keystroke,DEC);
+      debug_serial_port->print("check_ps2_keyboard: keystroke: ");
+      debug_serial_port->println(keystroke,DEC);
     #endif //DEBUG_PS2_KEYBOARD
     
     #ifdef FEATURE_SLEEP
-    last_activity_time = millis(); 
+      last_activity_time = millis(); 
     #endif //FEATURE_SLEEP
 
     if (ps2_keyboard_mode == PS2_KEYBOARD_NORMAL) {
@@ -2188,24 +2195,24 @@ void check_ps2_keyboard()
           key_tx = 1;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
-          #ifdef OPTION_MORE_DISPLAY_MSGS
-          lcd_center_print_timed("Default ratio", 0, default_display_msg_delay);
-          service_display();
-          #endif
+            #ifdef OPTION_MORE_DISPLAY_MSGS
+              lcd_center_print_timed("Default ratio", 0, default_display_msg_delay);
+              service_display();
+            #endif
           #endif           
           break;
         case PS2_TAB :
           if (pause_sending_buffer) {
             pause_sending_buffer = 0;
             #ifdef FEATURE_DISPLAY
-            #ifdef OPTION_MORE_DISPLAY_MSGS
-            lcd_center_print_timed("Resume", 0, default_display_msg_delay);
-            #endif
+              #ifdef OPTION_MORE_DISPLAY_MSGS
+                lcd_center_print_timed("Resume", 0, default_display_msg_delay);
+              #endif
             #endif                 
           } else {
             pause_sending_buffer = 1;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Pause", 0, default_display_msg_delay);
+              lcd_center_print_timed("Pause", 0, default_display_msg_delay);
             #endif            
           }
         break;  // pause
@@ -2213,41 +2220,41 @@ void check_ps2_keyboard()
         case PS2_SCROLL :   // Prosign next two characters
           ps2_prosign_flag = 1;
           #ifdef FEATURE_DISPLAY
-          #ifdef OPTION_MORE_DISPLAY_MSGS
-          lcd_center_print_timed("Prosign", 0, default_display_msg_delay);
-          #endif
+            #ifdef OPTION_MORE_DISPLAY_MSGS
+              lcd_center_print_timed("Prosign", 0, default_display_msg_delay);
+            #endif
           #endif          
           break;
 
         #ifdef FEATURE_MEMORIES
-        case PS2_F1 : ps2_usb_keyboard_play_memory(0); break;
-        case PS2_F2 : ps2_usb_keyboard_play_memory(1); break;
-        case PS2_F3 : ps2_usb_keyboard_play_memory(2); break;
-        #ifndef OPTION_SAVE_MEMORY_NANOKEYER
-        case PS2_F4 : ps2_usb_keyboard_play_memory(3); break;
-        case PS2_F5 : ps2_usb_keyboard_play_memory(4); break;
-        case PS2_F6 : ps2_usb_keyboard_play_memory(5); break;
-        case PS2_F7 : ps2_usb_keyboard_play_memory(6); break;
-        case PS2_F8 : ps2_usb_keyboard_play_memory(7); break;
-        case PS2_F9 : ps2_usb_keyboard_play_memory(8); break;
-        case PS2_F10 : ps2_usb_keyboard_play_memory(9); break;
-        case PS2_F11 : ps2_usb_keyboard_play_memory(10); break;
-        case PS2_F12 : ps2_usb_keyboard_play_memory(11); break;
-        #endif //OPTION_SAVE_MEMORY_NANOKEYER
-        case PS2_F1_ALT : if (number_of_memories > 0) {repeat_memory_msg(0);} break;
-        case PS2_F2_ALT : if (number_of_memories > 1) {repeat_memory_msg(1);} break;
-        case PS2_F3_ALT : if (number_of_memories > 2) {repeat_memory_msg(2);} break;
-        #ifndef OPTION_SAVE_MEMORY_NANOKEYER
-        case PS2_F4_ALT : if (number_of_memories > 3) {repeat_memory_msg(3);} break;
-        case PS2_F5_ALT : if (number_of_memories > 4) {repeat_memory_msg(4);} break;
-        case PS2_F6_ALT : if (number_of_memories > 5) {repeat_memory_msg(5);} break;
-        case PS2_F7_ALT : if (number_of_memories > 6) {repeat_memory_msg(6);} break;
-        case PS2_F8_ALT : if (number_of_memories > 7) {repeat_memory_msg(7);} break;
-        case PS2_F9_ALT : if (number_of_memories > 8) {repeat_memory_msg(8);} break;
-        case PS2_F10_ALT : if (number_of_memories > 9) {repeat_memory_msg(9);} break;
-        case PS2_F11_ALT : if (number_of_memories > 10) {repeat_memory_msg(10);} break;
-        case PS2_F12_ALT : if (number_of_memories > 11) {repeat_memory_msg(11);} break;
-        #endif //OPTION_SAVE_MEMORY_NANOKEYER
+          case PS2_F1 : ps2_usb_keyboard_play_memory(0); break;
+          case PS2_F2 : ps2_usb_keyboard_play_memory(1); break;
+          case PS2_F3 : ps2_usb_keyboard_play_memory(2); break;
+          #ifndef OPTION_SAVE_MEMORY_NANOKEYER
+            case PS2_F4 : ps2_usb_keyboard_play_memory(3); break;
+            case PS2_F5 : ps2_usb_keyboard_play_memory(4); break;
+            case PS2_F6 : ps2_usb_keyboard_play_memory(5); break;
+            case PS2_F7 : ps2_usb_keyboard_play_memory(6); break;
+            case PS2_F8 : ps2_usb_keyboard_play_memory(7); break;
+            case PS2_F9 : ps2_usb_keyboard_play_memory(8); break;
+            case PS2_F10 : ps2_usb_keyboard_play_memory(9); break;
+            case PS2_F11 : ps2_usb_keyboard_play_memory(10); break;
+            case PS2_F12 : ps2_usb_keyboard_play_memory(11); break;
+          #endif //OPTION_SAVE_MEMORY_NANOKEYER
+          case PS2_F1_ALT : if (number_of_memories > 0) {repeat_memory_msg(0);} break;
+          case PS2_F2_ALT : if (number_of_memories > 1) {repeat_memory_msg(1);} break;
+          case PS2_F3_ALT : if (number_of_memories > 2) {repeat_memory_msg(2);} break;
+          #ifndef OPTION_SAVE_MEMORY_NANOKEYER
+            case PS2_F4_ALT : if (number_of_memories > 3) {repeat_memory_msg(3);} break;
+            case PS2_F5_ALT : if (number_of_memories > 4) {repeat_memory_msg(4);} break;
+            case PS2_F6_ALT : if (number_of_memories > 5) {repeat_memory_msg(5);} break;
+            case PS2_F7_ALT : if (number_of_memories > 6) {repeat_memory_msg(6);} break;
+            case PS2_F8_ALT : if (number_of_memories > 7) {repeat_memory_msg(7);} break;
+            case PS2_F9_ALT : if (number_of_memories > 8) {repeat_memory_msg(8);} break;
+            case PS2_F10_ALT : if (number_of_memories > 9) {repeat_memory_msg(9);} break;
+            case PS2_F11_ALT : if (number_of_memories > 10) {repeat_memory_msg(10);} break;
+            case PS2_F12_ALT : if (number_of_memories > 11) {repeat_memory_msg(11);} break;
+          #endif //OPTION_SAVE_MEMORY_NANOKEYER
         #endif //FEATURE_MEMORIES
 
         case PS2_DELETE : if (send_buffer_bytes > 0) { send_buffer_bytes--; } break;
@@ -2265,90 +2272,90 @@ void check_ps2_keyboard()
           }
           clear_send_buffer();
           #ifdef FEATURE_MEMORIES
-          //clear_memory_button_buffer();
-          play_memory_prempt = 1;
-          repeat_memory = 255;
+            //clear_memory_button_buffer();
+            play_memory_prempt = 1;
+            repeat_memory = 255;
           #endif
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Abort", 0, default_display_msg_delay);
+            lcd_center_print_timed("Abort", 0, default_display_msg_delay);
           #endif          
           break;
 
         #ifdef FEATURE_MEMORIES
-        case PS2_F1_SHIFT  :
-          ps2_keyboard_program_memory(0);
-          break;
+          case PS2_F1_SHIFT  :
+            ps2_keyboard_program_memory(0);
+            break;
 
-        case PS2_F2_SHIFT  :
-          ps2_keyboard_program_memory(1);
-          break;
+          case PS2_F2_SHIFT  :
+            ps2_keyboard_program_memory(1);
+            break;
 
-        case PS2_F3_SHIFT  :
-          ps2_keyboard_program_memory(2);
-          break;
+          case PS2_F3_SHIFT  :
+            ps2_keyboard_program_memory(2);
+            break;
 
 
-        #ifndef OPTION_SAVE_MEMORY_NANOKEYER
-        case PS2_F4_SHIFT  :
-          ps2_keyboard_program_memory(3);
-          break;
+          #ifndef OPTION_SAVE_MEMORY_NANOKEYER
+            case PS2_F4_SHIFT  :
+              ps2_keyboard_program_memory(3);
+              break;
 
-        case PS2_F5_SHIFT  :
-          ps2_keyboard_program_memory(4);
-          break;
+            case PS2_F5_SHIFT  :
+              ps2_keyboard_program_memory(4);
+              break;
 
-        case PS2_F6_SHIFT  :
-          ps2_keyboard_program_memory(5);
-          break;
+            case PS2_F6_SHIFT  :
+              ps2_keyboard_program_memory(5);
+              break;
 
-        case PS2_F7_SHIFT  :
-          ps2_keyboard_program_memory(6);
-          break;
+            case PS2_F7_SHIFT  :
+              ps2_keyboard_program_memory(6);
+              break;
 
-        case PS2_F8_SHIFT  :
-          ps2_keyboard_program_memory(7);
-          break;
+            case PS2_F8_SHIFT  :
+              ps2_keyboard_program_memory(7);
+              break;
 
-        case PS2_F9_SHIFT  :
-          ps2_keyboard_program_memory(8);
-          break;
+            case PS2_F9_SHIFT  :
+              ps2_keyboard_program_memory(8);
+              break;
 
-        case PS2_F10_SHIFT  :
-          ps2_keyboard_program_memory(9);
-          break;
+            case PS2_F10_SHIFT  :
+              ps2_keyboard_program_memory(9);
+              break;
 
-        case PS2_F11_SHIFT  :
-          ps2_keyboard_program_memory(10);
-          break;
+            case PS2_F11_SHIFT  :
+              ps2_keyboard_program_memory(10);
+              break;
 
-        case PS2_F12_SHIFT  :
-          ps2_keyboard_program_memory(11);
-          break;
-        #endif //OPTION_SAVE_MEMORY_NANOKEYER
+            case PS2_F12_SHIFT  :
+              ps2_keyboard_program_memory(11);
+              break;
+          #endif //OPTION_SAVE_MEMORY_NANOKEYER
         #endif //FEATURE_MEMORIES
 
         #ifndef OPTION_SAVE_MEMORY_NANOKEYER
-        case PS2_INSERT :   // send serial number and increment
-          put_serial_number_in_send_buffer();
-          serial_number++;
-          break;
+          case PS2_INSERT :   // send serial number and increment
+            put_serial_number_in_send_buffer();
+            serial_number++;
+            break;
 
-        case PS2_END :      // send serial number no increment
-          put_serial_number_in_send_buffer();
-          break;
+          case PS2_END :      // send serial number no increment
+            put_serial_number_in_send_buffer();
+            break;
 
-        case PS2_BACKSPACE_SHIFT :    // decrement serial number
-          serial_number--;
-          #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Serial: " + String(serial_number), 0, default_display_msg_delay);
-          #endif          
-          break;
-        
+          case PS2_BACKSPACE_SHIFT :    // decrement serial number
+            serial_number--;
+            #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Serial: " + String(serial_number), 0, default_display_msg_delay);
+            #endif          
+            break;
+          
         #endif //OPTION_SAVE_MEMORY_NANOKEYER
 
         case PS2_LEFT_ALT :
           #ifdef DEBUG_PS2_KEYBOARD
-          debug_serial_port->println("PS2_LEFT_ALT\n");
+            debug_serial_port->println("PS2_LEFT_ALT\n");
           #endif
           break;
 
@@ -2356,7 +2363,7 @@ void check_ps2_keyboard()
         case PS2_A_CTRL :
           configuration.keyer_mode = IAMBIC_A;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
+            lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
           #endif
 
           config_dirty = 1;
@@ -2365,7 +2372,7 @@ void check_ps2_keyboard()
         case PS2_B_CTRL :
           configuration.keyer_mode = IAMBIC_B;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
+            lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
           #endif          
           config_dirty = 1;
           break;
@@ -2373,96 +2380,96 @@ void check_ps2_keyboard()
         case PS2_D_CTRL :
           configuration.keyer_mode = ULTIMATIC;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
+            lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
           #endif        
           config_dirty = 1;
           break;
 
         #ifndef OPTION_SAVE_MEMORY_NANOKEYER
-        case PS2_E_CTRL :
-          #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Enter Serial #", 0, default_display_msg_delay);
-          #else        
-          boop_beep();
-          #endif
-          work_int = ps2_keyboard_get_number_input(4,0,10000);
-          if (work_int > 0) {
-            serial_number = work_int;
+          case PS2_E_CTRL :
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
-            #else             
-            beep();
+              lcd_center_print_timed("Enter Serial #", 0, default_display_msg_delay);
+            #else        
+              boop_beep();
             #endif
-          }
-          break;
+            work_int = ps2_keyboard_get_number_input(4,0,10000);
+            if (work_int > 0) {
+              serial_number = work_int;
+              #ifdef FEATURE_DISPLAY
+                lcd_status = LCD_REVERT;
+              #else             
+                beep();
+              #endif
+            }
+            break;
         #endif //OPTION_SAVE_MEMORY_NANOKEYER
 
         case PS2_G_CTRL :
           configuration.keyer_mode = BUG;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Bug", 0, default_display_msg_delay);
+            lcd_center_print_timed("Bug", 0, default_display_msg_delay);
           #endif
           config_dirty = 1;
           break;
 
         #ifdef FEATURE_HELL
-        case PS2_H_CTRL :       
-          if (char_send_mode == CW) {
-            char_send_mode = HELL;
-            beep();
-          } else {
-            char_send_mode = CW;
-            beep();
-          }
-          break;
+          case PS2_H_CTRL :       
+            if (char_send_mode == CW) {
+              char_send_mode = HELL;
+              beep();
+            } else {
+              char_send_mode = CW;
+              beep();
+            }
+            break;
         #endif //FEATURE_HELL
 
         case PS2_I_CTRL :
           if (key_tx) {
             key_tx = 0;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
             #endif
             
           } else {
             key_tx = 1;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("TX On", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX On", 0, default_display_msg_delay);
             #endif      
           }
           break;
 
         #ifdef FEATURE_FARNSWORTH
-        case PS2_M_CTRL:         
-          #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Farnsworth WPM", 0, default_display_msg_delay);
-          #else          
-          boop_beep();
-          #endif
-          work_int = ps2_keyboard_get_number_input(3,-1,1000);
-          if (work_int > -1) {
-            configuration.wpm_farnsworth = work_int;
+          case PS2_M_CTRL:         
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
-            #else
-            beep();
+              lcd_center_print_timed("Farnsworth WPM", 0, default_display_msg_delay);
+            #else          
+              boop_beep();
             #endif
-            config_dirty = 1;
-          }
-          
-          break;
+            work_int = ps2_keyboard_get_number_input(3,-1,1000);
+            if (work_int > -1) {
+              configuration.wpm_farnsworth = work_int;
+              #ifdef FEATURE_DISPLAY
+                lcd_status = LCD_REVERT;
+              #else
+                beep();
+              #endif
+              config_dirty = 1;
+            }
+            
+            break;
           #endif //FEATURE_FARNSWORTH
 
         case PS2_N_CTRL :
           if (configuration.paddle_mode == PADDLE_NORMAL) {
             configuration.paddle_mode = PADDLE_REVERSE;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
+              lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
             #endif
           } else {
             configuration.paddle_mode = PADDLE_NORMAL;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
+              lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
             #endif      
           }
           config_dirty = 1;
@@ -2472,11 +2479,11 @@ void check_ps2_keyboard()
           if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
             configuration.sidetone_mode = SIDETONE_OFF;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+              lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
             #endif      
           } else {
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+              lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
             #endif      
             configuration.sidetone_mode = SIDETONE_ON;
           }
@@ -2485,17 +2492,17 @@ void check_ps2_keyboard()
 
         case PS2_T_CTRL :
           #ifdef FEATURE_MEMORIES
-          repeat_memory = 255;
+            repeat_memory = 255;
           #endif
           if (keyboard_tune_on) {
             tx_and_sidetone_key(0,MANUAL_SENDING);
             keyboard_tune_on = 0;
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #endif // FEATURE_DISPLAY
           } else {
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Tune", 0, default_display_msg_delay);
+              lcd_center_print_timed("Tune", 0, default_display_msg_delay);
             #endif      
             tx_and_sidetone_key(1,MANUAL_SENDING);
             keyboard_tune_on = 1;
@@ -2507,11 +2514,11 @@ void check_ps2_keyboard()
             manual_ptt_invoke = 0;
             ptt_unkey();
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #endif // FEATURE_DISPLAY            
           } else {
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("PTT Invoke", 0, default_display_msg_delay);
+              lcd_center_print_timed("PTT Invoke", 0, default_display_msg_delay);
             #endif      
             manual_ptt_invoke = 1;
             ptt_key();
@@ -2520,17 +2527,17 @@ void check_ps2_keyboard()
 
         case PS2_W_CTRL :
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("WPM Adjust", 0, default_display_msg_delay);
+            lcd_center_print_timed("WPM Adjust", 0, default_display_msg_delay);
           #else
-          boop_beep();
+            boop_beep();
           #endif
           work_int = ps2_keyboard_get_number_input(3,0,1000);
           if (work_int > 0) {
             speed_set(work_int);
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #else
-            beep();
+              beep();
             #endif
             config_dirty = 1;
           }
@@ -2539,7 +2546,7 @@ void check_ps2_keyboard()
         case PS2_F1_CTRL :
           switch_to_tx_silent(1);
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("TX 1", 0, default_display_msg_delay);
+            lcd_center_print_timed("TX 1", 0, default_display_msg_delay);
           #endif          
           break;
 
@@ -2547,7 +2554,7 @@ void check_ps2_keyboard()
           if ((ptt_tx_2) || (tx_key_line_2)) {
             switch_to_tx_silent(2);          
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("TX 2", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX 2", 0, default_display_msg_delay);
             #endif                      
           }
           break;
@@ -3799,28 +3806,28 @@ void check_ptt_tail()
       //if ((millis() - ptt_time) > ptt_tail_time) {
       if (last_sending_type == MANUAL_SENDING) {
         #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
-          ptt_unkey();
-        }          
+          if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
+            ptt_unkey();
+          }          
         #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {       
-          ptt_unkey();
-        }
-        #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-        if ((millis() - ptt_time) >= ptt_tail_time[configuration.current_tx-1]) {       
-          ptt_unkey();
-        }
-        #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+          #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+            if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {       
+              ptt_unkey();
+            }
+          #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+          if ((millis() - ptt_time) >= ptt_tail_time[configuration.current_tx-1]) {       
+            ptt_unkey();
+          }
+          #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
         #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
       } else {
         if ((millis() - ptt_time) > ptt_tail_time[configuration.current_tx-1]) {
           #ifdef OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
-          if (!send_buffer_bytes){
-            ptt_unkey();
-          }
+            if (!send_buffer_bytes){
+              ptt_unkey();
+            }
           #else
-          ptt_unkey();
+            ptt_unkey();
           #endif //OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
         }
       }
@@ -6531,7 +6538,7 @@ void winkey_keying_compensation_command(byte incoming_serial_byte) {
 void winkey_first_extension_command(byte incoming_serial_byte) {
 
   first_extension_time = incoming_serial_byte;
-  #ifdef DEBUG_WINKEY_PROTOCOL
+  #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
   send_char('X',KEYER_NORMAL);
   #endif
 }
@@ -6564,10 +6571,14 @@ void winkey_weighting_command(byte incoming_serial_byte) {
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
-  ptt_lead_time[configuration.current_tx-1] = (incoming_serial_byte*10);
-  #ifdef DEBUG_WINKEY_PROTOCOL
-  send_char('P',KEYER_NORMAL);
-  send_char('1',KEYER_NORMAL);
+  #if !defined(DEBUG_WINKEY_DISABLE_LEAD_IN_TIME_SETTING)
+    ptt_lead_time[configuration.current_tx-1] = (incoming_serial_byte*10);
+  #else
+    ptt_lead_time[configuration.current_tx-1] = 0;
+  #endif
+  #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
+    send_char('P',KEYER_NORMAL);
+    send_char('1',KEYER_NORMAL);
   #endif
 }
 #endif //FEATURE_WINKEY_EMULATION
@@ -6576,7 +6587,7 @@ void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
 void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
 
   ptt_tail_time[configuration.current_tx-1] = (incoming_serial_byte*10);
-  #ifdef DEBUG_WINKEY_PROTOCOL
+  #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
   send_char('P',KEYER_NORMAL);
   send_char('2',KEYER_NORMAL);
   #endif
@@ -6628,7 +6639,7 @@ void winkey_setmode_command(byte incoming_serial_byte) {
   config_dirty = 1;
   #endif
   if (incoming_serial_byte & 4) {  //serial echo enable
-    #ifdef DEBUG_WINKEY_PROTOCOL
+    #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
     send_char('S',KEYER_NORMAL);
     #endif
     winkey_serial_echo = 1;
@@ -6642,22 +6653,22 @@ void winkey_setmode_command(byte incoming_serial_byte) {
   }
   switch (incoming_serial_byte & 48) {
     case 0: configuration.keyer_mode = IAMBIC_B;
-      #ifdef DEBUG_WINKEY_PROTOCOL
+      #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
       send_char('B',KEYER_NORMAL);
       #endif
       break;
     case 16: configuration.keyer_mode = IAMBIC_A;
-      #ifdef DEBUG_WINKEY_PROTOCOL
+      #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
       send_char('A',KEYER_NORMAL);
       #endif
       break;
     case 32: configuration.keyer_mode = ULTIMATIC;
-      #ifdef DEBUG_WINKEY_PROTOCOL
+      #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
       send_char('U',KEYER_NORMAL);
       #endif
       break;
     case 48: configuration.keyer_mode = BUG;
-      #ifdef DEBUG_WINKEY_PROTOCOL
+      #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
       send_char('G',KEYER_NORMAL);
       #endif
       break;
@@ -6672,7 +6683,7 @@ void winkey_setmode_command(byte incoming_serial_byte) {
   #ifdef FEATURE_AUTOSPACE
   if ((incoming_serial_byte & 2) == 2) {  //xxxxxx1x = autospace
      configuration.autospace_active = 1;
-     #ifdef DEBUG_WINKEY_PROTOCOL
+     #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
      send_char('T',KEYER_NORMAL);
      #endif
   } else {
@@ -7261,6 +7272,7 @@ void service_winkey(byte action) {
       debug_serial_port->print(incoming_serial_byte);
       debug_serial_port->print("]");
       debug_serial_port->print(" [0x");
+      if (incoming_serial_byte < 16){debug_serial_port->print("0");}
       debug_serial_port->print(incoming_serial_byte,HEX);
       debug_serial_port->println("]");      
     #endif //DEBUG_WINKEY
@@ -7956,7 +7968,7 @@ void service_winkey(byte action) {
           debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND WINKEY_FIRST_EXTENSION_COMMAND byte");
         #endif //DEBUG_WINKEY              
         first_extension_time = incoming_serial_byte;
-        #ifdef DEBUG_WINKEY_PROTOCOL
+        #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
           send_char('X',KEYER_NORMAL);
         #endif
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
@@ -11012,12 +11024,18 @@ int memory_end(byte memory_number) {
 
 void initialize_pins() {
   
-  //#ifndef FEATURE_CAPACITIVE_PADDLE_PINS
+
   pinMode (paddle_left, INPUT);
   digitalWrite (paddle_left, HIGH);
   pinMode (paddle_right, INPUT);
   digitalWrite (paddle_right, HIGH);
-  //#endif //#ifdef FEATURE_CAPACITIVE_PADDLE_PINS
+
+  #if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
+    if (capactive_paddle_pin_inhibit_pin){
+      pinMode (capactive_paddle_pin_inhibit_pin, INPUT);
+      digitalWrite (capactive_paddle_pin_inhibit_pin, LOW);    
+    }
+  #endif //FEATURE_CAPACITIVE_PADDLE_PINS
   
   if (tx_key_line_1) {
     pinMode (tx_key_line_1, OUTPUT);
@@ -12828,11 +12846,19 @@ int paddle_pin_read(int pin_to_read){
       return !digitalRead(pin_to_read);
     #endif
   #else
+      if (capactive_paddle_pin_inhibit_pin){ 
+        if (digitalRead(capactive_paddle_pin_inhibit_pin) == HIGH){
+          return digitalRead(pin_to_read);
+        }
+
+      }
+
       if (read_capacitive_pin(pin_to_read) > capacitance_threshold) {
         return LOW;
       } else {
         return HIGH;
       }
+      
   #endif //FEATURE_CAPACITIVE_PADDLE_PINS  
 
 }
