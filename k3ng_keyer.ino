@@ -452,6 +452,9 @@ New fetures in this stable release:
       Added dependency check for FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
       More Winkey emulation debugging; working on strange issues with UcxLog interoperability.  UcxLog working with normal 1200 baud mode today.  Hmmm.
 
+    2.2.2016080101
+      Troubleshooting some UCXLog Winkey weirdness some users are experiencing.  Created OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -459,7 +462,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016072301"
+#define CODE_VERSION "2.2.2016080101"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -875,7 +878,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   #ifdef OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
     PS2Keyboard keyboard;
   #else //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
-  K3NG_PS2Keyboard keyboard;
+    K3NG_PS2Keyboard keyboard;
   #endif //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
 #endif
 
@@ -6242,7 +6245,9 @@ void service_send_buffer(byte no_print)
           #endif
           #ifdef FEATURE_WINKEY_EMULATION
             if (winkey_sending && winkey_host_open) {
-              winkey_port_write(0xc0|winkey_sending|winkey_xoff);
+              #if !defined(OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE)
+                winkey_port_write(0xc0|winkey_sending|winkey_xoff);
+              #endif
               winkey_interrupted = 1;
              }
           #endif
@@ -6418,10 +6423,10 @@ void service_send_buffer(byte no_print)
       repeat_memory = 255;
     #endif
     #ifdef FEATURE_WINKEY_EMULATION
-    if (winkey_sending && winkey_host_open) {
-      winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
-      winkey_interrupted = 1;
-    }
+      if (winkey_sending && winkey_host_open) {
+        winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+        winkey_interrupted = 1;
+      }
     #endif
   }
 
@@ -7319,15 +7324,17 @@ void service_winkey(byte action) {
             debug_serial_port->println("service_winkey: status byte: starting to send...");
           #endif //DEBUG_WINKEY          
           winkey_sending=0x04;
-          winkey_port_write(0xc4|winkey_sending|winkey_xoff);  // tell the client we're starting to send
+          #if !defined(OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE)
+            winkey_port_write(0xc4|winkey_sending|winkey_xoff);  // tell the client we're starting to send
+          #endif //OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE
           #ifdef FEATURE_MEMORIES
-          repeat_memory = 255;
+            repeat_memory = 255;
           #endif
         }
       } else {
         
         #ifdef OPTION_WINKEY_STRICT_HOST_OPEN
-        if ((winkey_host_open) || (incoming_serial_byte == 0)) {
+          if ((winkey_host_open) || (incoming_serial_byte == 0)) {
         #endif
         
         switch (incoming_serial_byte) {
@@ -7659,7 +7666,7 @@ void service_winkey(byte action) {
           configuration.wpm = ((incoming_serial_byte*100)/5);
           winkey_last_unbuffered_speed_wpm = configuration.wpm;
           #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
-          config_dirty = 1;
+            config_dirty = 1;
           #endif
         }
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
