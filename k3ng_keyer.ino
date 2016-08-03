@@ -455,6 +455,9 @@ New fetures in this stable release:
     2.2.2016080101
       Troubleshooting some UCXLog Winkey weirdness some users are experiencing.  Created OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE
 
+    2.2.2016080301
+      Disabled echoing of 7C (half space character) byte in Winkey emulation
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -462,7 +465,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016080101"
+#define CODE_VERSION "2.2.2016080301"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -6342,7 +6345,11 @@ void service_send_buffer(byte no_print)
       } else {
         #ifdef FEATURE_WINKEY_EMULATION
           if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open) && (!no_print) && (!cw_send_echo_inhibit)){
-            winkey_port_write(send_buffer_array[0]);
+            #if defined(OPTION_WINKEY_ECHO_7C_BYTE)
+              winkey_port_write(send_buffer_array[0]);
+            #else
+              if (send_buffer_array[0]!= 0x7C){winkey_port_write(send_buffer_array[0]);}
+            #endif
             if (send_buffer_array[0] == 13) {
               winkey_port_write(10);  // if we got a carriage return, also send a line feed          
             }
