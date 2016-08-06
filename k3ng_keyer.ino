@@ -458,6 +458,11 @@ New fetures in this stable release:
     2.2.2016080301
       Disabled echoing of 7C (half space character) byte in Winkey emulation
 
+    2.2.2016080601
+      More messing around with UCXlog...
+      OPTION_WINKEY_DO_NOT_ECHO_7C_BYTE                    // Might need for UCXlog? (7C = half space character)
+      OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE 
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -465,7 +470,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016080301"
+#define CODE_VERSION "2.2.2016080601"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -6104,7 +6109,12 @@ void send_char(byte cw_char, byte omit_letterspace)
       case 226: send_the_dits_and_dahs("------");break;// 'ß' LA3ZA
       #endif //OPTION_NON_ENGLISH_EXTENSIONS   
       
-      case '|': loop_element_lengths(0.5,0,configuration.wpm,AUTOMATIC_SENDING); return; break;
+      case '|': 
+        #if !defined(OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE)
+          loop_element_lengths(0.5,0,configuration.wpm,AUTOMATIC_SENDING); 
+        #endif
+        return; 
+        break;
 
       #if defined(OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION)
         case '?': send_the_dits_and_dahs("..--..");break;
@@ -6345,7 +6355,7 @@ void service_send_buffer(byte no_print)
       } else {
         #ifdef FEATURE_WINKEY_EMULATION
           if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open) && (!no_print) && (!cw_send_echo_inhibit)){
-            #if defined(OPTION_WINKEY_ECHO_7C_BYTE)
+            #if !defined(OPTION_WINKEY_DO_NOT_ECHO_7C_BYTE)
               winkey_port_write(send_buffer_array[0]);
             #else
               if (send_buffer_array[0]!= 0x7C){winkey_port_write(send_buffer_array[0]);}
