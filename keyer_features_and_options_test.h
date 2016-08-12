@@ -9,7 +9,7 @@
 
 
 #define FEATURE_COMMAND_BUTTONS
-// #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
+#define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
 #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
 #define FEATURE_MEMORY_MACROS
 #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
@@ -73,8 +73,8 @@
 // #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET  // activate this when using Winkey 2 emulation and Win-Test
 // #define OPTION_WINKEY_FREQUENT_STATUS_REPORT         // activate this to make Winkey emulation play better with RUMlog and RUMped
 #define OPTION_WINKEY_IGNORE_LOWERCASE               // Enable for typical K1EL Winkeyer behavior (use for SkookumLogger version 1.10.14 and prior to workaround "r" bug)
-#define OPTION_WINKEY_DO_NOT_ECHO_7C_BYTE                    // Might need for UCXlog? (7C = half space character)
-#define OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE         // Might need for UCXlog? 
+// #define OPTION_WINKEY_ECHO_7C_BYTE                    // For debugging purposes only (only in this test feature and options file) (7C = half space character)
+// #define OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE         // For debugging purposes only (only in this test feature and options file)
 // #define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
 #define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode
 #define OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT         // this makes dit paddle memory interruption a little smoother

@@ -463,6 +463,10 @@ New fetures in this stable release:
       OPTION_WINKEY_DO_NOT_ECHO_7C_BYTE                    // Might need for UCXlog? (7C = half space character)
       OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE 
 
+    2.2.2016081201
+      OPTION_WINKEY_DO_NOT_ECHO_7C_BYTE is changed to OPTION_WINKEY_ECHO_7C_BYTE and only in the test feature and options file for testing/debugging purposes
+      OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE - not placing this into production.  this was to troubleshoot issues with UCXLog 
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -470,7 +474,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016080601"
+#define CODE_VERSION "2.2.2016081201"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -6355,7 +6359,7 @@ void service_send_buffer(byte no_print)
       } else {
         #ifdef FEATURE_WINKEY_EMULATION
           if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open) && (!no_print) && (!cw_send_echo_inhibit)){
-            #if !defined(OPTION_WINKEY_DO_NOT_ECHO_7C_BYTE)
+            #if defined(OPTION_WINKEY_ECHO_7C_BYTE)
               winkey_port_write(send_buffer_array[0]);
             #else
               if (send_buffer_array[0]!= 0x7C){winkey_port_write(send_buffer_array[0]);}
