@@ -467,6 +467,9 @@ New fetures in this stable release:
       OPTION_WINKEY_DO_NOT_ECHO_7C_BYTE is changed to OPTION_WINKEY_ECHO_7C_BYTE and only in the test feature and options file for testing/debugging purposes
       OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE - not placing this into production.  this was to troubleshoot issues with UCXLog 
 
+    2.2.2016081601
+      Updated paddle echo to work with bug mode 
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -474,7 +477,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016081201"
+#define CODE_VERSION "2.2.2016081601"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -4037,12 +4040,6 @@ void check_dah_paddle()
     #if defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
       if (!winkey_interrupted && winkey_host_open && !winkey_breakin_status_byte_inhibit){
         send_winkey_breakin_byte_flag = 1;
-        // winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
-        // winkey_interrupted = 1;
-
-        // tone(sidetone_line,1000);
-        // delay(500);
-        // noTone(sidetone_line);
         dah_buffer = 0;
       }   
     #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION) 
@@ -4211,7 +4208,7 @@ void send_dah(byte sending_type)
       winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
 
       #ifdef FEATURE_AUTOSPACE
-      if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
+        if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
       #endif //FEATURE_AUTOSPACE
 
     }
@@ -4223,7 +4220,7 @@ void send_dah(byte sending_type)
       paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
 
       #ifdef FEATURE_AUTOSPACE
-      if (autospace_end_of_character_flag){paddle_echo_buffer_decode_time = 0;}
+        if (autospace_end_of_character_flag){paddle_echo_buffer_decode_time = 0;}
       #endif //FEATURE_AUTOSPACE    
     }
   #endif //FEATURE_PADDLE_ECHO 
@@ -4231,12 +4228,6 @@ void send_dah(byte sending_type)
   #ifdef FEATURE_AUTOSPACE
     autospace_end_of_character_flag = 0;
   #endif //FEATURE_AUTOSPACE  
-
-//  if ((keyer_mode == IAMBIC_A) && (iambic_flag)) {
-//    iambic_flag = 0;
-//    //dit_buffer = 0;
-//    dah_buffer = 0;
-//  }
 
   check_paddles();
 
@@ -5841,6 +5832,14 @@ void service_dit_dah_buffers()
   #ifdef DEBUG_LOOP
     debug_serial_port->println(F("loop: entering service_dit_dah_buffers"));
   #endif      
+
+
+  static byte bug_dah_flag = 0;
+
+  #ifdef FEATURE_PADDLE_ECHO
+    static unsigned long bug_dah_key_down_time = 0;
+  #endif //FEATURE_PADDLE_ECHO
+
       
   if ((configuration.keyer_mode == IAMBIC_A) || (configuration.keyer_mode == IAMBIC_B) || (configuration.keyer_mode == ULTIMATIC)) {
     if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left)) && (paddle_pin_read(paddle_right))) {
@@ -5863,11 +5862,37 @@ void service_dit_dah_buffers()
         dit_buffer = 0;
         send_dit(MANUAL_SENDING);
       }
+
+//zzzzzzzz
       if (dah_buffer) {
         dah_buffer = 0;
-        tx_and_sidetone_key(1,MANUAL_SENDING);
+        if (!bug_dah_flag) {
+          tx_and_sidetone_key(1,MANUAL_SENDING);
+          bug_dah_flag = 1; 
+          #ifdef FEATURE_PADDLE_ECHO
+            bug_dah_key_down_time = millis();
+          #endif //FEATURE_PADDLE_ECHO
+        }   
+
+        #ifdef FEATURE_PADDLE_ECHO
+          paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*3000.0)/configuration.wpm)*length_letterspace);
+        #endif //FEATURE_PADDLE_ECHO 
+
       } else {
-        tx_and_sidetone_key(0,MANUAL_SENDING);
+        if (bug_dah_flag){
+          tx_and_sidetone_key(0,MANUAL_SENDING);
+          #ifdef FEATURE_PADDLE_ECHO
+            if ((millis() - bug_dah_key_down_time) > (0.5 * (1200.0/configuration.wpm))){
+              if ((millis() - bug_dah_key_down_time) > (2 * (1200.0/configuration.wpm))){
+                paddle_echo_buffer = (paddle_echo_buffer * 10) + 2;
+              } else {
+                paddle_echo_buffer = (paddle_echo_buffer * 10) + 1;
+              }
+              paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*3000.0)/configuration.wpm)*length_letterspace);
+            }
+          #endif //FEATURE_PADDLE_ECHO            
+          bug_dah_flag = 0;
+        }
       }
       #ifdef FEATURE_DEAD_OP_WATCHDOG
         dah_counter = 0;
