@@ -10,7 +10,7 @@
   #define FEATURE_SERIAL
 #endif
 
-#if defined(HARDWARE_ARDUINO_DUE) && !defined(FEATURE_EEPROM_E24C1024) && defined(FEATURE_MEMORIES)
+#if defined(ARDUINO_SAM_DUE) && !defined(FEATURE_EEPROM_E24C1024) && defined(FEATURE_MEMORIES)
   #error "In order to use FEATURE_MEMORIES with HARDWARE_ARDUINO_DUE you need FEATURE_EEPROM_E24C1024"
 #endif
 
