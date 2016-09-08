@@ -470,6 +470,9 @@ New fetures in this stable release:
     2.2.2016081601
       Updated paddle echo to work with bug mode 
 
+    2.2.2016090701
+      More efficient code suggestion from Paul, K1XM, implemented in loop_element_lengths()
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -477,7 +480,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016081601"
+#define CODE_VERSION "2.2.2016090701"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -4426,9 +4429,13 @@ void tx_and_sidetone_key (int state, byte sending_type)
       unsigned long starttime = millis();
     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
-    unsigned long endtime = millis() + long(element_length*lengths) + long(additional_time_ms);
-    while ((millis() < endtime) && (millis() > 200)) {  // the second condition is to account for millis() rollover
+    // unsigned long endtime = millis() + long(element_length*lengths) + long(additional_time_ms);
+    // while ((millis() < endtime) && (millis() > 200)) {  // the second condition is to account for millis() rollover
 
+
+    unsigned long ticks = long(element_length*lengths) + long(additional_time_ms); // improvement from Paul, K1XM
+    unsigned long start = millis();
+    while ((millis() - start) < ticks) {
 
       #if defined(FEATURE_INTERNET_LINK) /*&& !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)*/
         if ((millis() > 1000)  && ((endtime - millis()) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
