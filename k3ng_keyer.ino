@@ -473,6 +473,9 @@ New fetures in this stable release:
     2.2.2016090701
       More efficient code suggestion from Paul, K1XM, implemented in loop_element_lengths()
 
+    2.2.2016090801
+      Removed legacy option: OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -480,7 +483,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016090701"
+#define CODE_VERSION "2.2.2016090801"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -558,11 +561,7 @@ New fetures in this stable release:
 #endif 
 
 #if defined(FEATURE_PS2_KEYBOARD)
-  #ifdef OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
-    #include <PS2Keyboard.h>
-  #else //OPTION_USE_ORIGINAL_VERSION_2_1_PS2KEYBOARD_LIB
-    #include <K3NG_PS2Keyboard.h>
-  #endif
+  #include <K3NG_PS2Keyboard.h>
 #endif
 
 #if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH)
