@@ -9,10 +9,10 @@
 
 
 #define FEATURE_COMMAND_BUTTONS
-#define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
+// #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
 #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
 #define FEATURE_MEMORY_MACROS
-// #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
+#define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
 // #define FEATURE_BEACON
 // #define FEATURE_CALLSIGN_RECEIVE_PRACTICE
 #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
@@ -53,7 +53,7 @@
 
 
 
-#define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
+// #define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
 #define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 
                                                              //    simultaneously.  This will make Winkey emulation be the default at boot up; 
                                                              //    hold command button down at boot up to activate CLI mode

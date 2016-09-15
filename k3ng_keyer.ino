@@ -479,6 +479,9 @@ New fetures in this stable release:
     2.2.2016090802
       Corrected error in FEATURE_ROTARY_ENCODER ttable (thanks, frye.dale)  
 
+    2.2.2016091401
+      More frequent PTT line tail time checking  
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -486,7 +489,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016090802"
+#define CODE_VERSION "2.2.2016091401"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -1125,7 +1128,7 @@ void loop()
     check_paddles();
     service_dit_dah_buffers();
 
-    #if defined(FEATURE_SERIAL)       
+    #if defined(FEATURE_SERIAL)      
       check_serial();
       check_paddles();            
       service_dit_dah_buffers();
@@ -3829,7 +3832,7 @@ void check_ptt_tail()
   #ifdef DEBUG_LOOP
   debug_serial_port->println(F("loop: entering check_ptt_tail"));
   #endif
-    
+
   if (key_state) {
     ptt_time = millis();
   } else {
@@ -3837,16 +3840,26 @@ void check_ptt_tail()
       //if ((millis() - ptt_time) > ptt_tail_time) {
       if (last_sending_type == MANUAL_SENDING) {
         #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+
+          // PTT Tail Time: N     PTT Hang Time: Y
+
           if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
             ptt_unkey();
           }          
         #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
           #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+
+            // PTT Tail Time: Y     PTT Hang Time: Y
+
             if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {       
               ptt_unkey();
             }
           #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-          if ((millis() - ptt_time) >= ptt_tail_time[configuration.current_tx-1]) {       
+          if ((millis() - ptt_time) >= ptt_tail_time[configuration.current_tx-1]) {  
+
+
+            // PTT Tail Time: Y    PTT Hang Time: N
+
             ptt_unkey();
           }
           #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
@@ -4407,6 +4420,8 @@ void tx_and_sidetone_key (int state, byte sending_type)
     link_key(state);
   #endif
 
+  check_ptt_tail();
+
 
 }
 
@@ -4446,6 +4461,8 @@ void tx_and_sidetone_key (int state, byte sending_type)
     unsigned long ticks = long(element_length*lengths) + long(additional_time_ms); // improvement from Paul, K1XM
     unsigned long start = millis();
     while ((millis() - start) < ticks) {
+
+      check_ptt_tail();
 
       #if defined(FEATURE_INTERNET_LINK) /*&& !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)*/
         if ((millis() > 1000)  && ((endtime - millis()) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
