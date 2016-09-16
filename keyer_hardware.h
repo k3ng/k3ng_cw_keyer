@@ -13,12 +13,15 @@
 // #define HARDWARE_NANOKEYER_REV_D   // https://nanokeyer.wordpress.com/nanokeyer-info/  files: keyer_pin_settings_nanokeyer_rev_d.h, keyer_features_and_options_nanokeyer_rev_d.h, keyer_settings_nanokeyer_rev_d.h  
 // #define HARDWARE_OPEN_INTERFACE   // http://remoteqth.com/open-interface.php   files: keyer_pin_settings_open_interface.h, keyer_features_and_options_open_interface.h, keyer_settings_open_interface.h
 // #define HARDWARE_TEST
+  
 
 // The models which can compile this sketch without error, has these pre-defined macros. Not tested.
 // ARDUINO_AVR_UNO
 // ARDUINO_SAM_DUE
 // ARDUINO_MAPLE_MINI // http://dan.drown.org/arduino/package_STM32duino_index.json
 // ARDUINO_AVR_PROMICRO // https://raw.githubusercontent.com/sparkfun/Arduino_Boards/master/IDE_Board_Manager/package_sparkfun_index.json
+
+// It is no longer necessary to uncomment HARDWARE_DUE to compile for the Arduino Due
 
 // do not touch anything below this line
 

@@ -482,6 +482,9 @@ New fetures in this stable release:
     2.2.2016091401
       More frequent PTT line tail time checking  
 
+    2.2.2016091601
+      Merge of toyo's pull request #22 - To compile for Sparkfun ProMicro and Maple mini - something is wrong.  it won't compile.  GitHub munged the code?
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -489,7 +492,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016091401"
+#define CODE_VERSION "2.2.2016091601"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
