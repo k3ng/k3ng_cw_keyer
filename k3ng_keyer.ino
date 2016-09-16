@@ -480,10 +480,10 @@ New fetures in this stable release:
       Corrected error in FEATURE_ROTARY_ENCODER ttable (thanks, frye.dale)  
 
     2.2.2016091401
-      More frequent PTT line tail time checking  
+      More frequent PTT line tail time checking 
 
-    2.2.2016091601
-      Merge of toyo's pull request #22 - To compile for Sparkfun ProMicro and Maple mini - something is wrong.  it won't compile.  GitHub munged the code?
+    2.2.2016091602
+      Reversing munged GitHub merge 
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -492,25 +492,22 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016091601"
+#define CODE_VERSION "2.2.2016091602"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
 #include "keyer_hardware.h"
 
-#if defined(ARDUINO_SAM_DUE)
+
+#ifndef HARDWARE_ARDUINO_DUE
+  #include <avr/pgmspace.h>
+  #include <avr/wdt.h>
+  #include <EEPROM.h>
+#else
   #include <SPI.h>
   #include <Wire.h>
   #define tone toneDUE
   #define noTone noToneDUE
-#elif defined(ARDUINO_MAPLE_MINI)
-  #include <SPI.h>
-  #include <Wire.h>
-  #include <EEPROM.h>
-#else
-  #include <avr/pgmspace.h>
-  #include <avr/wdt.h>
-  #include <EEPROM.h>
 #endif //HARDWARE_ARDUINO_DUE
 
 #ifdef HARDWARE_NANOKEYER_REV_B
@@ -609,12 +606,12 @@ New fetures in this stable release:
   #include <goertzel.h>
 #endif
 
-#if defined(FEATURE_ETHERNET)
+//#if defined(FEATURE_ETHERNET)
   #include <Ethernet.h>               // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
   #if defined(FEATURE_INTERNET_LINK)
     #include <EthernetUdp.h>
   #endif //FEATURE_INTERNET_LINK
-#endif //FEATURE_ETHERNET
+//#endif //FEATURE_ETHERNET
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
@@ -986,12 +983,13 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   BasicTerm term(&Serial);
 #endif
 
-PRIMARY_SERIAL_CLS * primary_serial_port;
+HardwareSerial * primary_serial_port;
 
 #if defined(FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT)
-  SECONDARY_SERIAL_CLS * secondary_serial_port;
+  HardwareSerial * secondary_serial_port;
 #endif
-PRIMARY_SERIAL_CLS * debug_serial_port;
+
+HardwareSerial * debug_serial_port;
 
 #ifdef FEATURE_PTT_INTERLOCK
   byte ptt_interlock_active = 0;
@@ -1710,7 +1708,7 @@ void initialize_cw_keyboard(){
 
 //-------------------------------------------------------------------------------------------------------
 
-#if defined(ARDUINO_SAM_DUE)
+#ifdef HARDWARE_ARDUINO_DUE
 
 /*
 
@@ -1790,92 +1788,8 @@ void TC3_Handler ( void ) {
   
 }
 
-#elif defined(ARDUINO_MAPLE_MINI)  //HARDWARE_ARDUINO_DUE
+#endif //HARDWARE_ARDUINO_DUE
 
-/*
-
-This code from http://www.stm32duino.com/viewtopic.php?t=496
-
-*/
-
-///////////////////////////////////////////////////////////////////////
-//
-// tone(pin,frequency[,duration]) generate a tone on a given pin
-//
-// noTone(pin)                    switch of the tone on the pin
-//
-///////////////////////////////////////////////////////////////////////
-
-//#include "Arduino.h"
-//#include <HardwareTimer.h>
-
-#ifndef TONE_TIMER
-#define TONE_TIMER 2
-#endif
-
-HardwareTimer tone_timer(TONE_TIMER);
-
-bool tone_state = true;             // last pin state for toggling
-short tone_pin = -1;                // pin for outputting sound
-short tone_freq = 444;              // tone frequency (0=pause)
-unsigned tone_micros = 500000/444;  // tone have wave time in usec
-int tone_counts = 0;                // tone duration in units of half waves
-
-// timer hander for tone with no duration specified, 
-// will keep going until noTone() is called
-void tone_handler_1(void) {
-    tone_state = !tone_state;
-    digitalWrite(tone_pin,tone_state);
-}
-
-// timer hander for tone with a specified duration,
-// will stop automatically when duration time is up.
-void tone_handler_2(void) {   // check duration
-    if(tone_freq>0){
-       tone_state = !tone_state;
-       digitalWrite(tone_pin,tone_state);
-    }
-    if(!--tone_counts){
-       tone_timer.pause();
-       pinMode(tone_pin, INPUT);
-    }
-}
-
-//  play a tone on given pin with given frequency and optional duration in msec
-void tone(uint8_t pin, unsigned short freq, unsigned duration = 0) {
-   tone_pin = pin;
-   tone_freq = freq;
-   tone_micros = 500000/(freq>0?freq:1000);
-   tone_counts = 0;
-
-   tone_timer.pause();
-
-   if(freq >= 0){
-      if(duration > 0)tone_counts = ((long)duration)*1000/tone_micros;
-      pinMode(tone_pin, OUTPUT);
-
-      // set timer to half period in microseconds
-      tone_timer.setPeriod(tone_micros);
-
-      // Set up an interrupt on channel 1
-      tone_timer.setChannel1Mode(TIMER_OUTPUT_COMPARE);
-      tone_timer.setCompare(TIMER_CH1, 1);  // Interrupt 1 count after each update
-      tone_timer.attachCompare1Interrupt(tone_counts?tone_handler_2:tone_handler_1);
-
-      // Refresh the tone timer
-      tone_timer.refresh();
-
-      // Start the timer counting
-      tone_timer.resume();
-   } else
-      pinMode(tone_pin, INPUT);
-}
-
-// disable tone on specified pin, if any
-void noTone(uint8_t pin){
-    tone(pin,-1);
-}
-#endif
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -3971,7 +3885,7 @@ void check_ptt_tail()
 //-------------------------------------------------------------------------------------------------------
 void write_settings_to_eeprom(int initialize_eeprom) {  
  
-  #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if !defined(HARDWARE_ARDUINO_DUE) || (defined(HARDWARE_ARDUINO_DUE) && defined(FEATURE_EEPROM_E24C1024))
   
   if (initialize_eeprom) {
     //configuration.magic_number = eeprom_magic_number;
@@ -4005,7 +3919,7 @@ int read_settings_from_eeprom() {
     return 1;
   #endif
   
-  #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if !defined(HARDWARE_ARDUINO_DUE) || (defined(HARDWARE_ARDUINO_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
     if (EEPROM.read(0) == eeprom_magic_number){
     
@@ -7975,7 +7889,7 @@ void service_winkey(byte action) {
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND 0x01");
             #endif //DEBUG_WINKEY          
-            #if defined(__AVR__)
+            #ifndef HARDWARE_ARDUINO_DUE
               asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {};*/ 
             #else //HARDWARE_ARDUINO_DUE
               setup();
@@ -8244,9 +8158,7 @@ void service_winkey(byte action) {
 
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
-void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use);
-
-void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
+void service_command_line_interface(HardwareSerial * port_to_use) {
  
   static byte cli_wait_for_cr_flag = 0; 
   
@@ -8297,8 +8209,6 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
   }
 }
 #endif //FEATURE_COMMAND_LINE_INTERFACE
-
-
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -8422,7 +8332,7 @@ void check_serial(){
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL_HELP) && defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use){
+void print_serial_help(HardwareSerial * port_to_use){
 
   port_to_use->println(F("\n\rK3NG Keyer Help\n\r"));
   port_to_use->println(F("CLI commands:"));
@@ -8528,33 +8438,14 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use){
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-
-void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
-  void serial_set_serial_number(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_status(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_set_dit_to_dah_ratio(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_set_weighting(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_tune_command(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_switch_tx(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_change_wordspace(PRIMARY_SERIAL_CLS * port_to_use);
-
-  #ifdef FEATURE_MEMORIES
-  void repeat_play_memory(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_set_memory_repeat(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use);
-  int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY_SERIAL_CLS * port_to_use);
-  void repeat_play_memory(PRIMARY_SERIAL_CLS * port_to_use);
-  void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use);
-  #endif
+void process_serial_command(HardwareSerial * port_to_use) {
   
   int user_input_temp = 0;
         
   //port_to_use->println();
   switch (incoming_serial_byte) {
     case 126:
-      #if defined(__AVR__)
+      #ifndef HARDWARE_ARDUINO_DUE 
         asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {} ;*/ 
       #else //HARDWARE_ARDUINO_DUE
         setup();
@@ -9068,8 +8959,8 @@ void service_paddle_echo()
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_MEMORIES)
-void serial_set_memory_repeat(PRIMARY_SERIAL_CLS * port_to_use) {
-  int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY_SERIAL_CLS * port_to_use);
+void serial_set_memory_repeat(HardwareSerial * port_to_use) {
+
   int temp_int = serial_get_number_input(5, -1, 32000, port_to_use);
   if (temp_int > -1) {
     configuration.memory_repeat_time = temp_int;
@@ -9081,8 +8972,8 @@ void serial_set_memory_repeat(PRIMARY_SERIAL_CLS * port_to_use) {
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_MEMORIES)
-void repeat_play_memory(PRIMARY_SERIAL_CLS * port_to_use) {
-  int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY_SERIAL_CLS * port_to_use);
+void repeat_play_memory(HardwareSerial * port_to_use) {
+
   byte memory_number = serial_get_number_input(2,0, (number_of_memories+1), port_to_use);
   #ifdef DEBUG_CHECK_SERIAL
     debug_serial_port->print(F("repeat_play_memory: memory_number:"));
@@ -9114,7 +9005,7 @@ void serial_play_memory(byte memory_number) {
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY_SERIAL_CLS * port_to_use)
+int serial_get_number_input(byte places,int lower_limit, int upper_limit,HardwareSerial * port_to_use)
 {
   byte incoming_serial_byte = 0;
   byte looping = 1;
@@ -9186,10 +9077,8 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_change_wordspace(PRIMARY_SERIAL_CLS * port_to_use)
+void serial_change_wordspace(HardwareSerial * port_to_use)
 {
-  int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY_SERIAL_CLS * port_to_use);
-
   int set_wordspace_to = serial_get_number_input(2,0,100,port_to_use);
   if (set_wordspace_to > 0) {
     config_dirty = 1;
@@ -9202,7 +9091,7 @@ void serial_change_wordspace(PRIMARY_SERIAL_CLS * port_to_use)
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_switch_tx(PRIMARY_SERIAL_CLS * port_to_use)
+void serial_switch_tx(HardwareSerial * port_to_use)
 {
   int set_tx_to = serial_get_number_input(1,0,7,port_to_use);
   if (set_tx_to > 0) {
@@ -9220,7 +9109,7 @@ void serial_switch_tx(PRIMARY_SERIAL_CLS * port_to_use)
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_set_dit_to_dah_ratio(PRIMARY_SERIAL_CLS * port_to_use)
+void serial_set_dit_to_dah_ratio(HardwareSerial * port_to_use)
 {
     int set_ratio_to = serial_get_number_input(4, 99, 1000, port_to_use);
     if ((set_ratio_to > 99) && (set_ratio_to < 1000)) {
@@ -9234,7 +9123,7 @@ void serial_set_dit_to_dah_ratio(PRIMARY_SERIAL_CLS * port_to_use)
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_set_serial_number(PRIMARY_SERIAL_CLS * port_to_use)
+void serial_set_serial_number(HardwareSerial * port_to_use)
 {
   int set_serial_number_to = serial_get_number_input(4,0,10000, port_to_use);
   if (set_serial_number_to > 0) {
@@ -9247,7 +9136,7 @@ void serial_set_serial_number(PRIMARY_SERIAL_CLS * port_to_use)
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use)
+void serial_set_sidetone_freq(HardwareSerial * port_to_use)
 {
   int set_sidetone_hz = serial_get_number_input(4,(SIDETONE_HZ_LOW_LIMIT-1),(SIDETONE_HZ_HIGH_LIMIT+1), port_to_use);
   if ((set_sidetone_hz > SIDETONE_HZ_LOW_LIMIT) && (set_sidetone_hz < SIDETONE_HZ_HIGH_LIMIT)) {
@@ -9262,7 +9151,7 @@ void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use)
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use)
+void serial_wpm_set(HardwareSerial * port_to_use)
 {
   int set_wpm = serial_get_number_input(3,0,1000, port_to_use);
   if (set_wpm > 0) {
@@ -9276,7 +9165,7 @@ void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use)
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_FARNSWORTH)
-void serial_set_farnsworth(PRIMARY_SERIAL_CLS * port_to_use)
+void serial_set_farnsworth(HardwareSerial * port_to_use)
 {
   int set_farnsworth_wpm = serial_get_number_input(3,-1,1000, port_to_use);
   if (set_farnsworth_wpm > 0) {
@@ -9290,7 +9179,7 @@ void serial_set_farnsworth(PRIMARY_SERIAL_CLS * port_to_use)
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_set_weighting(PRIMARY_SERIAL_CLS * port_to_use)
+void serial_set_weighting(HardwareSerial * port_to_use)
 {
   int set_weighting = serial_get_number_input(2,9,91,port_to_use);
   if (set_weighting > 0) {
@@ -9303,7 +9192,7 @@ void serial_set_weighting(PRIMARY_SERIAL_CLS * port_to_use)
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_tune_command (PRIMARY_SERIAL_CLS * port_to_use)
+void serial_tune_command (HardwareSerial * port_to_use)
 {
   byte incoming;
 
@@ -9376,7 +9265,7 @@ String generate_callsign() {
 #endif //FEATURE_CALLSIGN_RECEIVE_PRACTICE
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void paqso_practice(PRIMARY_SERIAL_CLS * port_to_use){
+void paqso_practice(HardwareSerial * port_to_use){
   
   // VT100 emulation in Linux: screen /dev/ttyACM1 115200 term vt100
   
@@ -9618,7 +9507,7 @@ void paqso_practice(PRIMARY_SERIAL_CLS * port_to_use){
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
+void serial_cw_practice(HardwareSerial * port_to_use){
   
 
   byte menu_loop = 1;
@@ -9671,7 +9560,7 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
+void us_callsign_practice(HardwareSerial * port_to_use)
 {
 
   byte loop1 = 1;
@@ -9769,7 +9658,7 @@ void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
+void serial_status(HardwareSerial * port_to_use) {
 
   port_to_use->println();
   switch (configuration.keyer_mode) {
@@ -9869,7 +9758,6 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   #endif //FEATURE_QLF
 
   #ifdef FEATURE_MEMORIES
-    void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use);
     serial_status_memories(port_to_use);
   #endif
 
@@ -10101,7 +9989,7 @@ void initialize_eeprom_memories()
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
+void serial_status_memories(HardwareSerial * port_to_use)
 {
   int last_memory_location;
 
@@ -10146,7 +10034,7 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
+void serial_program_memory(HardwareSerial * port_to_use)
 {
 
 
