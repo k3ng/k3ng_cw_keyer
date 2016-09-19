@@ -44,11 +44,13 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-// K3NG Version 2015101401  
+// K3NG Version 2016091601  
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
+#if !defined(ARDUINO_SAM_DUE)
+  #include <avr/io.h>
+  #include <avr/interrupt.h>
+  #include <avr/pgmspace.h>
+#endif
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h" // for attachInterrupt, FALLING
 #else
