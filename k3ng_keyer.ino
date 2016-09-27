@@ -93,6 +93,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     G  Switch to bug mode
     I  TX enable / disable
     J  Dah to dit ratio adjust
+    L  Adjust weighting
     N  Toggle paddle reverse
     O  Toggle sidetone on / off
     P#(#) Program a memory
@@ -489,6 +490,9 @@ New fetures in this stable release:
       Manual merge of toyo pull request #22  
       It is no longer necessary to specify HARDWARE_ARDUINO_DUE in keyer_hardware.h.  It is automatically detected now.
 
+    2.2.2016092701
+      Command Mode: command L - adjust weighting  
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -496,7 +500,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016091901"
+#define CODE_VERSION "2.2.2016092701"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -4937,7 +4941,7 @@ long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 //-------------------------------------------------------------------------------------------------------
 
 #ifdef FEATURE_COMMAND_BUTTONS
-void command_mode ()
+void command_mode()
 {
 
   keyer_machine_mode = KEYER_COMMAND_MODE;
@@ -5098,6 +5102,7 @@ void command_mode ()
           send_dit(AUTOMATIC_SENDING);
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
+        case 1211: command_weighting_adjust();break;
         #ifdef FEATURE_MEMORIES
           case 1221: command_program_memory(); break;                       // P - program a memory
         #endif //FEATURE_MEMORIES  Acknowledgement: LA3ZA fixed!
@@ -5284,10 +5289,10 @@ void adjust_dah_to_dit_ratio(int adjustment) {
  if ((configuration.dah_to_dit_ratio + adjustment) > 150 && (configuration.dah_to_dit_ratio + adjustment) < 810) {
    configuration.dah_to_dit_ratio = configuration.dah_to_dit_ratio + adjustment;
    #ifdef FEATURE_DISPLAY
-   #ifdef OPTION_MORE_DISPLAY_MSGS
-   lcd_center_print_timed("Dah/Dit: " + String(configuration.dah_to_dit_ratio), 0, default_display_msg_delay);
-   service_display();
-   #endif
+     #ifdef OPTION_MORE_DISPLAY_MSGS
+       lcd_center_print_timed("Dah/Dit: " + String(configuration.dah_to_dit_ratio), 0, default_display_msg_delay);
+       service_display();
+     #endif
    #endif   
  }
 
@@ -5297,12 +5302,12 @@ void adjust_dah_to_dit_ratio(int adjustment) {
 //-------------------------------------------------------------------------------------------------------
 
 #ifdef FEATURE_COMMAND_BUTTONS
-void command_dah_to_dit_ratio_adjust () {
+void command_dah_to_dit_ratio_adjust() {
 
   byte looping = 1;
 
   #ifdef FEATURE_DISPLAY
-  lcd_center_print_timed("Adj dah to dit", 0, default_display_msg_delay);          
+    lcd_center_print_timed("Adj dah to dit", 0, default_display_msg_delay);          
   #endif
 
   while (looping) {
@@ -5313,6 +5318,39 @@ void command_dah_to_dit_ratio_adjust () {
    }
    if (paddle_pin_read(paddle_right) == LOW) {
      adjust_dah_to_dit_ratio(-10);
+   }
+   while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+     looping = 0;
+   }
+   
+  }
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  dit_buffer = 0;
+  dah_buffer = 0;
+}
+#endif //FEATURE_COMMAND_BUTTONS
+
+//-------------------------------------------------------------------------------------------------------
+
+#ifdef FEATURE_COMMAND_BUTTONS
+void command_weighting_adjust() {
+
+  byte looping = 1;
+
+  #ifdef FEATURE_DISPLAY
+    lcd_center_print_timed("Adj weighting", 0, default_display_msg_delay);          
+  #endif
+
+  while (looping) {
+   send_dit(AUTOMATIC_SENDING);
+   send_dah(AUTOMATIC_SENDING);
+   if (paddle_pin_read(paddle_left) == LOW) {
+     configuration.weighting = configuration.weighting + 1;
+     if (configuration.weighting > 90){configuration.weighting = 90;}
+   }
+   if (paddle_pin_read(paddle_right) == LOW) {
+     configuration.weighting = configuration.weighting - 1;
+     if (configuration.weighting < 10){configuration.weighting = 10;}
    }
    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
      looping = 0;
