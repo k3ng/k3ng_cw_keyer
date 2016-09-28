@@ -499,6 +499,10 @@ New fetures in this stable release:
     2.2.2016092801
       Winkey Emulation - changed paddle interrupt behavior to send 0xC6,0xC0 rather than 0x64,0xC0
 
+    2.2.2016092802
+      Fixed issue with configuration in eeprom colliding with memory 0 (1) (Thanks, Ivan, IX1FJG)  
+
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -506,8 +510,8 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016092801"
-#define eeprom_magic_number 22
+#define CODE_VERSION "2.2.2016092802"
+#define eeprom_magic_number 23
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -641,10 +645,10 @@ New fetures in this stable release:
 
 
 // Variables and stuff
-struct config_t {
+struct config_t {  //47 bytes
   unsigned int wpm;
-  byte paddle_mode;
-  byte keyer_mode;
+  byte paddle_mode;  
+  byte keyer_mode;   
   byte sidetone_mode;
   unsigned int hz_sidetone;
   unsigned int dah_to_dit_ratio;
