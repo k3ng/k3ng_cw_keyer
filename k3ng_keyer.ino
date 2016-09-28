@@ -496,6 +496,9 @@ New fetures in this stable release:
     2.2.2016092702
       Winkey Emulation - changed paddle interrupt behavior to send 0xC2 and then 0xC0 rather than just 0xC0  
 
+    2.2.2016092801
+      Winkey Emulation - changed paddle interrupt behavior to send 0xC6,0xC0 rather than 0x64,0xC0
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -503,7 +506,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016092702"
+#define CODE_VERSION "2.2.2016092801"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -7436,8 +7439,9 @@ void service_winkey(byte action) {
         #endif //DEBUG_WINKEY         
         winkey_sending = 0;
         winkey_interrupted = 0;
-        winkey_port_write(0xc2|winkey_sending|winkey_xoff);  //<- this alone makes N1MM logger get borked (0xC2 = paddle interrupt)
-        winkey_port_write(0xc0|winkey_sending|winkey_xoff);    // so let's send a 0xC0 to keep N1MM logger happy weeeeee (wouldn't it be great if it was open source and someone could verify exactly how it's coded?)
+        //winkey_port_write(0xc2|winkey_sending|winkey_xoff);  
+        winkey_port_write(0xc6);    //<- this alone makes N1MM logger get borked (0xC2 = paddle interrupt)
+        winkey_port_write(0xc0);    // so let's send a 0xC0 to keep N1MM logger happy weeeeee (wouldn't it be great if it was open source and someone could verify exactly how it's coded?)
         winkey_buffer_counter = 0;
         winkey_buffer_pointer = 0;
       }
