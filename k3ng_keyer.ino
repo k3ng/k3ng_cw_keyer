@@ -493,6 +493,9 @@ New fetures in this stable release:
     2.2.2016092701
       Command Mode: command L - adjust weighting  
 
+    2.2.2016092702
+      Winkey Emulation - changed paddle interrupt behavior to send 0xC2 and then 0xC0 rather than just 0xC0  
+
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
@@ -500,7 +503,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016092701"
+#define CODE_VERSION "2.2.2016092702"
 #define eeprom_magic_number 22
 
 #include <stdio.h>
@@ -3748,16 +3751,16 @@ void put_memory_button_in_buffer(byte memory_number_to_put_in_buffer)
 
   if (memory_number_to_put_in_buffer < number_of_memories) {
     #ifdef DEBUG_MEMORIES
-    debug_serial_port->print(F("put_memory_button_in_buffer: memory_number_to_put_in_buffer:"));
-    debug_serial_port->println(memory_number_to_put_in_buffer,DEC);
+      debug_serial_port->print(F("put_memory_button_in_buffer: memory_number_to_put_in_buffer:"));
+      debug_serial_port->println(memory_number_to_put_in_buffer,DEC);
     #endif
     repeat_memory = 255;
     if ((millis() - last_memory_button_buffer_insert) > 400) {    // don't do another buffer insert if we just did one - button debounce
       #ifdef FEATURE_WINKEY_EMULATION
-      if (winkey_sending && winkey_host_open) {
-        winkey_port_write(0xc0|winkey_sending|winkey_xoff);
-        winkey_interrupted = 1;
-      }
+        if (winkey_sending && winkey_host_open) {
+          winkey_port_write(0xc0|winkey_sending|winkey_xoff);
+          winkey_interrupted = 1;
+        }
       #endif
 
       add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
@@ -7385,11 +7388,11 @@ void service_winkey(byte action) {
 
   /*
   
-  Why I wrote this emulation:
+  One reason I wrote this emulation:
   
   "The Winkey chip is $11.  We can't make the logging program a base for home brew projects. It's a contest logger."
   
-  -N1MM
+  -N1MM 6/12/2011
   
   */
   
@@ -7404,15 +7407,15 @@ void service_winkey(byte action) {
   #endif //OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND
   #ifdef OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP
     static byte winkey_discard_bytes_init_done = 0;  
-      if (!winkey_discard_bytes_init_done) {
-        if (primary_serial_port->available()) {
-          for (int z = winkey_discard_bytes_startup;z > 0;z--) {
-            while (primary_serial_port->available() == 0) {}
-            primary_serial_port->read();
-          }
-          winkey_discard_bytes_init_done = 1;
+    if (!winkey_discard_bytes_init_done) {
+      if (primary_serial_port->available()) {
+        for (int z = winkey_discard_bytes_startup;z > 0;z--) {
+          while (primary_serial_port->available() == 0) {}
+          primary_serial_port->read();
         }
+        winkey_discard_bytes_init_done = 1;
       }
+    }
   #endif //OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP
   
   #ifdef OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST
@@ -7429,12 +7432,12 @@ void service_winkey(byte action) {
     if (winkey_interrupted) {   // if Winkey sending was interrupted by the paddle, look at PTT line rather than timing out to send 0xc0
       if (ptt_line_activated == 0) {
         #ifdef DEBUG_WINKEY
-          debug_serial_port->println("service_winkey: sending unsolicited status byte due to paddle interrupt...");
+          debug_serial_port->println("\r\nservice_winkey: sending unsolicited status byte due to paddle interrupt...");
         #endif //DEBUG_WINKEY         
         winkey_sending = 0;
         winkey_interrupted = 0;
-        //winkey_port_write(0xc2|winkey_sending|winkey_xoff);  <- this makes N1MM get borked
-        winkey_port_write(0xc0|winkey_sending|winkey_xoff);    // tell the host we've sent everything
+        winkey_port_write(0xc2|winkey_sending|winkey_xoff);  //<- this alone makes N1MM logger get borked (0xC2 = paddle interrupt)
+        winkey_port_write(0xc0|winkey_sending|winkey_xoff);    // so let's send a 0xC0 to keep N1MM logger happy weeeeee (wouldn't it be great if it was open source and someone could verify exactly how it's coded?)
         winkey_buffer_counter = 0;
         winkey_buffer_pointer = 0;
       }
@@ -7446,7 +7449,7 @@ void service_winkey(byte action) {
         #endif
         //add_to_send_buffer(' ');    // this causes a 0x20 to get echoed back to host - doesn't seem to effect N1MM program
         #ifdef DEBUG_WINKEY
-          debug_serial_port->println("service_winkey: sending unsolicited status byte...");
+          debug_serial_port->println("\r\nservice_winkey: sending unsolicited status byte...");
         #endif //DEBUG_WINKEY           
         winkey_sending = 0;
         winkey_port_write(0xc0|winkey_sending|winkey_xoff);    // tell the host we've sent everything
@@ -7457,7 +7460,7 @@ void service_winkey(byte action) {
     // failsafe check - if we've been in some command status for awhile waiting for something, clear things out
     if ((winkey_status != WINKEY_NO_COMMAND_IN_PROGRESS) && ((millis() - winkey_last_activity) > winkey_command_timeout_ms)) {
       #ifdef DEBUG_WINKEY
-        debug_serial_port->println("service_winkey: command timeout! ->WINKEY_NO_COMMAND_IN_PROGRESS");
+        debug_serial_port->println("\r\nservice_winkey: command timeout! ->WINKEY_NO_COMMAND_IN_PROGRESS");
       #endif //DEBUG_WINKEY      
       winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       winkey_buffer_counter = 0;
@@ -7466,7 +7469,7 @@ void service_winkey(byte action) {
     }  
     if ((winkey_host_open) && (winkey_paddle_echo_buffer) && (winkey_paddle_echo_activated) && (millis() > winkey_paddle_echo_buffer_decode_time)) {
       #ifdef DEBUG_WINKEY
-        debug_serial_port->println("service_winkey: sending paddle echo char...");
+        debug_serial_port->println("\r\nservice_winkey: sending paddle echo char...");
       #endif //DEBUG_WINKEY       
       winkey_port_write(byte(convert_cw_number_to_ascii(winkey_paddle_echo_buffer)));
       winkey_paddle_echo_buffer = 0;
@@ -7475,7 +7478,7 @@ void service_winkey(byte action) {
     }
     if ((winkey_host_open) && (winkey_paddle_echo_buffer == 0) && (winkey_paddle_echo_activated) && (millis() > (winkey_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!winkey_paddle_echo_space_sent)) {
       #ifdef DEBUG_WINKEY
-        debug_serial_port->println("service_winkey: sending paddle echo space...");
+        debug_serial_port->println("\r\nservice_winkey: sending paddle echo space...");
       #endif //DEBUG_WINKEY        
       winkey_port_write(' ');
       winkey_paddle_echo_space_sent = 1;
