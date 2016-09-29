@@ -500,7 +500,10 @@ New fetures in this stable release:
       Winkey Emulation - changed paddle interrupt behavior to send 0xC6,0xC0 rather than 0x64,0xC0
 
     2.2.2016092802
-      Fixed issue with configuration in eeprom colliding with memory 0 (1) (Thanks, Ivan, IX1FJG)  
+      Fixed issue with configuration in eeprom colliding with memory 0 (1) (Thanks, Ivan, IX1FJG) 
+
+    2.2.2016092803
+      Winkey Emulation - changed paddle interrupt behavior to also clear send buffer 
 
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -510,7 +513,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016092802"
+#define CODE_VERSION "2.2.2016092803"
 #define eeprom_magic_number 23
 
 #include <stdio.h>
@@ -4567,10 +4570,6 @@ void tx_and_sidetone_key (int state, byte sending_type)
       unsigned long starttime = millis();
     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
-    // unsigned long endtime = millis() + long(element_length*lengths) + long(additional_time_ms);
-    // while ((millis() < endtime) && (millis() > 200)) {  // the second condition is to account for millis() rollover
-
-
     unsigned long ticks = long(element_length*lengths) + long(additional_time_ms); // improvement from Paul, K1XM
     unsigned long start = millis();
     while ((millis() - start) < ticks) {
@@ -4607,25 +4606,16 @@ void tx_and_sidetone_key (int state, byte sending_type)
         }    
      
         #ifndef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-            // if (being_sent == SENDING_DIT) {
-            //   check_dah_paddle();
-            // } else {
-            //   if (being_sent == SENDING_DAH) {
-            //     check_dit_paddle();
-            //   }
-            // }
-
-            if (being_sent == SENDING_DIT) {
-              check_dah_paddle();
+          if (being_sent == SENDING_DIT) {
+            check_dah_paddle();
+          } else {
+            if (being_sent == SENDING_DAH) {
+              check_dit_paddle();
             } else {
-              if (being_sent == SENDING_DAH) {
-                check_dit_paddle();
-              } else {
-                check_dah_paddle();
-                check_dit_paddle();                
-              }
-            }            
-
+              check_dah_paddle();
+              check_dit_paddle();                
+            }
+          }            
         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
           if ((float(float(millis()-starttime)/float(endtime-starttime))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
             if (being_sent == SENDING_DIT) {
@@ -4643,6 +4633,9 @@ void tx_and_sidetone_key (int state, byte sending_type)
           }
         #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
+      } else { //(configuration.keyer_mode != ULTIMATIC)
+        // check_dit_paddle();
+        // check_dah_paddle();
       }
       
       #if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
@@ -7402,7 +7395,6 @@ void service_winkey(byte action) {
   -N1MM 6/12/2011
   
   */
-  
    
   static byte winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
   static int winkey_parmcount = 0;
@@ -7440,14 +7432,22 @@ void service_winkey(byte action) {
       if (ptt_line_activated == 0) {
         #ifdef DEBUG_WINKEY
           debug_serial_port->println("\r\nservice_winkey: sending unsolicited status byte due to paddle interrupt...");
-        #endif //DEBUG_WINKEY         
+        #endif //DEBUG_WINKEY       
         winkey_sending = 0;
+        clear_send_buffer();
+
+        #ifdef FEATURE_MEMORIES
+        //clear_memory_button_buffer();
+        play_memory_prempt = 1;
+        repeat_memory = 255;
+        #endif          
+
         winkey_interrupted = 0;
         //winkey_port_write(0xc2|winkey_sending|winkey_xoff);  
         winkey_port_write(0xc6);    //<- this alone makes N1MM logger get borked (0xC2 = paddle interrupt)
         winkey_port_write(0xc0);    // so let's send a 0xC0 to keep N1MM logger happy weeeeee (wouldn't it be great if it was open source and someone could verify exactly how it's coded?)
         winkey_buffer_counter = 0;
-        winkey_buffer_pointer = 0;
+        winkey_buffer_pointer = 0;  
       }
     } else {
       //if ((winkey_host_open) && (winkey_sending) && (send_buffer_bytes < 1) && ((millis() - winkey_last_activity) > winkey_c0_wait_time)) {
@@ -9822,7 +9822,21 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
       break;
     case BUG: port_to_use->print(F("Bug")); break;
     case STRAIGHT: port_to_use->print(F("Straightkey")); break;
-    case ULTIMATIC: port_to_use->print(F("Ultimatic")); break;
+    case ULTIMATIC: 
+      port_to_use->print(F("Ultimatic ")); 
+      switch(ultimatic_mode){
+        // case ULTIMATIC_NORMAL:
+        //   port_to_use->print(F("Normal")); 
+        //   break;
+        case ULTIMATIC_DIT_PRIORITY:
+          port_to_use->print(F("Dit Priority")); 
+          break;
+        case ULTIMATIC_DAH_PRIORITY:
+          port_to_use->print(F("Dah Priority")); 
+          break;        
+      }
+
+    break; //zzzz
   }
   port_to_use->println();
   #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
@@ -13187,6 +13201,9 @@ void service_winkey_breakin(){
     winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
     winkey_interrupted = 1;
     send_winkey_breakin_byte_flag = 0;
+    #ifdef DEBUG_WINKEY
+      debug_serial_port->println("service_winkey_breakin: winkey_interrupted = 1");
+    #endif
   }   
    
 }
