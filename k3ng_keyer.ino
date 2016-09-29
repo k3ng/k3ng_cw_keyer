@@ -505,6 +505,9 @@ New fetures in this stable release:
     2.2.2016092803
       Winkey Emulation - changed paddle interrupt behavior to also clear send buffer 
 
+    2.2.2016092901
+      Improved opposite paddle dit/dah insertion in Ultimatic mode  
+
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -513,7 +516,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016092803"
+#define CODE_VERSION "2.2.2016092901"
 #define eeprom_magic_number 23
 
 #include <stdio.h>
@@ -4634,8 +4637,19 @@ void tx_and_sidetone_key (int state, byte sending_type)
         #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
       } else { //(configuration.keyer_mode != ULTIMATIC)
-        // check_dit_paddle();
-        // check_dah_paddle();
+
+
+          if (being_sent == SENDING_DIT) {
+            check_dah_paddle();
+          } else {
+            if (being_sent == SENDING_DAH) {
+              check_dit_paddle();
+            } else {
+              check_dah_paddle();
+              check_dit_paddle();                
+            }
+          }   
+
       }
       
       #if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
