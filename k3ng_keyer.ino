@@ -508,6 +508,10 @@ New fetures in this stable release:
     2.2.2016092901
       Improved opposite paddle dit/dah insertion in Ultimatic mode  
 
+    2.2.2016100601
+      Improved paddle break in for memory playing and Winkey interruption
+      Fixed various compile bugs that have crept into the code  
+
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -516,7 +520,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016092901"
+#define CODE_VERSION "2.2.2016100601"
 #define eeprom_magic_number 23
 
 #include <stdio.h>
@@ -680,7 +684,7 @@ struct config_t {  //47 bytes
   uint8_t link_receive_enabled;
 } configuration;
 
-
+byte sending_mode = UNDEFINED_SENDING;
 byte command_mode_disable_tx = 0;
 byte current_tx_key_line = tx_key_line_1;
 #ifdef OPTION_SAVE_MEMORY_NANOKEYER
@@ -713,7 +717,7 @@ byte keying_compensation = default_keying_compensation;
 byte first_extension_time = default_first_extension_time;
 byte ultimatic_mode = ULTIMATIC_NORMAL;
 float ptt_hang_time_wordspace_units = default_ptt_hang_time_wordspace_units;
-byte last_sending_type = MANUAL_SENDING;
+byte last_sending_mode = MANUAL_SENDING;
 byte zero = 0;
 byte iambic_flag = 0;
 unsigned long last_config_write = 0;
@@ -1318,7 +1322,8 @@ void loop()
 
     if (digitalRead(pin_straight_key) == STRAIGHT_KEY_ACTIVE_STATE){
       if (!last_straight_key_state){
-        tx_and_sidetone_key(1,MANUAL_SENDING);
+        sending_mode = MANUAL_SENDING;
+        tx_and_sidetone_key(1);
         last_straight_key_state = 1;
 
 
@@ -1330,7 +1335,8 @@ void loop()
       }
     } else {
       if (last_straight_key_state){
-        tx_and_sidetone_key(0,MANUAL_SENDING);
+        sending_mode = MANUAL_SENDING;
+        tx_and_sidetone_key(0);
         last_straight_key_state = 0;
       }
     }
@@ -2417,7 +2423,8 @@ void check_ps2_keyboard()
             ptt_unkey();
           }
           if (keyboard_tune_on) {
-            tx_and_sidetone_key(0,MANUAL_SENDING);
+            sending_mode = MANUAL_SENDING;
+            tx_and_sidetone_key(0);
             keyboard_tune_on = 0;
           }
           if (pause_sending_buffer) {
@@ -2648,7 +2655,8 @@ void check_ps2_keyboard()
             repeat_memory = 255;
           #endif
           if (keyboard_tune_on) {
-            tx_and_sidetone_key(0,MANUAL_SENDING);
+            sending_mode = MANUAL_SENDING;
+            tx_and_sidetone_key(0);
             keyboard_tune_on = 0;
             #ifdef FEATURE_DISPLAY
               lcd_status = LCD_REVERT;
@@ -2657,7 +2665,8 @@ void check_ps2_keyboard()
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("Tune", 0, default_display_msg_delay);
             #endif      
-            tx_and_sidetone_key(1,MANUAL_SENDING);
+            sending_mode = MANUAL_SENDING;
+            tx_and_sidetone_key(1);
             keyboard_tune_on = 1;
           }
           break;
@@ -2879,7 +2888,8 @@ void check_ps2_keyboard()
             ptt_unkey();
           }
           if (keyboard_tune_on) {
-            tx_and_sidetone_key(0,MANUAL_SENDING);
+            sending_mode = MANUAL_SENDING;
+            tx_and_sidetone_key(0);
             keyboard_tune_on = 0;
           }
           if (pause_sending_buffer) {
@@ -3100,7 +3110,8 @@ void check_ps2_keyboard()
           repeat_memory = 255;
           #endif
           if (keyboard_tune_on) {
-            tx_and_sidetone_key(0,MANUAL_SENDING);
+            sending_mode = MANUAL_SENDING;
+            tx_and_sidetone_key(0);
             keyboard_tune_on = 0;
             #ifdef FEATURE_DISPLAY
             lcd_status = LCD_REVERT;
@@ -3109,7 +3120,8 @@ void check_ps2_keyboard()
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Tune", 0, default_display_msg_delay);
             #endif      
-            tx_and_sidetone_key(1,MANUAL_SENDING);
+            sending_mode = MANUAL_SENDING;
+            tx_and_sidetone_key(1);
             keyboard_tune_on = 1;
           }
           break;
@@ -3515,7 +3527,7 @@ void debug_capture ()
         serial_byte_in = primary_serial_port->read();
         EEPROM.write(x,serial_byte_in);
         EEPROM.write(x-1,255);
-        send_dit(AUTOMATIC_SENDING);
+        send_dit();
         x--;
         primary_serial_port->write(serial_byte_in);
         //if ((serial_byte_in > 47) or (serial_byte_in = 20)) { primary_serial_port->write(serial_byte_in); }  // echo back
@@ -3747,10 +3759,11 @@ void transmit_hell_pixels (const char* hell_pixels, byte hellchar)
 #ifdef FEATURE_HELL
 void transmit_hell_pixel (byte hellbit)
 {
+  sending_mode = AUTOMATIC_SENDING;
   if (hellbit) {
-    tx_and_sidetone_key(1,AUTOMATIC_SENDING);
+    tx_and_sidetone_key(1);
   } else {
-    tx_and_sidetone_key(0,AUTOMATIC_SENDING);
+    tx_and_sidetone_key(0);
   }
   delayMicroseconds(hell_pixel_microseconds);
 }
@@ -3957,7 +3970,7 @@ void check_ptt_tail()
   } else {
     if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
       //if ((millis() - ptt_time) > ptt_tail_time) {
-      if (last_sending_type == MANUAL_SENDING) {
+      if (last_sending_mode == MANUAL_SENDING) {
         #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
 
           // PTT Tail Time: N     PTT Hang Time: Y
@@ -4097,7 +4110,8 @@ void check_dit_paddle()
   #ifdef OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT
     if (pin_value && memory_rpt_interrupt_flag) {
       memory_rpt_interrupt_flag = 0;
-      loop_element_lengths(3,0,configuration.wpm,MANUAL_SENDING);
+      sending_mode = MANUAL_SENDING;
+      loop_element_lengths(3,0,configuration.wpm);
       dit_buffer = 0;
     }
   #endif
@@ -4205,21 +4219,20 @@ void check_dah_paddle()
 
 //-------------------------------------------------------------------------------------------------------
 
-void send_dit(byte sending_type)
-{
+void send_dit(){
 
   // notes: key_compensation is a straight x mS lengthening or shortening of the key down time
   //        weighting is
 
   unsigned int character_wpm = configuration.wpm;
   #ifdef FEATURE_FARNSWORTH
-    if ((sending_type == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
+    if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
       character_wpm = configuration.wpm_farnsworth;
     }
   #endif //FEATURE_FARNSWORTH
 
   being_sent = SENDING_DIT;
-  tx_and_sidetone_key(1,sending_type);
+  tx_and_sidetone_key(1);
   #ifdef DEBUG_VARIABLE_DUMP
     dit_start_time = millis();
   #endif
@@ -4228,12 +4241,12 @@ void send_dit(byte sending_type)
 
   #ifdef FEATURE_QLF
     if (qlf_active){
-      loop_element_lengths((1.0*(float(configuration.weighting)/50)*(random(qlf_dit_min,qlf_dit_max)/100.0)),keying_compensation,character_wpm,sending_type);
+      loop_element_lengths((1.0*(float(configuration.weighting)/50)*(random(qlf_dit_min,qlf_dit_max)/100.0)),keying_compensation,character_wpm);
     } else {
-      loop_element_lengths((1.0*(float(configuration.weighting)/50)),keying_compensation,character_wpm,sending_type);
+      loop_element_lengths((1.0*(float(configuration.weighting)/50)),keying_compensation,character_wpm);
     }
   #else //FEATURE_QLF 
-    loop_element_lengths((1.0*(float(configuration.weighting)/50)),keying_compensation,character_wpm,sending_type);
+    loop_element_lengths((1.0*(float(configuration.weighting)/50)),keying_compensation,character_wpm);
   #endif //FEATURE_QLF
 
 
@@ -4242,26 +4255,26 @@ void send_dit(byte sending_type)
   #ifdef DEBUG_VARIABLE_DUMP
     dit_end_time = millis();
   #endif
-  tx_and_sidetone_key(0,sending_type);
+  tx_and_sidetone_key(0);
 
 
-  loop_element_lengths((2.0-(float(configuration.weighting)/50)),(-1.0*keying_compensation),character_wpm,sending_type);
+  loop_element_lengths((2.0-(float(configuration.weighting)/50)),(-1.0*keying_compensation),character_wpm);
 
   #ifdef FEATURE_AUTOSPACE
 
     byte autospace_end_of_character_flag = 0;
 
-    if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active)) {
+    if ((sending_mode == MANUAL_SENDING) && (configuration.autospace_active)) {
       check_paddles();
     }
-    if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active) && (dit_buffer == 0) && (dah_buffer == 0)) {
-      loop_element_lengths(2,0,configuration.wpm,sending_type);
+    if ((sending_mode == MANUAL_SENDING) && (configuration.autospace_active) && (dit_buffer == 0) && (dah_buffer == 0)) {
+      loop_element_lengths(2,0,configuration.wpm);
       autospace_end_of_character_flag = 1;
     }
   #endif
 
   #ifdef FEATURE_WINKEY_EMULATION
-    if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_type == MANUAL_SENDING)) {
+    if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_mode == MANUAL_SENDING)) {
       winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 1;
       winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
 
@@ -4273,7 +4286,7 @@ void send_dit(byte sending_type)
 
 
   #ifdef FEATURE_PADDLE_ECHO
-    if (sending_type == MANUAL_SENDING) {
+    if (sending_mode == MANUAL_SENDING) {
       paddle_echo_buffer = (paddle_echo_buffer * 10) + 1;
       paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
 
@@ -4288,7 +4301,7 @@ void send_dit(byte sending_type)
   #endif //FEATURE_AUTOSPACE
 
   being_sent = SENDING_NOTHING;
-  last_sending_type = sending_type;
+  last_sending_mode = sending_mode;
   
   check_paddles();
 
@@ -4296,19 +4309,18 @@ void send_dit(byte sending_type)
 
 //-------------------------------------------------------------------------------------------------------
 
-void send_dah(byte sending_type)
-{
+void send_dah(){
 
   unsigned int character_wpm = configuration.wpm;
 
   #ifdef FEATURE_FARNSWORTH
-    if ((sending_type == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
+    if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
       character_wpm = configuration.wpm_farnsworth;
     }
   #endif //FEATURE_FARNSWORTH
 
   being_sent = SENDING_DAH;
-  tx_and_sidetone_key(1,sending_type);
+  tx_and_sidetone_key(1);
   #ifdef DEBUG_VARIABLE_DUMP
     dah_start_time = millis();
   #endif
@@ -4316,12 +4328,12 @@ void send_dah(byte sending_type)
 
   #ifdef FEATURE_QLF
     if (qlf_active){
-      loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)*(random(qlf_dah_min,qlf_dah_max)/100.0)),keying_compensation,character_wpm,sending_type);
+      loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)*(random(qlf_dah_min,qlf_dah_max)/100.0)),keying_compensation,character_wpm);
     } else {
-      loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),keying_compensation,character_wpm,sending_type);
+      loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),keying_compensation,character_wpm);
     }
   #else //FEATURE_QLF 
-    loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),keying_compensation,character_wpm,sending_type);
+    loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),keying_compensation,character_wpm);
   #endif //FEATURE_QLF 
 
   if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_inactive_state);}
@@ -4330,25 +4342,25 @@ void send_dah(byte sending_type)
     dah_end_time = millis();
   #endif
 
-  tx_and_sidetone_key(0,sending_type);
+  tx_and_sidetone_key(0);
 
-  loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),character_wpm,sending_type);
+  loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),character_wpm);
 
   #ifdef FEATURE_AUTOSPACE
 
     byte autospace_end_of_character_flag = 0;
 
-    if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active)) {
+    if ((sending_mode == MANUAL_SENDING) && (configuration.autospace_active)) {
       check_paddles();
     }
-    if ((sending_type == MANUAL_SENDING) && (configuration.autospace_active) && (dit_buffer == 0) && (dah_buffer == 0)) {
-      loop_element_lengths(2,0,configuration.wpm,sending_type);
+    if ((sending_mode == MANUAL_SENDING) && (configuration.autospace_active) && (dit_buffer == 0) && (dah_buffer == 0)) {
+      loop_element_lengths(2,0,configuration.wpm);
       autospace_end_of_character_flag = 1;
     }
   #endif
 
   #ifdef FEATURE_WINKEY_EMULATION
-    if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_type == MANUAL_SENDING)) {
+    if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_mode == MANUAL_SENDING)) {
       winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 2;
       winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
 
@@ -4360,7 +4372,7 @@ void send_dah(byte sending_type)
   #endif
  
   #ifdef FEATURE_PADDLE_ECHO
-    if (sending_type == MANUAL_SENDING) {
+    if (sending_mode == MANUAL_SENDING) {
       paddle_echo_buffer = (paddle_echo_buffer * 10) + 2;
       paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
 
@@ -4377,13 +4389,13 @@ void send_dah(byte sending_type)
   check_paddles();
 
   being_sent = SENDING_NOTHING;
-  last_sending_type = sending_type;
+  last_sending_mode = sending_mode;
 
 }
 
 //-------------------------------------------------------------------------------------------------------
 
-void tx_and_sidetone_key (int state, byte sending_type)
+void tx_and_sidetone_key (int state)
 {
 
   #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
@@ -4470,8 +4482,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
           delay(first_extension_time);
         }
       }
-
-      if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+      if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_mode == MANUAL_SENDING))) {
         tone(sidetone_line, configuration.hz_sidetone);
       }
       key_state = 1;
@@ -4486,7 +4497,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
           #endif        
           ptt_key();
         }
-        if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+        if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_mode == MANUAL_SENDING))) {
           noTone(sidetone_line);
         }
         key_state = 0;
@@ -4509,7 +4520,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
           delay(first_extension_time);
         }
       }
-      if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+      if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_mode == MANUAL_SENDING))) {
         tone(sidetone_line, configuration.hz_sidetone);
       }
       key_state = 1;
@@ -4526,7 +4537,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
             ptt_key();
           }
         }
-        if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_type == MANUAL_SENDING))) {
+        if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_mode == MANUAL_SENDING))) {
           noTone(sidetone_line);
         }
         key_state = 0;
@@ -4549,7 +4560,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
 
 #ifndef FEATURE_HI_PRECISION_LOOP_TIMING
 
-  void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in, byte sending_type)
+  void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in)
   {
 
 
@@ -4580,7 +4591,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
       check_ptt_tail();
 
       #if defined(FEATURE_INTERNET_LINK) /*&& !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)*/
-        if ((millis() > 1000)  && ((endtime - millis()) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
+        if ((millis() > 1000)  && ((millis()-start) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
           service_udp_send_buffer();
           service_udp_receive();
           service_internet_link_udp_receive_buffer();
@@ -4620,7 +4631,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
             }
           }            
         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          if ((float(float(millis()-starttime)/float(endtime-starttime))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
+          if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
             if (being_sent == SENDING_DIT) {
               check_dah_paddle();
             } else {
@@ -4658,14 +4669,16 @@ void tx_and_sidetone_key (int state, byte sending_type)
 
       // blow out prematurely if we're automatic sending and a paddle gets hit
       #ifdef FEATURE_COMMAND_BUTTONS
-        if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
+        if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
           if (keyer_machine_mode == KEYER_NORMAL) {
+            sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
             return;
           }
         }   
       #else
-        if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
+        if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
           if (keyer_machine_mode == KEYER_NORMAL) {
+            sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
             return;
           }
         }   
@@ -4699,7 +4712,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
 
 #else //FEATURE_HI_PRECISION_LOOP_TIMING------------------------------------------------------------------
 
-  void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in, byte sending_type){
+  void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in) {
 
 
     
@@ -4741,24 +4754,17 @@ void tx_and_sidetone_key (int state, byte sending_type)
         }    
     
         #ifndef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          // if (being_sent == SENDING_DIT) {
-          //   check_dah_paddle();
-          // } else {
-          //   if (being_sent == SENDING_DAH) {
-          //     check_dit_paddle();
-          //   }
-          // }
 
-            if (being_sent == SENDING_DIT) {
-              check_dah_paddle();
+          if (being_sent == SENDING_DIT) {
+            check_dah_paddle();
+          } else {
+            if (being_sent == SENDING_DAH) {
+              check_dit_paddle();
             } else {
-              if (being_sent == SENDING_DAH) {
-                check_dit_paddle();
-              } else {
-                check_dah_paddle();
-                check_dit_paddle();                
-              }
-            }   
+              check_dah_paddle();
+              check_dit_paddle();                
+            }
+          }   
 
         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
           if ((float(float(micros()-starttime)/float(endtime-starttime))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
@@ -4777,6 +4783,20 @@ void tx_and_sidetone_key (int state, byte sending_type)
           }
         #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
+        } else { //(configuration.keyer_mode != ULTIMATIC)
+          if (being_sent == SENDING_DIT) {
+            check_dah_paddle();
+          } else {
+            if (being_sent == SENDING_DAH) {
+              check_dit_paddle();
+            } else {
+              check_dah_paddle();
+              check_dit_paddle();                
+            }
+          }   
+        }
+
+
         #ifdef FEATURE_STRAIGHT_KEY
           service_straight_key();
         #endif //FEATURE_STRAIGHT_KEY
@@ -4789,23 +4809,20 @@ void tx_and_sidetone_key (int state, byte sending_type)
 
       // blow out prematurely if we're automatic sending and a paddle gets hit
       #ifdef FEATURE_COMMAND_BUTTONS
-        if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
+        if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
           if (keyer_machine_mode == KEYER_NORMAL) {
-
-
-
+            sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
             return;
           }
-        }    
+        }   
       #else
-        if (sending_type == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
+        if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
           if (keyer_machine_mode == KEYER_NORMAL) {
-            
+            sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
             return;
           }
-        }  
+        }   
       #endif
-    }   
   
    
     if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
@@ -4820,7 +4837,7 @@ void tx_and_sidetone_key (int state, byte sending_type)
       if (configuration.dah_buffer_off) {dah_buffer = 0;}
     }  
     #endif //FEATURE_DIT_DAH_BUFFER_CONTROL
-   
+  
  
 
   } //void loop_element_lengths
@@ -4904,14 +4921,16 @@ long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
     check_paddles();
 
     if (dit_buffer) {
-      send_dit(MANUAL_SENDING);
+      sending_mode = MANUAL_SENDING;
+      send_dit();
       dit_buffer = 0;
       paddle_hit = 1;
       cw_char = (cw_char * 10) + 1;
       last_element_time = millis();
     }
     if (dah_buffer) {
-      send_dah(MANUAL_SENDING);
+      sending_mode = MANUAL_SENDING;
+      send_dah();
       dah_buffer = 0;
       paddle_hit = 1;
       cw_char = (cw_char * 10) + 2;
@@ -5016,14 +5035,16 @@ void command_mode()
       check_paddles();
 
       if (dit_buffer) {
-        send_dit(MANUAL_SENDING);
+        sending_mode = MANUAL_SENDING;
+        send_dit();
         dit_buffer = 0;
         paddle_hit = 1;
         cw_char = (cw_char * 10) + 1;
         last_element_time = millis();
       }
       if (dah_buffer) {
-        send_dah(MANUAL_SENDING);
+        sending_mode = MANUAL_SENDING;
+        send_dah();
         dah_buffer = 0;
         paddle_hit = 1;
         cw_char = (cw_char * 10) + 2;
@@ -5067,7 +5088,7 @@ void command_mode()
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
           #endif
-          send_dit(AUTOMATIC_SENDING);
+          send_dit();
           break; 
         case 2111: // B - Iambic mode
           configuration.keyer_mode = IAMBIC_B;
@@ -5076,7 +5097,7 @@ void command_mode()
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
           #endif          
-          send_dit(AUTOMATIC_SENDING);
+          send_dit();
           break;
         case 1: // E - announce spEed
           char c[4];
@@ -5092,7 +5113,7 @@ void command_mode()
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
           #endif                    
-          send_dit(AUTOMATIC_SENDING);
+          send_dit();
           break; 
         case 1121: command_sidetone_freq_adj(); break;                    // F - adjust sidetone frequency
         case 221: // G - switch to buG mode
@@ -5102,7 +5123,7 @@ void command_mode()
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Bug", 0, default_display_msg_delay);
           #endif          
-          send_dit(AUTOMATIC_SENDING);
+          send_dit();
           break;  
         case 11:                                                     // I - toggle TX enable / disable
           if (command_mode_disable_tx) {
@@ -5116,7 +5137,7 @@ void command_mode()
               lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
             #endif            
           }
-          send_dit(AUTOMATIC_SENDING);
+          send_dit();
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
         case 1211: command_weighting_adjust();break;
@@ -5136,7 +5157,7 @@ void command_mode()
             configuration.paddle_mode = PADDLE_NORMAL;
           }
           config_dirty = 1;
-          send_dit(AUTOMATIC_SENDING);
+          send_dit();
           break;  
         case 222: // O - toggle sidetone on and off
           if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {
@@ -5159,7 +5180,7 @@ void command_mode()
             //beep();
           }
           config_dirty = 1;        
-          send_dit(AUTOMATIC_SENDING);
+          send_dit();
           break; 
         case 2: command_tuning_mode(); break;                             // T - tuning mode
         #ifdef FEATURE_POTENTIOMETER
@@ -5176,7 +5197,7 @@ void command_mode()
               #endif 
             }
             config_dirty = 1;
-            send_dit(AUTOMATIC_SENDING);
+            send_dit();
             break; 
         #endif
         case 122: command_speed_mode(); break;                            // W - change wpm
@@ -5191,7 +5212,7 @@ void command_mode()
               config_dirty = 1;
               #ifdef FEATURE_DISPLAY
                 lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
-                send_dit(AUTOMATIC_SENDING);
+                send_dit();
               #else
                 send_char('O',KEYER_NORMAL);
                 send_char('F',KEYER_NORMAL);
@@ -5202,7 +5223,7 @@ void command_mode()
               config_dirty = 1;
               #ifdef FEATURE_DISPLAY
                 lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
-                send_dit(AUTOMATIC_SENDING);
+                send_dit();
               #else            
                 send_char('O',KEYER_NORMAL);
                 send_char('N',KEYER_NORMAL);
@@ -5219,7 +5240,7 @@ void command_mode()
         #endif
         #ifdef FEATURE_ALPHABET_SEND_PRACTICE
           case 111:
-            send_dit(AUTOMATIC_SENDING); 
+            send_dit(); 
             command_alphabet_send_practice(); // S - Alphabet Send Practice
             stay_in_command_mode = 0;
             break;
@@ -5328,8 +5349,8 @@ void command_dah_to_dit_ratio_adjust() {
   #endif
 
   while (looping) {
-   send_dit(AUTOMATIC_SENDING);
-   send_dah(AUTOMATIC_SENDING);
+   send_dit();
+   send_dah();
    if (paddle_pin_read(paddle_left) == LOW) {
      adjust_dah_to_dit_ratio(10);
    }
@@ -5359,8 +5380,8 @@ void command_weighting_adjust() {
   #endif
 
   while (looping) {
-   send_dit(AUTOMATIC_SENDING);
-   send_dah(AUTOMATIC_SENDING);
+   send_dit();
+   send_dah();
    if (paddle_pin_read(paddle_left) == LOW) {
      configuration.weighting = configuration.weighting + 1;
      if (configuration.weighting > 90){configuration.weighting = 90;}
@@ -5393,24 +5414,27 @@ void command_tuning_mode() {
   lcd_center_print_timed("Tune Mode", 0, default_display_msg_delay);          
   #endif  
   
-  send_dit(AUTOMATIC_SENDING);
+  send_dit();
   key_tx = 1;
   while (looping) {
 
     if (paddle_pin_read(paddle_left) == LOW) {
-      tx_and_sidetone_key(1,MANUAL_SENDING);
+      sending_mode = MANUAL_SENDING;
+      tx_and_sidetone_key(1);
       ptt_key();
       latched = 0;
     } else {
        if (paddle_pin_read(paddle_left) == HIGH && latched == 0) {
-         tx_and_sidetone_key(0,MANUAL_SENDING);
+         sending_mode = MANUAL_SENDING;
+         tx_and_sidetone_key(0);
          ptt_unkey();
        }
     }
 
     if (paddle_pin_read(paddle_right) == LOW && latched == 0) {
       latched = 1;
-      tx_and_sidetone_key(1,MANUAL_SENDING);
+      sending_mode = MANUAL_SENDING;
+      tx_and_sidetone_key(1);
       ptt_key();
       while ((paddle_pin_read(paddle_right) == LOW) && (paddle_pin_read(paddle_left) == HIGH)) {
         delay(10);
@@ -5418,7 +5442,8 @@ void command_tuning_mode() {
     } else {
       if ((paddle_pin_read(paddle_right) == LOW) && (latched)) {
         latched = 0;
-        tx_and_sidetone_key(0,MANUAL_SENDING);
+        sending_mode = MANUAL_SENDING;
+        tx_and_sidetone_key(0);
         ptt_unkey();
         while ((paddle_pin_read(paddle_right) == LOW) && (paddle_pin_read(paddle_left) == HIGH)) {
           delay(10);
@@ -5430,11 +5455,12 @@ void command_tuning_mode() {
    }
    
   }
-  tx_and_sidetone_key(0,MANUAL_SENDING);
+  sending_mode = MANUAL_SENDING;
+  tx_and_sidetone_key(0);
   ptt_unkey();
   while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   key_tx = 0;
-  send_dit(AUTOMATIC_SENDING);
+  send_dit();
   dit_buffer = 0;
   dah_buffer = 0;
 }
@@ -5510,7 +5536,7 @@ void command_speed_mode()
   
 
   while (looping) {
-    send_dit(AUTOMATIC_SENDING);
+    send_dit();
     if ((paddle_pin_read(paddle_left) == LOW)) {
       speed_change(1);
     }
@@ -5940,7 +5966,8 @@ void check_command_buttons()
               speed_change(1);
               previous_sidetone_mode = configuration.sidetone_mode;
               configuration.sidetone_mode = SIDETONE_ON; 
-              send_dit(MANUAL_SENDING);
+              sending_mode = MANUAL_SENDING;
+              send_dit();
               configuration.sidetone_mode = previous_sidetone_mode;
               //speed_button_cmd_executed = 1;
               dit_buffer = 0;
@@ -5961,7 +5988,8 @@ void check_command_buttons()
               speed_change(-1);
               previous_sidetone_mode = configuration.sidetone_mode;
               configuration.sidetone_mode = SIDETONE_ON; 
-              send_dah(MANUAL_SENDING);
+              sending_mode = MANUAL_SENDING;
+              send_dah();
               configuration.sidetone_mode = previous_sidetone_mode;              
               //speed_button_cmd_executed = 1;
               dah_buffer = 0;
@@ -6037,25 +6065,29 @@ void service_dit_dah_buffers()
     } else {
       if (dit_buffer) {
         dit_buffer = 0;
-        send_dit(MANUAL_SENDING);
+        sending_mode = MANUAL_SENDING;
+        send_dit();
       }
       if (dah_buffer) {
         dah_buffer = 0;
-        send_dah(MANUAL_SENDING);
+        sending_mode = MANUAL_SENDING;
+        send_dah();
       }
     }
   } else {
     if (configuration.keyer_mode == BUG) {
       if (dit_buffer) {
         dit_buffer = 0;
-        send_dit(MANUAL_SENDING);
+        sending_mode = MANUAL_SENDING;
+        send_dit();
       }
 
 //zzzzzzzz
       if (dah_buffer) {
         dah_buffer = 0;
         if (!bug_dah_flag) {
-          tx_and_sidetone_key(1,MANUAL_SENDING);
+          sending_mode = MANUAL_SENDING;
+          tx_and_sidetone_key(1);
           bug_dah_flag = 1; 
           #ifdef FEATURE_PADDLE_ECHO
             bug_dah_key_down_time = millis();
@@ -6068,7 +6100,8 @@ void service_dit_dah_buffers()
 
       } else {
         if (bug_dah_flag){
-          tx_and_sidetone_key(0,MANUAL_SENDING);
+          sending_mode = MANUAL_SENDING;
+          tx_and_sidetone_key(0);
           #ifdef FEATURE_PADDLE_ECHO
             if ((millis() - bug_dah_key_down_time) > (0.5 * (1200.0/configuration.wpm))){
               if ((millis() - bug_dah_key_down_time) > (2 * (1200.0/configuration.wpm))){
@@ -6089,9 +6122,11 @@ void service_dit_dah_buffers()
       if (configuration.keyer_mode == STRAIGHT) {
         if (dit_buffer) {
           dit_buffer = 0;
-          tx_and_sidetone_key(1,MANUAL_SENDING);
+          sending_mode = MANUAL_SENDING;
+          tx_and_sidetone_key(1);
         } else {
-          tx_and_sidetone_key(0,MANUAL_SENDING);
+          sending_mode = MANUAL_SENDING;
+          tx_and_sidetone_key(0);
         }
         #ifdef FEATURE_DEAD_OP_WATCHDOG
           dit_counter = 0;
@@ -6146,13 +6181,17 @@ void boop_beep()
 void send_the_dits_and_dahs(char const * cw_to_send){
 
 
+  sending_mode = AUTOMATIC_SENDING;
+
   for (int x = 0;x < 12;x++){
     switch(cw_to_send[x]){
-      case '.': send_dit(AUTOMATIC_SENDING); break;
-      case '-': send_dah(AUTOMATIC_SENDING); break;
+      case '.': send_dit(); break;
+      case '-': send_dah(); break;
       default: return; break;
     }
-    if ((dit_buffer) || (dah_buffer)){
+    if (dit_buffer || dah_buffer || sending_mode == AUTOMATIC_SENDING_INTERRUPTED){
+      dit_buffer = 0;
+      dah_buffer = 0;
       return;
     }
   }
@@ -6178,6 +6217,8 @@ void send_char(byte cw_char, byte omit_letterspace)
   #endif //FEATURE_SLEEP
 
   if ((cw_char == 10) || (cw_char == 13)) { return; }  // don't attempt to send carriage return or line feed
+
+  sending_mode = AUTOMATIC_SENDING;
 
   if (char_send_mode == CW) {
     switch (cw_char) {
@@ -6221,26 +6262,26 @@ void send_char(byte cw_char, byte omit_letterspace)
 
       case '=': send_the_dits_and_dahs("-...-");break;
       case '/': send_the_dits_and_dahs("-..-.");break;
-      case ' ': loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm,AUTOMATIC_SENDING); break;
+      case ' ': loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm); break;
       case '*': send_the_dits_and_dahs("-...-.-");break;
-      //case '&': send_dit(AUTOMATIC_SENDING); loop_element_lengths(3); send_dits(3); break;
+      //case '&': send_dit(); loop_element_lengths(3); send_dits(3); break;
       case '.': send_the_dits_and_dahs(".-.-.-");break;
       case ',': send_the_dits_and_dahs("--..--");break;
-      case '\'': send_the_dits_and_dahs(".----.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(4); send_dit(AUTOMATIC_SENDING); break;                   // apostrophe
-      case '!': send_the_dits_and_dahs("-.-.--");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); break;
-      case '(': send_the_dits_and_dahs("-.--.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); break;
-      case ')': send_the_dits_and_dahs("-.--.-");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case '&': send_the_dits_and_dahs(".-...");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(3); break;
-      case ':': send_the_dits_and_dahs("---...");break;//send_dahs(3); send_dits(3); break;
-      case ';': send_the_dits_and_dahs("-.-.-.");break;//send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '+': send_the_dits_and_dahs(".-.-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '-': send_the_dits_and_dahs("-....-");break;//send_dah(AUTOMATIC_SENDING); send_dits(4); send_dah(AUTOMATIC_SENDING); break;
-      case '_': send_the_dits_and_dahs("..--.-");break;//send_dits(2); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;
-      case '"': send_the_dits_and_dahs(".-..-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '$': send_the_dits_and_dahs("...-..-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); send_dits(2); send_dah(AUTOMATIC_SENDING); break;
-      case '@': send_the_dits_and_dahs(".--.-.");break;//send_dit(AUTOMATIC_SENDING); send_dahs(2); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;
-      case '<': send_the_dits_and_dahs(".-.-.");break;//send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); break;     // AR
-      case '>': send_the_dits_and_dahs("...-.-");break;//send_dits(3); send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break;               // SK
+      case '\'': send_the_dits_and_dahs(".----.");break;// apostrophe
+      case '!': send_the_dits_and_dahs("-.-.--");break;
+      case '(': send_the_dits_and_dahs("-.--.");break;
+      case ')': send_the_dits_and_dahs("-.--.-");break;
+      case '&': send_the_dits_and_dahs(".-...");break;
+      case ':': send_the_dits_and_dahs("---...");break;
+      case ';': send_the_dits_and_dahs("-.-.-.");break;
+      case '+': send_the_dits_and_dahs(".-.-.");break;
+      case '-': send_the_dits_and_dahs("-....-");break;
+      case '_': send_the_dits_and_dahs("..--.-");break;
+      case '"': send_the_dits_and_dahs(".-..-.");break;
+      case '$': send_the_dits_and_dahs("...-..-");break;
+      case '@': send_the_dits_and_dahs(".--.-.");break;
+      case '<': send_the_dits_and_dahs(".-.-.");break; // AR
+      case '>': send_the_dits_and_dahs("...-.-");break; // SK
 
       #ifdef OPTION_RUSSIAN_LANGUAGE_SEND_CLI    // Contributed by Павел Бирюков, UA1AQC
         case 192: send_the_dits_and_dahs(".-");break; //А
@@ -6316,19 +6357,19 @@ void send_char(byte cw_char, byte omit_letterspace)
       case 223: send_the_dits_and_dahs("------");break;// 'ß'
 
       // for English/Japanese font LCD controller which has a few European characters also (HD44780UA00) (LA3ZA code)
-      case 225: send_the_dits_and_dahs(".-.-");break;//send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); send_dit(AUTOMATIC_SENDING); send_dah(AUTOMATIC_SENDING); break; // 'ä' LA3ZA
-      case 239: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'ö' LA3ZA
-      case 242: send_the_dits_and_dahs("---.");break;//send_dahs(3);send_dit(AUTOMATIC_SENDING);break; // 'ø' LA3ZA
-      case 245: send_the_dits_and_dahs("..--");break;//send_dits(2);send_dahs(2);break; // 'ü' LA3ZA
-      case 246: send_the_dits_and_dahs("----");break;//send_dahs(4);break; // almost '' or rather sigma LA3ZA
-      case 252: send_the_dits_and_dahs(".--.-");break;//send_dit(AUTOMATIC_SENDING);send_dahs(2);send_dit(AUTOMATIC_SENDING);send_dah(AUTOMATIC_SENDING); break; // å (sort of) LA3ZA
+      case 225: send_the_dits_and_dahs(".-.-");break;// 'ä' LA3ZA
+      case 239: send_the_dits_and_dahs("---.");break;// 'ö' LA3ZA
+      case 242: send_the_dits_and_dahs("---.");break;// 'ø' LA3ZA
+      case 245: send_the_dits_and_dahs("..--");break;// 'ü' LA3ZA
+      case 246: send_the_dits_and_dahs("----");break;// almost '' or rather sigma LA3ZA
+      case 252: send_the_dits_and_dahs(".--.-");break;// å (sort of) LA3ZA
       case 238: send_the_dits_and_dahs("--.--");break;// 'ñ' LA3ZA
       case 226: send_the_dits_and_dahs("------");break;// 'ß' LA3ZA
       #endif //OPTION_NON_ENGLISH_EXTENSIONS   
       
       case '|': 
         #if !defined(OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE)
-          loop_element_lengths(0.5,0,configuration.wpm,AUTOMATIC_SENDING); 
+          loop_element_lengths(0.5,0,configuration.wpm); 
         #endif
         return; 
         break;
@@ -6345,7 +6386,7 @@ void send_char(byte cw_char, byte omit_letterspace)
       
     }
     if (omit_letterspace != OMIT_LETTERSPACE) {
-      loop_element_lengths((length_letterspace-1),0,configuration.wpm,AUTOMATIC_SENDING); //this is minus one because send_dit and send_dah have a trailing element space
+      loop_element_lengths((length_letterspace-1),0,configuration.wpm); //this is minus one because send_dit and send_dah have a trailing element space
     }
   } else {
     #ifdef FEATURE_HELL
@@ -6537,7 +6578,8 @@ void service_send_buffer(byte no_print)
           remove_from_send_buffer();
           if (send_buffer_bytes > 0) {
             send_buffer_status = SERIAL_SEND_BUFFER_TIMED_COMMAND;
-            tx_and_sidetone_key(1,AUTOMATIC_SENDING);
+            sending_mode = AUTOMATIC_SENDING;
+            tx_and_sidetone_key(1);
             timed_command_end_time = millis() + (send_buffer_array[0] * 1000);
             timed_command_in_progress = SERIAL_SEND_BUFFER_TIMED_KEY_DOWN;
             remove_from_send_buffer();
@@ -6619,7 +6661,8 @@ void service_send_buffer(byte no_print)
     if (send_buffer_status == SERIAL_SEND_BUFFER_TIMED_COMMAND) {    // we're in a timed command
 
       if ((timed_command_in_progress == SERIAL_SEND_BUFFER_TIMED_KEY_DOWN) && (millis() > timed_command_end_time)) {
-        tx_and_sidetone_key(0,AUTOMATIC_SENDING);
+        sending_mode = AUTOMATIC_SENDING;
+        tx_and_sidetone_key(0);
         timed_command_in_progress = 0;
         send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
       }
@@ -7671,7 +7714,8 @@ void service_winkey(byte action) {
             #ifdef FEATURE_MEMORIES
               repeat_memory = 255;
             #endif
-            tx_and_sidetone_key(0,AUTOMATIC_SENDING);  // N1MM program needs this for the CTRL-T tune command to work right since it issues a 0x0a
+            sending_mode = AUTOMATIC_SENDING;
+            tx_and_sidetone_key(0);  // N1MM program needs this for the CTRL-T tune command to work right since it issues a 0x0a
                                      // rather than 0x0b 0x00 to clear a key down - doesn't follow protocol spec
                                    
             break;
@@ -8242,10 +8286,11 @@ void service_winkey(byte action) {
         #ifdef FEATURE_MEMORIES
         repeat_memory = 255;
         #endif
+        sending_mode = AUTOMATIC_SENDING;
         if (incoming_serial_byte) {
-          tx_and_sidetone_key(1,AUTOMATIC_SENDING);
+          tx_and_sidetone_key(1);
         } else {
-          tx_and_sidetone_key(0,AUTOMATIC_SENDING);
+          tx_and_sidetone_key(0);
         }
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
@@ -9360,7 +9405,8 @@ void serial_tune_command (PRIMARY_SERIAL_CLS * port_to_use)
     incoming = port_to_use->read();
   }
 
-  tx_and_sidetone_key(1,MANUAL_SENDING);
+  sending_mode = MANUAL_SENDING;
+  tx_and_sidetone_key(1);
   port_to_use->println("Keying tx - press a key to unkey");
   #ifdef FEATURE_COMMAND_BUTTONS
   while ((port_to_use->available() == 0) && (!analogbuttonread(0))) {}  // keystroke or button0 hit gets us out of here
@@ -9368,7 +9414,7 @@ void serial_tune_command (PRIMARY_SERIAL_CLS * port_to_use)
   while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
     incoming = port_to_use->read();
   }
-  tx_and_sidetone_key(0,MANUAL_SENDING);
+  tx_and_sidetone_key(0);
 
 }
 #endif
@@ -10895,10 +10941,11 @@ byte play_memory(byte memory_number)
                     input_error = 1;
                   }
                 }
+                sending_mode = AUTOMATIC_SENDING;
                 if (input_error != 1) {   // go ahead and transmit
-                  tx_and_sidetone_key(1,AUTOMATIC_SENDING);
+                  tx_and_sidetone_key(1);
                   delay_result = memory_nonblocking_delay(int_from_macro*1000);
-                  tx_and_sidetone_key(0,AUTOMATIC_SENDING);
+                  tx_and_sidetone_key(0);
                 }
                 if (delay_result) {   // if a paddle or button0 was hit during the delay, exit
                   return 0;
@@ -11086,7 +11133,7 @@ void program_memory(int memory_number)
     lcd_center_print_timed(lcd_print_string, 0, default_display_msg_delay);
   #endif
 
-  send_dit(AUTOMATIC_SENDING);
+  send_dit();
 
   byte paddle_hit = 0;
   byte loop1 = 1;
@@ -11130,7 +11177,8 @@ void program_memory(int memory_number)
     while (loop1) {
        check_paddles();
        if (dit_buffer) {
-         send_dit(MANUAL_SENDING);
+         sending_mode = MANUAL_SENDING;
+         send_dit();
          dit_buffer = 0;
          paddle_hit = 1;
          cwchar = (cwchar * 10) + 1;
@@ -11140,9 +11188,10 @@ void program_memory(int memory_number)
          #endif
        }
        if (dah_buffer) {
-         send_dah(MANUAL_SENDING);
-         dah_buffer = 0;
-         paddle_hit = 1;
+        sending_mode = MANUAL_SENDING;
+        send_dah();
+        dah_buffer = 0;
+        paddle_hit = 1;
          cwchar = (cwchar * 10) + 2;
          last_element_time = millis();
          #ifdef DEBUG_MEMORY_WRITE
@@ -11262,7 +11311,6 @@ void program_memory(int memory_number)
 
   play_memory(memory_number);
 
-//  send_dit(AUTOMATIC_SENDING);
 
 }
 #endif
@@ -12324,7 +12372,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
   // grab the keypad / and * for dit and dah paddling
   if (key == 0x54) {usb_dit = 1; return;}
   if (key == 0x55) {usb_dah = 1; return;}
-  if (key == 0x58) {tx_and_sidetone_key(1,MANUAL_SENDING);return;}
+  if (key == 0x58) {sending_mode = MANUAL_SENDING;tx_and_sidetone_key(1);return;}
   
   if ((modifier.bmLeftShift) || (modifier.bmRightShift)) {
     switch(key){     
@@ -12514,7 +12562,8 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         repeat_memory = 255;
         #endif
         if (keyboard_tune_on) {
-          tx_and_sidetone_key(0,MANUAL_SENDING);
+          sending_mode = MANUAL_SENDING;
+          tx_and_sidetone_key(0);
           keyboard_tune_on = 0;
           #ifdef FEATURE_DISPLAY
           lcd_status = LCD_REVERT;
@@ -12522,8 +12571,9 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         } else {
           #ifdef FEATURE_DISPLAY
           lcd_center_print_timed("Tune", 0, default_display_msg_delay);
-          #endif      
-          tx_and_sidetone_key(1,MANUAL_SENDING);
+          #endif 
+          sending_mode = MANUAL_SENDING;     
+          tx_and_sidetone_key(1);
           keyboard_tune_on = 1;
         }
         break;
@@ -12684,7 +12734,8 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         ptt_unkey();
       }
       if (keyboard_tune_on) {
-        tx_and_sidetone_key(0,MANUAL_SENDING);
+        sending_mode = MANUAL_SENDING;
+        tx_and_sidetone_key(0);
         keyboard_tune_on = 0;
       }
       if (pause_sending_buffer) {
@@ -12768,7 +12819,7 @@ void KbdRptParser::OnKeyUp(uint8_t mod, uint8_t key)
   // grab the keypad / and * for dit and dah paddling
   if (key == 0x54) {usb_dit = 0; return;}
   if (key == 0x55) {usb_dah = 0; return;}
-  if (key == 0x58) {tx_and_sidetone_key(0,MANUAL_SENDING);return;}
+  if (key == 0x58) {sending_mode = MANUAL_SENDING;tx_and_sidetone_key(0);return;}
   
 }
 #endif //FEATURE_USB_KEYBOARD
@@ -12877,10 +12928,12 @@ void MouseRptParser::OnRightButtonDown(MOUSEINFO *mi){
   usb_dah = 1;
 };
 void MouseRptParser::OnMiddleButtonUp(MOUSEINFO *mi){
-  tx_and_sidetone_key(0,MANUAL_SENDING);
+  sending_mode = MANUAL_SENDING;
+  tx_and_sidetone_key(0);
 };
 void MouseRptParser::OnMiddleButtonDown(MOUSEINFO *mi){
-  tx_and_sidetone_key(1,MANUAL_SENDING);
+  sending_mode = MANUAL_SENDING;
+  tx_and_sidetone_key(1);
 };
 #endif //FEATURE_USB_MOUSE
 //---------------------------------------------------------------------
@@ -13146,7 +13199,7 @@ void command_alphabet_send_practice(){
       }      
       beep();
 
-      //send_dit(AUTOMATIC_SENDING);
+      //send_dit();
       if (letter < 'Z')
         letter++;
       else
@@ -13162,7 +13215,7 @@ void command_alphabet_send_practice(){
       }          
       boop();
       boop();
-      //send_dah(AUTOMATIC_SENDING);
+      //send_dah();
     }
   } while (cw_char != 9);
 
@@ -13896,7 +13949,7 @@ void web_print_page_keyer_settings(EthernetClient client){
 
     
   #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-    web_print_control_checkbox(client,"cs",(configuration.cmos_super_keyer_iambic_b_timing_on)?1:0,F(" CMOS Superkeyer Iambic B Timing "));
+    web_print_control_checkbox(client,"cs",(configuration.cmos_super_keyer_iambic_b_timing_on)?1:0," CMOS Superkeyer Iambic B Timing ");
     web_print_control_textbox(client,"cp","addr",configuration.cmos_super_keyer_iambic_b_timing_percent,"","%");
     web_client_println(client,"<br>");
   #endif
@@ -14000,10 +14053,12 @@ void web_print_page_control(EthernetClient client){
     url_sub_string = readString;
     if (url_sub_string.length() > 14){url_sub_string.remove(14);}
     if (url_sub_string.indexOf("?ky") > 0){
-      tx_and_sidetone_key(1,AUTOMATIC_SENDING);
+      sending_mode = AUTOMATIC_SENDING;
+      tx_and_sidetone_key(1);
     }
     if (url_sub_string.indexOf("?uk") > 0){
-      tx_and_sidetone_key(0,AUTOMATIC_SENDING);
+      sending_mode = AUTOMATIC_SENDING;
+      tx_and_sidetone_key(0);
     }
     if (url_sub_string.indexOf("?wn") > 0){
       speed_change(-2);
@@ -14883,7 +14938,7 @@ void service_internet_link_udp_receive_buffer(){
 
   // TODO : key down expire time check
   if ((key_down_time > 0) && ((millis()-key_down_time) > (FEATURE_INTERNET_LINK_KEY_DOWN_TIMEOUT_SECS * 1000))){
-    tx_and_sidetone_key(0, AUTOMATIC_SENDING);
+    tx_and_sidetone_key(0);
     key_down_time = 0;
   }
 
@@ -14899,7 +14954,7 @@ void service_internet_link_udp_receive_buffer(){
           debug_serial_port->println(incoming_link_command_parameter);
         #endif //DEBUG_INTERNET_LINKING_RECEIVE
         if (incoming_link_command == 'V'){ // key down immediately for incoming_link_parameter mS
-          tx_and_sidetone_key(1, AUTOMATIC_SENDING);
+          tx_and_sidetone_key(1);
           key_down_time = millis();
           #if defined(DEBUG_INTERNET_LINKING_RECEIVE)
             debug_serial_port->println(F("service_internet_link_udp_receive_buffer: LINK_V_COMMAND_IN_PROGRESS tx_and_sidetone_key: 1"));
@@ -14925,7 +14980,7 @@ void service_internet_link_udp_receive_buffer(){
       break;
     case LINK_U_COMMAND_BUFFERED: // key up after last command time has passed
       if (millis() >= buffered_command_execution_time){
-        tx_and_sidetone_key(0, AUTOMATIC_SENDING);
+        tx_and_sidetone_key(0);
         key_down_time = 0;
         last_command_completion_time = millis();
         current_link_control_state = LINK_NO_COMMAND;     
@@ -14936,7 +14991,7 @@ void service_internet_link_udp_receive_buffer(){
       break;
     case LINK_D_COMMAND_BUFFERED: // key down after last command time has passed
       if (millis() >= buffered_command_execution_time){
-        tx_and_sidetone_key(1, AUTOMATIC_SENDING);
+        tx_and_sidetone_key(1);
         key_down_time = millis();
         last_command_completion_time = millis();
         current_link_control_state = LINK_NO_COMMAND;  
@@ -14947,7 +15002,7 @@ void service_internet_link_udp_receive_buffer(){
       break;
     case LINK_V_COMMAND_IN_PROGRESS: // we're in key down, check if it time to key up and complete
       if (millis() >= v_command_key_down_expire_time){
-        tx_and_sidetone_key(0, AUTOMATIC_SENDING);
+        tx_and_sidetone_key(0);
         key_down_time = 0;
         v_command_key_down_expire_time = 0;
         last_command_completion_time = millis();
