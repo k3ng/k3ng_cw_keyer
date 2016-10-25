@@ -41,7 +41,6 @@
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
 #define memory_area_start 60             // the eeprom location where memory space starts
-#define memory_area_end 1023             // the eeprom location where memory space ends
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
 #define winkey_command_timeout_ms 5000
 #define winkey_discard_bytes_startup 3   // this is used if OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP is enabled above
@@ -194,6 +193,14 @@
 #define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500            // increase this time if you have greater than 500 ms latency on your link
 #define FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS 20
 #define FEATURE_INTERNET_LINK_KEY_DOWN_TIMEOUT_SECS 8
+
+#if defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
+  #define memory_area_end 4095             // the eeprom location where memory space ends
+#elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega168__)
+  #define memory_area_end 511             // the eeprom location where memory space ends
+#else
+  #define memory_area_end 1023             // the eeprom location where memory space ends
+#endif
 
 // ######## ########  ######  ######## 
 //    ##    ##       ##    ##    ##    

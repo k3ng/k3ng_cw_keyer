@@ -145,4 +145,7 @@
 #define PRINTCHAR 0
 #define NOPRINT 1
 
+#define DONT_RAISE_ERROR_MSG 0
+#define RAISE_ERROR_MSG 1
+
 #endif //keyer_h

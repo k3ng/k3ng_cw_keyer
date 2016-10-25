@@ -40,9 +40,9 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     \g     Bug mode
     \h     Switch to Hell sending                    (requires FEATURE_HELL)
     \i     Transmit enable/disable
-    \j###  Dah to dit ratio (300 = 3.00)
+    \j###  Dah to dit ratio (300 = 3.00, do \j alone to set to default)
     \k     Callsign receive practice
-    \l##   Set weighting (50 = normal)
+    \l##   Set weighting (50 = normal, do \l alone to set to default)
     \m###  Set Farnsworth speed
     \n     Toggle paddle reverse
     \o     Toggle sidetone on/off
@@ -512,6 +512,9 @@ New fetures in this stable release:
       Improved paddle break in for memory playing and Winkey interruption
       Fixed various compile bugs that have crept into the code  
 
+    2.2.2016102401
+      Updated \J (dah to dit ratio) and \L (weighting) CLI commands so that without arguments they set the parameters to defaults 
+
 
   ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -520,7 +523,7 @@ New fetures in this stable release:
   
 */
 
-#define CODE_VERSION "2.2.2016100601"
+#define CODE_VERSION "2.2.2016102401"
 #define eeprom_magic_number 23
 
 #include <stdio.h>
@@ -8820,7 +8823,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         config_dirty = 1;
         break;
       case '%':
-        user_input_temp = serial_get_number_input(2,-1,100,port_to_use);
+        user_input_temp = serial_get_number_input(2,-1,100,port_to_use, RAISE_ERROR_MSG);
         if ((user_input_temp >= 0) && (user_input_temp < 100)) {
           configuration.cmos_super_keyer_iambic_b_timing_percent = user_input_temp;
           port_to_use->println(F("CMOS Super Keyer Timing Set."));
@@ -9165,7 +9168,7 @@ void service_paddle_echo()
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_MEMORIES)
 void serial_set_memory_repeat(PRIMARY_SERIAL_CLS * port_to_use) {
 
-  int temp_int = serial_get_number_input(5, -1, 32000, port_to_use);
+  int temp_int = serial_get_number_input(5, -1, 32000, port_to_use, RAISE_ERROR_MSG);
   if (temp_int > -1) {
     configuration.memory_repeat_time = temp_int;
     config_dirty = 1;
@@ -9178,7 +9181,7 @@ void serial_set_memory_repeat(PRIMARY_SERIAL_CLS * port_to_use) {
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_MEMORIES)
 void repeat_play_memory(PRIMARY_SERIAL_CLS * port_to_use) {
 
-  byte memory_number = serial_get_number_input(2,0, (number_of_memories+1), port_to_use);
+  byte memory_number = serial_get_number_input(2,0, (number_of_memories+1), port_to_use, RAISE_ERROR_MSG);
   #ifdef DEBUG_CHECK_SERIAL
     debug_serial_port->print(F("repeat_play_memory: memory_number:"));
     debug_serial_port->println(memory_number);
@@ -9209,7 +9212,7 @@ void serial_play_memory(byte memory_number) {
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY_SERIAL_CLS * port_to_use)
+int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY_SERIAL_CLS * port_to_use,int raise_error_message)
 {
   byte incoming_serial_byte = 0;
   byte looping = 1;
@@ -9258,7 +9261,9 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY
     }
   }
   if (error) {
-    port_to_use->println(F("Error..."));
+    if (raise_error_message == RAISE_ERROR_MSG){
+      port_to_use->println(F("Error..."));
+    }
     while (port_to_use->available() > 0) { incoming_serial_byte = port_to_use->read(); }  // clear out buffer
     return(-1);
   } else {
@@ -9271,7 +9276,9 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY
     if ((return_number > lower_limit) && (return_number < upper_limit)) {
       return(return_number);
     } else {
-      port_to_use->println(F("Error..."));
+      if (raise_error_message == RAISE_ERROR_MSG){
+        port_to_use->println(F("Error..."));
+      }
       return(-1);
     }
   }
@@ -9283,7 +9290,7 @@ int serial_get_number_input(byte places,int lower_limit, int upper_limit,PRIMARY
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_change_wordspace(PRIMARY_SERIAL_CLS * port_to_use)
 {
-  int set_wordspace_to = serial_get_number_input(2,0,100,port_to_use);
+  int set_wordspace_to = serial_get_number_input(2,0,100,port_to_use, RAISE_ERROR_MSG);
   if (set_wordspace_to > 0) {
     config_dirty = 1;
     configuration.length_wordspace = set_wordspace_to;
@@ -9297,7 +9304,7 @@ void serial_change_wordspace(PRIMARY_SERIAL_CLS * port_to_use)
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_switch_tx(PRIMARY_SERIAL_CLS * port_to_use)
 {
-  int set_tx_to = serial_get_number_input(1,0,7,port_to_use);
+  int set_tx_to = serial_get_number_input(1,0,7,port_to_use,RAISE_ERROR_MSG);
   if (set_tx_to > 0) {
     switch (set_tx_to){
       case 1: switch_to_tx_silent(1); port_to_use->print(F("Switching to TX #")); port_to_use->println(F("1")); break;
@@ -9315,13 +9322,22 @@ void serial_switch_tx(PRIMARY_SERIAL_CLS * port_to_use)
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_set_dit_to_dah_ratio(PRIMARY_SERIAL_CLS * port_to_use)
 {
-    int set_ratio_to = serial_get_number_input(4, 99, 1000, port_to_use);
-    if ((set_ratio_to > 99) && (set_ratio_to < 1000)) {
-      configuration.dah_to_dit_ratio = set_ratio_to;
-      port_to_use->print(F("Setting dah to dit ratio to "));
-      port_to_use->println((float(configuration.dah_to_dit_ratio)/100));
-      config_dirty = 1;
+    int set_ratio_to = serial_get_number_input(4, 99, 1000, port_to_use, DONT_RAISE_ERROR_MSG);
+    // if ((set_ratio_to > 99) && (set_ratio_to < 1000)) {
+    //   configuration.dah_to_dit_ratio = set_ratio_to;
+    //   port_to_use->print(F("Setting dah to dit ratio to "));
+    //   port_to_use->println((float(configuration.dah_to_dit_ratio)/100));
+    //   config_dirty = 1;
+    // }
+
+    if ((set_ratio_to < 100) || (set_ratio_to > 999)) {
+      set_ratio_to = 300;
     }
+    configuration.dah_to_dit_ratio = set_ratio_to;
+    port_to_use->print(F("Dah to dit ratio set to "));
+    port_to_use->println((float(configuration.dah_to_dit_ratio)/100));
+    config_dirty = 1;
+   
 }
 #endif
 
@@ -9329,7 +9345,7 @@ void serial_set_dit_to_dah_ratio(PRIMARY_SERIAL_CLS * port_to_use)
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_set_serial_number(PRIMARY_SERIAL_CLS * port_to_use)
 {
-  int set_serial_number_to = serial_get_number_input(4,0,10000, port_to_use);
+  int set_serial_number_to = serial_get_number_input(4,0,10000, port_to_use,RAISE_ERROR_MSG);
   if (set_serial_number_to > 0) {
     serial_number = set_serial_number_to;
     port_to_use->print(F("\nSetting serial number to "));
@@ -9342,7 +9358,7 @@ void serial_set_serial_number(PRIMARY_SERIAL_CLS * port_to_use)
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use)
 {
-  int set_sidetone_hz = serial_get_number_input(4,(SIDETONE_HZ_LOW_LIMIT-1),(SIDETONE_HZ_HIGH_LIMIT+1), port_to_use);
+  int set_sidetone_hz = serial_get_number_input(4,(SIDETONE_HZ_LOW_LIMIT-1),(SIDETONE_HZ_HIGH_LIMIT+1), port_to_use, RAISE_ERROR_MSG);
   if ((set_sidetone_hz > SIDETONE_HZ_LOW_LIMIT) && (set_sidetone_hz < SIDETONE_HZ_HIGH_LIMIT)) {
     port_to_use->write("Setting sidetone to ");
     port_to_use->print(set_sidetone_hz,DEC);
@@ -9357,7 +9373,7 @@ void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use)
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use)
 {
-  int set_wpm = serial_get_number_input(3,0,1000, port_to_use);
+  int set_wpm = serial_get_number_input(3,0,1000, port_to_use, RAISE_ERROR_MSG);
   if (set_wpm > 0) {
     speed_set(set_wpm);
     port_to_use->write("Setting WPM to ");
@@ -9371,7 +9387,7 @@ void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use)
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_FARNSWORTH)
 void serial_set_farnsworth(PRIMARY_SERIAL_CLS * port_to_use)
 {
-  int set_farnsworth_wpm = serial_get_number_input(3,-1,1000, port_to_use);
+  int set_farnsworth_wpm = serial_get_number_input(3,-1,1000, port_to_use, RAISE_ERROR_MSG);
   if (set_farnsworth_wpm > 0) {
     configuration.wpm_farnsworth = set_farnsworth_wpm;
     port_to_use->write("Setting Farnworth WPM to ");
@@ -9385,12 +9401,13 @@ void serial_set_farnsworth(PRIMARY_SERIAL_CLS * port_to_use)
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_set_weighting(PRIMARY_SERIAL_CLS * port_to_use)
 {
-  int set_weighting = serial_get_number_input(2,9,91,port_to_use);
-  if (set_weighting > 0) {
-    configuration.weighting = set_weighting;
-    port_to_use->write("Setting weighting to ");
-    port_to_use->println(set_weighting,DEC);
+  int set_weighting = serial_get_number_input(2,9,91,port_to_use, DONT_RAISE_ERROR_MSG);
+  if (set_weighting < 1) {
+    set_weighting = 50;
   }
+  configuration.weighting = set_weighting;
+  port_to_use->write("Setting weighting to ");
+  port_to_use->println(set_weighting,DEC);
 }
 #endif
 
