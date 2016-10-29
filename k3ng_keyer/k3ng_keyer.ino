@@ -33,12 +33,12 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     \#     Play memory #                             (requires FEATURES_MEMORIES; play memories 1 - 10 (0 = memory 10) )
     \a     Iambic A mode
     \b     Iambic B mode
-    \c     Switch to CW (from Hell)
+    \c     Single Paddle mode
     \d     Ultimatic mode
     \e#### Set serial number to ####
     \f#### Set sidetone frequency to #### hertz
     \g     Bug mode
-    \h     Switch to Hell sending                    (requires FEATURE_HELL)
+    \h     Toggle between CW and Hell sending                    (requires FEATURE_HELL)
     \i     Transmit enable/disable
     \j###  Dah to dit ratio (300 = 3.00, do \j alone to set to default)
     \k     Callsign receive practice
@@ -87,6 +87,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
  Command Mode (press button0 to enter command mode and press again to exit)
     A  Switch to Iambic A mode
     B  Switch to Iambic B mode
+    C  Switch to Single Paddle Mode
     D  Switch to Ultimatic mode
     E  Announce speed
     F  Adjust sidetone frequency
@@ -132,6 +133,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
 
    CTRL-A           Iambic A
    CTRL-B           Iambic B
+   CTRL-C           Single Paddle
    CTRL-D           Ultimatic
    CTRL-E           Set Serial Number
    CTRL-G           Bug
@@ -515,15 +517,20 @@ New fetures in this stable release:
     2.2.2016102401
       Updated \J (dah to dit ratio) and \L (weighting) CLI commands so that without arguments they set the parameters to defaults 
 
+    2.2.2016102801
+      Single Paddle mode, C command  
 
-  ATTENTION: AS OF VERSION 2.2.2016012004 LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
+
+  ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
   FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
 
   
+  "Make good code and share it with friends."
+
 */
 
-#define CODE_VERSION "2.2.2016102401"
+#define CODE_VERSION "2.2.2016102801"
 #define eeprom_magic_number 23
 
 #include <stdio.h>
@@ -2540,6 +2547,14 @@ void check_ps2_keyboard()
           config_dirty = 1;
           break;
 
+        case PS2_C_CTRL :
+          configuration.keyer_mode = SINGLE_PADDLE;
+          #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+          #endif          
+          config_dirty = 1;
+          break;
+
         case PS2_D_CTRL :
           configuration.keyer_mode = ULTIMATIC;
           #ifdef FEATURE_DISPLAY
@@ -2994,6 +3009,14 @@ void check_ps2_keyboard()
           configuration.keyer_mode = IAMBIC_B;
           #ifdef FEATURE_DISPLAY
           lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
+          #endif          
+          config_dirty = 1;
+          break;
+
+        case PS2_C_CTRL :
+          configuration.keyer_mode = SINGLE_PADDLE;
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
           #endif          
           config_dirty = 1;
           break;
@@ -3835,6 +3858,7 @@ void check_paddles()
 
   if (configuration.keyer_mode == ULTIMATIC) {
     if (ultimatic_mode == ULTIMATIC_NORMAL) {
+
       switch (last_closure) {
         case DIT_CLOSURE_DAH_OFF:
           if (dah_buffer) {
@@ -3913,7 +3937,7 @@ void check_paddles()
           }
           break;
       }
-    } else {
+    } else {  // if (ultimatic_mode == ULTIMATIC_NORMAL)
      if ((dit_buffer) && (dah_buffer)) {   // dit or dah priority mode
        if (ultimatic_mode == ULTIMATIC_DIT_PRIORITY) {
          dah_buffer = 0;
@@ -3921,8 +3945,95 @@ void check_paddles()
          dit_buffer = 0;
        }
      }
+    } // if (ultimatic_mode == ULTIMATIC_NORMAL)
+  } // if (configuration.keyer_mode == ULTIMATIC)
+
+  if (configuration.keyer_mode == SINGLE_PADDLE){
+    switch (last_closure) {
+      case DIT_CLOSURE_DAH_OFF:
+        if (dit_buffer) {
+          if (dah_buffer) {
+            dah_buffer = 0;
+          } else {
+            last_closure = DIT_CLOSURE_DAH_OFF;
+          }
+        } else {
+          if (dah_buffer) {
+            last_closure = DAH_CLOSURE_DIT_OFF;
+          } else {
+            last_closure = NO_CLOSURE;
+          }
+        }
+        break;
+
+      case DIT_CLOSURE_DAH_ON:
+
+        if (dah_buffer) {
+          if (dit_buffer) {
+            last_closure = DAH_CLOSURE_DIT_ON;
+            dit_buffer = 0;
+          } else {
+            last_closure = DAH_CLOSURE_DIT_OFF;
+          }
+        } else {
+          if (!dit_buffer) {
+            last_closure = NO_CLOSURE;
+          }
+        }
+        break;
+
+        
+
+      case DAH_CLOSURE_DIT_OFF:
+        if (dah_buffer) {
+          if (dit_buffer) {
+            dit_buffer = 0;
+          } else {
+            last_closure = DAH_CLOSURE_DIT_OFF;
+          }
+        } else {
+          if (dit_buffer) {
+            last_closure = DIT_CLOSURE_DAH_OFF;
+          } else {
+            last_closure = NO_CLOSURE;
+          }
+        }
+        break;
+
+      case DAH_CLOSURE_DIT_ON:
+        if (dit_buffer) {
+          if (dah_buffer) {
+            last_closure = DIT_CLOSURE_DAH_ON;
+            dah_buffer = 0;
+          } else {
+            last_closure = DIT_CLOSURE_DAH_OFF;
+          }
+        } else {
+          if (!dah_buffer) {
+            last_closure = NO_CLOSURE;
+          }
+        }
+        break;
+
+      case NO_CLOSURE:
+        if ((dit_buffer) && (!dah_buffer)) {
+          last_closure = DIT_CLOSURE_DAH_OFF;
+        } else {
+          if ((dah_buffer) && (!dit_buffer)) {
+            last_closure = DAH_CLOSURE_DIT_OFF;
+          } else {
+            if ((dit_buffer) && (dah_buffer)) {
+              // need to handle dit/dah priority here
+              last_closure = DIT_CLOSURE_DAH_ON;
+              dah_buffer = 0;
+            }
+          }
+        }
+        break;
     }
-  }
+  } //if (configuration.keyer_mode == SINGLE_PADDLE)
+
+
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -4617,7 +4728,7 @@ void tx_and_sidetone_key (int state)
         service_ptt_interlock();
       #endif //FEATURE_PTT_INTERLOCK
       
-      if (configuration.keyer_mode != ULTIMATIC) {
+      if ((configuration.keyer_mode != ULTIMATIC) && (configuration.keyer_mode != SINGLE_PADDLE)) {
         if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
             iambic_flag = 1;
         }    
@@ -4751,7 +4862,7 @@ void tx_and_sidetone_key (int state)
         service_usb();
       #endif //FEATURE_USB_KEYBOARD
       
-      if (configuration.keyer_mode != ULTIMATIC) {
+      if ((configuration.keyer_mode != ULTIMATIC) && (configuration.keyer_mode != SINGLE_PADDLE))  {
         if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
             iambic_flag = 1;
         }    
@@ -5102,6 +5213,15 @@ void command_mode()
           #endif          
           send_dit();
           break;
+        case 2121: // C - Single paddle mode
+          configuration.keyer_mode = SINGLE_PADDLE;
+          keyer_mode_before = SINGLE_PADDLE;
+          config_dirty = 1;
+          #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+          #endif          
+          send_dit();
+          break;          
         case 1: // E - announce spEed
           char c[4];
           delay(250);
@@ -6060,7 +6180,7 @@ void service_dit_dah_buffers()
   #endif //FEATURE_PADDLE_ECHO
 
       
-  if ((configuration.keyer_mode == IAMBIC_A) || (configuration.keyer_mode == IAMBIC_B) || (configuration.keyer_mode == ULTIMATIC)) {
+  if ((configuration.keyer_mode == IAMBIC_A) || (configuration.keyer_mode == IAMBIC_B) || (configuration.keyer_mode == ULTIMATIC) || (configuration.keyer_mode == SINGLE_PADDLE)) {
     if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left)) && (paddle_pin_read(paddle_right))) {
       iambic_flag = 0;
       dit_buffer = 0;
@@ -8546,15 +8666,13 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use){
   port_to_use->println(F("\\#\t\t: play memory # x"));
   port_to_use->println(F("\\A\t\t: Iambic A"));
   port_to_use->println(F("\\B\t\t: Iambic B"));
-  #ifdef FEATURE_HELL
-    port_to_use->println(F("\\C\t\t: switch to CW (from Hell mode)"));
-  #endif
+  port_to_use->println(F("\\C\t\t: Single Paddle"));
   port_to_use->println(F("\\D\t\t: Ultimatic"));
   port_to_use->println(F("\\E####\t\t: Set serial number to ####"));
   port_to_use->println(F("\\F####\t\t: Set sidetone to #### hz"));
   port_to_use->println(F("\\G\t\t: switch to Bug mode"));
   #ifdef FEATURE_HELL
-    port_to_use->println(F("\\H\t\t: Switch to Hell mode"));
+    port_to_use->println(F("\\H\t\t: Toggle CW / Hell mode"));
   #endif
   port_to_use->println(F("\\I\t\t: TX line disable/enable"));
   port_to_use->println(F("\\J###\t\t: Set Dah to Dit Ratio"));
@@ -8676,20 +8794,27 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     #endif //FEATURE_STRAIGHT_KEY_ECHO
     case 43: cli_prosign_flag = 1; break;
     #if defined(FEATURE_SERIAL_HELP)
-      case 63: print_serial_help(port_to_use); break;                         // ? = print help
+      case '?': print_serial_help(port_to_use); break;                         // ? = print help
     #endif //FEATURE_SERIAL_HELP
-    case 65: configuration.keyer_mode = IAMBIC_A; config_dirty = 1; port_to_use->println(F("Iambic A")); break;    // A - Iambic A mode
-    case 66: configuration.keyer_mode = IAMBIC_B; config_dirty = 1; port_to_use->println(F("Iambic B")); break;    // B - Iambic B mode
-    case 67: char_send_mode = CW; port_to_use->println(F("CW mode")); break;             // C - CW mode
-    case 68: configuration.keyer_mode = ULTIMATIC; config_dirty = 1; port_to_use->println(F("Ultimatic")); break;  // D - Ultimatic mode
-    case 69: serial_set_serial_number(port_to_use); break;                                   // E - set serial number
-    case 70: serial_set_sidetone_freq(port_to_use); break;                                   // F - set sidetone frequency
-    case 71: configuration.keyer_mode = BUG; config_dirty = 1; port_to_use->println(F("Bug")); break;              // G - Bug mode
+    case 'A': configuration.keyer_mode = IAMBIC_A; config_dirty = 1; port_to_use->println(F("\r\nIambic A")); break;    // A - Iambic A mode
+    case 'B': configuration.keyer_mode = IAMBIC_B; config_dirty = 1; port_to_use->println(F("\r\nIambic B")); break;    // B - Iambic B mode
+    case 'C': configuration.keyer_mode = SINGLE_PADDLE; config_dirty = 1; port_to_use->println(F("\r\nSingle Paddle")); break;    // B - Iambic B mode
+    //case 67: char_send_mode = CW; port_to_use->println(F("CW mode")); break;             // C - CW mode
+    case 'D': configuration.keyer_mode = ULTIMATIC; config_dirty = 1; port_to_use->println(F("\r\nUltimatic")); break;  // D - Ultimatic mode
+    case 'E': serial_set_serial_number(port_to_use); break;                                   // E - set serial number
+    case 'F': serial_set_sidetone_freq(port_to_use); break;                                   // F - set sidetone frequency
+    case 'G': configuration.keyer_mode = BUG; config_dirty = 1; port_to_use->println(F("\r\nBug")); break;              // G - Bug mode
     #ifdef FEATURE_HELL
-      case 72: char_send_mode = HELL; port_to_use->println(F("Hell mode")); break;         // H - Hell mode
+      case 'H': // H - Hell mode
+        if (char_send_mode == CW){
+          char_send_mode = HELL; port_to_use->println(F("\r\nHell mode"));
+        } else {
+          char_send_mode = CW; port_to_use->println(F("\r\nCW mode"));
+        }  
+        break;         
     #endif //FEATURE_HELL
-    case 73:                                                                      // I - transmit line on/off
-      port_to_use->print(F("TX o"));
+    case 'I':                                                                      // I - transmit line on/off
+      port_to_use->print(F("\r\nTX o"));
       if (key_tx) {
         key_tx = 0;
         port_to_use->println(F("ff"));
@@ -8714,7 +8839,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       case 80: repeat_memory = 255; serial_program_memory(port_to_use); break;                                // P - program memory
     #endif //FEATURE_MEMORIES
     case 81: serial_qrss_mode(); break; // Q - activate QRSS mode
-    case 82: speed_mode = SPEED_NORMAL; port_to_use->println(F("QRSS Off")); break; // R - activate regular timing mode
+    case 82: speed_mode = SPEED_NORMAL; port_to_use->println(F("\r\nQRSS Off")); break; // R - activate regular timing mode
     case 83: serial_status(port_to_use); break;                                              // S - Status command
     case 74: serial_set_dit_to_dah_ratio(port_to_use); break;                          // J - dit to dah ratio
     #ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
@@ -8725,7 +8850,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       case 77: serial_set_farnsworth(port_to_use); break;                                // M - set Farnsworth speed
     #endif
     case 78:                                                                // N - paddle reverse
-      port_to_use->print(F("Paddles "));
+      port_to_use->print(F("\r\nPaddles "));
       if (configuration.paddle_mode == PADDLE_NORMAL) {
         configuration.paddle_mode = PADDLE_REVERSE;
         port_to_use->println(F("reversed"));
@@ -8736,7 +8861,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       config_dirty = 1;
     break;  // case 78
     case 79:                                                                // O - toggle sidetone on/off
-      port_to_use->print(F("Sidetone O"));
+      port_to_use->print(F("\r\nSidetone O"));
       if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {
         configuration.sidetone_mode = SIDETONE_OFF;
         port_to_use->println(F("FF"));
@@ -8752,7 +8877,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       #endif
       serial_tune_command(port_to_use); break;
     case 85:
-      port_to_use->print(F("PTT o"));
+      port_to_use->print(F("\r\nPTT o"));
       if (ptt_line_activated) {
         manual_ptt_invoke = 0;
         ptt_unkey();
@@ -8765,7 +8890,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       break;
     #ifdef FEATURE_POTENTIOMETER
       case 86:                // V - toggle pot activation
-        port_to_use->print(F("Potentiometer "));
+        port_to_use->print(F("\r\nPotentiometer "));
         configuration.pot_activated = !configuration.pot_activated;
         if (configuration.pot_activated) {
           port_to_use->print(F("A"));
@@ -8781,7 +8906,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     case 89: serial_change_wordspace(port_to_use); break;
     #ifdef FEATURE_AUTOSPACE
       case 90:
-        port_to_use->print(F("Autospace O"));
+        port_to_use->print(F("\r\nAutospace O"));
         if (configuration.autospace_active) {
           configuration.autospace_active = 0;
           config_dirty = 1;
@@ -8803,15 +8928,15 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     case 94:                           // ^ - toggle send CW send immediately
        if (cli_wait_for_cr_to_send_cw) {
          cli_wait_for_cr_to_send_cw = 0;
-         port_to_use->println(F("Send CW immediately"));
+         port_to_use->println(F("\r\nSend CW immediately"));
        } else {
          cli_wait_for_cr_to_send_cw = 1;
-         port_to_use->println(F("Wait for CR to send CW"));
+         port_to_use->println(F("\r\nWait for CR to send CW"));
        }
       break;
     #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
       case '&':
-        port_to_use->print(F("CMOS Super Keyer Timing O"));
+        port_to_use->print(F("\r\nCMOS Super Keyer Timing O"));
         if (configuration.cmos_super_keyer_iambic_b_timing_on) {
           configuration.cmos_super_keyer_iambic_b_timing_on = 0;
           port_to_use->println(F("ff"));        
@@ -8826,14 +8951,14 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         user_input_temp = serial_get_number_input(2,-1,100,port_to_use, RAISE_ERROR_MSG);
         if ((user_input_temp >= 0) && (user_input_temp < 100)) {
           configuration.cmos_super_keyer_iambic_b_timing_percent = user_input_temp;
-          port_to_use->println(F("CMOS Super Keyer Timing Set."));
+          port_to_use->println(F("\r\nCMOS Super Keyer Timing Set."));
         }
         config_dirty = 1;
         break;
     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
     #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
       case '.':
-        port_to_use->print(F("Dit Buffer O"));
+        port_to_use->print(F("\r\nDit Buffer O"));
         if (configuration.dit_buffer_off) {
           configuration.dit_buffer_off = 0;
           port_to_use->println(F("n"));
@@ -8844,7 +8969,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         config_dirty = 1;
         break;
       case '-':
-        port_to_use->print(F("Dah Buffer O"));
+        port_to_use->print(F("\r\nDah Buffer O"));
         if (configuration.dah_buffer_off) {
           configuration.dah_buffer_off = 0;
           port_to_use->println(F("n"));
@@ -8860,7 +8985,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       break;
     #ifdef FEATURE_QLF
       case '{':
-        port_to_use->print(F("QLF: O"));
+        port_to_use->print(F("\r\nQLF: O"));
         if (qlf_active){
             qlf_active = 0;
             port_to_use->println(F("ff"));
@@ -8885,7 +9010,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       send_serial_number(1,1);
       break;
 
-    default: port_to_use->println(F("Unknown command")); break;
+    default: port_to_use->println(F("\r\nUnknown command")); break;
   }
 
 }
@@ -9912,6 +10037,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
           port_to_use->print(F("Dah Priority")); 
           break;        
       }
+    case SINGLE_PADDLE: port_to_use->print(F("Single Paddle")); break;
 
     break; //zzzz
   }
@@ -12472,6 +12598,14 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         config_dirty = 1;
         break;
 
+      case 0x06 : // CTRL-C
+        configuration.keyer_mode = SINGLE_PADDLE;
+        #ifdef FEATURE_DISPLAY
+        lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+        #endif          
+        config_dirty = 1;
+        break;
+
       case 0x07 : // CTRL-D
         configuration.keyer_mode = ULTIMATIC;
         #ifdef FEATURE_DISPLAY
@@ -13962,6 +14096,7 @@ void web_print_page_keyer_settings(EthernetClient client){
   web_print_control_radio(client,"md",BUG,(configuration.keyer_mode == BUG)?1:0,"Bug ");
   web_print_control_radio(client,"md",STRAIGHT,(configuration.keyer_mode == STRAIGHT)?1:0,"Straight Key");
   web_print_control_radio(client,"md",ULTIMATIC,(configuration.keyer_mode == ULTIMATIC)?1:0,"Ultimatic");
+  web_print_control_radio(client,"md",SINGLE_PADDLE,(configuration.keyer_mode == SINGLE_PADDLE)?1:0,"Single Paddle");
   web_client_println(client,"<br>");  
 
     

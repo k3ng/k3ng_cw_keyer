@@ -9,6 +9,7 @@
 #define IAMBIC_A 3
 #define BUG 4
 #define ULTIMATIC 5
+#define SINGLE_PADDLE 6
 
 #define PADDLE_NORMAL 0
 #define PADDLE_REVERSE 1
