@@ -65,6 +65,7 @@
 #define tx_key_dit_and_dah_pins_active_state LOW
 #define tx_key_dit_and_dah_pins_inactive_state HIGH
 #define potentiometer_check_interval_ms 150
+#define default_paddle_interruption_quiet_time_element_lengths 0
 
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_number_of_buttons 4

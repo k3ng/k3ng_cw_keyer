@@ -74,7 +74,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     \<     Send current serial number
     \(     Send current serial number in cut numbers
     \)     Send serial number with cut numbers, then increment
-  
+    \[     Set Quiet Paddle Interruption 
 
 
  Buttons
@@ -520,6 +520,9 @@ New fetures in this stable release:
     2.2.2016102801
       Single Paddle mode, C command  
 
+    2.2.2016103101
+      Quiet Paddle Interruption feature - set with \[ command in CLI.  Value is 0 to 20 element lengths; 0 = off   
+
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -530,8 +533,8 @@ New fetures in this stable release:
 
 */
 
-#define CODE_VERSION "2.2.2016102801"
-#define eeprom_magic_number 23
+#define CODE_VERSION "2.2.2016103101"
+#define eeprom_magic_number 24
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -665,7 +668,7 @@ New fetures in this stable release:
 
 
 // Variables and stuff
-struct config_t {  //47 bytes
+struct config_t {  //48 bytes
   unsigned int wpm;
   byte paddle_mode;  
   byte keyer_mode;   
@@ -692,6 +695,7 @@ struct config_t {  //47 bytes
   int link_send_udp_port[FEATURE_INTERNET_LINK_MAX_LINKS];
   int link_receive_udp_port;
   uint8_t link_receive_enabled;
+  uint8_t paddle_interruption_quiet_time_element_lengths;
 } configuration;
 
 byte sending_mode = UNDEFINED_SENDING;
@@ -1100,6 +1104,8 @@ PRIMARY_SERIAL_CLS * debug_serial_port;
     #endif //FEATURE_INTERNET_LINK
   #endif
 #endif //FEATURE_ETHERNET
+
+unsigned long automatic_sending_interruption_time = 0;     
 
 
 /*---------------------------------------------------------------------------------------------------------
@@ -3845,7 +3851,7 @@ void check_paddles()
   static byte last_closure = NO_CLOSURE;
 
   check_dit_paddle();
-  check_dah_paddle();
+  check_dah_paddle();  
 
   #ifdef FEATURE_WINKEY_EMULATION
     if (winkey_dit_invoke) {
@@ -4786,6 +4792,7 @@ void tx_and_sidetone_key (int state)
         if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
           if (keyer_machine_mode == KEYER_NORMAL) {
             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+            automatic_sending_interruption_time = millis(); 
             return;
           }
         }   
@@ -4793,6 +4800,7 @@ void tx_and_sidetone_key (int state)
         if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
           if (keyer_machine_mode == KEYER_NORMAL) {
             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+            automatic_sending_interruption_time = millis(); 
             return;
           }
         }   
@@ -4926,6 +4934,7 @@ void tx_and_sidetone_key (int state)
         if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
           if (keyer_machine_mode == KEYER_NORMAL) {
             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+            automatic_sending_interruption_time = millis(); 
             return;
           }
         }   
@@ -4933,6 +4942,7 @@ void tx_and_sidetone_key (int state)
         if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
           if (keyer_machine_mode == KEYER_NORMAL) {
             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+            automatic_sending_interruption_time = millis(); 
             return;
           }
         }   
@@ -6172,6 +6182,16 @@ void service_dit_dah_buffers()
     debug_serial_port->println(F("loop: entering service_dit_dah_buffers"));
   #endif      
 
+  if (automatic_sending_interruption_time != 0){
+    if ((millis() - automatic_sending_interruption_time) > (configuration.paddle_interruption_quiet_time_element_lengths*(1200/configuration.wpm))){
+      automatic_sending_interruption_time = 0;
+      sending_mode = MANUAL_SENDING;
+    } else {
+      dit_buffer = 0;
+      dah_buffer = 0;
+      return;        
+    }
+  }
 
   static byte bug_dah_flag = 0;
 
@@ -6509,7 +6529,9 @@ void send_char(byte cw_char, byte omit_letterspace)
       
     }
     if (omit_letterspace != OMIT_LETTERSPACE) {
+
       loop_element_lengths((length_letterspace-1),0,configuration.wpm); //this is minus one because send_dit and send_dah have a trailing element space
+
     }
   } else {
     #ifdef FEATURE_HELL
@@ -8838,18 +8860,18 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       case 57: serial_play_memory(incoming_serial_byte-49); break;
       case 80: repeat_memory = 255; serial_program_memory(port_to_use); break;                                // P - program memory
     #endif //FEATURE_MEMORIES
-    case 81: serial_qrss_mode(); break; // Q - activate QRSS mode
-    case 82: speed_mode = SPEED_NORMAL; port_to_use->println(F("\r\nQRSS Off")); break; // R - activate regular timing mode
-    case 83: serial_status(port_to_use); break;                                              // S - Status command
-    case 74: serial_set_dit_to_dah_ratio(port_to_use); break;                          // J - dit to dah ratio
+    case 'Q': serial_qrss_mode(); break; // Q - activate QRSS mode
+    case 'R': speed_mode = SPEED_NORMAL; port_to_use->println(F("\r\nQRSS Off")); break; // R - activate regular timing mode
+    case 'S': serial_status(port_to_use); break;                                              // S - Status command
+    case 'J': serial_set_dit_to_dah_ratio(port_to_use); break;                          // J - dit to dah ratio
     #ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
-      case 75: serial_cw_practice(port_to_use); break;                     // K - CW practice
+      case 'K': serial_cw_practice(port_to_use); break;                     // K - CW practice
     #endif //FEATURE_CALLSIGN_RECEIVE_PRACTICE
     case 76: serial_set_weighting(port_to_use); break;
     #ifdef FEATURE_FARNSWORTH
-      case 77: serial_set_farnsworth(port_to_use); break;                                // M - set Farnsworth speed
+      case 'M': serial_set_farnsworth(port_to_use); break;                                // M - set Farnsworth speed
     #endif
-    case 78:                                                                // N - paddle reverse
+    case 'N':                                                                // N - paddle reverse
       port_to_use->print(F("\r\nPaddles "));
       if (configuration.paddle_mode == PADDLE_NORMAL) {
         configuration.paddle_mode = PADDLE_REVERSE;
@@ -8859,8 +8881,8 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         port_to_use->println(F("normal"));
       }
       config_dirty = 1;
-    break;  // case 78
-    case 79:                                                                // O - toggle sidetone on/off
+    break;
+    case 'O':                                                                // O - toggle sidetone on/off
       port_to_use->print(F("\r\nSidetone O"));
       if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {
         configuration.sidetone_mode = SIDETONE_OFF;
@@ -8870,8 +8892,8 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         port_to_use->println(F("N"));
       }
       config_dirty = 1;
-    break; // case 79
-    case 84: // T - tune
+    break;
+    case 'T': // T - tune
       #ifdef FEATURE_MEMORIES
         repeat_memory = 255;
       #endif
@@ -8889,7 +8911,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       }
       break;
     #ifdef FEATURE_POTENTIOMETER
-      case 86:                // V - toggle pot activation
+      case 'V':                // V - toggle pot activation
         port_to_use->print(F("\r\nPotentiometer "));
         configuration.pot_activated = !configuration.pot_activated;
         if (configuration.pot_activated) {
@@ -8901,8 +8923,8 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         config_dirty = 1;
         break;
     #endif
-    case 87: serial_wpm_set(port_to_use);break;                                        // W - set WPM
-    case 88: serial_switch_tx(port_to_use);break;                                      // X - switch transmitter
+    case 'W': serial_wpm_set(port_to_use);break;                                        // W - set WPM
+    case 'X': serial_switch_tx(port_to_use);break;                                      // X - switch transmitter
     case 89: serial_change_wordspace(port_to_use); break;
     #ifdef FEATURE_AUTOSPACE
       case 90:
@@ -8925,7 +8947,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         repeat_memory = 255;
         break;                           // \ - double backslash - clear serial send buffer
     #endif
-    case 94:                           // ^ - toggle send CW send immediately
+    case '^':                           // ^ - toggle send CW send immediately
        if (cli_wait_for_cr_to_send_cw) {
          cli_wait_for_cr_to_send_cw = 0;
          port_to_use->println(F("\r\nSend CW immediately"));
@@ -8996,7 +9018,6 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         break;
     #endif //FEATURE_QLF
 
-
     case '>':
       send_serial_number(0,1);
       break;
@@ -9009,7 +9030,14 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     case ')':
       send_serial_number(1,1);
       break;
-
+    case '[':
+      user_input_temp = serial_get_number_input(2,-1,21,port_to_use,RAISE_ERROR_MSG);
+      if ((user_input_temp >= 0) && (user_input_temp < 21)) {
+        configuration.paddle_interruption_quiet_time_element_lengths = user_input_temp;
+        port_to_use->println(F("\r\nPaddle Interruption Quiet Time set."));
+      }
+      config_dirty = 1;      
+      break;
     default: port_to_use->println(F("\r\nUnknown command")); break;
   }
 
@@ -10111,13 +10139,20 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
 
 
   #ifdef FEATURE_QLF
-    port_to_use->print("QLF: O");
+    port_to_use->print(F("QLF: O"));
     if (qlf_active){
       port_to_use->println("n");
     } else {
       port_to_use->println("ff");
     }
   #endif //FEATURE_QLF
+
+  port_to_use->print(F("Quiet Paddle Interrupt: "));
+  if (configuration.paddle_interruption_quiet_time_element_lengths > 0){
+    port_to_use->println(configuration.paddle_interruption_quiet_time_element_lengths);
+  } else {
+    port_to_use->println(F("Off"));
+  }
 
   #ifdef FEATURE_MEMORIES
     serial_status_memories(port_to_use);
@@ -10142,14 +10177,14 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   #endif //DEBUG_VARIABLE_DUMP
   
   #ifdef DEBUG_BUTTONS
-  for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
-    port_to_use->print(F("analog_button_array:   "));
-    port_to_use->print(x);
-    port_to_use->print(F(" button_array_low_limit: "));
-    port_to_use->print(button_array_low_limit[x]);
-    port_to_use->print(F("  button_array_high_limit: "));
-    port_to_use->println(button_array_high_limit[x]);
-  }
+    for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
+      port_to_use->print(F("analog_button_array:   "));
+      port_to_use->print(x);
+      port_to_use->print(F(" button_array_low_limit: "));
+      port_to_use->print(button_array_low_limit[x]);
+      port_to_use->print(F("  button_array_high_limit: "));
+      port_to_use->println(button_array_high_limit[x]);
+    }
   #endif 
   
 }
@@ -11946,13 +11981,14 @@ void initialize_keyer_state(){
   configuration.wpm = initial_speed_wpm;
 
   pot_wpm_low_value = initial_pot_wpm_low_value;
+
+  configuration.paddle_interruption_quiet_time_element_lengths = default_paddle_interruption_quiet_time_element_lengths;
   
   configuration.hz_sidetone = initial_sidetone_freq;
   configuration.memory_repeat_time = default_memory_repeat_time;
   configuration.cmos_super_keyer_iambic_b_timing_percent = default_cmos_super_keyer_iambic_b_timing_percent;
   
   configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
-  //configuration.current_tx = 1;
   configuration.length_wordspace = default_length_wordspace;
   configuration.weighting = default_weighting;
   
