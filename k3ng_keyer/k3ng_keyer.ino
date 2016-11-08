@@ -523,6 +523,11 @@ New fetures in this stable release:
     2.2.2016103101
       Quiet Paddle Interruption feature - set with \[ command in CLI.  Value is 0 to 20 element lengths; 0 = off   
 
+    2.2.2016110801
+      Integrated OK1RR Tiny Keyer hardware files - HARDWARE_TINYKEYER in keyer_hardware.h file
+
+
+  This code is currently maintained for / compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -533,7 +538,7 @@ New fetures in this stable release:
 
 */
 
-#define CODE_VERSION "2.2.2016103101"
+#define CODE_VERSION "2.2.2016110801"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -567,6 +572,10 @@ New fetures in this stable release:
   #include "keyer_features_and_options_open_interface.h"
 #endif
 
+#ifdef HARDWARE_TINYKEYER
+  #include "keyer_features_and_options_tinykeyer.h"
+#endif  
+
 #ifdef HARDWARE_TEST
   #include "keyer_features_and_options_test.h"
 #endif    
@@ -599,6 +608,11 @@ New fetures in this stable release:
   #include "keyer_pin_settings_open_interface.h"
   #include "keyer_settings_open_interface.h"
 #endif
+
+#ifdef HARDWARE_TINYKEYER
+  #include "keyer_pin_settings_tinykeyer.h"
+  #include "keyer_settings_tinykeyer.h"
+#endif  
 
 #ifdef HARDWARE_TEST
   #include "keyer_pin_settings_test.h"

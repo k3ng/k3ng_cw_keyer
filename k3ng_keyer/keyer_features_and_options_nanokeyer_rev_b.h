@@ -11,7 +11,7 @@
 #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 //#define FEATURE_SERIAL_HELP
 //#define FEATURE_HELL
-//#define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
+// #define FEATURE_PS2_KEYBOARD        // Change keyboard layout (non-US in K3NG_PS2Keyboard.h).  Additional options below.
 //#define FEATURE_USB_KEYBOARD         
 //#define FEATURE_DEAD_OP_WATCHDOG
 //#define FEATURE_AUTOSPACE
