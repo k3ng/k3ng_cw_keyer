@@ -92,6 +92,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     E  Announce speed
     F  Adjust sidetone frequency
     G  Switch to bug mode
+    H  Set weighting and dah to dit ratio to defaults
     I  TX enable / disable
     J  Dah to dit ratio adjust
     L  Adjust weighting
@@ -106,6 +107,11 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     Y#### Change memory repeat delay to #### mS
     Z  Autospace On/Off
     #  Play a memory without transmitting
+    ?  Status
+         1. Speed in WPM
+         2. Keyer Mode (A = Iambic A, B = Iambic B, G = Bug, S = Single Paddle, U = Ultimatic)
+         3. Weighting
+         4. Dah to Dit Ratio
 
  Memory Macros
     \#     Jump to memory #
@@ -526,6 +532,10 @@ New fetures in this stable release:
     2.2.2016110801
       Integrated OK1RR Tiny Keyer hardware files - HARDWARE_TINYKEYER in keyer_hardware.h file
 
+    2.2.2016110802
+      New command mode command H - set weighting and dah to dit ratio to defaults
+      New command mode command ? - Status
+
 
   This code is currently maintained for / compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
@@ -538,7 +548,7 @@ New fetures in this stable release:
 
 */
 
-#define CODE_VERSION "2.2.2016110801"
+#define CODE_VERSION "2.2.2016110802"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -5128,11 +5138,12 @@ void command_mode()
   byte button_that_was_pressed = 0;
   byte paddle_hit = 0;
   unsigned long last_element_time = 0;
-  int cw_char;
+  unsigned long cw_char;
   byte stay_in_command_mode = 1;
   byte speed_mode_before = speed_mode;
   speed_mode = SPEED_NORMAL;                 // put us in normal speed mode (life is too short to do command mode in QRSS)
   byte keyer_mode_before = configuration.keyer_mode;
+  char c[4];
   if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B)) {
     configuration.keyer_mode = IAMBIC_B;                   // we got to be in iambic mode (life is too short to make this work in bug mode)
   }
@@ -5247,7 +5258,6 @@ void command_mode()
           send_dit();
           break;          
         case 1: // E - announce spEed
-          char c[4];
           delay(250);
           sprintf(c, "%d", configuration.wpm);
           send_char(c[0],KEYER_NORMAL);
@@ -5270,6 +5280,15 @@ void command_mode()
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Bug", 0, default_display_msg_delay);
           #endif          
+          send_dit();
+          break;  
+        case 1111:   // H - set weighting and dah to dit ratio to defaults
+          configuration.weighting = default_weighting;
+          configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
+          config_dirty = 1;
+          #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Dflt Wght & Ratio", 0, default_display_msg_delay); 
+          #endif         
           send_dit();
           break;  
         case 11:                                                     // I - toggle TX enable / disable
@@ -5385,6 +5404,9 @@ void command_mode()
           case 11112: play_memory(3); break;
           case 11111: play_memory(4); break;
         #endif
+        case 121212:send_char(75,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(78,KEYER_NORMAL);send_char(71,KEYER_NORMAL);send_char(32,KEYER_NORMAL);
+                    send_char(55,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(32,KEYER_NORMAL);send_char(69,KEYER_NORMAL);send_char(69,KEYER_NORMAL);
+                    break;          
         #ifdef FEATURE_ALPHABET_SEND_PRACTICE
           case 111:
             send_dit(); 
@@ -5392,6 +5414,52 @@ void command_mode()
             stay_in_command_mode = 0;
             break;
         #endif  //FEATURE_ALPHABET_SEND_PRACTICE
+//zzzzzzz
+        case 112211: // ? - status
+          
+          delay(250);
+          sprintf(c, "%d", configuration.wpm);
+          send_char(c[0],KEYER_NORMAL);
+          send_char(c[1],KEYER_NORMAL);
+          send_char(' ',KEYER_NORMAL);
+          
+          switch(configuration.keyer_mode){
+            case IAMBIC_A:
+              send_char('A',KEYER_NORMAL);
+              break;
+            case IAMBIC_B:
+              send_char('B',KEYER_NORMAL);
+              break;    
+            case SINGLE_PADDLE:
+              send_char('S',KEYER_NORMAL);
+              break;
+            case ULTIMATIC:
+              send_char('U',KEYER_NORMAL);
+              break; 
+            case BUG:
+              send_char('G',KEYER_NORMAL);
+              break;                                        
+          }
+          send_char(' ',KEYER_NORMAL);
+          send_char(' ',KEYER_NORMAL);
+        
+
+          sprintf(c, "%d", configuration.weighting);
+          send_char(c[0],KEYER_NORMAL);
+          send_char(c[1],KEYER_NORMAL);
+          send_char(' ',KEYER_NORMAL);
+
+          sprintf(c, "%d", configuration.dah_to_dit_ratio);
+          send_char(c[0],KEYER_NORMAL);
+          send_char('.',KEYER_NORMAL);
+          send_char(c[1],KEYER_NORMAL);
+          send_char(c[2],KEYER_NORMAL);
+          send_char(' ',KEYER_NORMAL);          
+
+          break; 
+
+
+
         case 9: // button was hit
           #if defined(FEATURE_MEMORIES)
             if (button_that_was_pressed == 0){  // button 0 was hit - exit
