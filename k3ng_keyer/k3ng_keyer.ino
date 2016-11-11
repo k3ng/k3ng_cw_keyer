@@ -9169,7 +9169,14 @@ void service_paddle_echo()
         Keyboard.write(KEY_BACKSPACE); // backspace
         no_space = 1;
         break;
-      case 1212:  // prosign AA
+      case 222222:
+      case 2222222:
+      case 22222222:
+      case 222222222:
+        Keyboard.write(32); // space
+        no_space = 1;
+        break;
+     case 1212:  // prosign AA
         Keyboard.write(KEY_RETURN);
         no_space = 1;   
         break;
@@ -9247,7 +9254,7 @@ void service_paddle_echo()
         
       default:
         character_to_send = convert_cw_number_to_ascii(paddle_echo_buffer);
-        if ((character_to_send > 64) && (character_to_send < 91)) {character_to_send = character_to_send + 32;}
+        if ((cw_keyboard_capslock_on == 0)&&(character_to_send > 64) && (character_to_send < 91)) {character_to_send = character_to_send + 32;}
         if (character_to_send=='*'){
           no_space = 1;
           #ifdef OPTION_UNKNOWN_CHARACTER_ERROR_TONE
