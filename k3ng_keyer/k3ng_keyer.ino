@@ -1087,6 +1087,7 @@ PRIMARY_SERIAL_CLS * debug_serial_port;
 #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
+#include "Keyboard.h" //include usb keyboard library
   byte cw_keyboard_capslock_on = 0;
 #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
