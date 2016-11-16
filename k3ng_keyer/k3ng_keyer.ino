@@ -197,6 +197,19 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     
     If you are using an Arduino Mega ADK, you must customize the USB Host Shield Library settings.h file!
  
+ 
+ Option Usb Computer Keyboard Emulation FEATURE_CW_COMPUTER_KEYBOARD
+ (Arduino Due, Leonardo only)
+
+    You can use your cw key as a computer keyoard. Your computer recognize the K3NG keyer as a normal keyboard.
+    Language available English and Italian (more languages to add)
+    Use following prosign to emulate Enter Key, Caps Lock, space and backspace:
+    Prosign AA "Enter"
+    Prosign DO "Caps Lock" (enable and disable)
+    "......" or more "Backspace"
+    "------" or more "Space"
+
+ 
  Useful Stuff
     Reset to defaults: squeeze both paddles at power up (good to use if you dorked up the speed and don't have the CLI)
     Press the right paddle to enter straight key mode at power up
