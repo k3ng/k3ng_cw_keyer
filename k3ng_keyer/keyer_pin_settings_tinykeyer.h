@@ -12,7 +12,7 @@
 #define tx_key_line_6 0
 #define sidetone_line 4         // connect a speaker for sidetone
 #define potentiometer 0         // tinykeyer no pot used
-#define ptt_tx_1 13             // tinykeyer PTT port (high = PTT down/PTT on)
+#define ptt_tx_1 0              // (put 13 instead 0 to activate) tinykeyer PTT port (high = PTT down/PTT on)
 #define ptt_tx_2 0              // Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
 #define ptt_tx_3 0              // These are optional - set to 0 if unused
 #define ptt_tx_4 0
