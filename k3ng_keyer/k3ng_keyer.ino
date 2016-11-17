@@ -196,6 +196,20 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     or built your own MAX3421 based USB port.
     
     If you are using an Arduino Mega ADK, you must customize the USB Host Shield Library settings.h file!
+
+
+    Option Usb Computer Keyboard Emulation FEATURE_CW_COMPUTER_KEYBOARD
+    (Arduino Due, Leonardo only)
+
+       You can use your cw key as a computer keyoard. Your computer recognize the K3NG keyer as a normal keyboard.
+       Language available English and Italian (more languages to add)
+       Use following prosign to emulate Enter Key, Caps Lock, space and backspace:
+       Prosign AA "Enter"
+       Prosign DO "Caps Lock" (enable and disable)
+       "......" or more "Backspace"
+       "------" or more "Space"
+
+
  
  Useful Stuff
     Reset to defaults: squeeze both paddles at power up (good to use if you dorked up the speed and don't have the CLI)
@@ -536,6 +550,9 @@ New fetures in this stable release:
       New command mode command H - set weighting and dah to dit ratio to defaults
       New command mode command ? - Status
 
+    2.2.2016111701
+      FEATURE_CW_COMPUTER_KEYBOARD enhancements from Giogrio IZ2XBZ
+
 
   This code is currently maintained for / compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
@@ -548,7 +565,7 @@ New fetures in this stable release:
 
 */
 
-#define CODE_VERSION "2.2.2016110802"
+#define CODE_VERSION "2.2.2016111701"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -689,7 +706,9 @@ New fetures in this stable release:
   // #include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
 #endif
 
-
+#if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
+  #include <Keyboard.h>
+#endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
 // Variables and stuff
 struct config_t {  //48 bytes
@@ -1627,6 +1646,13 @@ void loop()
           case 111111111:
             Keyboard.write(KEY_BACKSPACE); // backspace
             cw_keyboard_no_space = 1;
+            break;
+          case 222222:
+          case 2222222:
+          case 22222222:
+          case 222222222:
+            Keyboard.write(32); // space
+            no_space = 1;
             break;
           case 1212:  // prosign AA
             Keyboard.write(KEY_RETURN);
@@ -9247,7 +9273,8 @@ void service_paddle_echo()
         
       default:
         character_to_send = convert_cw_number_to_ascii(paddle_echo_buffer);
-        if ((character_to_send > 64) && (character_to_send < 91)) {character_to_send = character_to_send + 32;}
+        // if ((character_to_send > 64) && (character_to_send < 91)) {character_to_send = character_to_send + 32;}
+        if ((cw_keyboard_capslock_on == 0) && (character_to_send > 64) && (character_to_send < 91)) {character_to_send = character_to_send + 32;}
         if (character_to_send=='*'){
           no_space = 1;
           #ifdef OPTION_UNKNOWN_CHARACTER_ERROR_TONE
