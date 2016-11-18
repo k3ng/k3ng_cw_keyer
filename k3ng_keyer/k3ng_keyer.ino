@@ -1637,6 +1637,10 @@ void loop()
  
 
 
+/* *************************************************
+**** THIS CODE IS DUPLICATED AND NO NECESSARY  *****
+****       PLEASE CHECK ;) at row 9193         *****   
+****************************************************
 
       #if defined(FEATURE_CW_COMPUTER_KEYBOARD)       
         switch (decode_character){
@@ -1756,7 +1760,7 @@ void loop()
        
 
       #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD) 
-
+*/
       
       // reinitialize everything
       last_transition_time = 0;
@@ -9200,7 +9204,7 @@ void service_paddle_echo()
         no_space = 1;   
         break;
       case 211222: // prosign DO
-        Keyboard.write(KEY_CAPS_LOCK);
+        //Keyboard.write(KEY_CAPS_LOCK); // THIS DON'T WORK ON MAC ;(
         #ifdef OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
           if (cw_keyboard_capslock_on){
             beep();delay(100);
