@@ -95,6 +95,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     H  Set weighting and dah to dit ratio to defaults
     I  TX enable / disable
     J  Dah to dit ratio adjust
+    K  Toggle Dit and Dah Buffers on and off
     L  Adjust weighting
     N  Toggle paddle reverse
     O  Toggle sidetone on / off
@@ -556,6 +557,8 @@ Recent Update History
     2.2.2016111702
       Eliminated FEATURE_DIT_DAH_BUFFER_CONTROL code; it's compiled in with core code now.  Also depricated OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL
 
+    2.2.2016112301
+      New command mode command K: toggle dit and dah buffer on and off
 
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
@@ -568,7 +571,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016111702"
+#define CODE_VERSION "2.2.2016112301"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -5327,7 +5330,27 @@ void command_mode()
           send_dit();
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
-        case 1211: command_weighting_adjust();break;
+        case 212:
+          send_char('O',KEYER_NORMAL);
+          if (configuration.dit_buffer_off){
+            configuration.dit_buffer_off = 0;
+            configuration.dah_buffer_off = 0;
+            #ifdef FEATURE_DISPLAY
+              lcd_center_print_timed("Dit Dah Buffers On", 0, default_display_msg_delay);
+            #endif
+            send_char('N',KEYER_NORMAL);           
+          } else {
+            configuration.dit_buffer_off = 1;
+            configuration.dah_buffer_off = 1;
+            #ifdef FEATURE_DISPLAY
+              lcd_center_print_timed("Dit Dah Buffers Off", 0, default_display_msg_delay);
+            #endif 
+            send_char('F',KEYER_NORMAL);
+            send_char('F',KEYER_NORMAL);             
+          }
+
+          break;
+        case 1211: command_weighting_adjust();break; // L - weight adjust
         #ifdef FEATURE_MEMORIES
           case 1221: command_program_memory(); break;                       // P - program a memory
         #endif //FEATURE_MEMORIES  Acknowledgement: LA3ZA fixed!
