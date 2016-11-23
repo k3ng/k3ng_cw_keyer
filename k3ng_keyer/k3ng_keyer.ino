@@ -175,7 +175,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
    UP ARROW         Increase WPM
    Keypad /         Dit Paddle (USB Keyboard Only)
    Keypad *         Dah Paddle (USB Keyboard Only)
-   Keypad ENTER     Tune / Straightkey (USB Keyboard Only)
+   Keypad ENTER     Tune / Straight Key (USB Keyboard Only)
    
  USB Mouse
  
@@ -201,7 +201,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     Option Usb Computer Keyboard Emulation FEATURE_CW_COMPUTER_KEYBOARD
     (Arduino Due, Leonardo only)
 
-       You can use your cw key as a computer keyoard. Your computer recognize the K3NG keyer as a normal keyboard.
+       You can use your cw key as a computer keyboard. Your computer recognize the K3NG keyer as a normal keyboard.
        Language available English and Italian (more languages to add)
        Use following prosign to emulate Enter Key, Caps Lock, space and backspace:
        Prosign AA "Enter"
@@ -211,12 +211,12 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
 
 
  
- Useful Stuff
+Useful Stuff
     Reset to defaults: squeeze both paddles at power up (good to use if you dorked up the speed and don't have the CLI)
     Press the right paddle to enter straight key mode at power up
     Press the left  paddle at power up to enter and stay forever in beacon mode
 
-New fetures in this stable release:
+Recent Update History
 
     2.2.2015040402 More work on ARDUINO_SAM_DUE (documented)
 
@@ -551,10 +551,13 @@ New fetures in this stable release:
       New command mode command ? - Status
 
     2.2.2016111701
-      FEATURE_CW_COMPUTER_KEYBOARD enhancements from Giogrio IZ2XBZ
+      FEATURE_CW_COMPUTER_KEYBOARD enhancements from Giorgio IZ2XBZ
+   
+    2.2.2016111702
+      Eliminated FEATURE_DIT_DAH_BUFFER_CONTROL code; it's compiled in with core code now.  Also depricated OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL
 
 
-  This code is currently maintained for / compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
+  This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -565,7 +568,7 @@ New fetures in this stable release:
 
 */
 
-#define CODE_VERSION "2.2.2016111701"
+#define CODE_VERSION "2.2.2016111702"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -4233,10 +4236,8 @@ int read_settings_from_eeprom() {
       switch_to_tx_silent(configuration.current_tx);
       config_dirty = 0;
 
-      #if defined(OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL) && defined(FEATURE_DIT_DAH_BUFFER_CONTROL)
-        configuration.dit_buffer_off = 1;
-        configuration.dah_buffer_off = 1;
-      #endif //defined(OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL) && defined(FEATURE_DIT_DAH_BUFFER_CONTROL)
+      configuration.dit_buffer_off = 0;
+      configuration.dah_buffer_off = 0;
 
       return 0;
     } else {
@@ -4869,15 +4870,12 @@ void tx_and_sidetone_key (int state)
         dah_buffer = 0;
     }    
    
-    #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
-      if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
-        if (configuration.dit_buffer_off) {dit_buffer = 0;}
-        if (configuration.dah_buffer_off) {dah_buffer = 0;}
-      }  
-    #endif //FEATURE_DIT_DAH_BUFFER_CONTROL
-   
-   
+    if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
+      if (configuration.dit_buffer_off) {dit_buffer = 0;}
+      if (configuration.dah_buffer_off) {dah_buffer = 0;}
+    }  
 
+   
 
   } //void loop_element_lengths
 
@@ -5005,14 +5003,11 @@ void tx_and_sidetone_key (int state)
         dah_buffer = 0;
     }    
 
-    #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
     if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
       if (configuration.dit_buffer_off) {dit_buffer = 0;}
       if (configuration.dah_buffer_off) {dah_buffer = 0;}
     }  
-    #endif //FEATURE_DIT_DAH_BUFFER_CONTROL
   
- 
 
   } //void loop_element_lengths
 
@@ -8835,10 +8830,8 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use){
     port_to_use->println(F("\\&\t\t: Toggle CMOS Super Keyer Timing on/off"));
     port_to_use->println(F("\\%##\t\t: Set CMOS Super Keyer Timing %"));
   #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-  #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
-    port_to_use->println(F("\\.\t\t: Toggle dit buffer on/off"));
-    port_to_use->println(F("\\-\t\t: Toggle dah buffer on/off"));
-  #endif //FEATURE_DIT_DAH_BUFFER_CONTROL  
+  port_to_use->println(F("\\.\t\t: Toggle dit buffer on/off"));
+  port_to_use->println(F("\\-\t\t: Toggle dah buffer on/off"));
   port_to_use->println(F("\nMemory Macros:"));
   port_to_use->println(F("\\#\t\t: Jump to memory #"));
   port_to_use->println(F("\\C\t\t: Send serial number with cut numbers"));
@@ -8879,10 +8872,8 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use){
     port_to_use->println(F("\\&\t\t: Toggle CMOS Super Keyer Timing on/off"));
     port_to_use->println(F("\\%##\t\t: Set CMOS Super Keyer Timing %"));
   #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-  #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
-    port_to_use->println(F("\\.\t\t: Toggle dit buffer on/off"));
-    port_to_use->println(F("\\-\t\t: Toggle dah buffer on/off"));
-  #endif //FEATURE_DIT_DAH_BUFFER_CONTROL
+  port_to_use->println(F("\\.\t\t: Toggle dit buffer on/off"));
+  port_to_use->println(F("\\-\t\t: Toggle dah buffer on/off"));
   port_to_use->println(F("\\:\t\t: CW send echo inhibit toggle"));
   #ifdef FEATURE_QLF
     port_to_use->println(F("\\{\t\t: QLF mode on/off"));
@@ -9086,30 +9077,28 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         config_dirty = 1;
         break;
     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-    #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
-      case '.':
-        port_to_use->print(F("\r\nDit Buffer O"));
-        if (configuration.dit_buffer_off) {
-          configuration.dit_buffer_off = 0;
-          port_to_use->println(F("n"));
-        } else {
-          configuration.dit_buffer_off = 1;
-          port_to_use->println(F("ff"));
-        }
-        config_dirty = 1;
-        break;
-      case '-':
-        port_to_use->print(F("\r\nDah Buffer O"));
-        if (configuration.dah_buffer_off) {
-          configuration.dah_buffer_off = 0;
-          port_to_use->println(F("n"));
-        } else {
-          configuration.dah_buffer_off = 1;
-          port_to_use->println(F("ff"));
-        }
-        config_dirty = 1;    
-        break;
-    #endif //FEATURE_DIT_DAH_BUFFER_CONTROL
+    case '.':
+      port_to_use->print(F("\r\nDit Buffer O"));
+      if (configuration.dit_buffer_off) {
+        configuration.dit_buffer_off = 0;
+        port_to_use->println(F("n"));
+      } else {
+        configuration.dit_buffer_off = 1;
+        port_to_use->println(F("ff"));
+      }
+      config_dirty = 1;
+      break;
+    case '-':
+      port_to_use->print(F("\r\nDah Buffer O"));
+      if (configuration.dah_buffer_off) {
+        configuration.dah_buffer_off = 0;
+        port_to_use->println(F("n"));
+      } else {
+        configuration.dah_buffer_off = 1;
+        port_to_use->println(F("ff"));
+      }
+      config_dirty = 1;    
+      break;
     case ':':
       if (cw_send_echo_inhibit) cw_send_echo_inhibit = 0; else cw_send_echo_inhibit = 1;
       break;
@@ -10179,20 +10168,18 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     break; //zzzz
   }
   port_to_use->println();
-  #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
-    port_to_use->print(F("Buffers: Dit O"));
-    if (configuration.dit_buffer_off){
-      port_to_use->print(F("FF"));
-    } else {
-      port_to_use->print(F("N"));
-    }
-    port_to_use->print(F(" Dah O"));
-    if (configuration.dah_buffer_off){
-      port_to_use->println(F("FF"));
-    } else {
-      port_to_use->println(F("N"));
-    }
-  #endif //FEATURE_DIT_DAH_BUFFER_CONTROL  
+  port_to_use->print(F("Buffers: Dit O"));
+  if (configuration.dit_buffer_off){
+    port_to_use->print(F("FF"));
+  } else {
+    port_to_use->print(F("N"));
+  }
+  port_to_use->print(F(" Dah O"));
+  if (configuration.dah_buffer_off){
+    port_to_use->println(F("FF"));
+  } else {
+    port_to_use->println(F("N"));
+  }
   if (speed_mode == SPEED_NORMAL) {
     port_to_use->print(F("WPM: "));
     port_to_use->println(configuration.wpm,DEC);
@@ -14251,11 +14238,8 @@ void web_print_page_keyer_settings(EthernetClient client){
     web_client_println(client,"<br>");
   #endif
   
-
-  #ifdef FEATURE_DIT_DAH_BUFFER_CONTROL
-    web_print_control_checkbox(client,"di",(!configuration.dit_buffer_off)?1:0," Dit Buffer ");
-    web_print_control_checkbox(client,"da",(!configuration.dah_buffer_off)?1:0," Dah Buffer<br>");
-  #endif //FEATURE_DIT_DAH_BUFFER_CONTROL 
+  web_print_control_checkbox(client,"di",(!configuration.dit_buffer_off)?1:0," Dit Buffer ");
+  web_print_control_checkbox(client,"da",(!configuration.dah_buffer_off)?1:0," Dah Buffer<br>");
 
   web_print_control_radio(client,"sm",SPEED_NORMAL,(speed_mode == SPEED_NORMAL)?1:0,"Normal Speed Mode ");
 

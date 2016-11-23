@@ -24,7 +24,6 @@
 //#define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power
 //#define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
 //#define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-//#define FEATURE_DIT_DAH_BUFFER_CONTROL
 //#define FEATURE_HI_PRECISION_LOOP_TIMING
 //#define FEATURE_USB_MOUSE
 //#define FEATURE_CAPACITIVE_PADDLE_PINS  // remove the bypass capacitors on the paddle_left and paddle_right lines when using capactive paddles
@@ -66,7 +65,6 @@
 //#define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 #define OPTION_SAVE_MEMORY_NANOKEYER
 //#define OPTION_INVERT_PADDLE_PIN_LOGIC
-//#define OPTION_DIT_DAH_BUFFERS_OFF_BY_DEFAULT_FOR_FEATURE_DIT_DAH_BUFFER_CONTROL
 //#define OPTION_ADVANCED_SPEED_DISPLAY //enables "nerd" speed visualization on display: wpm, cpm (char per min), duration of dit and dah in milliseconds and ratio (contributed by Giorgio, IZ2XBZ)
 //#define OPTION_RUSSIAN_LANGUAGE_SEND_CLI // Russian language CLI sending support (contributed by Павел Бирюков, UA1AQC)
 #define OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION
