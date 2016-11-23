@@ -560,6 +560,9 @@ Recent Update History
     2.2.2016112301
       New command mode command K: toggle dit and dah buffer on and off
 
+    2.2.2016112302
+      Updated keyer_hardware.h to accomodate Leonardo, Yun, Esplora, and other boards to compile with Serial related functionality.   
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -571,7 +574,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016112301"
+#define CODE_VERSION "2.2.2016112302"
 #define eeprom_magic_number 24
 
 #include <stdio.h>

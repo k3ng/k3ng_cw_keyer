@@ -18,12 +18,6 @@
 // Note: it is no longer necessary to uncomment HARDWARE_ARDUINO_DUE to compile for the Arduino Due
 
 
-// The models which can compile this sketch without error, has these pre-defined macros. Not tested.
-// ARDUINO_AVR_UNO
-// ARDUINO_SAM_DUE
-// ARDUINO_MAPLE_MINI // http://dan.drown.org/arduino/package_STM32duino_index.json
-// ARDUINO_AVR_PROMICRO // https://raw.githubusercontent.com/sparkfun/Arduino_Boards/master/IDE_Board_Manager/package_sparkfun_index.json
-
 // do not touch anything below this line
 
 #if defined(HARDWARE_NANOKEYER_REV_B) || defined(HARDWARE_NANOKEYER_REV_D) || defined(HARDWARE_OPEN_INTERFACE) || defined(HARDWARE_TINYKEYER) || defined(HARDWARE_TEST)
@@ -32,12 +26,11 @@
 
 // Serial port class definitions for various devices
 
-// TODO: Need macro that is defined for Arduino Leonardo and define Serial_ 
 
 #if defined(ARDUINO_MAPLE_MINI)
   #define PRIMARY_SERIAL_CLS USBSerial
   #define SECONDARY_SERIAL_CLS USBSerial 
-#elif defined(ARDUINO_AVR_PROMICRO)
+#elif defined(ARDUINO_AVR_PROMICRO) || defined(ARDUINO_AVR_LEONARDO) || defined(ARDUINO_AVR_MICRO) || defined(ARDUINO_AVR_YUN) || defined(ARDUINO_AVR_ESPLORA) || defined(ARDUINO_AVR_LILYPAD_USB) || defined(ARDUINO_AVR_ROBOT_CONTROL) || defined(ARDUINO_AVR_ROBOT_MOTOR)
   #define PRIMARY_SERIAL_CLS Serial_
   #define SECONDARY_SERIAL_CLS Serial_ 
 #else
