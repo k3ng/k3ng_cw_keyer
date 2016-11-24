@@ -561,7 +561,10 @@ Recent Update History
       New command mode command K: toggle dit and dah buffer on and off
 
     2.2.2016112302
-      Updated keyer_hardware.h to accomodate Leonardo, Yun, Esplora, and other boards to compile with Serial related functionality.   
+      Updated keyer_hardware.h to accomodate Leonardo, Yun, Esplora, and other boards to compile with Serial related functionality. 
+
+    2.2.2016112401
+      Updated dit and dah buffer control to change automatically with Iambic A & B and Ultimatic    
 
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
@@ -574,7 +577,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016112302"
+#define CODE_VERSION "2.2.2016112401"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -5260,6 +5263,8 @@ void command_mode()
         case 12: // A - Iambic mode
           configuration.keyer_mode = IAMBIC_A;
           keyer_mode_before = IAMBIC_A;
+          configuration.dit_buffer_off = 0;
+          configuration.dah_buffer_off = 0;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
@@ -5269,6 +5274,8 @@ void command_mode()
         case 2111: // B - Iambic mode
           configuration.keyer_mode = IAMBIC_B;
           keyer_mode_before = IAMBIC_B;
+          configuration.dit_buffer_off = 0;
+          configuration.dah_buffer_off = 0;          
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
@@ -5293,6 +5300,8 @@ void command_mode()
         case 211: // D - Ultimatic mode
           configuration.keyer_mode = ULTIMATIC;
           keyer_mode_before = ULTIMATIC;
+          configuration.dit_buffer_off = 1;
+          configuration.dah_buffer_off = 1;           
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
@@ -8943,11 +8952,32 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     #if defined(FEATURE_SERIAL_HELP)
       case '?': print_serial_help(port_to_use); break;                         // ? = print help
     #endif //FEATURE_SERIAL_HELP
-    case 'A': configuration.keyer_mode = IAMBIC_A; config_dirty = 1; port_to_use->println(F("\r\nIambic A")); break;    // A - Iambic A mode
-    case 'B': configuration.keyer_mode = IAMBIC_B; config_dirty = 1; port_to_use->println(F("\r\nIambic B")); break;    // B - Iambic B mode
-    case 'C': configuration.keyer_mode = SINGLE_PADDLE; config_dirty = 1; port_to_use->println(F("\r\nSingle Paddle")); break;    // B - Iambic B mode
+    case 'A':  // A - Iambic A mode
+      configuration.keyer_mode = IAMBIC_A; 
+      configuration.dit_buffer_off = 0;
+      configuration.dah_buffer_off = 0;
+      config_dirty = 1; 
+      port_to_use->println(F("\r\nIambic A")); 
+      break;    
+    case 'B':  // B - Iambic B mode
+      configuration.keyer_mode = IAMBIC_B;
+      configuration.dit_buffer_off = 0;
+      configuration.dah_buffer_off = 0;      
+      config_dirty = 1;
+      port_to_use->println(F("\r\nIambic B")); 
+      break;    
+    case 'C':  // C - single paddle mode
+      configuration.keyer_mode = SINGLE_PADDLE; 
+      config_dirty = 1; port_to_use->println(F("\r\nSingle Paddle")); 
+      break;    
     //case 67: char_send_mode = CW; port_to_use->println(F("CW mode")); break;             // C - CW mode
-    case 'D': configuration.keyer_mode = ULTIMATIC; config_dirty = 1; port_to_use->println(F("\r\nUltimatic")); break;  // D - Ultimatic mode
+    case 'D': // D - Ultimatic mode
+      configuration.keyer_mode = ULTIMATIC; 
+      configuration.dit_buffer_off = 1;
+      configuration.dah_buffer_off = 1;        
+      config_dirty = 1; 
+      port_to_use->println(F("\r\nUltimatic")); 
+      break;  
     case 'E': serial_set_serial_number(port_to_use); break;                                   // E - set serial number
     case 'F': serial_set_sidetone_freq(port_to_use); break;                                   // F - set sidetone frequency
     case 'G': configuration.keyer_mode = BUG; config_dirty = 1; port_to_use->println(F("\r\nBug")); break;              // G - Bug mode
