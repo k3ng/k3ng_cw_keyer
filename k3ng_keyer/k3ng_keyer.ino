@@ -569,6 +569,9 @@ Recent Update History
     2.2.2016112501
       Code comment update
 
+    2.2.2016112502
+      Merged in GitHub pull request 24 https://github.com/k3ng/k3ng_cw_keyer/pull/24 from Giorgio IZ2XBZ   
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -584,7 +587,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016112501"
+#define CODE_VERSION "2.2.2016112502"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
