@@ -564,20 +564,27 @@ Recent Update History
       Updated keyer_hardware.h to accomodate Leonardo, Yun, Esplora, and other boards to compile with Serial related functionality. 
 
     2.2.2016112401
-      Updated dit and dah buffer control to change automatically with Iambic A & B and Ultimatic    
+      Updated dit and dah buffer control to change automatically with Iambic A & B and Ultimatic  
+
+    2.2.2016112501
+      Code comment update
 
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
-  FOR EXAMPLE: C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY1\, C:\USERS\ME\DOCUMENTS\ARDUINO\LIBRARIES\LIBRARY2\, etc....
+  FOR EXAMPLE:
+
+    K3NG_PS2Keyboard.h, K3NG_PS2Keyboard.cpp ----->  \Arduino\Sketchbook\libraries\K3NG_PS2Keyboard\
+    Goertz.h, Gooertz.cpp ------------------------>  \Arduino\Sketchbook\libraries\Goertz\
+    BasicTerm.h, BasicTerm.cpp ------------------->  \Arduino\Sketchbook\libraries\BasicTerm\
 
   
   "Make good code and share it with friends."
 
 */
 
-#define CODE_VERSION "2.2.2016112401"
+#define CODE_VERSION "2.2.2016112501"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -6475,6 +6482,7 @@ void send_the_dits_and_dahs(char const * cw_to_send){
       dah_buffer = 0;
       return;
     }
+    //check_serial(); OK1RR Testing - 64 byte buffer issue 2016-11-25
   }
 
 }
@@ -7104,7 +7112,7 @@ void winkey_first_extension_command(byte incoming_serial_byte) {
 
   first_extension_time = incoming_serial_byte;
   #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
-  send_char('X',KEYER_NORMAL);
+    send_char('X',KEYER_NORMAL);
   #endif
 }
 #endif //FEATURE_WINKEY_EMULATION
@@ -7116,7 +7124,7 @@ void winkey_dah_to_dit_ratio_command(byte incoming_serial_byte) {
   if ((incoming_serial_byte > 32) && (incoming_serial_byte < 67)) {
     configuration.dah_to_dit_ratio = (300*(float(incoming_serial_byte)/50));
     #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
-    config_dirty = 1;
+      config_dirty = 1;
     #endif
   }
 
