@@ -1597,7 +1597,7 @@ void loop()
 
       #if defined(OPTION_PROSIGN_SUPPORT)
         byte cw_ascii_temp = convert_cw_number_to_ascii(decode_character);
-        static char * prosign_char = "";
+        static char * prosign_char = (char*)"";
 
         if ((cw_ascii_temp > PROSIGN_START) && (cw_ascii_temp < PROSIGN_END)){  // if we have a prosign code, convert it to chars
           prosign_char = convert_prosign(cw_ascii_temp);
@@ -9222,7 +9222,7 @@ void service_paddle_echo()
 
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte byte_temp = 0;
-    static char * prosign_temp = "";
+    static char * prosign_temp = (char*)"";
   #endif
   
   #if defined(FEATURE_DISPLAY) && defined(OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS)
@@ -10359,17 +10359,17 @@ char * convert_prosign(byte prosign_code)
 {
 
   switch(prosign_code){
-    case PROSIGN_AA: return("AA"); break;
-    case PROSIGN_AS: return("AS"); break;
-    case PROSIGN_BK: return("BK"); break;
-    case PROSIGN_CL: return("CL"); break;
-    case PROSIGN_CT: return("CT"); break;
-    case PROSIGN_KN: return("KN"); break;
-    case PROSIGN_NJ: return("NJ"); break;
-    case PROSIGN_SK: return("SK"); break;
-    case PROSIGN_SN: return("SN"); break;
-    case PROSIGN_HH: return("HH"); break; // iz0rus
-    default: return(""); break;
+    case PROSIGN_AA: return((char*)"AA"); break;
+    case PROSIGN_AS: return((char*)"AS"); break;
+    case PROSIGN_BK: return((char*)"BK"); break;
+    case PROSIGN_CL: return((char*)"CL"); break;
+    case PROSIGN_CT: return((char*)"CT"); break;
+    case PROSIGN_KN: return((char*)"KN"); break;
+    case PROSIGN_NJ: return((char*)"NJ"); break;
+    case PROSIGN_SK: return((char*)"SK"); break;
+    case PROSIGN_SN: return((char*)"SN"); break;
+    case PROSIGN_HH: return((char*)"HH"); break; // iz0rus
+    default: return((char*)""); break;
 
   }
 
