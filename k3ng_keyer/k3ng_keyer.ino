@@ -570,7 +570,10 @@ Recent Update History
       Code comment update
 
     2.2.2016112502
-      Merged in GitHub pull request 24 https://github.com/k3ng/k3ng_cw_keyer/pull/24 from Giorgio IZ2XBZ   
+      Merged in GitHub pull request 24 https://github.com/k3ng/k3ng_cw_keyer/pull/24 from Giorgio IZ2XBZ  
+
+    2.2.2016112701
+      Improved performance when sending large macros from logging and contest programs using Winkey emulation.  Thanks, Martin OK1RR for discovery and testing   
 
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
@@ -587,7 +590,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016112502"
+#define CODE_VERSION "2.2.2016112701"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -6485,7 +6488,9 @@ void send_the_dits_and_dahs(char const * cw_to_send){
       dah_buffer = 0;
       return;
     }
-    //check_serial(); OK1RR Testing - 64 byte buffer issue 2016-11-25
+    #if defined(FEATURE_SERIAL)
+      check_serial();
+    #endif
   }
 
 }
