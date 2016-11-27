@@ -575,6 +575,9 @@ Recent Update History
     2.2.2016112701
       Improved performance when sending large macros from logging and contest programs using Winkey emulation.  Thanks, Martin OK1RR for discovery and testing   
 
+    2.2.2016112702
+      Updated command mode K command to work only when in Ultimatic mode
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -590,7 +593,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016112701"
+#define CODE_VERSION "2.2.2016112702"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -5355,25 +5358,33 @@ void command_mode()
           send_dit();
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
-        case 212:
-          send_char('O',KEYER_NORMAL);
-          if (configuration.dit_buffer_off){
-            configuration.dit_buffer_off = 0;
-            configuration.dah_buffer_off = 0;
-            #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Dit Dah Buffers On", 0, default_display_msg_delay);
-            #endif
-            send_char('N',KEYER_NORMAL);           
+        case 212:                                                                   // K - turn dit and dah buffers on and off in Ulitmatic mode
+          if (configuration.keyer_mode == ULTIMATIC){
+            send_char('O',KEYER_NORMAL);
+            if (configuration.dit_buffer_off){
+              configuration.dit_buffer_off = 0;
+              configuration.dah_buffer_off = 0;
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("Dit Dah Buffers On", 0, default_display_msg_delay);
+              #endif
+              send_char('N',KEYER_NORMAL);           
+            } else {
+              configuration.dit_buffer_off = 1;
+              configuration.dah_buffer_off = 1;
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("Dit Dah Buffers Off", 0, default_display_msg_delay);
+              #endif 
+              send_char('F',KEYER_NORMAL);
+              send_char('F',KEYER_NORMAL);             
+            }
           } else {
-            configuration.dit_buffer_off = 1;
-            configuration.dah_buffer_off = 1;
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Dit Dah Buffers Off", 0, default_display_msg_delay);
-            #endif 
-            send_char('F',KEYER_NORMAL);
-            send_char('F',KEYER_NORMAL);             
+              lcd_center_print_timed("Error", 0, default_display_msg_delay);
+            #endif             
+            send_char('E',KEYER_NORMAL);
+            send_char('R',KEYER_NORMAL);
+            send_char('R',KEYER_NORMAL);
           }
-
           break;
         case 1211: command_weighting_adjust();break; // L - weight adjust
         #ifdef FEATURE_MEMORIES
