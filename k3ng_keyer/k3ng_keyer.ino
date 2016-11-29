@@ -606,9 +606,38 @@ Recent Update History
   #define tone toneDUE
   #define noTone noToneDUE
 #elif defined(ARDUINO_MAPLE_MINI)
-  #include <SPI.h>
-  #include <Wire.h>
+//  #include <SPI.h>
+//  #include <Wire.h>
   #include <EEPROM.h>
+  void initialize_pins(void);
+  void initialize_keyer_state(void);
+  void initialize_potentiometer(void);
+  void initialize_rotary_encoder(void);
+  void initialize_default_modes(void);
+  void initialize_watchdog(void);
+  void initialize_ethernet_variables(void);
+  void check_eeprom_for_initialization(void);
+  void check_for_beacon_mode(void);
+  void check_for_debug_modes(void);
+  void initialize_analog_button_array(void);
+  void initialize_serial_ports(void);
+  void initialize_ps2_keyboard(void);
+  void initialize_usb(void);
+  void initialize_cw_keyboard(void);
+  void initialize_display(void);
+  void initialize_ethernet(void);
+  void initialize_udp(void);
+  void initialize_web_server(void);
+  void initialize_debug_startup(void);
+  
+  void check_paddles(void);
+  void service_dit_dah_buffers(void);
+  void service_send_buffer(byte);
+  void check_ptt_tail(void);
+  void check_for_dirty_configuration(void);
+  void tone(uint8_t, short unsigned int, unsigned int);
+  void noTone(uint8_t);
+  void serial_status(PRIMARY_SERIAL_CLS*);
 #else
   #include <avr/pgmspace.h>
   #include <avr/wdt.h>
@@ -720,12 +749,12 @@ Recent Update History
   #include <goertzel.h>
 #endif
 
-//#if defined(FEATURE_ETHERNET)
+#if defined(FEATURE_ETHERNET)
   #include <Ethernet.h>               // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
   #if defined(FEATURE_INTERNET_LINK)
     #include <EthernetUdp.h>
   #endif //FEATURE_INTERNET_LINK
-//#endif //FEATURE_ETHERNET
+#endif //FEATURE_ETHERNET
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
@@ -1997,7 +2026,7 @@ void tone(uint8_t pin, unsigned short freq, unsigned duration = 0) {
   } else {
     pinMode(tone_pin, INPUT);
   }
-
+}
 // disable tone on specified pin, if any
 void noTone(uint8_t pin){
   tone(pin,-1);

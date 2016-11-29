@@ -2,17 +2,17 @@
 #ifndef keyer_pin_settings_h
 #define keyer_pin_settings_h
 
-#define paddle_left 2
-#define paddle_right 5
-#define tx_key_line_1 11       // (high = key down/tx on)
-#define tx_key_line_2 12
+#define paddle_left 17
+#define paddle_right 18
+#define tx_key_line_1 19       // (high = key down/tx on)
+#define tx_key_line_2 0
 #define tx_key_line_3 0
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-#define sidetone_line 4         // connect a speaker for sidetone
-#define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
-#define ptt_tx_1 0              // PTT ("push to talk") lines
+#define sidetone_line 16         // connect a speaker for sidetone
+#define potentiometer 10        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
+#define ptt_tx_1 33              // PTT ("push to talk") lines
 #define ptt_tx_2 0              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
 #define ptt_tx_3 0              //   These are optional - set to 0 if unused
 #define ptt_tx_4 0
@@ -22,8 +22,8 @@
 #define tx_key_dah 0            // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 
 #ifdef FEATURE_COMMAND_BUTTONS
-  #define analog_buttons_pin A1
-  #define command_mode_active_led 0
+  #define analog_buttons_pin 20
+  #define command_mode_active_led 33
 #endif //FEATURE_COMMAND_BUTTONS
 
 
@@ -76,7 +76,7 @@
 #endif //FEATURE_PTT_INTERLOCK
 
 #ifdef FEATURE_STRAIGHT_KEY
-  #define pin_straight_key 52
+  #define pin_straight_key 32
 #endif //FEATURE_STRAIGHT_KEY
 
 #ifdef FEATURE_CW_DECODER
@@ -84,7 +84,7 @@
   #ifdef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
     #define cw_decoder_audio_input_pin 0 // this must be an analog pin!
   #endif //OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-  #define cw_decoder_indicator 24
+  #define cw_decoder_indicator 33
 #endif //FEATURE_CW_DECODER
 
 
