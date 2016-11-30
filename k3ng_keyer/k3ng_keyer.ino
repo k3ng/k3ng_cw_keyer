@@ -578,6 +578,9 @@ Recent Update History
     2.2.2016112702
       Updated command mode K command to work only when in Ultimatic mode
 
+    2.2.2016112901
+      Fixed bug with command mode status command reporting wrong keyer mode.  Also fixed CLI status query reporting wrong keyer mode while in command mode
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -593,7 +596,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016112702"
+#define CODE_VERSION "2.2.2016112901"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -5261,7 +5264,11 @@ void command_mode()
       }
 
       #if defined(FEATURE_SERIAL)
+        configuration.keyer_mode = keyer_mode_before;
         check_serial();
+        if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B) && (configuration.keyer_mode != ULTIMATIC)  && (configuration.keyer_mode != SINGLE_PADDLE)) {
+          configuration.keyer_mode = IAMBIC_B;                   
+        }
       #endif
 
     } //while (looping)
@@ -5503,7 +5510,7 @@ void command_mode()
           send_char(c[1],KEYER_NORMAL);
           send_char(' ',KEYER_NORMAL);
           
-          switch(configuration.keyer_mode){
+          switch(keyer_mode_before){
             case IAMBIC_A:
               send_char('A',KEYER_NORMAL);
               break;
@@ -10246,6 +10253,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
           port_to_use->print(F("Dah Priority")); 
           break;        
       }
+    break;
     case SINGLE_PADDLE: port_to_use->print(F("Single Paddle")); break;
 
     break; //zzzz
