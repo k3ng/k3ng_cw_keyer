@@ -583,6 +583,9 @@ Recent Update History
 
     2.2.2016120101
       Compilation of serial related functionality for TEENSYDUINO
+    
+    2.2.2016120102
+      Comilation issue fix for ARDUINO_MAPLE_MINI.  Thanks, Edgar, KC2UEZ
 
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
@@ -599,7 +602,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016120101"
+#define CODE_VERSION "2.2.2016120102"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -612,9 +615,9 @@ Recent Update History
   #define tone toneDUE
   #define noTone noToneDUE
 #elif defined(ARDUINO_MAPLE_MINI)
-  #include <SPI.h>
-  #include <Wire.h>
-  #include <EEPROM.h>
+  //#include <SPI.h>
+  //#include <Wire.h>
+  #include <EEPROM.h>  
 #else
   #include <avr/pgmspace.h>
   #include <avr/wdt.h>
@@ -1001,13 +1004,6 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
       {0x3 , 0x3, 0x4, 0x10}, {0x3 , 0x5, 0x3, 0x20}
     };
   #else                                      // Use the full-step state table (emits a code at 00 only)
-  // const unsigned char ttable[7][4] = {  // corrected on 2016-09-08
-  //   {0x0, 0x2, 0x4,  0x0}, {0x3, 0x0, 0x1, 0x10},
-  //   {0x3, 0x2, 0x0,  0x0}, {0x3, 0x2, 0x1,  0x0},
-  //   {0x6, 0x0, 0x4,  0x0}, {0x6, 0x5, 0x0, 0x10},
-  //   {0x6, 0x5, 0x4,  0x0},
-  // };
-
     const unsigned char ttable[7][4] = {
       {0x0, 0x2, 0x4,  0x0}, {0x3, 0x0, 0x1, 0x10},
       {0x3, 0x2, 0x0,  0x0}, {0x3, 0x2, 0x1,  0x0},
@@ -1976,12 +1972,12 @@ void tone_handler_2(void) {   // check duration
 
 //  play a tone on given pin with given frequency and optional duration in msec
 void tone(uint8_t pin, unsigned short freq, unsigned duration = 0) {
- tone_pin = pin;
- tone_freq = freq;
- tone_micros = 500000/(freq>0?freq:1000);
- tone_counts = 0;
+  tone_pin = pin;
+  tone_freq = freq;
+  tone_micros = 500000/(freq>0?freq:1000);
+  tone_counts = 0;
 
- tone_timer.pause();
+  tone_timer.pause();
 
   if(freq >= 0){
     if(duration > 0)tone_counts = ((long)duration)*1000/tone_micros;
@@ -2003,6 +1999,7 @@ void tone(uint8_t pin, unsigned short freq, unsigned duration = 0) {
   } else {
     pinMode(tone_pin, INPUT);
   }
+}
 
 // disable tone on specified pin, if any
 void noTone(uint8_t pin){
