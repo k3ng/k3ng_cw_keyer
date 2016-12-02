@@ -581,6 +581,9 @@ Recent Update History
     2.2.2016112901
       Fixed bug with command mode status command reporting wrong keyer mode.  Also fixed CLI status query reporting wrong keyer mode while in command mode
 
+    2.2.2016120101
+      Compilation of serial related functionality for TEENSYDUINO
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -596,7 +599,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016112901"
+#define CODE_VERSION "2.2.2016120101"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
