@@ -587,6 +587,9 @@ Recent Update History
     2.2.2016120102
       Comilation issue fix for ARDUINO_MAPLE_MINI.  Thanks, Edgar, KC2UEZ
 
+    2.2.2016120401
+      Added keyer_stm32duino.h with function declarations to make ARDUINO_MAPLE_MINI compilation work.  Thanks, Edgar, KC2UEZ
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -602,7 +605,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016120102"
+#define CODE_VERSION "2.2.2016120401"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -617,7 +620,8 @@ Recent Update History
 #elif defined(ARDUINO_MAPLE_MINI)
   //#include <SPI.h>
   //#include <Wire.h>
-  #include <EEPROM.h>  
+  #include <EEPROM.h> 
+  #include "keyer_stm32duino.h" 
 #else
   #include <avr/pgmspace.h>
   #include <avr/wdt.h>
