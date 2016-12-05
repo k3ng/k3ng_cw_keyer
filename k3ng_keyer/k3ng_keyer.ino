@@ -618,8 +618,8 @@ Recent Update History
   #define tone toneDUE
   #define noTone noToneDUE
 #elif defined(ARDUINO_MAPLE_MINI)
-  //#include <SPI.h>
-  //#include <Wire.h>
+  #include <SPI.h>
+  #include <Wire.h>
   #include <EEPROM.h> 
   #include "keyer_stm32duino.h" 
 #else
@@ -733,12 +733,12 @@ Recent Update History
   #include <goertzel.h>
 #endif
 
-//#if defined(FEATURE_ETHERNET)
+#if defined(FEATURE_ETHERNET)
   #include <Ethernet.h>               // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
   #if defined(FEATURE_INTERNET_LINK)
     #include <EthernetUdp.h>
   #endif //FEATURE_INTERNET_LINK
-//#endif //FEATURE_ETHERNET
+#endif //FEATURE_ETHERNET
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
@@ -8845,7 +8845,7 @@ void check_serial(){
         send_char(debug_serial_send_cw[1],0);
         key_tx = previous_tx;
         configuration.sidetone_mode = previous_sidetone;
-      #endif /DEBUG_SERIAL_SEND_CW_CALLOUT
+      #endif //DEBUG_SERIAL_SEND_CW_CALLOUT
       service_command_line_interface(secondary_serial_port);
     } //  while (secondary_serial_port->available() > 0)  
   #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
