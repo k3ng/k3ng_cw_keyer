@@ -578,6 +578,18 @@ Recent Update History
     2.2.2016112702
       Updated command mode K command to work only when in Ultimatic mode
 
+    2.2.2016112901
+      Fixed bug with command mode status command reporting wrong keyer mode.  Also fixed CLI status query reporting wrong keyer mode while in command mode
+
+    2.2.2016120101
+      Compilation of serial related functionality for TEENSYDUINO
+    
+    2.2.2016120102
+      Comilation issue fix for ARDUINO_MAPLE_MINI.  Thanks, Edgar, KC2UEZ
+
+    2.2.2016120401
+      Added keyer_stm32duino.h with function declarations to make ARDUINO_MAPLE_MINI compilation work.  Thanks, Edgar, KC2UEZ
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -593,7 +605,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016112702"
+#define CODE_VERSION "2.2.2016120401"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -606,9 +618,10 @@ Recent Update History
   #define tone toneDUE
   #define noTone noToneDUE
 #elif defined(ARDUINO_MAPLE_MINI)
-  #include <SPI.h>
-  #include <Wire.h>
-  #include <EEPROM.h>
+  //#include <SPI.h>
+  //#include <Wire.h>
+  #include <EEPROM.h> 
+  #include "keyer_stm32duino.h" 
 #else
   #include <avr/pgmspace.h>
   #include <avr/wdt.h>
@@ -995,13 +1008,6 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
       {0x3 , 0x3, 0x4, 0x10}, {0x3 , 0x5, 0x3, 0x20}
     };
   #else                                      // Use the full-step state table (emits a code at 00 only)
-  // const unsigned char ttable[7][4] = {  // corrected on 2016-09-08
-  //   {0x0, 0x2, 0x4,  0x0}, {0x3, 0x0, 0x1, 0x10},
-  //   {0x3, 0x2, 0x0,  0x0}, {0x3, 0x2, 0x1,  0x0},
-  //   {0x6, 0x0, 0x4,  0x0}, {0x6, 0x5, 0x0, 0x10},
-  //   {0x6, 0x5, 0x4,  0x0},
-  // };
-
     const unsigned char ttable[7][4] = {
       {0x0, 0x2, 0x4,  0x0}, {0x3, 0x0, 0x1, 0x10},
       {0x3, 0x2, 0x0,  0x0}, {0x3, 0x2, 0x1,  0x0},
@@ -1970,12 +1976,12 @@ void tone_handler_2(void) {   // check duration
 
 //  play a tone on given pin with given frequency and optional duration in msec
 void tone(uint8_t pin, unsigned short freq, unsigned duration = 0) {
- tone_pin = pin;
- tone_freq = freq;
- tone_micros = 500000/(freq>0?freq:1000);
- tone_counts = 0;
+  tone_pin = pin;
+  tone_freq = freq;
+  tone_micros = 500000/(freq>0?freq:1000);
+  tone_counts = 0;
 
- tone_timer.pause();
+  tone_timer.pause();
 
   if(freq >= 0){
     if(duration > 0)tone_counts = ((long)duration)*1000/tone_micros;
@@ -1997,6 +2003,7 @@ void tone(uint8_t pin, unsigned short freq, unsigned duration = 0) {
   } else {
     pinMode(tone_pin, INPUT);
   }
+}
 
 // disable tone on specified pin, if any
 void noTone(uint8_t pin){
@@ -5261,7 +5268,11 @@ void command_mode()
       }
 
       #if defined(FEATURE_SERIAL)
+        configuration.keyer_mode = keyer_mode_before;
         check_serial();
+        if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B) && (configuration.keyer_mode != ULTIMATIC)  && (configuration.keyer_mode != SINGLE_PADDLE)) {
+          configuration.keyer_mode = IAMBIC_B;                   
+        }
       #endif
 
     } //while (looping)
@@ -5503,7 +5514,7 @@ void command_mode()
           send_char(c[1],KEYER_NORMAL);
           send_char(' ',KEYER_NORMAL);
           
-          switch(configuration.keyer_mode){
+          switch(keyer_mode_before){
             case IAMBIC_A:
               send_char('A',KEYER_NORMAL);
               break;
@@ -10246,6 +10257,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
           port_to_use->print(F("Dah Priority")); 
           break;        
       }
+    break;
     case SINGLE_PADDLE: port_to_use->print(F("Single Paddle")); break;
 
     break; //zzzz

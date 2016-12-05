@@ -33,6 +33,9 @@
 #elif defined(ARDUINO_AVR_PROMICRO) || defined(ARDUINO_AVR_LEONARDO) || defined(ARDUINO_AVR_MICRO) || defined(ARDUINO_AVR_YUN) || defined(ARDUINO_AVR_ESPLORA) || defined(ARDUINO_AVR_LILYPAD_USB) || defined(ARDUINO_AVR_ROBOT_CONTROL) || defined(ARDUINO_AVR_ROBOT_MOTOR)
   #define PRIMARY_SERIAL_CLS Serial_
   #define SECONDARY_SERIAL_CLS Serial_ 
+#elif defined(TEENSYDUINO)
+  #define PRIMARY_SERIAL_CLS usb_serial_class
+  #define SECONDARY_SERIAL_CLS usb_serial_class
 #else
   #define PRIMARY_SERIAL_CLS HardwareSerial
   #define SECONDARY_SERIAL_CLS HardwareSerial 
