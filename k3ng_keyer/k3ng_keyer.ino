@@ -590,6 +590,9 @@ Recent Update History
     2.2.2016120401
       Added keyer_stm32duino.h with function declarations to make ARDUINO_MAPLE_MINI compilation work.  Thanks, Edgar, KC2UEZ
 
+    2.2.2016120901
+      Merged pull request STM32duino compatibilty 30. Thanks, Edgar, KC2UEZ
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -605,7 +608,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016120401"
+#define CODE_VERSION "2.2.2016120901"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -733,12 +736,14 @@ Recent Update History
   #include <goertzel.h>
 #endif
 
-#if defined(FEATURE_ETHERNET)
+//#if defined(FEATURE_ETHERNET)
+#if !defined(ARDUINO_MAPLE_MINI)  
   #include <Ethernet.h>               // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
   #if defined(FEATURE_INTERNET_LINK)
     #include <EthernetUdp.h>
   #endif //FEATURE_INTERNET_LINK
-#endif //FEATURE_ETHERNET
+#endif //!defined(ARDUINO_MAPLE_MINI)  
+//#endif //FEATURE_ETHERNET
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
