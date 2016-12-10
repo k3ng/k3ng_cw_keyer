@@ -596,6 +596,9 @@ Recent Update History
     2.2.2016120902
       Fixed bug in command mode when OPTION_WATCHDOG_TIMER is enabled.  Thanks, disneysw.
 
+    2.2.2016121001
+      Support for FUNtronics FK-10 contributed by disneysw. HARDWARE_FK_10 in keyer_hardware.h; files: keyer_pin_settings_fk_10.h, keyer_features_and_options_fk_10.h, keyer_settings_fk_10.h
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -611,12 +614,11 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016120902"
+#define CODE_VERSION "2.2.2016121001"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
 #include "keyer_hardware.h"
-
 
 #if defined(ARDUINO_SAM_DUE)  
   #include <SPI.h>
@@ -634,27 +636,19 @@ Recent Update History
   #include <EEPROM.h>  
 #endif //ARDUINO_SAM_DUE
 
-#ifdef HARDWARE_NANOKEYER_REV_B
+#if defined(HARDWARE_NANOKEYER_REV_B)
   #include "keyer_features_and_options_nanokeyer_rev_b.h"
-#endif
-
-#ifdef HARDWARE_NANOKEYER_REV_D
+#elif defined(HARDWARE_NANOKEYER_REV_D)
   #include "keyer_features_and_options_nanokeyer_rev_d.h"
-#endif
-
-#ifdef HARDWARE_OPEN_INTERFACE
+#elif defined(HARDWARE_OPEN_INTERFACE)
   #include "keyer_features_and_options_open_interface.h"
-#endif
-
-#ifdef HARDWARE_TINYKEYER
+#elif defined(HARDWARE_TINYKEYER)
   #include "keyer_features_and_options_tinykeyer.h"
-#endif  
-
-#ifdef HARDWARE_TEST
+#elif defined(HARDWARE_FK_10)
+  #include "keyer_features_and_options_fk_10.h"  
+#elif defined(HARDWARE_TEST)
   #include "keyer_features_and_options_test.h"
-#endif    
-
-#ifndef HARDWARE_CUSTOM
+#else
   #include "keyer_features_and_options.h"
 #endif
 
@@ -668,32 +662,25 @@ Recent Update History
 #include "keyer_dependencies.h"
 #include "keyer_debug.h"
 
-#ifdef HARDWARE_NANOKEYER_REV_B
+#if defined(HARDWARE_NANOKEYER_REV_B)
   #include "keyer_pin_settings_nanokeyer_rev_b.h"
   #include "keyer_settings_nanokeyer_rev_b.h"
-#endif
-
-#ifdef HARDWARE_NANOKEYER_REV_D
+#elif defined(HARDWARE_NANOKEYER_REV_D)
   #include "keyer_pin_settings_nanokeyer_rev_d.h"
   #include "keyer_settings_nanokeyer_rev_d.h"
-#endif
-
-#ifdef HARDWARE_OPEN_INTERFACE
+#elif defined(HARDWARE_OPEN_INTERFACE)
   #include "keyer_pin_settings_open_interface.h"
   #include "keyer_settings_open_interface.h"
-#endif
-
-#ifdef HARDWARE_TINYKEYER
+#elif defined(HARDWARE_TINYKEYER)
   #include "keyer_pin_settings_tinykeyer.h"
   #include "keyer_settings_tinykeyer.h"
-#endif  
-
-#ifdef HARDWARE_TEST
+#elif defined(HARDWARE_FK_10)
+  #include "keyer_pin_settings_fk_10.h"
+  #include "keyer_settings_fk_10.h"  
+#elif defined(HARDWARE_TEST)
   #include "keyer_pin_settings_test.h"
   #include "keyer_settings_test.h"
-#endif
-
-#ifndef HARDWARE_CUSTOM
+#else
   #include "keyer_pin_settings.h"
   #include "keyer_settings.h"
 #endif
