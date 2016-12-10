@@ -593,6 +593,9 @@ Recent Update History
     2.2.2016120901
       Merged pull request STM32duino compatibilty 30. Thanks, Edgar, KC2UEZ
 
+    2.2.2016120902
+      Fixed bug in command mode when OPTION_WATCHDOG_TIMER is enabled.  Thanks, disneysw.
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -608,7 +611,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016120901"
+#define CODE_VERSION "2.2.2016120902"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -5114,6 +5117,11 @@ long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
   unsigned long entry_time = millis();
 
   while (looping) {
+
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
+
     #ifdef FEATURE_POTENTIOMETER
       if (configuration.pot_activated) {
         check_potentiometer();
@@ -5166,6 +5174,9 @@ long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 
   } //while (looping)
 
+
+
+
   if (button_hit) {
     #ifdef DEBUG_GET_CW_INPUT_FROM_USER
       debug_serial_port->println(F("get_cw_input_from_user: button_hit exit 9"));
@@ -5191,6 +5202,11 @@ void command_mode()
   #ifdef DEBUG_COMMAND_MODE
     debug_serial_port->println(F("command_mode: entering"));
   #endif
+
+  #ifdef OPTION_WATCHDOG_TIMER
+    wdt_disable();
+  #endif //OPTION_WATCHDOG_TIMER
+
   
   byte looping;
   byte button_that_was_pressed = 0;
@@ -5226,6 +5242,10 @@ void command_mode()
     cw_char = 0;
  //   cw_char = get_cw_input_from_user(0);
 
+
+    // #ifdef OPTION_WATCHDOG_TIMER
+    //   wdt_reset();
+    // #endif  //OPTION_WATCHDOG_TIMER
 
     looping = 1;
     while (looping) {
@@ -5595,6 +5615,12 @@ void command_mode()
       debug_serial_port->print(F("command_mode: command_mode_disable_tx set"));
     }
   #endif //DEBUG_COMMAND_MODE
+
+
+  #ifdef OPTION_WATCHDOG_TIMER
+    wdt_enable(WDTO_4S);
+  #endif //OPTION_WATCHDOG_TIMER
+
 }
 #endif //FEATURE_COMMAND_BUTTONS
 
@@ -5660,18 +5686,23 @@ void command_dah_to_dit_ratio_adjust() {
   #endif
 
   while (looping) {
-   send_dit();
-   send_dah();
-   if (paddle_pin_read(paddle_left) == LOW) {
-     adjust_dah_to_dit_ratio(10);
-   }
-   if (paddle_pin_read(paddle_right) == LOW) {
-     adjust_dah_to_dit_ratio(-10);
-   }
-   while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
-     looping = 0;
-   }
+    send_dit();
+    send_dah();
+    if (paddle_pin_read(paddle_left) == LOW) {
+      adjust_dah_to_dit_ratio(10);
+    }
+    if (paddle_pin_read(paddle_right) == LOW) {
+      adjust_dah_to_dit_ratio(-10);
+    }
+    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+      looping = 0;
+    }
    
+
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
+
   }
   while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   dit_buffer = 0;
@@ -5691,20 +5722,24 @@ void command_weighting_adjust() {
   #endif
 
   while (looping) {
-   send_dit();
-   send_dah();
-   if (paddle_pin_read(paddle_left) == LOW) {
-     configuration.weighting = configuration.weighting + 1;
-     if (configuration.weighting > 90){configuration.weighting = 90;}
-   }
-   if (paddle_pin_read(paddle_right) == LOW) {
-     configuration.weighting = configuration.weighting - 1;
-     if (configuration.weighting < 10){configuration.weighting = 10;}
-   }
-   while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
-     looping = 0;
-   }
+    send_dit();
+    send_dah();
+    if (paddle_pin_read(paddle_left) == LOW) {
+      configuration.weighting = configuration.weighting + 1;
+      if (configuration.weighting > 90){configuration.weighting = 90;}
+    }
+    if (paddle_pin_read(paddle_right) == LOW) {
+      configuration.weighting = configuration.weighting - 1;
+      if (configuration.weighting < 10){configuration.weighting = 10;}
+    }
+    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+      looping = 0;
+    }
    
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
+
   }
   while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   dit_buffer = 0;
@@ -5728,6 +5763,10 @@ void command_tuning_mode() {
   send_dit();
   key_tx = 1;
   while (looping) {
+
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
 
     if (paddle_pin_read(paddle_left) == LOW) {
       sending_mode = MANUAL_SENDING;
@@ -5783,10 +5822,8 @@ void sidetone_adj(int hz) {
   if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
     configuration.hz_sidetone = configuration.hz_sidetone + hz;
     config_dirty = 1;
-    #ifdef FEATURE_DISPLAY
-    #ifdef OPTION_MORE_DISPLAY_MSGS
-    lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
-    #endif
+    #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
+      lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
     #endif   
   }
 
@@ -5825,7 +5862,10 @@ void command_sidetone_freq_adj() {
     while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
       looping = 0;
     }
-    
+
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
 
   }
   while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
@@ -5859,13 +5899,17 @@ void command_speed_mode()
       looping = 0;
     }
 
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
+
   }
   while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   #ifndef FEATURE_DISPLAY
-  // announce speed in CW
-  wpm_string = String(configuration.wpm, DEC);
-  send_char(wpm_string[0],KEYER_NORMAL);
-  send_char(wpm_string[1],KEYER_NORMAL);
+    // announce speed in CW
+    wpm_string = String(configuration.wpm, DEC);
+    send_char(wpm_string[0],KEYER_NORMAL);
+    send_char(wpm_string[1],KEYER_NORMAL);
   #endif
 
   dit_buffer = 0;
@@ -5928,8 +5972,7 @@ void switch_to_tx(byte tx)
 
 //------------------------------------------------------------------
 
-#ifdef FEATURE_MEMORIES
-#ifdef FEATURE_COMMAND_BUTTONS
+#if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
 void check_the_memory_buttons()
 {
 
@@ -5941,20 +5984,18 @@ void check_the_memory_buttons()
   }
 }
 #endif
-#endif
 
 //------------------------------------------------------------------
 
-#ifdef FEATURE_COMMAND_BUTTONS
-#ifdef FEATURE_DL2SBA_BANKSWITCH
+#if defined(FEATURE_COMMAND_BUTTONS) && defined(FEATURE_DL2SBA_BANKSWITCH)
 void setOneButton(int button, int index) { 
-    int button_value = int(1023 * (float(button * analog_buttons_r2)/float((button * analog_buttons_r2) + analog_buttons_r1))); 
-    int lower_button_value = int(1023 * (float((button-1) * analog_buttons_r2)/float(((button-1) * analog_buttons_r2) + analog_buttons_r1))); 
-    int higher_button_value = int(1023 * (float((button+1) * analog_buttons_r2)/float(((button+1) * analog_buttons_r2) + analog_buttons_r1))); 
-    button_array_low_limit[index] = (button_value - ((button_value - lower_button_value)/2)); 
-    button_array_high_limit[index] = (button_value + ((higher_button_value - button_value)/2)); 
+    
+  int button_value = int(1023 * (float(button * analog_buttons_r2)/float((button * analog_buttons_r2) + analog_buttons_r1))); 
+  int lower_button_value = int(1023 * (float((button-1) * analog_buttons_r2)/float(((button-1) * analog_buttons_r2) + analog_buttons_r1))); 
+  int higher_button_value = int(1023 * (float((button+1) * analog_buttons_r2)/float(((button+1) * analog_buttons_r2) + analog_buttons_r1))); 
+  button_array_low_limit[index] = (button_value - ((button_value - lower_button_value)/2)); 
+  button_array_high_limit[index] = (button_value + ((higher_button_value - button_value)/2)); 
 }
-#endif
 #endif
 
 //------------------------------------------------------------------
@@ -5980,51 +6021,51 @@ void initialize_analog_button_array() {
   
   #ifndef FEATURE_DL2SBA_BANKSWITCH
   
-  int button_value;
-  int lower_button_value;
-  int higher_button_value;
+    int button_value;
+    int lower_button_value;
+    int higher_button_value;
 
-  #ifdef OPTION_REVERSE_BUTTON_ORDER
-  byte y = analog_buttons_number_of_buttons - 1;
-  #endif
-
-  for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
-    button_value = int(1023 * (float(x * analog_buttons_r2)/float((x * analog_buttons_r2) + analog_buttons_r1)));
-    lower_button_value = int(1023 * (float((x-1) * analog_buttons_r2)/float(((x-1) * analog_buttons_r2) + analog_buttons_r1)));
-    higher_button_value = int(1023 * (float((x+1) * analog_buttons_r2)/float(((x+1) * analog_buttons_r2) + analog_buttons_r1)));
-    #ifndef OPTION_REVERSE_BUTTON_ORDER
-    button_array_low_limit[x] = (button_value - ((button_value - lower_button_value)/2));
-    button_array_high_limit[x] = (button_value + ((higher_button_value - button_value)/2));
-    #else
-    button_array_low_limit[y] = (button_value - ((button_value - lower_button_value)/2));
-    button_array_high_limit[y] = (button_value + ((higher_button_value - button_value)/2));
-    y--;
+    #ifdef OPTION_REVERSE_BUTTON_ORDER
+      byte y = analog_buttons_number_of_buttons - 1;
     #endif
 
-    #ifdef DEBUG_BUTTON_ARRAY    
-    debug_serial_port->print("initialize_analog_button_array: ");
-    debug_serial_port->print(x);
-    debug_serial_port->print(": ");
-    debug_serial_port->print(button_array_low_limit[x]);
-    debug_serial_port->print(" - ");
-    debug_serial_port->println(button_array_high_limit[x]);
-    #endif //DEBUG_BUTTON_ARRAY
+    for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
+      button_value = int(1023 * (float(x * analog_buttons_r2)/float((x * analog_buttons_r2) + analog_buttons_r1)));
+      lower_button_value = int(1023 * (float((x-1) * analog_buttons_r2)/float(((x-1) * analog_buttons_r2) + analog_buttons_r1)));
+      higher_button_value = int(1023 * (float((x+1) * analog_buttons_r2)/float(((x+1) * analog_buttons_r2) + analog_buttons_r1)));
+      #ifndef OPTION_REVERSE_BUTTON_ORDER
+        button_array_low_limit[x] = (button_value - ((button_value - lower_button_value)/2));
+        button_array_high_limit[x] = (button_value + ((higher_button_value - button_value)/2));
+      #else
+        button_array_low_limit[y] = (button_value - ((button_value - lower_button_value)/2));
+        button_array_high_limit[y] = (button_value + ((higher_button_value - button_value)/2));
+        y--;
+      #endif
+
+      #ifdef DEBUG_BUTTON_ARRAY    
+        debug_serial_port->print("initialize_analog_button_array: ");
+        debug_serial_port->print(x);
+        debug_serial_port->print(": ");
+        debug_serial_port->print(button_array_low_limit[x]);
+        debug_serial_port->print(" - ");
+        debug_serial_port->println(button_array_high_limit[x]);
+      #endif //DEBUG_BUTTON_ARRAY
 
 
-  }
+    }
   
   #else //FEATURE_DL2SBA_BANKSWITCH
   
-  setOneButton(0,0); 
-  setOneButton(1,3); 
-  setOneButton(2,2); 
-  setOneButton(3,1); 
-  setOneButton(4,9); 
-  setOneButton(5,8); 
-  setOneButton(6,7); 
-  setOneButton(7,6); 
-  setOneButton(8,5); 
-  setOneButton(9,4); 
+    setOneButton(0,0); 
+    setOneButton(1,3); 
+    setOneButton(2,2); 
+    setOneButton(3,1); 
+    setOneButton(4,9); 
+    setOneButton(5,8); 
+    setOneButton(6,7); 
+    setOneButton(7,6); 
+    setOneButton(8,5); 
+    setOneButton(9,4); 
       
   #endif //FEATURE_DL2SBA_BANKSWITCH
 #endif //FEATURE_COMMAND_BUTTONS
@@ -6518,6 +6559,11 @@ void send_the_dits_and_dahs(char const * cw_to_send){
     #if defined(FEATURE_SERIAL)
       check_serial();
     #endif
+
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
+
   }
 
 }
@@ -7659,6 +7705,126 @@ void winkey_admin_get_values_command() {
 
 }
 #endif
+
+
+/*
+
+Chapter One
+
+It was late on a rainy Sunday evening.  Static crashes on the direct conversion receiver signaled a distant thunderstorm, due to arrive in an hour or so.  Colin knew he would have to disconnect the little microcontroller circuit from the receiver and all the station antennas soon, but it was getting late and he had to get his sleep for work the next day.
+
+The contraption was a tangled mess on his desk, something only a radio amateur or mad scientist could appreciate.  Alligator clips connected the I and Q audio from the simple receiver to the microcontroller.  Colin had been learning about fast Fourier analysis.  This was his first attempt at actually running the code in an effort to decode RTTY signals.   The microcontroller probably lacked the horsepower to do it, and Colin knew expecting any sort of performance from his creation was a long shot.
+
+Colin tuned to some RTTY signals but couldn't copy anything, despite carefully and slowly tuning the receiver in hopes of hitting that sweet spot where perhaps the microcontroller would blurt out some intelligence, some discernable word or text.  Just one recognizable snippet would give him the feeling of accomplishment or even victory, even if his design never proved to be usable in his nightly hobby.
+
+The static crashes grew stronger and more frequent.  Colin had resigned himself to the fact that success would not be achieved this evening.  The approaching storm along with his growing fatigue convinced him to shut things down and head upstairs to bed.  Just then a burst of noise, different from the thunderstorm static crashes, but a type that you normally hear on 80 meters each night blurted out.  The microcontroller sent out its serial port a string of random characters, in a vain attempt to decode the sounds:
+
+GEHZCVFNOVTZBEBA
+
+Colin went about the process of disconnecting the power to everything and disconnecting antennas and went to bed.
+
+The next evening after supper with his family, Colin went to his basement radio room again, determined to work again on his project but perhaps less eager than before due to the increasing futility of his efforts.  The microcontroller sat connected to the receiver, and the controller to the computer.  He listened to the receiver in the background while responding to emails.  There was a QSO in progress, an old man talking about his dog itching a lot.  The two old men in the conversation droned on forever, with Colin chuckling to himself, but too caught up in his email to reach over and tune the rig to another frequency in hopes of finding a more interesting conversation.
+
+A burst of noise came through the rig again, much like the night before, though much stronger.  The simple receiver lacked automatic gain control and the strong signal produced a rather loud, annoying noise emanating from the rig, prompting Colin to reach over and turn the volume down.  Colin noticed on his serial terminal program another random string of characters which the microcontroller dutifully decoded:
+
+GEHZCVFNOVTZBEBA
+
+The string looked familiar to Colin.  He copied and pasted the string into search on his computer.  The search produced one hit, the terminal program log from the previous evening.  Colin opened the file and saw the matching string, 16 characters.  "What are the chances of that happening?", he thought.  He looked through his code again, looking for some sort of mistake, pattern in the code algorithm, or some plausible explanation. The receiver belched again:
+
+GEHZCVFNOVTZBEBA
+
+At this point Colin had no plausible explanation why the same random string of characters would be decoded last night and this evening, from mere noise bursts.  Frustrated, he decided to post a message on an Internet group describing the strange behavior and the random characters, and then walked away from his radios to watch TV with the family.  After almost an hour of watching mindless sitcoms, it was time for the kids to go to bed.  After they were tucked into bed, Colin came back to his desk to catch up on email.
+
+The receiver, still powered up with the random noise of the universe coming out of the speaker at a low level, and the connected microcontroller circuit sat idle, waiting for some signal to decode.  An AM roundtable comes up on frequency and he listens awhile, while he continues to web surf, looking for something to occupy his mind.  A static crash comes through the speaks and the microcontroller terminal comes alive again, spewing characters:
+
+COLINMEETME@40-10-45.5&75-10-52.6@SAT1200Z
+
+"Wow" Colin exclaims, almost involuntarily.  He pauses for a moment, hoping his wife in the next room hasn't heard him.  She doesn't respond, continuing to watch TV.  "That's my name....coordinates, and a day and time.  That can't be a coincidence.  What in the world have I stumbled upon?" he thinks.  Nervously he brings up Google Earth and enters  the coordinates.  It's a coffee shop, about an hour and twenty minutes south. " Whoever sent this wants to meet me?"
+
+Chapter Two
+
+Colin barely slept the rest of the nights that week thinking about the message.  He stays out of his radio room which is very unlike him.  His wife is out of town this weekend, and Colin rationalizes that there's no excuse to not go to the coffee shop.  Early Saturday morning he quickly gets up, and nervously gets dressed.  He worries if he's given himself enough time to get there.  It's near the city and the surrounding suburban area where the coffee shop is located is notorious for bad traffic.  He decides to take a toll road and exit where he can take back roads to avoid the main thoroughfares.
+
+He arrived at the coffee with a few minutes to spare, takes an out of the way parking spot towards the rear of the restaurant, backing in so he can see anyone pulling in or out, and the side entrance of the coffee shop.  He sits in the vehicle and surveys the parking lot.   Opening the glove compartment he pulls out a pistol in a holster.  Although licensed for carrying a sidearm, Colin rarely, if ever actual wore it in public.  He strapped it on to his belt and double-checked that his jacket concealed it.  His hands shook nervously, but he reassured himself he was somewhat prepared in case the proverbial "men in black" attempted to swoop down and throw him into a black van and drive off.
+
+Looking up, Colin sees an old man in the parking lot looking his way.  They make eye contact.  Colin looks away but it's clear the old man is has somehow identified him.  Colin sighs.  "Perhaps he saw all the antennas on my vehicle, or my callsign plate."  He gets out of the vehicle, locks it, and walks over to the old man.
+
+"Hello" he says in a somewhat frail voice.  "You Colin?"
+
+"Yes" replies Colin, nervously.
+
+The old man nods and his face lightens up.  "Come inside, let's talk."
+
+They go inside and get in line.  The old man orders a coffee, and Colin, never acquiring a taste for coffee, get a hot chocolate.  They grab a table towards the back, away from everyone else.  The old man looks around to make sure they're out of earshot of others.
+
+The old man leans inward, "So you copied my transmission the other day?"
+
+"Yes."  Colin tells him the story of how he came upon the transmission.
+
+"Well, congratulations.  You've stumbled upon something I think you're going to be very happy about.  You're in amateur radio?"  Colin nods.  "You've come upon a secret society.  We've been around a long time, since World War II.  Some of us are hams, others aren't.  We're everywhere.  You've heard us anytime you've turned on a radio, you just didn't know it.  We're the people you don't normally find on the air....the academics, scientists, progressives, politicians, famous people...activists...introverts...geniuses...people close to world leaders.  We communicate via encrypted messaging.  Those noise bursts you heard were transmissions from me.  Some of our communications are noise bursts.  Sometime we communicate with pure noise, indistinguishable from the normal noise you hear on your receiver everyday.  We hide out in the open."
+
+"But how do you do this?"  Colin's technical curiosity emerges.  "How do you communicate with noise?"
+
+The old man takes a sip from his coffee.  "We use a pseudo-random bit stream and quadrature modulate a digital signal taken from a special alphabet, somewhat like ASCII.  It's amazingly simple but nearly impossible to break without the bit stream.  You were just lucky to receive it.  Apparently the buggy code in your microcontroller digital signal processing generates part of the pseudo random stream under the right conditions.  Everyone thinks 80 meters is noisy.  It's really not, there's just a lot of us talking on it.  You ever turn on your radio and it's S9 noise everywhere?"
+
+"Yes" replies Colin.
+
+"Sometimes that's us.  We sometimes modulate wideband noise when we have a particularly large message to send out, something important.  The technology is really interesting.  It pushes the limits of Shannon's Equation." he pauses.  "You ever hear of long delay echos?"
+
+"I've never experienced one, but I've read about them and heard they're somewhat common." Colin says.
+
+He smiles.  "That's us.  Sometime we communicate by receiving someone's signal on the air, we delay it, modulate the noise on it, and re-transmit it.  We do that for fun.  People seem to get a kick out of it."
+
+"Why does this society exist?"  asks Colin.
+
+"We serve a higher purpose." pointing above, he says.  "It came out of the Resistance in World War II and was originally intended to prevent atrocities like the Holocaust from happening again, but since then it's grown to encompass other things.  Many of us started off as radio amateurs and got bored with it.  We dropped out.  We're the radio guys you don't see at hamfests or on the Internet.  Those of us who are licensed amateurs usually lay low and don't get on the air, at least in a way you can hear us.  Amateur radio is to us as CB is to amateur radio.  Few of us fit in with them. Members communicate about important stuff, like scientific discoveries or secret information from governments that could save lives or change the world.  We've provided information that has ended wars, and started some.  Some say we provided the information that started the fall of the USSR.  We operate without borders or recognition of nationality.   I'm not sure how many of us there are, but it's perhaps in the thousands, worldwide."
+
+Colin asks "Are you spies?"
+
+"We're not spies, we're communicators." he replies.
+
+"Does the government know of this network?" 
+
+"Perhaps, but not at a high level or in any official capacity that we know of.  We definitely have members close to people high up, advisers of sorts.  Undoubtedly there are members in intelligence agencies in various governments.  But they don't dare divulge knowledge of the network.  It's too valuable.  To them it's a tool, and they know they would be denied that tool, purged from the network, should they let others know of it.  But they are free to use the information they receive, as they see fit.  But they know they have a responsibility to use it for the greater good."
+
+The old man clears his throat and takes another gulp of coffee.  "Communications is a weapon, more powerful than any weapon you can carry.  That phone," he said, pointing to my iPhone lying on the table, " is just as powerful as the weapon you have on your belt, just in a different way."
+
+Colin tries to hide a puzzled look, wondering how the old man knew of his weapon.  Changing the subject, he asks "How do people get into this?"
+
+"Membership is by invitation only.  We have 16 character identity strings.  You received mine.  An identity string is what you would call a callsign in amateur radio.  You're the first person I've ever heard of receiving the signal without knowledge of the code.  There's no process for someone like you to join.  But I'm getting old and I need to hand off my encryption stream to someone before I die, to keep it going.  You seem to be a nice enough guy, qualified to join, from what I have seen and heard about you."
+
+"But.... this sounds like a network of rather smart and powerful people.  I'm just an ordinary guy who likes to play with radios and occasionally build something.  I'm not a scientist or someone powerful.  Is there some role I will have, something I need to do?" Colin asks.
+
+"Some members just have fun with this, somewhat like a hobby.  They don't have roles, for now.  You will have a role, you just don't know what it is yet.  Do not seek out a role.  Do not try to make yourself important or identify some great thing to do.  Those who invent things to do, create crises, or give themselves power get purged from the network.  Your role will become known in due time and you will know it when you encounter it.  Trust me." 
+
+He goes on, "You're going to receive more information.  It will explain the encryption algorithm.  You know how to program, so with a little bit of work you should be able to write the software for a transceiver that will work reliably.  I'll also give you an identity string.  It's derived from mine and you'll eventually be able to trace it back mathematically to previous identity strings and others in the hierarchy.  The more you communicate, your identity string will establish a trust relationship with other identity strings, other operators.  The more operators you gain trust with, you will get more of the algorithm and more of the bit stream.  With more of the algorithm and bit stream, the more signals you will be able to receive and you will be able to communicate with more people in the network hierarchy.  With perseverance and patience you'll get to know some high level members, perhaps even people you see on the news."
+
+"I said before that there are thousands of operators.  The truth is I don't know how many operators there are.  No one does.  As more of the bit stream is revealed, more members appear.  For all we know there could be millions of members.  There could be extra-terrestrials in the network."  He chuckles.  "Some have theorized that some of the noise we receive from outer space could be actually intelligence encrypted in the noise, like we do.  We just don't have the information or computing power yet to decode it."
+
+The smile leaves old man's face.  "You have to keep this a secret.  If you reveal this to the wrong people, the results would be disastrous.  Those who reveal the code of the noise are purged from the network, sometimes not seen again."
+Before Colin could ask his next question, the old man got up, handed him a card with characters written in bold black marker:
+
+8^fGwq9(:lLDPu6$
+
+"Congratulations.  This is your identity string.  Memorize it.  Guard it with your life."  He offers his right hand and they shake hands.
+
+Colin follows the old man out the door, wanting to ask more questions. "Where will I would get the information on the algorithm, how do I build a transceiver?"  he frantically asks.
+
+"You have to listen to the noise."  he said as he walked to his car, got in, and drove off.
+
+Colin drove home in somewhat of a daze, not sure what to make of all this.  Was the old man crazy, or was all this real?  Colin went about my business for a few days, thinking about the old man and wondering what would be next.  "Would I get something in the mail?  Perhaps an email?  Would he contact me again?"
+
+A few days later while watching the local news, a story came on about the death of a prominent researcher.  Colin was shocked to see a grainy photo of the old man he had met at the coffee shop, the photo perhaps from the 60s as he looked younger, more Colin's age today.  Walter was his name.  He had worked at Bell Labs in New Jersey as a physicist and had made many discoveries in communications which were patented in the 60s and 70s.  Walter was a quiet man but was known for his community work.  He fled Germany with his family as a young boy prior to World War II breaking out.  His father was a poor potato farmer who later helped the allies in cryptography after he devised a code based on the patterns of eyes on potatoes.  His wife had passed before him several years earlier.  Walter died alone at his home, of unknown causes and his death was under investigation.  Investigators doubted there was foul play, but there was a rather odd paper he was writing with codes on it found next to him.  He was survived by two children and some grandchildren residing in Florida.  Colin thought perhaps he could contact his family, but he knew he couldn't risk revealing what he had heard from the man if what he said was true.  Colin sat dumbfounded, wondering if he had lost his one connection to the secret network.
+
+Later that night Colin once again turned on his receiver to 80 meters.  The little circuit sat idle with alligator clips connecting the rig audio to it.  His original goal of copying a RTTY signal now seemed pointless and insignificant in the grand scheme of things with the new knowledge he had.  He wanted to write more code and figure out the algorithm, all of it.  But Colin had no idea what next step to take, no clue what the algorithm was that would grant him access to a whole new world.  He pulled the card out of his wallet with his identity string and stared at the seemingly random 16 characters.  It contained uppercase, lowercase, numbers, symbols, just about everything.  Perhaps it was a base 64 character set?  What secrets were in it?  His thoughts were a disorganized jumble, and feeling a headache coming on he stopped himself from thinking further about it.
+
+He was no longer interested in listening to Morse code signals or voice conversations.  That was merely just meaningless noise, a distraction from what he was really looking for.  Every little pop and crackle on the receiver caught his attention.  Was it just random atmospheric noise leftover from the Big Bang or some noisy electrical appliance, or was there intelligence in each seemingly random sounds?  For hours he scanned through the band, hoping to catch the right signal in hopes that his little contraption might pick up some clue that would lead him to the next step, perhaps someone else in the network since his contact had passed away.  BZZZZZT bursts from the receiver and the microcontroller terminal screen came alive:
+
+ 8^fGwq9(:lLDPu6$ : KEEP LISTENING TO THE NOISE AND AWAIT FURTHER INFO.
+
+*/
+
+
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL)
