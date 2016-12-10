@@ -253,8 +253,9 @@ New fetures in this stable release:
       Memories can now be programmed in commmand mode (FEATURE_COMMAND_BUTTONS) by pressing the memory button
       FEATURE_CW_DECODER now has digital input pin (cw_decoder_pin) and if OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR is enable, cw_decoder_audio_input_pin will work in parallel
 
-    Add Yaacwk support
-      add hardware files for YAACWK Arduino Nano V3.0 based board
+    2.2.2016121001
+      Add code for support Yaacwk hardware, an AtMega 644p compatible with Arduino
+      add Eeschema kicad files for AtMega 644p based board
       see http://i1cra.briata.org/yaacwk/ for more info
 
     2.2.2015090801
