@@ -35,4 +35,8 @@
   #define keyer_awake 8       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
 #endif
 
+#else
+
+  #error "Multiple pin_settings.h files included somehow..."
+
 #endif //keyer_pin_settings_h

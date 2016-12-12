@@ -38,4 +38,8 @@
   #define capactive_paddle_pin_inhibit_pin 0     // if this pin is defined and is set high, the capacitive paddle pins will switch to normal (non-capacitive) sensing mode
 #endif
 
+#else
+
+  #error "Multiple pin_settings.h files included somehow..."
+
 #endif //keyer_pin_settings_h

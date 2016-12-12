@@ -171,7 +171,7 @@
 #if defined(FEATURE_ETHERNET)
   // #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
   // #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
-  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.178")
+  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.179")
   #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
 
   #define FEATURE_ETHERNET_GATEWAY {192,168,1,1}                   // default gateway

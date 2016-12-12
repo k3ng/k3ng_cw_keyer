@@ -599,6 +599,9 @@ Recent Update History
     2.2.2016121001
       Support for FUNtronics FK-10 contributed by disneysw. HARDWARE_FK_10 in keyer_hardware.h; files: keyer_pin_settings_fk_10.h, keyer_features_and_options_fk_10.h, keyer_settings_fk_10.h
 
+    2.2.2016121201
+      Additional work on web interface
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -614,7 +617,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016121001"
+#define CODE_VERSION "2.2.2016121201"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -1152,7 +1155,7 @@ PRIMARY_SERIAL_CLS * debug_serial_port;
 
   #if defined(FEATURE_WEB_SERVER)
     #define MAX_WEB_REQUEST 512  
-    String readString;
+    String web_server_incoming_string;
     uint8_t valid_request = 0;
     EthernetServer server(FEATURE_ETHERNET_WEB_LISTENER_PORT);                             // default server port 
     #define MAX_PARSE_RESULTS 32
@@ -4829,20 +4832,33 @@ void tx_and_sidetone_key (int state)
             }
           }            
         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
+          if (configuration.cmos_super_keyer_iambic_b_timing_on){
+            if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
+              if (being_sent == SENDING_DIT) {
+                check_dah_paddle();
+              } else {
+                if (being_sent == SENDING_DAH) {
+                  check_dit_paddle();
+                }
+              }     
+            } else {
+              if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
+                dah_buffer = 0;
+                dit_buffer = 0;         
+              }              
+            }
+          } else {
             if (being_sent == SENDING_DIT) {
               check_dah_paddle();
             } else {
               if (being_sent == SENDING_DAH) {
                 check_dit_paddle();
+              } else {
+                check_dah_paddle();
+                check_dit_paddle();                
               }
-            }     
-          } else {
-            if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
-              dah_buffer = 0;
-              dit_buffer = 0;         
-            }              
-          }
+            }  
+          }  
         #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
       } else { //(configuration.keyer_mode != ULTIMATIC)
@@ -4964,19 +4980,32 @@ void tx_and_sidetone_key (int state)
           }   
 
         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          if ((float(float(micros()-starttime)/float(endtime-starttime))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
+          if (configuration.cmos_super_keyer_iambic_b_timing_on){
+            if ((float(float(micros()-starttime)/float(endtime-starttime))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
+              if (being_sent == SENDING_DIT) {
+                check_dah_paddle();
+              } else {
+                if (being_sent == SENDING_DAH) {
+                  check_dit_paddle();
+                }
+              }     
+            } else {
+              if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
+                dah_buffer = 0;
+                dit_buffer = 0;         
+              }                 
+            }
+          } else {
             if (being_sent == SENDING_DIT) {
               check_dah_paddle();
             } else {
               if (being_sent == SENDING_DAH) {
                 check_dit_paddle();
+              } else {
+                check_dah_paddle();
+                check_dit_paddle();                
               }
-            }     
-          } else {
-            if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
-              dah_buffer = 0;
-              dit_buffer = 0;         
-            }                 
+            }               
           }
         #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
@@ -5517,7 +5546,7 @@ void command_mode()
             stay_in_command_mode = 0;
             break;
         #endif  //FEATURE_ALPHABET_SEND_PRACTICE
-//zzzzzzz
+
         case 112211: // ? - status
           
           delay(250);
@@ -6431,7 +6460,6 @@ void service_dit_dah_buffers()
         send_dit();
       }
 
-//zzzzzzzz
       if (dah_buffer) {
         dah_buffer = 0;
         if (!bug_dah_flag) {
@@ -10535,6 +10563,19 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
       port_to_use->println(button_array_high_limit[x]);
     }
   #endif 
+//aaaaaaa
+  #if defined(FEATURE_ETHERNET)
+    port_to_use->print(F("Ethernet: "));
+    port_to_use->print(configuration.ip[0]);
+    port_to_use->print(F("."));
+    port_to_use->print(configuration.ip[1]);
+    port_to_use->print(F("."));
+    port_to_use->print(configuration.ip[2]);
+    port_to_use->print(F("."));
+    port_to_use->println(configuration.ip[3]);      
+  #endif
+
+  port_to_use->println(F(">"));
   
 }
 #endif
@@ -13895,7 +13936,6 @@ void check_for_network_restart(){
 #if defined(FEATURE_WEB_SERVER)
 void service_web_server() {
 
-
   // Create a client connection
   EthernetClient client = server.available();
   if (client) {
@@ -13907,50 +13947,48 @@ void service_web_server() {
         char c = client.read();
      
         //read char by char HTTP request
-        if (readString.length() < MAX_WEB_REQUEST){
+        if (web_server_incoming_string.length() < MAX_WEB_REQUEST){
           //store characters to string
-          readString += c;
-          #if defined(DEBUG_STATION_INTERLOCK)
-            debug.print(c);
-          #endif //DEBUG_STATION_INTERLOCK  
+          web_server_incoming_string += c;
+          #if defined(DEBUG_WEB_SERVER_READS)
+            debug_serial_port->print("service_web_server: read: ");
+            debug_serial_port->print(c);
+          #endif //DEBUG_WEB_SERVER_READS  
         } else {
-          // readString = "";
+          // web_server_incoming_string = "";
         }
 
         //has HTTP request ended?
         if (c == '\n'){ 
 
-          #if defined(DEBUG_STATION_INTERLOCK)
-            debug.println(readString); //print to serial monitor for debuging     
-          #endif //DEBUG_STATION_INTERLOCK
+          #if defined(DEBUG_WEB_SERVER_READS)
+            debug_serial_port->println(web_server_incoming_string); //print to serial monitor for debuging     
+          #endif //DEBUG_WEB_SERVER_READS
 
-          if (readString.startsWith("GET / ")){
+          if (web_server_incoming_string.startsWith("GET / ")){
             valid_request = 1;
             web_print_page_main_menu(client);
           }
 
-          if (readString.startsWith("GET /About")){
+          if (web_server_incoming_string.startsWith("GET /About")){
             valid_request = 1;
             web_print_page_about(client);
           }
-
-
-
-          if (readString.startsWith("GET /KeyerSettings")){
+//zzzzzzzz
+          if (web_server_incoming_string.startsWith("GET /KeyerSettings")){
             valid_request = 1;
             // are there form results being posted?
-            if (readString.indexOf("?") > 0){
-              //web_print_page_keyer_settings_process(client);
+            if (web_server_incoming_string.indexOf("?") > 0){
+              web_print_page_keyer_settings_process(client);
             } else {
               web_print_page_keyer_settings(client);
             }
           }
 
-
-          if (readString.startsWith("GET /NetworkSettings")){
+          if (web_server_incoming_string.startsWith("GET /NetworkSettings")){
             valid_request = 1;
             // are there form results being posted?
-            if (readString.indexOf("?ip0=") > 0){
+            if (web_server_incoming_string.indexOf("?ip0=") > 0){
               web_print_page_network_settings_process(client);
             } else {
               web_print_page_network_settings(client);
@@ -13958,20 +13996,33 @@ void service_web_server() {
           }
 
           #if defined(FEATURE_INTERNET_LINK)
-            if (readString.startsWith("GET /LinkSettings")){
+            if (web_server_incoming_string.startsWith("GET /LinkSettings")){
               valid_request = 1;
               // are there form results being posted?
-              if (readString.indexOf("?ip") > 0){
+              if (web_server_incoming_string.indexOf("?ip") > 0){
                 web_print_page_link_settings_process(client);
               } else {
                 web_print_page_link_settings(client);
               }
             }
           #endif //FEATURE_INTERNET_LINK
-          if (readString.startsWith("GET /ctrl")){
+          if (web_server_incoming_string.startsWith("GET /ctrl")){
             valid_request = 1;
             web_print_page_control(client); 
           }
+
+          #if defined(FEATURE_MEMORIES)
+            if (web_server_incoming_string.startsWith("GET /mem")){
+              valid_request = 1;
+              // are there form results being posted?
+              // if (web_server_incoming_string.indexOf("?") > 0){
+              //   web_print_page_memories_process(client);
+              // } else {
+                web_print_page_memories(client);
+              // }
+            }
+          #endif //FEATURE_MEMORIES
+
 
           if (!valid_request){
             web_print_page_404(client);                      
@@ -13979,7 +14030,7 @@ void service_web_server() {
 
           delay(1);
           client.stop();
-          readString = "";  
+          web_server_incoming_string = "";  
          }
        }
     }
@@ -14372,7 +14423,11 @@ void web_print_page_main_menu(EthernetClient client){
 
   web_print_title(client);
 
-  web_client_println(client,F("<H1>K3NG CW Keyer</H1><hr><br><br><a href=\"ctrl\"\" class=\"internal\">Control</a><br><br><a href=\"KeyerSettings\"\" class=\"internal\">Keyer Settings</a><br><br>")); 
+  web_client_println(client,F("<H1>K3NG CW Keyer</H1><hr><br><br><a href=\"ctrl\"\" class=\"internal\">Control</a><br><br>"));
+  #if defined(FEATURE_MEMORIES)
+    web_client_println(client,F("<a href=\"mem\"\" class=\"internal\">Memories</a><br><br>"));
+  #endif //FEATURE_MEMORIES
+  web_client_println(client,F("<a href=\"KeyerSettings\"\" class=\"internal\">Keyer Settings</a><br><br>")); 
   #if defined(FEATURE_INTERNET_LINK)
     web_client_println(client,F("<a href=\"LinkSettings\"\" class=\"internal\">Link Settings</a><br><br>"));
   #endif //FEATURE_INTERNET_LINK
@@ -14394,8 +14449,8 @@ void web_print_control_radio(EthernetClient client,const char *name,int value,ui
   web_client_print(client,name);
   web_client_print(client,F("\" value=\""));
   web_client_print(client,value);
-  web_client_print(client,"\" ");
-  if (checked) {web_client_print(client,F("checked"));}
+  web_client_print(client,"\"");
+  if (checked) {web_client_print(client,F(" checked"));}
   web_client_print(client,">");
   web_client_print(client,caption);
   web_client_print(client,F("</label>"));
@@ -14408,10 +14463,12 @@ void web_print_control_radio(EthernetClient client,const char *name,int value,ui
 
 void web_print_control_checkbox(EthernetClient client,const char *name,uint8_t checked,const char *caption){
 
-    web_client_print(client,F("<label><input type=\"checkbox\" id=\""));
+    web_client_print(client,F("<label><input type=\"checkbox\" id=\"cbox"));
     web_client_print(client,name);
-    web_client_print(client,F("\" "));
-    if (checked) {web_client_print(client,F("checked"));}
+    web_client_print(client,F("\" value=\""));
+    web_client_print(client,name);
+    web_client_print(client,F("\""));
+    if (checked) {web_client_print(client,F(" checked"));}
     web_client_print(client,F(">"));
     web_client_print(client,caption);
     web_client_print(client,F("</label>"));
@@ -14474,8 +14531,6 @@ void web_print_page_keyer_settings(EthernetClient client){
 
   web_client_println(client,F("<H1>Keyer Settings</H1><hr><br><form>"));
 
-  web_client_println(client,F("<br><br>This is under construction - save does not work yet...<br><br>"));
-
   web_print_control_radio(client,"md",IAMBIC_A,(configuration.keyer_mode == IAMBIC_A)?1:0,"Iambic A ");
   web_print_control_radio(client,"md",IAMBIC_B,(configuration.keyer_mode == IAMBIC_B)?1:0,"Iambic B ");
   web_print_control_radio(client,"md",BUG,(configuration.keyer_mode == BUG)?1:0,"Bug ");
@@ -14491,14 +14546,25 @@ void web_print_page_keyer_settings(EthernetClient client){
     web_client_println(client,"<br>");
   #endif
   
-  web_print_control_checkbox(client,"di",(!configuration.dit_buffer_off)?1:0," Dit Buffer ");
-  web_print_control_checkbox(client,"da",(!configuration.dah_buffer_off)?1:0," Dah Buffer<br>");
+  //web_print_control_checkbox(client,"di",(!configuration.dit_buffer_off)?1:0," Dit Buffer ");  // couldn't get checkboxes working correctly 2016-12-11
+
+  web_client_print(client,"Dit Buffer"); 
+  web_print_control_radio(client,"di",0,(configuration.dit_buffer_off)?0:1,"On ");
+  web_print_control_radio(client,"di",1,(configuration.dit_buffer_off)?1:0,"Off   ");
+  web_client_println(client,"<br>");
+
+  // web_print_control_checkbox(client,"da",(!configuration.dah_buffer_off)?1:0," Dah Buffer<br>");
+
+  web_client_print(client,"Dah Buffer"); 
+  web_print_control_radio(client,"da",0,(configuration.dah_buffer_off)?0:1,"On ");
+  web_print_control_radio(client,"da",1,(configuration.dah_buffer_off)?1:0,"Off");
+  web_client_println(client,"<br>");
 
   web_print_control_radio(client,"sm",SPEED_NORMAL,(speed_mode == SPEED_NORMAL)?1:0,"Normal Speed Mode ");
 
   web_print_control_textbox(client,"wp","addr",(int)configuration.wpm,""," WPM ");
 
-  #ifdef FEATURE_FARNSWORTH
+  #if defined(FEATURE_FARNSWORTH)
     web_print_control_textbox(client,"fw","addr",(int)configuration.wpm_farnsworth,""," Farnsworth WPM");
   #endif //FEATURE_FARNSWORTH
 
@@ -14528,14 +14594,21 @@ void web_print_page_keyer_settings(EthernetClient client){
     web_client_println(client,F("<br>"));;
   #endif 
 
-  #ifdef FEATURE_POTENTIOMETER
-    web_print_control_textbox(client,"po","addr",(int)pot_value_wpm(),"Potentiometer "," WPM ");
-    web_print_control_checkbox(client,"pa",(configuration.pot_activated)?1:0," Active");
+  #if defined(FEATURE_POTENTIOMETER)
+    //web_print_control_textbox(client,"po","addr",(int)pot_value_wpm(),"Potentiometer "," WPM ");
+    //web_print_control_checkbox(client,"pa",(configuration.pot_activated)?1:0," Active");
+    web_client_print(client,"Potentiometer ");
+    web_print_control_radio(client,"pa",1,(configuration.pot_activated)?1:0,"Active ");
+    web_print_control_radio(client,"pa",0,(configuration.pot_activated)?0:1,"Inactive");    
     web_client_println(client,F("<br>"));
   #endif
 
-  #ifdef FEATURE_AUTOSPACE
-    web_print_control_checkbox(client,"as",(configuration.autospace_active)?1:0," Autospace<br>");
+  #if defined(FEATURE_AUTOSPACE)
+    //web_print_control_checkbox(client,"as",(configuration.autospace_active)?1:0," Autospace<br>");
+    web_client_print(client,"Autospace"); 
+    web_print_control_radio(client,"as",1,(configuration.autospace_active)?1:0,"On ");
+    web_print_control_radio(client,"as",0,(configuration.autospace_active)?0:1,"Off");
+    web_client_println(client,"<br>");    
   #endif //FEATURE_AUTOSPACE
 
   web_print_control_textbox(client,"ws","addr",(int)configuration.length_wordspace,"Wordspace ","");
@@ -14544,8 +14617,14 @@ void web_print_page_keyer_settings(EthernetClient client){
   web_print_control_textbox(client,"tx","addr",(int)configuration.current_tx,"TX ","");
   web_client_println(client,F("<br>"));
 
-  #ifdef FEATURE_QLF
-    web_print_control_checkbox(client,"ql",(qlf_active)?1:0," QLF<br>");
+  #if defined(FEATURE_QLF)
+    //web_print_control_checkbox(client,"ql",(qlf_active)?1:0," QLF<br>");
+
+    web_client_print(client,"QLF"); 
+    web_print_control_radio(client,"ql",1,(qlf_active)?1:0,"On ");
+    web_print_control_radio(client,"ql",0,(qlf_active)?0:1,"Off");
+    web_client_println(client,"<br>");
+
   #endif //FEATURE_QLF
 
   web_client_println(client,F("<br><br><input type=\"submit\" value=\"Save\"></form>"));
@@ -14558,6 +14637,260 @@ void web_print_page_keyer_settings(EthernetClient client){
 #endif //FEATURE_WEB_SERVER 
              
 //-------------------------------------------------------------------------------------------------------
+
+
+
+#if defined(FEATURE_WEB_SERVER)
+
+void web_print_page_keyer_settings_process(EthernetClient client){
+
+
+  uint8_t invalid_data = 0;
+
+  unsigned int ud = 0;
+
+  uint8_t temp_keyer_mode = 0;
+  uint8_t temp_dit_buffer_off = 0;
+  uint8_t temp_dah_buffer_off = 0;  
+  uint8_t temp_speed_mode = 0;
+  unsigned int temp_wpm = 0;
+  unsigned int temp_qrss_dit_length = 0;
+  uint8_t temp_sidetone_mode = 0;
+  unsigned int temp_sidetone_hz = 0;
+  String temp_string_dit_dah_ratio;
+  uint8_t temp_weight = 0;
+  unsigned int temp_serial = 0;
+  uint8_t temp_wordspace = 0;
+  uint8_t temp_tx = 0;  
+
+  #if defined(FEATURE_QLF)
+    uint8_t temp_qlf = 0;
+  #endif //FEATURE_QLF
+
+  #if defined(FEATURE_POTENTIOMETER)
+    uint8_t temp_pot_activated = 0;
+  #endif //FEATURE_POTENTIOMETER
+    
+  #if defined(FEATURE_AUTOSPACE)
+    uint8_t temp_autospace_active = 0;
+  #endif //FEATURE_AUTOSPACE
+
+  #if defined(FEATURE_FARNSWORTH)
+    unsigned int temp_farnsworth = 0;
+  #endif //FEATURE_FARNSWORTH
+
+  parse_get(web_server_incoming_string);
+
+  if (parse_get_results_index){
+
+
+
+    for (int x = 0; x < parse_get_results_index; x++){ 
+      if (parse_get_results[x].parameter == "md"){temp_keyer_mode = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "di"){temp_dit_buffer_off = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "da"){temp_dah_buffer_off = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "sm"){temp_speed_mode = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "wp"){temp_wpm = parse_get_results[x].value_long;}
+      #if defined(FEATURE_FARNSWORTH)
+        if (parse_get_results[x].parameter == "fw"){temp_farnsworth = parse_get_results[x].value_long;}
+      #endif //FEATURE_FARNSWORTH
+      if (parse_get_results[x].parameter == "qd"){temp_qrss_dit_length = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "st"){temp_sidetone_mode = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "hz"){temp_sidetone_hz = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "dd"){temp_string_dit_dah_ratio = parse_get_results[x].value_string;}
+      if (parse_get_results[x].parameter == "wt"){temp_weight = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "sn"){temp_serial = parse_get_results[x].value_long;}
+      // po - nothing to do for potentiometer value
+      #if defined(FEATURE_POTENTIOMETER)
+        if (parse_get_results[x].parameter == "pa"){temp_pot_activated = parse_get_results[x].value_long;}
+      #endif //FEATURE_POTENTIOMETER
+      #if defined(FEATURE_AUTOSPACE)
+        if (parse_get_results[x].parameter == "as"){temp_autospace_active = parse_get_results[x].value_long;}
+      #endif //FEATURE_AUTOSPACE        
+      if (parse_get_results[x].parameter == "ws"){temp_wordspace = parse_get_results[x].value_long;}
+      if (parse_get_results[x].parameter == "tx"){temp_tx = parse_get_results[x].value_long;}
+      #if defined(FEATURE_QLF)
+        if (parse_get_results[x].parameter == "ql"){temp_qlf = parse_get_results[x].value_long;}
+      #endif //FEATURE_QLF      
+
+
+    }
+    
+
+    // data validation
+    
+
+    // TODO !  data validation
+
+
+    if (invalid_data){
+
+      web_print_header(client);
+      web_print_meta_refresh(client,configuration.ip[0],configuration.ip[1],configuration.ip[2],configuration.ip[3],2);                                                   
+      web_client_println(client,F("\/KeyerSettings'\" />"));      
+      web_print_style_sheet(client);
+      web_print_title(client);
+      web_client_println(client,F("<br>Bad data!<br>"));
+      web_print_home_link(client);
+      web_print_footer(client);
+
+    } else { 
+
+    // assign to variables
+           
+      configuration.keyer_mode = temp_keyer_mode;
+      configuration.dit_buffer_off = temp_dit_buffer_off;
+      configuration.dah_buffer_off = temp_dah_buffer_off;
+      speed_mode = temp_speed_mode;
+      configuration.wpm = temp_wpm;
+      qrss_dit_length = temp_qrss_dit_length;
+      configuration.sidetone_mode = temp_sidetone_mode;
+      configuration.hz_sidetone = temp_sidetone_hz;
+      temp_string_dit_dah_ratio.replace(".","");
+      configuration.dah_to_dit_ratio =  temp_string_dit_dah_ratio.toInt();
+      configuration.weighting = temp_weight;
+      serial_number = temp_serial;
+      configuration.length_wordspace = temp_wordspace;
+      configuration.current_tx = temp_tx;
+      #if defined(FEATURE_QLF)
+        qlf_active = temp_qlf;
+      #endif //FEATURE_QLF  
+      #if defined(FEATURE_POTENTIOMETER)
+        configuration.pot_activated = temp_pot_activated;
+      #endif //FEATURE_POTENTIOMETER  
+      #if defined(FEATURE_AUTOSPACE)
+        configuration.autospace_active = temp_autospace_active;
+      #endif //FEATURE_AUTOSPACE  
+      #if defined(FEATURE_FARNSWORTH)
+        configuration.wpm_farnsworth = temp_farnsworth;
+      #endif //FEATURE_FARNSWORTH
+
+      web_print_header(client);
+      web_print_meta_refresh(client,configuration.ip[0],configuration.ip[1],configuration.ip[2],configuration.ip[3],2);                                                   
+      web_client_println(client,F("\/KeyerSettings'\" />"));
+      web_print_style_sheet(client);
+      web_print_title(client);
+      web_client_println(client,F("<br>Configuration saved<br><br>"));
+      web_print_home_link(client);
+      web_print_footer(client);
+      config_dirty = 1;
+    }
+  }
+}
+#endif //FEATURE_WEB_SERVER
+
+//-------------------------------------------------------------------------------------------------------
+
+
+#if defined(FEATURE_WEB_SERVER) && defined(FEATURE_MEMORIES)
+
+void web_print_page_memories(EthernetClient client){
+
+//zzzzzzzz
+
+  int memory_number_to_send = 0;
+  int last_memory_location;
+
+  #if defined(OPTION_PROSIGN_SUPPORT)
+    byte eeprom_temp = 0;
+    static char * prosign_temp = "";
+  #endif
+
+
+
+
+  web_print_header(client);
+
+  web_print_style_sheet(client);
+
+  web_print_title(client);
+
+  web_client_println(client,F("<H1>Memories</H1><hr><br>"));
+
+  web_client_print(client,F("<br><br>"));
+
+  //if (web_server_incoming_string.length() > 14){web_server_incoming_string.remove(14);}
+
+  if ((web_server_incoming_string.indexOf("?m") > 0) && (web_server_incoming_string.length() > (web_server_incoming_string.indexOf("?m")+2))) {
+    memory_number_to_send = ((web_server_incoming_string.charAt(web_server_incoming_string.indexOf("?m")+2)-48)*10) + (web_server_incoming_string.charAt(web_server_incoming_string.indexOf("?m")+3)-48);
+
+
+// web_client_print(client,web_server_incoming_string);
+// web_client_print(client,F("<br><br>"));
+
+// web_client_print(client,F("mem number: "));
+// web_client_print(client,memory_number_to_send);
+// web_client_print(client,F("<br><br>"));
+
+// web_client_print(client,web_server_incoming_string.charAt(web_server_incoming_string.indexOf("?m")+1));
+// web_client_print(client,web_server_incoming_string.charAt(web_server_incoming_string.indexOf("?m")+2));
+// web_client_print(client,F("<br><br>"));
+
+    add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+    add_to_send_buffer(memory_number_to_send-1);
+  }
+
+
+  for(int i = 0;i < number_of_memories;i++){
+    web_client_print(client,F("<a href=\"/mem?m"));
+    if(i < 9){web_client_print(client,"0");}
+    web_client_print(client,i+1);
+    web_client_print(client,"\" class=\"ctrl\">");
+    web_client_print(client,i+1);
+    
+
+  
+    last_memory_location = memory_end(i) + 1;
+
+    if (EEPROM.read(memory_start(i)) == 255) {
+      // web_client_print(client,F("{empty}"));
+      web_client_print(client,F("       "));
+    } else {
+      web_client_print(client,") ");
+      for (int y = (memory_start(i)); (y < last_memory_location); y++) {
+        if (EEPROM.read(y) < 255) {
+          #if defined(OPTION_PROSIGN_SUPPORT)
+            eeprom_temp = EEPROM.read(y);
+            if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+              prosign_temp = convert_prosign(eeprom_temp);
+              web_client_write(client,prosign_temp[0]);
+              web_client_write(client,prosign_temp[1]);
+            } else {
+              web_client_write(client,eeprom_temp);
+            }
+          #else         
+            web_client_write(client,EEPROM.read(y));
+          #endif //OPTION_PROSIGN_SUPPORT
+        } else {
+          y = last_memory_location;
+        }
+      }
+    }
+
+
+    web_client_print(client,"</a>");
+    // web_client_print(client,"<br><br><br>");
+    if (number_of_memories > 4){
+      if (((i+1) % 4) == 0){web_client_print(client,"<br><br><br>");}
+    }
+  }
+
+  web_client_print(client,F("<br>")); 
+
+  web_print_home_link(client);
+
+  web_print_footer(client);
+
+
+  
+
+}
+#endif //FEATURE_WEB_SERVER && FEATURE_MEMORIES
+
+
+//-------------------------------------------------------------------------------------------------------
+
+
 #if defined(FEATURE_WEB_SERVER)
 
 void web_print_page_control(EthernetClient client){
@@ -14568,7 +14901,9 @@ void web_print_page_control(EthernetClient client){
 
     /ctrlnd - no display
 
-    /strlnd?st<TEXTTOSEND>/
+    /ctrlnd?st<TEXTTOSEND>/
+
+    http://192.168.1.178/ctrlnd?sttest/
 
 
   */
@@ -14583,8 +14918,8 @@ void web_print_page_control(EthernetClient client){
 
   String url_sub_string; 
 
-  if ((readString.indexOf("ctrl?") > 0) || (readString.indexOf("ctrlnd?") > 0)){
-    url_sub_string = readString;
+  if ((web_server_incoming_string.indexOf("ctrl?") > 0) || (web_server_incoming_string.indexOf("ctrlnd?") > 0)){
+    url_sub_string = web_server_incoming_string;
     if (url_sub_string.length() > 14){url_sub_string.remove(14);}
     if (url_sub_string.indexOf("?ky") > 0){
       sending_mode = AUTOMATIC_SENDING;
@@ -14601,22 +14936,22 @@ void web_print_page_control(EthernetClient client){
       speed_change(2);
     }
     #if defined(FEATURE_MEMORIES)
-    if ((readString.indexOf("?m") > 0) & (readString.length() > (readString.indexOf("?m")+2))) {
-      memory_number_to_send = ((readString.charAt(readString.indexOf("m")+1)-48)*10) + (readString.charAt(readString.indexOf("m")+2)-48);
-      add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
-      add_to_send_buffer(memory_number_to_send-1);
-    }
+      if ((web_server_incoming_string.indexOf("?m") > 0) & (web_server_incoming_string.length() > (web_server_incoming_string.indexOf("?m")+2))) {
+        memory_number_to_send = ((web_server_incoming_string.charAt(web_server_incoming_string.indexOf("m")+1)-48)*10) + (web_server_incoming_string.charAt(web_server_incoming_string.indexOf("m")+2)-48);
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(memory_number_to_send-1);
+      }
     #endif //FEATURE_MEMORIES
     if (url_sub_string.indexOf("?st") > 0){
-      for (int x = (readString.indexOf("st")+2);x < readString.length();x++){
-        if (readString.charAt(x) == '/'){
-          x = readString.length();      
+      for (int x = (web_server_incoming_string.indexOf("st")+2);x < web_server_incoming_string.length();x++){
+        if (web_server_incoming_string.charAt(x) == '/'){
+          x = web_server_incoming_string.length();      
         } else {
-          if (readString.charAt(x) == '%'){  // do we have a http hex code?
-            add_to_send_buffer((((uint8_t)readString.charAt(x+1)-48)<<4)+((uint8_t)readString.charAt(x+2)-48));
+          if (web_server_incoming_string.charAt(x) == '%'){  // do we have a http hex code?
+            add_to_send_buffer((((uint8_t)web_server_incoming_string.charAt(x+1)-48)<<4)+((uint8_t)web_server_incoming_string.charAt(x+2)-48));
             x = x + 2;
           } else {
-            add_to_send_buffer(uppercase(readString.charAt(x)));
+            add_to_send_buffer(uppercase(web_server_incoming_string.charAt(x)));
           }
         }
       }
@@ -14625,7 +14960,7 @@ void web_print_page_control(EthernetClient client){
 
   
 
-  if (readString.indexOf("nd") > 0){ // no display option
+  if (web_server_incoming_string.indexOf("nd") > 0){ // no display option
 
     web_print_200OK(client);
 
@@ -14640,8 +14975,8 @@ void web_print_page_control(EthernetClient client){
     web_client_println(client,F("<H1>Control</H1><hr><br>"));
   //zzzzzzz
 
-// web_client_print(client,"readString: ");
-// web_client_print(client,readString);
+// web_client_print(client,"web_server_incoming_string: ");
+// web_client_print(client,web_server_incoming_string);
 // web_client_print(client,"url_sub_string: ");
 // web_client_print(client,url_sub_string);
 // web_client_println(client,F("<br><br>"));
@@ -14840,7 +15175,7 @@ void web_print_page_link_settings_process(EthernetClient client){
 
   unsigned int ud = 0;
 
-  parse_get(readString);
+  parse_get(web_server_incoming_string);
   if (parse_get_results_index){
 
     for (int x = 0; x < parse_get_results_index; x++){   // TODO - rewrite this to scale...
@@ -14959,7 +15294,7 @@ void web_print_page_network_settings_process(EthernetClient client){
 
   unsigned int ud = 0;
 
-  parse_get(readString);
+  parse_get(web_server_incoming_string);
   if (parse_get_results_index){
 
     for (int x = 0; x < parse_get_results_index; x++){
