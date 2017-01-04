@@ -59,6 +59,7 @@
 // #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
 // #define FEATURE_PADDLE_ECHO
 // #define FEATURE_STRAIGHT_KEY_ECHO
+// #define FEATURE_AMERICAN_MORSE
 
 
 // #define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port

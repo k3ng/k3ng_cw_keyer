@@ -195,6 +195,8 @@
 #define FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS 20
 #define FEATURE_INTERNET_LINK_KEY_DOWN_TIMEOUT_SECS 8
 
+#define WEB_SERVER_CONTROL_TX_KEY_TIME_LIMIT_SECS 10
+
 #if defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
   #define memory_area_end 4095             // the eeprom location where memory space ends
 #elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega168__)

@@ -33,6 +33,7 @@
 
 #define CW 0
 #define HELL 1
+#define AMERICAN_MORSE 2
 
 #ifdef FEATURE_PS2_KEYBOARD
   #define PS2_KEYBOARD_NORMAL 0

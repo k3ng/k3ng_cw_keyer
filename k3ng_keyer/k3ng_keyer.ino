@@ -75,6 +75,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     \(     Send current serial number in cut numbers
     \)     Send serial number with cut numbers, then increment
     \[     Set Quiet Paddle Interruption 
+    \=     Toggle American Morse mode    (requires FEATURE_AMERICAN_MORSE)
 
 
  Buttons
@@ -602,6 +603,13 @@ Recent Update History
     2.2.2016121201
       Additional work on web interface
 
+    2.2.2016121202
+      Additional work on web interface
+      Mainstreamed FEATURE_HI_PRECISION_LOOP_TIMING code.  No longer an option.  (Need to clean out of keyer_feature_and_options files)
+
+    2.2.2017010301
+      FEATURE_AMERICAN_MORSE - American Morse Code sending mode.  \= command in the CLI switches to American Morse Code https://en.wikipedia.org/wiki/American_Morse_code
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -617,7 +625,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2016121201"
+#define CODE_VERSION "2.2.2017010301"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -793,7 +801,7 @@ byte current_tx_key_line = tx_key_line_1;
 byte manual_ptt_invoke = 0;
 byte qrss_dit_length = initial_qrss_dit_length;
 byte keyer_machine_mode = KEYER_NORMAL;   // KEYER_NORMAL, BEACON, KEYER_COMMAND_MODE
-byte char_send_mode = 0; // CW, HELL
+byte char_send_mode = 0; // CW, HELL, AMERICAN_MORSE
 byte key_tx = 0;         // 0 = tx_key_line control suppressed
 byte dit_buffer = 0;     // used for buffering paddle hits in iambic operation
 byte dah_buffer = 0;     // used for buffering paddle hits in iambic operation
@@ -1166,6 +1174,7 @@ PRIMARY_SERIAL_CLS * debug_serial_port;
     };
     struct parse_get_result_t parse_get_results[MAX_PARSE_RESULTS];
     int parse_get_results_index = 0;
+    unsigned long web_control_tx_key_time = 0;
   #endif //FEATURE_WEB_SERVER
 
   #if defined(FEATURE_UDP)
@@ -4759,171 +4768,177 @@ void tx_and_sidetone_key (int state)
 //-------------------------------------------------------------------------------------------------------
 
 
-#ifndef FEATURE_HI_PRECISION_LOOP_TIMING
+// #ifndef FEATURE_HI_PRECISION_LOOP_TIMING
 
-  void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in)
-  {
+//   void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in)
+//   {
 
 
     
-    if ((lengths == 0) or (lengths < 0)) {
-      return;
-    }
+//     if ((lengths == 0) or (lengths < 0)) {
+//       return;
+//     }
 
 
-    float element_length;
+//     float element_length;
 
-    if (speed_mode == SPEED_NORMAL) {
-      element_length = 1200/speed_wpm_in;   
-    } else {
-      element_length = qrss_dit_length * 1000;
-    }
+//     if (speed_mode == SPEED_NORMAL) {
+//       element_length = 1200/speed_wpm_in;   
+//     } else {
+//       element_length = qrss_dit_length * 1000;
+//     }
 
 
 
-    #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-      unsigned long starttime = millis();
-    #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+//     #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+//       unsigned long starttime = millis();
+//     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
-    unsigned long ticks = long(element_length*lengths) + long(additional_time_ms); // improvement from Paul, K1XM
-    unsigned long start = millis();
-    while ((millis() - start) < ticks) {
+//     unsigned long ticks = long(element_length*lengths) + long(additional_time_ms); // improvement from Paul, K1XM
+//     unsigned long start = millis();
+//     while ((millis() - start) < ticks) {
 
-      check_ptt_tail();
+//       check_ptt_tail();
 
-      #if defined(FEATURE_INTERNET_LINK) /*&& !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)*/
-        if ((millis() > 1000)  && ((millis()-start) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
-          service_udp_send_buffer();
-          service_udp_receive();
-          service_internet_link_udp_receive_buffer();
-        }
-      #endif //FEATURE_INTERNET_LINK
+//       #if defined(FEATURE_INTERNET_LINK) /*&& !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)*/
+//         if ((millis() > 1000)  && ((millis()-start) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
+//           service_udp_send_buffer();
+//           service_udp_receive();
+//           service_internet_link_udp_receive_buffer();
+//         }
+//       #endif //FEATURE_INTERNET_LINK
 
-      #ifdef OPTION_WATCHDOG_TIMER
-        wdt_reset();
-      #endif  //OPTION_WATCHDOG_TIMER
+//       #ifdef OPTION_WATCHDOG_TIMER
+//         wdt_reset();
+//       #endif  //OPTION_WATCHDOG_TIMER
       
-      #ifdef FEATURE_ROTARY_ENCODER
-        check_rotary_encoder();
-      #endif //FEATURE_ROTARY_ENCODER    
+//       #ifdef FEATURE_ROTARY_ENCODER
+//         check_rotary_encoder();
+//       #endif //FEATURE_ROTARY_ENCODER    
       
-      #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
-        service_usb();
-      #endif //FEATURE_USB_KEYBOARD || FEATURE_USB_MOUSE
+//       #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
+//         service_usb();
+//       #endif //FEATURE_USB_KEYBOARD || FEATURE_USB_MOUSE
 
-      #ifdef FEATURE_PTT_INTERLOCK
-        service_ptt_interlock();
-      #endif //FEATURE_PTT_INTERLOCK
+//       #ifdef FEATURE_PTT_INTERLOCK
+//         service_ptt_interlock();
+//       #endif //FEATURE_PTT_INTERLOCK
       
-      if ((configuration.keyer_mode != ULTIMATIC) && (configuration.keyer_mode != SINGLE_PADDLE)) {
-        if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
-            iambic_flag = 1;
-        }    
+//       if ((configuration.keyer_mode != ULTIMATIC) && (configuration.keyer_mode != SINGLE_PADDLE)) {
+//         if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
+//             iambic_flag = 1;
+//         }    
      
-        #ifndef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          if (being_sent == SENDING_DIT) {
-            check_dah_paddle();
-          } else {
-            if (being_sent == SENDING_DAH) {
-              check_dit_paddle();
-            } else {
-              check_dah_paddle();
-              check_dit_paddle();                
-            }
-          }            
-        #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          if (configuration.cmos_super_keyer_iambic_b_timing_on){
-            if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
-              if (being_sent == SENDING_DIT) {
-                check_dah_paddle();
-              } else {
-                if (being_sent == SENDING_DAH) {
-                  check_dit_paddle();
-                }
-              }     
-            } else {
-              if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
-                dah_buffer = 0;
-                dit_buffer = 0;         
-              }              
-            }
-          } else {
-            if (being_sent == SENDING_DIT) {
-              check_dah_paddle();
-            } else {
-              if (being_sent == SENDING_DAH) {
-                check_dit_paddle();
-              } else {
-                check_dah_paddle();
-                check_dit_paddle();                
-              }
-            }  
-          }  
-        #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+//         #ifndef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+//           if (being_sent == SENDING_DIT) {
+//             check_dah_paddle();
+//           } else {
+//             if (being_sent == SENDING_DAH) {
+//               check_dit_paddle();
+//             } else {
+//               check_dah_paddle();
+//               check_dit_paddle();                
+//             }
+//           }            
+//         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+//           if (configuration.cmos_super_keyer_iambic_b_timing_on){
+//             if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
+//               if (being_sent == SENDING_DIT) {
+//                 check_dah_paddle();
+//               } else {
+//                 if (being_sent == SENDING_DAH) {
+//                   check_dit_paddle();
+//                 }
+//               }     
+//             } else {
+//               if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
+//                 dah_buffer = 0;
+//                 dit_buffer = 0;         
+//               }              
+//             }
+//           } else {
+//             if (being_sent == SENDING_DIT) {
+//               check_dah_paddle();
+//             } else {
+//               if (being_sent == SENDING_DAH) {
+//                 check_dit_paddle();
+//               } else {
+//                 check_dah_paddle();
+//                 check_dit_paddle();                
+//               }
+//             }  
+//           }  
+//         #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
-      } else { //(configuration.keyer_mode != ULTIMATIC)
+//       } else { //(configuration.keyer_mode != ULTIMATIC)
 
 
-          if (being_sent == SENDING_DIT) {
-            check_dah_paddle();
-          } else {
-            if (being_sent == SENDING_DAH) {
-              check_dit_paddle();
-            } else {
-              check_dah_paddle();
-              check_dit_paddle();                
-            }
-          }   
+//           if (being_sent == SENDING_DIT) {
+//             check_dah_paddle();
+//           } else {
+//             if (being_sent == SENDING_DAH) {
+//               check_dit_paddle();
+//             } else {
+//               check_dah_paddle();
+//               check_dit_paddle();                
+//             }
+//           }   
 
-      }
+//       }
       
-      #if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
-        check_the_memory_buttons();
-      #endif
+//       #if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
+//         check_the_memory_buttons();
+//       #endif
 
-      // blow out prematurely if we're automatic sending and a paddle gets hit
-      #ifdef FEATURE_COMMAND_BUTTONS
-        if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
-          if (keyer_machine_mode == KEYER_NORMAL) {
-            sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
-            automatic_sending_interruption_time = millis(); 
-            return;
-          }
-        }   
-      #else
-        if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
-          if (keyer_machine_mode == KEYER_NORMAL) {
-            sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
-            automatic_sending_interruption_time = millis(); 
-            return;
-          }
-        }   
-      #endif
+//       // blow out prematurely if we're automatic sending and a paddle gets hit
+//       #ifdef FEATURE_COMMAND_BUTTONS
+//         if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
+//           if (keyer_machine_mode == KEYER_NORMAL) {
+//             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+//             automatic_sending_interruption_time = millis(); 
+//             return;
+//           }
+//         }   
+//       #else
+//         if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
+//           if (keyer_machine_mode == KEYER_NORMAL) {
+//             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+//             automatic_sending_interruption_time = millis(); 
+//             return;
+//           }
+//         }   
+//       #endif
 
-      #ifdef FEATURE_STRAIGHT_KEY
-        service_straight_key();
-      #endif //FEATURE_STRAIGHT_KEY
+//       #ifdef FEATURE_STRAIGHT_KEY
+//         service_straight_key();
+//       #endif //FEATURE_STRAIGHT_KEY
 
+
+        // #if defined(FEATURE_WEB_SERVER)
+        //   if (speed_mode == SPEED_QRSS){
+        //     service_web_server();
+        //   }
+        // #endif //FEATURE_WEB_SERVER
         
-    }  //while ((millis() < endtime) && (millis() > 200))
+//     }  //while ((millis() < endtime) && (millis() > 200))
    
-    if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
-        iambic_flag = 0;
-        dit_buffer = 0;
-        dah_buffer = 0;
-    }    
+//     if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
+//         iambic_flag = 0;
+//         dit_buffer = 0;
+//         dah_buffer = 0;
+//     }    
    
-    if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
-      if (configuration.dit_buffer_off) {dit_buffer = 0;}
-      if (configuration.dah_buffer_off) {dah_buffer = 0;}
-    }  
+//     if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
+//       if (configuration.dit_buffer_off) {dit_buffer = 0;}
+//       if (configuration.dah_buffer_off) {dah_buffer = 0;}
+//     }  
 
    
 
-  } //void loop_element_lengths
+//   } //void loop_element_lengths
 
 
-#else //FEATURE_HI_PRECISION_LOOP_TIMING------------------------------------------------------------------
+// #else //FEATURE_HI_PRECISION_LOOP_TIMING------------------------------------------------------------------
 
   void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in) {
 
@@ -4947,8 +4962,16 @@ void tx_and_sidetone_key (int state)
       unsigned long starttime = micros();
     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
+
+    unsigned long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
+    unsigned long start = micros();
     unsigned long endtime = micros() + long(element_length*lengths*1000) + long(additional_time_ms*1000);
-    while ((micros() < endtime) && (micros() > 200000)) {  // the second condition is to account for millis() rollover
+
+    while ((micros() - start) < ticks){
+
+    
+    //while ((micros() < endtime) && (micros() > 200000)) {  // the second condition is to account for millis() rollover
+
       #ifdef OPTION_WATCHDOG_TIMER
         wdt_reset();
       #endif  //OPTION_WATCHDOG_TIMER
@@ -5027,30 +5050,36 @@ void tx_and_sidetone_key (int state)
           service_straight_key();
         #endif //FEATURE_STRAIGHT_KEY
 
-      } //while ((millis() < endtime) && (millis() > 200))
-      
-      #if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
-        check_the_memory_buttons();
-      #endif
+        #if defined(FEATURE_WEB_SERVER)
+          if (speed_mode == SPEED_QRSS){
+            service_web_server();
+          }
+        #endif //FEATURE_WEB_SERVER
 
-      // blow out prematurely if we're automatic sending and a paddle gets hit
-      #ifdef FEATURE_COMMAND_BUTTONS
-        if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
-          if (keyer_machine_mode == KEYER_NORMAL) {
-            sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
-            automatic_sending_interruption_time = millis(); 
-            return;
-          }
-        }   
-      #else
-        if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
-          if (keyer_machine_mode == KEYER_NORMAL) {
-            sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
-            automatic_sending_interruption_time = millis(); 
-            return;
-          }
-        }   
-      #endif
+    } //while ((millis() < endtime) && (millis() > 200))
+    
+    #if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
+      check_the_memory_buttons();
+    #endif
+
+    // blow out prematurely if we're automatic sending and a paddle gets hit
+    #ifdef FEATURE_COMMAND_BUTTONS
+      if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
+        if (keyer_machine_mode == KEYER_NORMAL) {
+          sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+          automatic_sending_interruption_time = millis(); 
+          return;
+        }
+      }   
+    #else
+      if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
+        if (keyer_machine_mode == KEYER_NORMAL) {
+          sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+          automatic_sending_interruption_time = millis(); 
+          return;
+        }
+      }   
+    #endif
   
    
     if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
@@ -5067,7 +5096,7 @@ void tx_and_sidetone_key (int state)
 
   } //void loop_element_lengths
 
-#endif //FEATURE_HI_PRECISION_LOOP_TIMING
+// #endif //FEATURE_HI_PRECISION_LOOP_TIMING
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -6558,12 +6587,48 @@ void boop_beep()
 void send_the_dits_and_dahs(char const * cw_to_send){
 
 
+  /* American Morse - Special Symbols
+
+    ~  long dah (4 units)
+
+    =  very long dah (5 units)
+
+    &  an extra space (1 unit)
+
+  */ 
+
   sending_mode = AUTOMATIC_SENDING;
 
   for (int x = 0;x < 12;x++){
     switch(cw_to_send[x]){
       case '.': send_dit(); break;
       case '-': send_dah(); break;
+      #if defined(FEATURE_AMERICAN_MORSE)  // this is a bit of a hack, but who cares!  :-)
+      case '~': 
+
+        being_sent = SENDING_DAH;
+        tx_and_sidetone_key(1);
+        if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_active_state);}
+        loop_element_lengths((float(4.0)*(float(configuration.weighting)/50)),keying_compensation,configuration.wpm);
+        if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_inactive_state);}
+        tx_and_sidetone_key(0);
+        loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),configuration.wpm);
+        break;
+
+      case '=': 
+        being_sent = SENDING_DAH;
+        tx_and_sidetone_key(1);
+        if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_active_state);}
+        loop_element_lengths((float(5.0)*(float(configuration.weighting)/50)),keying_compensation,configuration.wpm);
+        if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_inactive_state);}
+        tx_and_sidetone_key(0);
+        loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),configuration.wpm);
+        break;
+
+      case '&': 
+        loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),configuration.wpm);
+        break;            
+      #endif //FEATURE_AMERICAN_MORSE
       default: return; break;
     }
     if (dit_buffer || dah_buffer || sending_mode == AUTOMATIC_SENDING_INTERRUPTED){
@@ -6776,9 +6841,80 @@ void send_char(byte cw_char, byte omit_letterspace)
 
     }
   } else {
-    #ifdef FEATURE_HELL
-      transmit_hell_char(cw_char);
-    #endif
+    if (char_send_mode == HELL){
+      #ifdef FEATURE_HELL
+        transmit_hell_char(cw_char);
+      #endif
+    } else {
+      if (char_send_mode == AMERICAN_MORSE){
+        #ifdef FEATURE_AMERICAN_MORSE
+
+          /* 
+
+            ~  long dah (4 units)
+    
+            =  very long dah (5 units)
+      
+            &  an extra space (1 unit)
+
+          */ 
+
+
+          switch (cw_char){  
+
+            case 'A': send_the_dits_and_dahs(".-");break;
+            case 'B': send_the_dits_and_dahs("-...");break;
+            case 'C': send_the_dits_and_dahs("..&.");break;
+            case 'D': send_the_dits_and_dahs("-..");break;
+            case 'E': send_the_dits_and_dahs(".");break;
+            case 'F': send_the_dits_and_dahs(".-.");break;
+            case 'G': send_the_dits_and_dahs("--.");break;
+            case 'H': send_the_dits_and_dahs("....");break;
+            case 'I': send_the_dits_and_dahs("..");break;
+            case 'J': send_the_dits_and_dahs("-.-.");break;
+            case 'K': send_the_dits_and_dahs("-.-");break;
+            case 'L': send_the_dits_and_dahs("~");break;
+            case 'M': send_the_dits_and_dahs("--");break;
+            case 'N': send_the_dits_and_dahs("-.");break;
+            case 'O': send_the_dits_and_dahs(".&.");break;
+            case 'P': send_the_dits_and_dahs(".....");break;
+            case 'Q': send_the_dits_and_dahs("..-.");break;
+            case 'R': send_the_dits_and_dahs(".&..");break;
+            case 'S': send_the_dits_and_dahs("...");break;
+            case 'T': send_the_dits_and_dahs("-");break;
+            case 'U': send_the_dits_and_dahs("..-");break;
+            case 'V': send_the_dits_and_dahs("...-");break;
+            case 'W': send_the_dits_and_dahs(".--");break;
+            case 'X': send_the_dits_and_dahs(".-..");break;
+            case 'Y': send_the_dits_and_dahs("..&..");break;
+            case 'Z': send_the_dits_and_dahs("...&.");break;
+
+            case '&': send_the_dits_and_dahs(".&...");break;
+
+            case '0': send_the_dits_and_dahs("=");break;
+            case '1': send_the_dits_and_dahs(".---.");break;
+            case '2': send_the_dits_and_dahs("..--..");break;
+            case '3': send_the_dits_and_dahs("...-.");break;
+            case '4': send_the_dits_and_dahs("....-");break;
+            case '5': send_the_dits_and_dahs("---");break;
+            case '6': send_the_dits_and_dahs("......");break;
+            case '7': send_the_dits_and_dahs("--..");break;
+            case '8': send_the_dits_and_dahs("-....");break;
+            case '9': send_the_dits_and_dahs("-..-");break;   
+
+            case ',': send_the_dits_and_dahs(".-.-");break;  
+            case '.': send_the_dits_and_dahs("..--..");break;
+            case '?': send_the_dits_and_dahs("-..-.");break;  
+            case '!': send_the_dits_and_dahs("---.");break;  
+            case ':': send_the_dits_and_dahs("-.-&.&.");break;    
+            case ';': send_the_dits_and_dahs("...&..");break;   
+            case '-': send_the_dits_and_dahs("....&.-..");break;    
+
+          }  //switch (cw_char)
+        
+        #endif      
+      } 
+    }
   }
 
 }
@@ -9137,6 +9273,9 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use){
   #ifdef FEATURE_QLF
     port_to_use->println(F("\\{\t\t: QLF mode on/off"));
   #endif //FEATURE_QLF
+  #if defined(FEATURE_AMERICAN_MORSE)
+    port_to_use->println(F("=\t\t: American Morse mode on/off"));
+  #endif  
 
 }
 #endif
@@ -9146,6 +9285,10 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use){
 void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
   
   int user_input_temp = 0;
+
+  #ifdef FEATURE_AMERICAN_MORSE
+    static int previous_dah_to_dit_ratio = 300;
+  #endif //FEATURE_AMERICAN_MORSE
         
   //port_to_use->println();
   switch (incoming_serial_byte) {
@@ -9207,13 +9350,27 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     case 'G': configuration.keyer_mode = BUG; config_dirty = 1; port_to_use->println(F("\r\nBug")); break;              // G - Bug mode
     #ifdef FEATURE_HELL
       case 'H': // H - Hell mode
-        if (char_send_mode == CW){
+        if ((char_send_mode == CW) || (char_send_mode == AMERICAN_MORSE)){
           char_send_mode = HELL; port_to_use->println(F("\r\nHell mode"));
         } else {
           char_send_mode = CW; port_to_use->println(F("\r\nCW mode"));
         }  
         break;         
     #endif //FEATURE_HELL
+    #ifdef FEATURE_AMERICAN_MORSE
+      case '=': // = - American Morse
+        if ((char_send_mode == CW) || (char_send_mode == HELL)){
+          char_send_mode = AMERICAN_MORSE; port_to_use->println(F("\r\nAmerican Morse mode"));
+          previous_dah_to_dit_ratio = configuration.dah_to_dit_ratio;
+          configuration.dah_to_dit_ratio = 200;
+        } else {
+          char_send_mode = CW; port_to_use->println(F("\r\nInternational CW mode"));
+          configuration.dah_to_dit_ratio = previous_dah_to_dit_ratio;
+        }  
+        break;         
+    #endif //FEATURE_AMERICAN_MORSE
+
+
     case 'I':                                                                      // I - transmit line on/off
       port_to_use->print(F("\r\nTX o"));
       if (key_tx) {
@@ -10414,6 +10571,12 @@ void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
 void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
 
   port_to_use->println();
+  #if defined(FEATURE_AMERICAN_MORSE)
+    if (char_send_mode == AMERICAN_MORSE){port_to_use->println(F("American Morse"));}
+  #endif 
+  #if defined(FEATURE_HELL)
+    if (char_send_mode == HELL){port_to_use->println(F("Hellschreiber"));}
+  #endif 
   switch (configuration.keyer_mode) {
     case IAMBIC_A: port_to_use->print(F("Iambic A")); break;
     case IAMBIC_B: port_to_use->print(F("Iambic B")); 
@@ -12093,6 +12256,9 @@ void initialize_debug_startup(){
   #ifdef FEATURE_HELL
   debug_serial_port->println(F("FEATURE_HELL"));
   #endif
+  #ifdef FEATURE_AMERICAN_MORSE
+  debug_serial_port->println(F("FEATURE_AMERICAN_MORSE"));
+  #endif  
   #ifdef FEATURE_PS2_KEYBOARD
   debug_serial_port->println(F("FEATURE_PS2_KEYBOARD"));
   #endif
@@ -13936,6 +14102,12 @@ void check_for_network_restart(){
 #if defined(FEATURE_WEB_SERVER)
 void service_web_server() {
 
+
+  if ((web_control_tx_key_time > 0) && ((millis()-web_control_tx_key_time) > (WEB_SERVER_CONTROL_TX_KEY_TIME_LIMIT_SECS*1000))){
+    tx_and_sidetone_key(0);
+    web_control_tx_key_time = 0;
+  }
+
   // Create a client connection
   EthernetClient client = server.available();
   if (client) {
@@ -14923,11 +15095,13 @@ void web_print_page_control(EthernetClient client){
     if (url_sub_string.length() > 14){url_sub_string.remove(14);}
     if (url_sub_string.indexOf("?ky") > 0){
       sending_mode = AUTOMATIC_SENDING;
+      web_control_tx_key_time = millis();
       tx_and_sidetone_key(1);
     }
     if (url_sub_string.indexOf("?uk") > 0){
       sending_mode = AUTOMATIC_SENDING;
       tx_and_sidetone_key(0);
+      web_control_tx_key_time = 0;
     }
     if (url_sub_string.indexOf("?wn") > 0){
       speed_change(-2);
@@ -15805,7 +15979,7 @@ void service_internet_link_udp_receive_buffer(){
   static unsigned long buffered_command_execution_time = 0;
   static unsigned long key_down_time = 0;
 
-  // TODO : key down expire time check
+
   if ((key_down_time > 0) && ((millis()-key_down_time) > (FEATURE_INTERNET_LINK_KEY_DOWN_TIMEOUT_SECS * 1000))){
     tx_and_sidetone_key(0);
     key_down_time = 0;
