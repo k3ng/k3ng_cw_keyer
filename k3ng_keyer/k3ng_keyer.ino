@@ -211,7 +211,10 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
        "......" or more "Backspace"
        "------" or more "Space"
 
-
+  SIDETONE_SWITCH
+       Enabling this feature and an external toggle switch  adds switch control for playing cw sidetone.
+       ST Switch status is displayed in the status command.  This feature will override the software control of the sidetone (\o).
+       
  
 Useful Stuff
     Reset to defaults: squeeze both paddles at power up (good to use if you dorked up the speed and don't have the CLI)
@@ -1354,6 +1357,11 @@ void loop()
     #endif  
 
   }
+
+  #ifdef FEATURE_SIDETONE_SWITCH
+  check_sidetone_switch();
+  #endif //FEATURE_SIDETONE_SWITCH
+
   
 }
 
@@ -3535,6 +3543,11 @@ int ps2_keyboard_get_number_input(byte places,int lower_limit, int upper_limit)
           check_potentiometer();
         }
         #endif
+
+        #ifdef FEATURE_SIDETONE_SWITCH
+        check_sidetone_switch();
+        #endif
+
         #ifdef FEATURE_ROTARY_ENCODER
         check_rotary_encoder();
         #endif //FEATURE_ROTARY_ENCODER
@@ -3733,6 +3746,50 @@ void check_rotary_encoder(){
 }
 #endif //FEATURE_ROTARY_ENCODER
 //-------------------------------------------------------------------------------------------------------
+
+#ifdef FEATURE_SIDETONE_SWITCH
+void check_sidetone_switch()
+{
+	static unsigned long lastcheck = 0 ; 
+
+    if ( millis() - lastcheck < 250 ) return ;
+
+    lastcheck = millis() ;
+
+    int ss_read = sidetone_switch_value();
+
+    if ( (ss_read == HIGH)  && ( (configuration.sidetone_mode == SIDETONE_ON) ||
+                               (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) )){
+        return ;
+    }
+    if ( (ss_read == LOW)  && configuration.sidetone_mode == SIDETONE_OFF ){
+        return ;
+    }
+    config_dirty = 1;
+    #ifdef FEATURE_SLEEP
+     last_activity_time = millis(); 
+    #endif //FEATURE_SLEEP
+
+    if ( ss_read == HIGH ) {
+        configuration.sidetone_mode = SIDETONE_ON;
+        return ;
+    }
+    if ( ss_read == LOW ){
+        configuration.sidetone_mode = SIDETONE_OFF;
+        return ;
+    }
+}
+
+int sidetone_switch_value()
+{
+    return digitalRead(SIDETONE_SWITCH);
+}
+
+#endif
+
+
+//-------------------------------------------------------------------------------------------------------
+
 
 #ifdef FEATURE_POTENTIOMETER
 void check_potentiometer()
@@ -10653,6 +10710,10 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   port_to_use->print(" ");
   port_to_use->print(configuration.hz_sidetone,DEC);
   port_to_use->println(" hz");
+#ifdef FEATURE_SIDETONE_SWITCH
+  Serial.print("Sidetone Switch: ");
+  Serial.println(sidetone_switch_value() ? F("ON") : F("OFF"));
+#endif // FEATURE_SIDETONE_SWITCH
   port_to_use->print(F("Dah to dit: "));
   port_to_use->println((float(configuration.dah_to_dit_ratio)/100));
   port_to_use->print(F("Weighting: "));
@@ -12214,6 +12275,10 @@ void initialize_pins() {
       digitalWrite(keyer_awake,KEYER_AWAKE_PIN_AWAKE_STATE);
     }
   #endif //FEATURE_SLEEP
+
+  #ifdef FEATURE_SIDETONE_SWITCH
+  pinMode(SIDETONE_SWITCH,INPUT);
+  #endif //FEATURE_SIDETONE_SWITCH
 
   
 }

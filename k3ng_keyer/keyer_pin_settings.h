@@ -26,6 +26,17 @@
   #define command_mode_active_led 0
 #endif //FEATURE_COMMAND_BUTTONS
 
+/*
+FEATURE_SIDETONE_SWITCH
+  Enabling this feature and an external toggle switch  adds switch control for playing cw sidetone.
+  ST Switch status is displayed in the status command.  This feature will override the software control of the sidetone (\o).
+  Arduino pin is assigned by SIDETONE_SWITCH 
+*/
+
+#ifdef FEATURE_SIDETONE_SWITCH
+#define SIDETONE_SWITCH 8
+#endif //FEATURE_SIDETONE_SWITCH
+
 
 //lcd pins
 #ifdef FEATURE_LCD_4BIT
