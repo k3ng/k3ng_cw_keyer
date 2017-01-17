@@ -38,6 +38,17 @@
   #define capactive_paddle_pin_inhibit_pin 0     // if this pin is defined and is set high, the capacitive paddle pins will switch to normal (non-capacitive) sensing mode
 #endif
 
+/*
+FEATURE_SIDETONE_SWITCH
+  Enabling this feature and an external toggle switch  adds switch control for playing cw sidetone.
+  ST Switch status is displayed in the status command.  This feature will override the software control of the sidetone (\o).
+  Arduino pin is assigned by SIDETONE_SWITCH 
+*/
+
+#ifdef FEATURE_SIDETONE_SWITCH
+  #define SIDETONE_SWITCH 8
+#endif //FEATURE_SIDETONE_SWITCH
+
 #else
 
   #error "Multiple pin_settings.h files included somehow..."

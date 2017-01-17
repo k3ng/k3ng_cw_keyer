@@ -616,6 +616,9 @@ Recent Update History
     2.2.2017011701
       FEATURE_LCD1602_N07DH - added include for Wire.h (Thanks, Hjalmar, OZ1JHM)
 
+    2.2.2017011702
+      Pull request 32 https://github.com/k3ng/k3ng_cw_keyer/pull/32 merged which adds FEATURE_SIDETONE_SWITCH.  Also fixed up additional features and pins files. (Thanks, dfannin)
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -631,7 +634,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2017011701"
+#define CODE_VERSION "2.2.2017011702"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -1359,7 +1362,7 @@ void loop()
   }
 
   #ifdef FEATURE_SIDETONE_SWITCH
-  check_sidetone_switch();
+    check_sidetone_switch();
   #endif //FEATURE_SIDETONE_SWITCH
 
   
@@ -3527,7 +3530,7 @@ int ps2_keyboard_get_number_input(byte places,int lower_limit, int upper_limit)
   String keyboard_string;
 
   #ifdef FEATURE_MEMORIES
-  repeat_memory = 255;
+    repeat_memory = 255;
   #endif
 
   while (looping) {
@@ -3539,17 +3542,17 @@ int ps2_keyboard_get_number_input(byte places,int lower_limit, int upper_limit)
 
         check_ptt_tail();
         #ifdef FEATURE_POTENTIOMETER
-        if (configuration.pot_activated) {
-          check_potentiometer();
-        }
+          if (configuration.pot_activated) {
+            check_potentiometer();
+          }
         #endif
 
         #ifdef FEATURE_SIDETONE_SWITCH
-        check_sidetone_switch();
+          check_sidetone_switch();
         #endif
 
         #ifdef FEATURE_ROTARY_ENCODER
-        check_rotary_encoder();
+          check_rotary_encoder();
         #endif //FEATURE_ROTARY_ENCODER
       }
     } else {
@@ -3558,8 +3561,8 @@ int ps2_keyboard_get_number_input(byte places,int lower_limit, int upper_limit)
         numbers[numberindex] = keystroke;
         numberindex++;
         #ifdef FEATURE_DISPLAY
-        keyboard_string.concat(String(keystroke-48));
-        lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
+          keyboard_string.concat(String(keystroke-48));
+          lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
         #endif                     
         if (numberindex > places){
             looping = 0;
@@ -3570,8 +3573,8 @@ int ps2_keyboard_get_number_input(byte places,int lower_limit, int upper_limit)
           if (numberindex) {
             numberindex--;
             #ifdef FEATURE_DISPLAY
-            keyboard_string = keyboard_string.substring(0,keyboard_string.length()-1);
-            lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
+              keyboard_string = keyboard_string.substring(0,keyboard_string.length()-1);
+              lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
             #endif             
           }
         } else {
@@ -3795,7 +3798,7 @@ int sidetone_switch_value()
 void check_potentiometer()
 {
   #ifdef DEBUG_LOOP
-  debug_serial_port->println(F("loop: entering check_potentiometer")); 
+    debug_serial_port->println(F("loop: entering check_potentiometer")); 
   #endif
 
   static unsigned long last_pot_check_time = 0;
