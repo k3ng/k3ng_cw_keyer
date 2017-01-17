@@ -610,6 +610,9 @@ Recent Update History
     2.2.2017010301
       FEATURE_AMERICAN_MORSE - American Morse Code sending mode.  \= command in the CLI switches to American Morse Code https://en.wikipedia.org/wiki/American_Morse_code
 
+    2.2.2017011701
+      FEATURE_LCD1602_N07DH - added include for Wire.h (Thanks, Hjalmar, OZ1JHM)
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -625,7 +628,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2017010301"
+#define CODE_VERSION "2.2.2017011701"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -706,6 +709,7 @@ Recent Update History
 
 #if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH)
   #include <LiquidCrystal.h>
+  #include <Wire.h>
 #endif
 
 #if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_ADAFRUIT_BACKPACK) || defined(FEATURE_LCD_YDv1) || defined(FEATURE_LCD_SAINSMART_I2C)
