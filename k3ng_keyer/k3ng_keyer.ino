@@ -619,6 +619,9 @@ Recent Update History
     2.2.2017011702
       Pull request 32 https://github.com/k3ng/k3ng_cw_keyer/pull/32 merged which adds FEATURE_SIDETONE_SWITCH.  Also fixed up additional features and pins files. (Thanks, dfannin)
 
+    2.2.2017011703
+      Added OPTION_CW_KEYBOARD_GERMAN (Thanks, Raimo, DL1HTB)
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -634,7 +637,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2017011702"
+#define CODE_VERSION "2.2.2017011703"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -9685,7 +9688,11 @@ void service_paddle_echo()
         Keyboard.write(KEY_BACKSPACE); // backspace
         no_space = 1;
         break;
+      #ifdef OPTION_CW_KEYBOARD_GERMAN  // DL1HTB changed sign AA for return to BK
+      case 2111212:  // return prosign BK
+      #else
       case 1212:  // prosign AA
+      #endif //OPTION_CW_KEYBOARD_GERMAN // #end DL1HTB changed sign AA for return to BK
         Keyboard.write(KEY_RETURN);
         no_space = 1;   
         break;
@@ -9761,6 +9768,78 @@ void service_paddle_echo()
           break;   
       #endif //OPTION_CW_KEYBOARD_ITALIAN
         
+      #ifdef OPTION_CW_KEYBOARD_GERMAN  // DL1HTB added german keyboard mapping
+        case 122121: // "@"
+          Keyboard.press(KEY_RIGHT_ALT);
+          Keyboard.write('q');
+          Keyboard.releaseAll();
+          break;
+        case 112211: // "?"
+          Keyboard.write(95);
+          break;
+        case 11221: // "!"
+          Keyboard.write(33);
+          break;
+        case 21121: // "/"
+          Keyboard.write(38);
+          break;
+        case 222222: // "\"
+          Keyboard.press(KEY_RIGHT_ALT);
+          Keyboard.write('-');
+          Keyboard.releaseAll();
+          // Keyboard.write(92);
+          break;
+        case 21112: // "=" or "BT"
+          Keyboard.press(KEY_LEFT_SHIFT);
+          Keyboard.write('0');
+          Keyboard.releaseAll();
+          break;
+        case 1212: // "ä"
+          Keyboard.write(39);  
+          break;
+        case 2221: // "ö"
+          Keyboard.write(59);  
+          break;
+        case 1122: // "ü"
+          Keyboard.write(91);  
+          break;
+        case 2222: // "ch"
+          Keyboard.write(99);  
+          Keyboard.write(104);  
+          break;
+        case 2122: // "y"
+          Keyboard.write(122);  
+          break;
+        case 2211: // "z"
+          Keyboard.write(121);  
+          break;
+        case 21221: // "("
+          Keyboard.press(KEY_LEFT_SHIFT);
+          Keyboard.write('8');
+          Keyboard.releaseAll();
+          break;
+        case 212212: // ")"
+          Keyboard.write(40);  
+          break;
+        case 12111: // "&" "AS"
+          Keyboard.press(KEY_LEFT_SHIFT);
+          Keyboard.write('6');
+          Keyboard.releaseAll();
+          break;
+        case 222111: // ":"
+          Keyboard.write(62);  
+          break;
+        case 212121: // ";"
+          Keyboard.write(60);  
+          break;
+        case 12121: // "+"
+          Keyboard.write(93);  
+          break;
+        case 211112: // "-"
+          Keyboard.write(47);  
+          break;   
+      #endif //OPTION_CW_KEYBOARD_GERMAN // #end DL1HTB added german keyboard mapping
+      
       default:
         character_to_send = convert_cw_number_to_ascii(paddle_echo_buffer);
         // if ((character_to_send > 64) && (character_to_send < 91)) {character_to_send = character_to_send + 32;}
