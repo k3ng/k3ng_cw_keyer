@@ -59,7 +59,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     \z     Autospace on/off
     \+     Create prosign
     \!##   Repeat play memory
-    \|#### Set memory repeat (milliseconds)
+    \|#### Set memory repeat (milliseconds)  (backslash and pipe)
     \*     Toggle paddle echo
     \`     Toggle straight key echo
     \^     Toggle wait for carriage return to send CW / send CW immediately
@@ -76,6 +76,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     \)     Send serial number with cut numbers, then increment
     \[     Set Quiet Paddle Interruption 
     \=     Toggle American Morse mode    (requires FEATURE_AMERICAN_MORSE)
+    \\     Immediately clear the buffer, stop memory sending, etc.
 
 
  Buttons
@@ -101,6 +102,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     N  Toggle paddle reverse
     O  Toggle sidetone on / off
     P#(#) Program a memory
+    R####  Set serial number to ####
     S  Alphabet code practice (FEATURE_ALPHABET_SEND_PRACTICE)
     T  Tune mode
     V  Toggle potentiometer active / inactive
@@ -622,6 +624,9 @@ Recent Update History
     2.2.2017011703
       Added OPTION_CW_KEYBOARD_GERMAN (Thanks, Raimo, DL1HTB)
 
+    2.2.2017012101
+      New command mode command R: set serial number  
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -637,7 +642,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2017011703"
+#define CODE_VERSION "2.2.2017012101"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -825,9 +830,9 @@ byte config_dirty = 0;
 unsigned long ptt_time = 0; 
 byte ptt_line_activated = 0;
 byte speed_mode = SPEED_NORMAL;
-#if defined(FEATURE_COMMAND_LINE_INTERFACE) || defined(FEATURE_PS2_KEYBOARD) || defined(FEATURE_MEMORY_MACROS) || defined(FEATURE_MEMORIES)
+#if defined(FEATURE_COMMAND_LINE_INTERFACE) || defined(FEATURE_PS2_KEYBOARD) || defined(FEATURE_MEMORY_MACROS) || defined(FEATURE_MEMORIES) || defined(FEATURE_COMMAND_BUTTONS)
   unsigned int serial_number = 1;
-#endif //FEATURE_COMMAND_LINE_INTERFACE
+#endif
 byte pause_sending_buffer = 0;
 byte length_letterspace = default_length_letterspace;
 byte keying_compensation = default_keying_compensation;
@@ -5576,6 +5581,10 @@ void command_mode()
           config_dirty = 1;        
           send_dit();
           break; 
+
+        case 121: command_set_serial_number(); break;  // R - Set serial number
+
+
         case 2: command_tuning_mode(); break;                             // T - tuning mode
         #ifdef FEATURE_POTENTIOMETER
           case 1112:  // V - toggle pot active
@@ -5735,6 +5744,39 @@ void command_mode()
 
 }
 #endif //FEATURE_COMMAND_BUTTONS
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_COMMAND_BUTTONS)
+void command_set_serial_number() {
+  
+  byte character_count = 0;;
+  int cw_char = 0;
+  byte number_sent = 0;
+  unsigned int repeat_value = 0;
+  byte error_flag = 0;
+  
+  for (character_count = 0; character_count < 4; character_count++) {
+    cw_char = get_cw_input_from_user(0);
+    number_sent = (convert_cw_number_to_ascii(cw_char) - 48);
+    if ((number_sent > -1) && (number_sent < 10)) {
+      repeat_value = (repeat_value * 10) + number_sent;
+    } else { // we got a bad value
+      error_flag = 1;
+      character_count = 5;
+    }      
+  }
+  
+  if (error_flag) {
+    boop();
+  } else {
+    serial_number = repeat_value;
+    //config_dirty = 1;
+    beep();
+  }
+  
+}
+#endif
 
 //-------------------------------------------------------------------------------------------------------
 
