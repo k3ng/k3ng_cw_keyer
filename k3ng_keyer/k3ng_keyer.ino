@@ -637,6 +637,9 @@ Recent Update History
         Fixed capialization in HELP display and Status output to be consistent
         Changed "$" at end of non-empty memory contents in CLI status display to "_" to help determine if a trailing space is present.
 
+    2.2.2017020702
+      Fixed typo 
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -652,7 +655,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2017020701"
+#define CODE_VERSION "2.2.2017020702"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -767,7 +770,7 @@ Recent Update History
 
 //#if defined(FEATURE_ETHERNET)
 #if !defined(ARDUINO_MAPLE_MINI)  
-  #include <Ethernet.h>        https://github.com/gepd/Stino/tree/new-stino       // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
+  #include <Ethernet.h>  // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
   #if defined(FEATURE_INTERNET_LINK)
     #include <EthernetUdp.h>
   #endif //FEATURE_INTERNET_LINK
