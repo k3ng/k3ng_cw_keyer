@@ -119,7 +119,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
 
  Memory Macros
     \#     Jump to memory #
-    \c     Play serial number with cut numbers
+    \c     Play serial number with cut numbers, then increment
     \d###  Delay for ### seconds
     \e     Play serial number, then increment
     \f#### Change sidetone to #### hertz (must be four digits - use leading zero below 1000 hz)
@@ -627,6 +627,16 @@ Recent Update History
     2.2.2017012101
       New command mode command R: set serial number  
 
+    2.2.2017020701
+      WD9DMP contributed fixes and changes
+        Reconciled CLI Command/Memory Macro Help code with front comments and actual code so all commands now display with /?
+        Removed unimplemented Memory Macros from CLI Help
+        Updated descriptions of CLI Command/Memory Macro functions in help display (some missing serial number lack increment description where present in code)
+        Fixed issue where the TX ON/TX Off LCD display state in Command Mode could get out of sync with the actual key_tx state
+        Fixed serial numbers not displaying in LCD and CLI when playing back from Macro or CLI command (please check conditional compilations)
+        Fixed capialization in HELP display and Status output to be consistent
+        Changed "$" at end of non-empty memory contents in CLI status display to "_" to help determine if a trailing space is present.
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -642,7 +652,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2017012101"
+#define CODE_VERSION "2.2.2017020701"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -757,7 +767,7 @@ Recent Update History
 
 //#if defined(FEATURE_ETHERNET)
 #if !defined(ARDUINO_MAPLE_MINI)  
-  #include <Ethernet.h>               // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
+  #include <Ethernet.h>        https://github.com/gepd/Stino/tree/new-stino       // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
   #if defined(FEATURE_INTERNET_LINK)
     #include <EthernetUdp.h>
   #endif //FEATURE_INTERNET_LINK
@@ -772,7 +782,7 @@ Recent Update History
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
-  #include <Keyboard.h>
+  //#include <Keyboard.h>
 #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
 // Variables and stuff
@@ -5339,7 +5349,7 @@ void command_mode()
     configuration.keyer_mode = IAMBIC_B;                   // we got to be in iambic mode (life is too short to make this work in bug mode)
   }
 
-  command_mode_disable_tx = 0;
+  // command_mode_disable_tx = 0;  //Removed disable TX state every time Command Mode is entered - now set to actual key_tx status on CM entry (WD9DMP)
 
   boop_beep();
   #ifdef command_mode_active_led
@@ -5366,6 +5376,11 @@ void command_mode()
 
     looping = 1;
     while (looping) {
+
+          #ifdef FEATURE_DISPLAY
+            service_display();
+          #endif
+
       #ifdef FEATURE_POTENTIOMETER
         if (configuration.pot_activated) {
           check_potentiometer();
@@ -6399,7 +6414,7 @@ void check_command_buttons()
   byte analogbuttontemp = analogbuttonpressed();
   long button_depress_time;
   byte paddle_was_hit = 0;
-  byte store_key_tx = key_tx;
+  //byte store_key_tx = key_tx; //Commented this out as not needed with new code (WD9DMP)
   byte previous_sidetone_mode = 0;
   if ((analogbuttontemp < analog_buttons_number_of_buttons) && ((millis() - last_button_action) > 200)) {
     #ifdef FEATURE_MEMORIES
@@ -6413,10 +6428,12 @@ void check_command_buttons()
     }
     if ((millis() - button_depress_time) < 500) {
       if (analogbuttontemp == 0) {
+        command_mode_disable_tx = !key_tx; //Added to sync the Command Mode entry state to actual key_tx state in case changed by CLI or keyboard (WD9DMP)
         key_tx = 0;
         command_mode();
         if (command_mode_disable_tx) {
-          key_tx = !store_key_tx;
+          //key_tx = !store_key_tx; //Inverting pre-command mode state seems to cause Command Mode sync issues (WD9DMP)
+          key_tx = 0; //Added this line to explicitly disable key_tx if command_mode_disable_tx is set after exiting Command Mode (WD9DMP)
         } else {
           key_tx = 1;
         }
@@ -9292,31 +9309,32 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use){
 
   port_to_use->println(F("\n\rK3NG Keyer Help\n\r"));
   port_to_use->println(F("CLI commands:"));
-  port_to_use->println(F("\\#\t\t: play memory # x"));
+  port_to_use->println(F("\\#\t\t: Play memory # x")); //Upper case to first letter only(WD9DMP)
   port_to_use->println(F("\\A\t\t: Iambic A"));
   port_to_use->println(F("\\B\t\t: Iambic B"));
-  port_to_use->println(F("\\C\t\t: Single Paddle"));
+  port_to_use->println(F("\\C\t\t: Single paddle")); //Upper case to first letter only(WD9DMP)
   port_to_use->println(F("\\D\t\t: Ultimatic"));
   port_to_use->println(F("\\E####\t\t: Set serial number to ####"));
   port_to_use->println(F("\\F####\t\t: Set sidetone to #### hz"));
-  port_to_use->println(F("\\G\t\t: switch to Bug mode"));
+  port_to_use->println(F("\\G\t\t: Switch to bug mode")); //Upper case to first letter only(WD9DMP)
   #ifdef FEATURE_HELL
     port_to_use->println(F("\\H\t\t: Toggle CW / Hell mode"));
   #endif
   port_to_use->println(F("\\I\t\t: TX line disable/enable"));
-  port_to_use->println(F("\\J###\t\t: Set Dah to Dit Ratio"));
+  port_to_use->println(F("\\J###\t\t: Set dah to dit ratio")); //Upper case to first letter only(WD9DMP)
   #ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
     port_to_use->println(F("\\K\t\t: Callsign receive practice"));
   #endif
   port_to_use->println(F("\\L##\t\t: Set weighting (50 = normal)"));
   #ifdef FEATURE_FARNSWORTH
-    port_to_use->println(F("\\M###\t\t: Set Farnsworth Speed"));
+    port_to_use->println(F("\\M###\t\t: Set Farnsworth speed")); //Upper case to first letter only(WD9DMP)
   #endif
-  port_to_use->println(F("\\N\t\t: toggle paddle reverse"));
-  port_to_use->println(F("\\Px<string>\t: program memory #x with <string>"));
+  port_to_use->println(F("\\N\t\t: Toggle paddle reverse")); //Upper case to first letter only(WD9DMP)
+  port_to_use->println(F("\\O\t\t: Toggle sidetone on/off")); //Added missing command (WD9DMP)
+  port_to_use->println(F("\\Px<string>\t: Program memory #x with <string>")); //Upper case to first letter only(WD9DMP)
   port_to_use->println(F("\\Q#[#]\t\t: Switch to QRSS mode with ## second dit length"));
   port_to_use->println(F("\\R\t\t: Switch to regular speed (wpm) mode"));
-  port_to_use->println(F("\\S\t\t: status report"));
+  port_to_use->println(F("\\S\t\t: Status report")); //Upper case to first letter only(WD9DMP)
   port_to_use->println(F("\\T\t\t: Tune mode"));
   port_to_use->println(F("\\U\t\t: PTT toggle"));
   #ifdef FEATURE_POTENTIOMETER
@@ -9328,63 +9346,83 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use){
   #ifdef FEATURE_AUTOSPACE
     port_to_use->println(F("\\Z\t\t: Autospace on/off"));
   #endif //FEATURE_AUTOSPACE
-  port_to_use->println(F("\\+\t\t: Prosign"));
-  port_to_use->println(F("\\\\\t\t: Empty keyboard send buffer"));
+  port_to_use->println(F("\\+\t\t: Create prosign")); //Changed description to match change log at top (WD9DMP)
+  port_to_use->println(F("\\!##\t\t: Repeat play memory")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\|####\t\t: Set memory repeat (milliseconds)")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\*\t\t: Toggle paddle echo")); //Added missing command(WD9DMP) 
+  port_to_use->println(F("\\`\t\t: Toggle straight key echo")); //Added missing command(WD9DMP) 
+  port_to_use->println(F("\\^\t\t: Toggle wait for carriage return to send CW / send CW immediately")); //Added missing command(WD9DMP)
   #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-    port_to_use->println(F("\\&\t\t: Toggle CMOS Super Keyer Timing on/off"));
-    port_to_use->println(F("\\%##\t\t: Set CMOS Super Keyer Timing %"));
+    port_to_use->println(F("\\&\t\t: Toggle CMOS Super Keyer timing on/off")); //Upper case to first letter only(WD9DMP)
+    port_to_use->println(F("\\%##\t\t: Set CMOS Super Keyer timing %")); //Upper case to first letter only(WD9DMP)
   #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
   port_to_use->println(F("\\.\t\t: Toggle dit buffer on/off"));
   port_to_use->println(F("\\-\t\t: Toggle dah buffer on/off"));
+  port_to_use->println(F("\\~\t\t: Reset unit")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\:\t\t: Toggle cw send echo")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\{\t\t: QLF mode on/off")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\>\t\t: Send serial number, then increment")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\<\t\t: Send current serial number")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\(\t\t: Send current serial number in cut numbers")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\)\t\t: Send serial number with cut numbers, then increment")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\[\t\t: Set quiet paddle interruption - 0 to 20 element lengths; 0 = off")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\=\t\t: Toggle American Morse mode    (requires FEATURE_AMERICAN_MORSE)")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\\\\t\t: Empty keyboard send buffer")); //Moved to end of command list (WD9DMP)
+
+  //Memory Macros below (WD9DMP)
+  #ifdef FEATURE_MEMORY_MACROS
   port_to_use->println(F("\nMemory Macros:"));
   port_to_use->println(F("\\#\t\t: Jump to memory #"));
-  port_to_use->println(F("\\C\t\t: Send serial number with cut numbers"));
+  port_to_use->println(F("\\C\t\t: Send serial number with cut numbers, then increment"));//Added "then increment" (WD9DMP)
   port_to_use->println(F("\\D###\t\t: Delay for ### seconds"));
-  port_to_use->println(F("\\E\t\t: Send serial number"));
+  port_to_use->println(F("\\E\t\t: Send serial number, then increment"));//Added "then increment" (WD9DMP)
   port_to_use->println(F("\\F####\t\t: Set sidetone to #### hz"));
   #ifdef FEATURE_HELL
     port_to_use->println(F("\\H\t\t: Switch to Hell mode"));
   #endif //FEATURE_HELL
+  port_to_use->println(F("\\I\t\t: Insert memory #"));//Added missing macro (WD9DMP)
   #ifdef FEATURE_HELL
     port_to_use->println(F("\\L\t\t: Switch to CW (from Hell mode)"));
   #endif //FEATURE_HELL    
-  port_to_use->println(F("\\N\t\t: Decrement serial number"));
+  port_to_use->println(F("\\N\t\t: Decrement serial number - do not send"));//Added "do not send" (WD9DMP)
   port_to_use->println(F("\\Q##\t\t: Switch to QRSS with ## second dit length"));
   port_to_use->println(F("\\R\t\t: Switch to regular speed mode"));
+  port_to_use->println(F("\\S\t\t: Insert space"));//Added missing macro (WD9DMP)
   port_to_use->println(F("\\T###\t\t: Transmit for ### seconds"));
-  port_to_use->println(F("\\U\t\t: key PTT"));
-  port_to_use->println(F("\\V\t\t: unkey PTT"));
+  port_to_use->println(F("\\U\t\t: Key PTT")); //Upper case to first letter only(WD9DMP)
+  port_to_use->println(F("\\V\t\t: Unkey PTT")); //Upper case to first letter only(WD9DMP)
   port_to_use->println(F("\\W###\t\t: Change WPM to ###"));
   port_to_use->println(F("\\X#\t\t: Switch to transmitter #"));
   port_to_use->println(F("\\Y#\t\t: Increase speed # WPM"));
   port_to_use->println(F("\\Z#\t\t: Decrease speed # WPM"));
-  port_to_use->println(F("\\^\t\t: Toggle send CW immediately"));
-  port_to_use->println(F("\\+\t\t: Prosign"));
-  #ifdef FEATURE_MEMORIES
-    port_to_use->println(F("\\!##\t\t: Repeat play memory"));
-    port_to_use->println(F("\\|####\t\t: Set memory repeat (milliseconds)"));
-  #endif //FEATURE_MEMORIES
-  #if defined(FEATURE_PADDLE_ECHO)
-    port_to_use->println(F("\\*\t\t: Toggle paddle echo"));
-  #endif //FEATURE_PADDLE_ECHO
-  #if defined(FEATURE_STRAIGHT_KEY_ECHO)
-    port_to_use->println(F("\\`\t\t: Toggle straight key echo"));
-  #endif //FEATURE_STRAIGHT_KEY_ECHO  
-  port_to_use->println(F("\\^\t\t: Toggle wait for carriage return to send CW / send CW immediately"));
-  port_to_use->println(F("\\~\t\t: Reset unit"));
-  #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-    port_to_use->println(F("\\&\t\t: Toggle CMOS Super Keyer Timing on/off"));
-    port_to_use->println(F("\\%##\t\t: Set CMOS Super Keyer Timing %"));
-  #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-  port_to_use->println(F("\\.\t\t: Toggle dit buffer on/off"));
-  port_to_use->println(F("\\-\t\t: Toggle dah buffer on/off"));
-  port_to_use->println(F("\\:\t\t: CW send echo inhibit toggle"));
-  #ifdef FEATURE_QLF
-    port_to_use->println(F("\\{\t\t: QLF mode on/off"));
-  #endif //FEATURE_QLF
-  #if defined(FEATURE_AMERICAN_MORSE)
-    port_to_use->println(F("=\t\t: American Morse mode on/off"));
-  #endif  
+  //port_to_use->println(F("\\^\t\t: Toggle send CW immediately")); //Could not find this macro in the code (WD9DMP)
+  port_to_use->println(F("\\+\t\t: Prosign the next two characters"));//Added "the next two characters" (WD9DMP)
+  //#ifdef FEATURE_MEMORIES //Could not find following 2 macros in the code (WD9DMP)
+    //port_to_use->println(F("\\!##\t\t: Repeat play memory")); //Could not find this macro in the code (WD9DMP)
+    //port_to_use->println(F("\\|####\t\t: Set memory repeat (milliseconds)")); //Could not find this macro in the code (WD9DMP)
+  //#endif //FEATURE_MEMORIES //Could not find previous 2 macros in code (WD9DMP)
+  //#if defined(FEATURE_PADDLE_ECHO) //Could not find following macro in the code (WD9DMP)
+    //port_to_use->println(F("\\*\t\t: Toggle paddle echo")); //Could not find macro in the code (WD9DMP)
+  //#endif //FEATURE_PADDLE_ECHO //Could not find previous macro in the code (WD9DMP)
+  //#if defined(FEATURE_STRAIGHT_KEY_ECHO) //Could not find following macro in the code (WD9DMP)
+    //port_to_use->println(F("\\`\t\t: Toggle straight key echo")); //Could not find macro in the code (WD9DMP)
+  //#endif //FEATURE_STRAIGHT_KEY_ECHO //Could not find previous macro in the code (WD9DMP)  
+  //port_to_use->println(F("\\^\t\t: Toggle wait for carriage return to send CW / send CW immediately")); //Could not find macro in the code (WD9DMP)
+  //port_to_use->println(F("\\~\t\t: Reset unit"));  //Could not find macro in the code (WD9DMP)
+  //#ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING //Could not find following 2 macros in the code (WD9DMP)
+    //port_to_use->println(F("\\&\t\t: Toggle CMOS Super Keyer timing on/off")); //Could not find macro in the code (WD9DMP)
+    //port_to_use->println(F("\\%##\t\t: Set CMOS Super Keyer timing %")); //Could not find macro in the code (WD9DMP)
+  //#endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING //Could not find previous 2 macros in code (WD9DMP)
+  //port_to_use->println(F("\\.\t\t: Toggle dit buffer on/off")); //Could not find macro in the code (WD9DMP)
+  //port_to_use->println(F("\\-\t\t: Toggle dah buffer on/off")); //Could not find macro in the code (WD9DMP)
+  //port_to_use->println(F("\\:\t\t: CW send echo inhibit toggle")); //Could not find macro in the code (WD9DMP)
+  //#ifdef FEATURE_QLF //Could not find following macro in the code (WD9DMP)
+    //port_to_use->println(F("\\{\t\t: QLF mode on/off")); //Could not find macro in the code (WD9DMP)
+  //#endif //FEATURE_QLF //Could not find previous macro in the code (WD9DMP)
+  //#if defined(FEATURE_AMERICAN_MORSE) //Could not find following macro in the code (WD9DMP)
+    //port_to_use->println(F("=\t\t: American Morse mode on/off")); //Could not find macro in the code (WD9DMP)
+  //#endif //Could not find previous macro in the code (WD9DMP) 
+  #endif //FEATURE_MEMORY_MACROS
 
 }
 #endif
@@ -10618,7 +10656,7 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
     port_to_use->println("CW Practice\n");
     port_to_use->println("1 - US Callsigns");
     port_to_use->println("2 - PA QSO Party");
-    port_to_use->println("0 - eXit\n");
+    port_to_use->println("0 - Exit\n"); //Fixed capitalization error in "eXit" (WD9DMP)
     
     menu_loop2 = 1;
     
@@ -10777,7 +10815,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
       #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
       break;
     case BUG: port_to_use->print(F("Bug")); break;
-    case STRAIGHT: port_to_use->print(F("Straightkey")); break;
+    case STRAIGHT: port_to_use->print(F("Straight Key")); break;
     case ULTIMATIC: 
       port_to_use->print(F("Ultimatic ")); 
       switch(ultimatic_mode){
@@ -10799,15 +10837,15 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   port_to_use->println();
   port_to_use->print(F("Buffers: Dit O"));
   if (configuration.dit_buffer_off){
-    port_to_use->print(F("FF"));
+    port_to_use->print(F("ff"));
   } else {
-    port_to_use->print(F("N"));
+    port_to_use->print(F("n"));
   }
   port_to_use->print(F(" Dah O"));
   if (configuration.dah_buffer_off){
-    port_to_use->println(F("FF"));
+    port_to_use->println(F("ff"));
   } else {
-    port_to_use->println(F("N"));
+    port_to_use->println(F("n"));
   }
   if (speed_mode == SPEED_NORMAL) {
     port_to_use->print(F("WPM: "));
@@ -10815,7 +10853,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     #ifdef FEATURE_FARNSWORTH
       port_to_use->print(F("Farnsworth WPM: "));
       if (configuration.wpm_farnsworth < configuration.wpm) {
-        port_to_use->println(F("disabled"));
+        port_to_use->println(F("Disabled")); //(WD9DMP)
       } else {
         port_to_use->println(configuration.wpm_farnsworth,DEC);
       }
@@ -10827,8 +10865,8 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   }
   port_to_use->print(F("Sidetone:"));
   switch (configuration.sidetone_mode) {
-    case SIDETONE_ON: port_to_use->print(F("ON")); break;
-    case SIDETONE_OFF: port_to_use->print(F("OFF")); break;
+    case SIDETONE_ON: port_to_use->print(F("On")); break; //(WD9DMP)
+    case SIDETONE_OFF: port_to_use->print(F("Off")); break; //(WD9DMP)
     case SIDETONE_PADDLE_ONLY: port_to_use->print(F("Paddle Only")); break;
   }
   port_to_use->print(" ");
@@ -10836,7 +10874,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   port_to_use->println(" hz");
 #ifdef FEATURE_SIDETONE_SWITCH
   Serial.print("Sidetone Switch: ");
-  Serial.println(sidetone_switch_value() ? F("ON") : F("OFF"));
+  Serial.println(sidetone_switch_value() ? F("On") : F("Off")); //(WD9DMP)
 #endif // FEATURE_SIDETONE_SWITCH
   port_to_use->print(F("Dah to dit: "));
   port_to_use->println((float(configuration.dah_to_dit_ratio)/100));
@@ -10849,9 +10887,9 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     port_to_use->print(pot_value_wpm(),DEC);
     port_to_use->print(F(" ("));
     if (configuration.pot_activated != 1) {
-      port_to_use->print(F("not "));
+      port_to_use->print(F("Not "));
     }
-    port_to_use->println("activated)");
+    port_to_use->println("Activated)");
   #endif
   #ifdef FEATURE_AUTOSPACE
     port_to_use->print(F("Autospace O"));
@@ -11157,10 +11195,14 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
               port_to_use->write(eeprom_temp);
             }
           #else         
-            port_to_use->write(EEPROM.read(y));
+            if ((EEPROM.read(y) == 32) && ((EEPROM.read(y+1) == 255) || ((y+1) >= last_memory_location))){
+              port_to_use->write("_");
+            } else {
+              port_to_use->write(EEPROM.read(y));
+            }
           #endif //OPTION_PROSIGN_SUPPORT
         } else {
-          port_to_use->write("$");
+          //port_to_use->write("$");
           y = last_memory_location;
         }
       }
@@ -11414,32 +11456,60 @@ void send_serial_number(byte cut_numbers,int increment_serial_number){
   serial_number_string = String(serial_number, DEC);
   if (serial_number_string.length() < 3 ) {
     if (cut_numbers){
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
       send_char('T',KEYER_NORMAL);
     } else {
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
       send_char('0',KEYER_NORMAL);
     }
   }
   if (serial_number_string.length() == 1) {
     if (cut_numbers){
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
       send_char('T',KEYER_NORMAL);
     } else {
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
       send_char('0',KEYER_NORMAL);
     }
   }
   for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
     if ((serial_number_string[a] == '0') && (cut_numbers)){
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
       send_char('T',KEYER_NORMAL);
     } else {
      if ((serial_number_string[a] == '9') && (cut_numbers)) {
-       send_char('N',KEYER_NORMAL);
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('N');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      send_char('N',KEYER_NORMAL);
      } else {
-       send_char(serial_number_string[a],KEYER_NORMAL);
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character(serial_number_string[a]);} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      send_char(serial_number_string[a],KEYER_NORMAL);
      }
     }
   }
 
   serial_number = serial_number + increment_serial_number;
 
+}
+
+#endif
+//New function below to send serial number character to CLI as well as LCD (WD9DMP)
+//---------------------------------------------------------------------
+#if defined(FEATURE_MEMORIES) || defined(FEATURE_COMMAND_LINE_INTERFACE)
+void display_serial_number_character(char snumchar){
+  #if defined(FEATURE_SERIAL)
+  #ifdef FEATURE_COMMAND_LINE_INTERFACE
+    primary_serial_port->write(snumchar);
+    #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+      secondary_serial_port->write(snumchar);
+    #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+  #endif //FEATURE_COMMAND_LINE_INTERFACE
+#endif // (FEATURE_SERIAL)
+#ifdef FEATURE_DISPLAY
+  if (lcd_send_echo) {
+    display_scroll_print_char(snumchar);
+    service_display();
+    }
+#endif // FEATURE_DISPLAY
 }
 
 #endif
