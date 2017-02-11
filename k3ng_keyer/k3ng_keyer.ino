@@ -641,7 +641,7 @@ Recent Update History
       Fixed typo 
 
     2.2.2017021001 
-      Fixed typo - 'include <Keyboard.h>' was commented out 
+      Fixed typo - 'include <Keyboard.h>' was commented out (thanks Raimo, DL1HTB)
 
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
