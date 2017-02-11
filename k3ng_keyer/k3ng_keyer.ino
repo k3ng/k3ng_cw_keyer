@@ -640,6 +640,9 @@ Recent Update History
     2.2.2017020702
       Fixed typo 
 
+    2.2.2017021001 
+      Fixed typo - 'include <Keyboard.h>' was commented out 
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -655,7 +658,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2017020702"
+#define CODE_VERSION "2.2.2017021001"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -785,7 +788,7 @@ Recent Update History
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
-  //#include <Keyboard.h>
+  #include <Keyboard.h>
 #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
 // Variables and stuff
