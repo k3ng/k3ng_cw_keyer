@@ -643,6 +643,12 @@ Recent Update History
     2.2.2017021001 
       Fixed typo - 'include <Keyboard.h>' was commented out (thanks Raimo, DL1HTB)
 
+    2017.02.12.01  
+      WD9DMP contributed addition fixes
+      Changed version number scheme.  The 2.2 really isn't significant anymore.
+
+
+
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -658,7 +664,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2.2.2017021001"
+#define CODE_VERSION "2017.02.12.01"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -2740,16 +2746,16 @@ void check_ps2_keyboard()
         #endif //FEATURE_HELL
 
         case PS2_I_CTRL :
-          if (key_tx) {
+          if (key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP)
             key_tx = 0;
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX off", 0, default_display_msg_delay);
             #endif
             
-          } else {
+          } else if (!key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP)
             key_tx = 1;
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("TX On", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX on", 0, default_display_msg_delay);
             #endif      
           }
           break;
