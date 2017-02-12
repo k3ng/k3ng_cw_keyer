@@ -647,6 +647,9 @@ Recent Update History
       WD9DMP contributed addition fixes
       Changed version number scheme.  The 2.2 really isn't significant anymore.
 
+    2017.02.12.02
+      loop_element_lengths sending_mode code error fixed.  (Thanks, WD9DMP)
+
 
 
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
@@ -664,7 +667,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.02.12.01"
+#define CODE_VERSION "2017.02.12.02"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -5160,7 +5163,7 @@ void tx_and_sidetone_key (int state)
     #ifdef FEATURE_COMMAND_BUTTONS
       if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
         if (keyer_machine_mode == KEYER_NORMAL) {
-          sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+          sending_mode = AUTOMATIC_SENDING_INTERRUPTED;  // == error fixed 2017-02-12 - Thanks, WD9DMP
           automatic_sending_interruption_time = millis(); 
           return;
         }
@@ -5168,7 +5171,7 @@ void tx_and_sidetone_key (int state)
     #else
       if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
         if (keyer_machine_mode == KEYER_NORMAL) {
-          sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+          sending_mode = AUTOMATIC_SENDING_INTERRUPTED;  // == error fixed 2017-02-12 - Thanks, WD9DMP
           automatic_sending_interruption_time = millis(); 
           return;
         }
