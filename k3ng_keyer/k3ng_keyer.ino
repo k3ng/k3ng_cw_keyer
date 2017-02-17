@@ -650,6 +650,9 @@ Recent Update History
     2017.02.12.02
       loop_element_lengths sending_mode code error fixed.  (Thanks, WD9DMP)
 
+    2017.02.16.01
+      Added note: Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
+
 
 
   This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
@@ -667,7 +670,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.02.12.02"
+#define CODE_VERSION "2017.02.16.01"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -743,7 +746,7 @@ Recent Update History
 #endif 
 
 #if defined(FEATURE_PS2_KEYBOARD)
-  #include <K3NG_PS2Keyboard.h>
+  #include <K3NG_PS2Keyboard.h>  
 #endif
 
 #if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH)
@@ -797,7 +800,7 @@ Recent Update History
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
-  #include <Keyboard.h>
+  #include <Keyboard.h>  // Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
 #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
 // Variables and stuff
@@ -5059,6 +5062,7 @@ void tx_and_sidetone_key (int state)
       unsigned long starttime = micros();
     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
+    uint8_t direct_read_paddle_break = 0;
 
     unsigned long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
     unsigned long start = micros();
@@ -5100,7 +5104,9 @@ void tx_and_sidetone_key (int state)
           }   
 
         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+          if (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW) {direct_read_paddle_break = 1;} // zzzzzzzz
           if (configuration.cmos_super_keyer_iambic_b_timing_on){
+            
             if ((float(float(micros()-starttime)/float(endtime-starttime))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
               if (being_sent == SENDING_DIT) {
                 check_dah_paddle();
@@ -5161,7 +5167,7 @@ void tx_and_sidetone_key (int state)
 
     // blow out prematurely if we're automatic sending and a paddle gets hit
     #ifdef FEATURE_COMMAND_BUTTONS
-      if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
+      if (sending_mode == AUTOMATIC_SENDING && (direct_read_paddle_break || paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
         if (keyer_machine_mode == KEYER_NORMAL) {
           sending_mode = AUTOMATIC_SENDING_INTERRUPTED;  // == error fixed 2017-02-12 - Thanks, WD9DMP
           automatic_sending_interruption_time = millis(); 
@@ -5169,7 +5175,7 @@ void tx_and_sidetone_key (int state)
         }
       }   
     #else
-      if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
+      if (sending_mode == AUTOMATIC_SENDING && (direct_read_paddle_break || paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
         if (keyer_machine_mode == KEYER_NORMAL) {
           sending_mode = AUTOMATIC_SENDING_INTERRUPTED;  // == error fixed 2017-02-12 - Thanks, WD9DMP
           automatic_sending_interruption_time = millis(); 
@@ -10821,11 +10827,11 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
       #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
         port_to_use->print(F(" / CMOS Super Keyer Timing: O"));
         if (configuration.cmos_super_keyer_iambic_b_timing_on) {
-          port_to_use->print("N ");
+          port_to_use->print("n ");
           port_to_use->print(configuration.cmos_super_keyer_iambic_b_timing_percent);
           port_to_use->print("%");
         } else {
-         port_to_use->print("FF");
+         port_to_use->print("ff");
         }
       #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
       break;
@@ -10878,7 +10884,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     port_to_use->print(qrss_dit_length,DEC);
     port_to_use->println(" seconds");
   }
-  port_to_use->print(F("Sidetone:"));
+  port_to_use->print(F("Sidetone: "));
   switch (configuration.sidetone_mode) {
     case SIDETONE_ON: port_to_use->print(F("On")); break; //(WD9DMP)
     case SIDETONE_OFF: port_to_use->print(F("Off")); break; //(WD9DMP)
