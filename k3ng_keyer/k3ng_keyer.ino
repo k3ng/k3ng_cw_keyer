@@ -199,8 +199,14 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     ADK board (which has a built in USB host interface, get or Circuits@Home USB shield (http://www.circuitsathome.com/products-page/arduino-shields/usb-host-shield-2-0-for-arduino),
     or built your own MAX3421 based USB port.
     
-    If you are using an Arduino Mega ADK, you must customize the USB Host Shield Library settings.h file!
+    If you are using an Arduino Mega ADK with Arduino IDE older than version 1.5.5, you must customize the USB Host Shield Library settings.h file!
 
+    If you are using Arduino IDE older than version 1.5.5 and you experience a compiler error, you may need to add these lines to your keyer.h file:
+
+        #define HID_PROTOCOL_KEYBOARD 1
+        #define HID_PROTOCOL_MOUSE 2
+
+    (Thanks Raimo, DL1HTB, for the two notes above.)
 
     Option Usb Computer Keyboard Emulation FEATURE_CW_COMPUTER_KEYBOARD
     (Arduino Due, Leonardo only)
@@ -796,9 +802,9 @@ Recent Update History
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
-  // #include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, so they are commented out
-  // #include <usbhub.h>   // Uncomment the three lines if you are using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE
-  // #include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
+  #include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, so they are commented out
+  #include <usbhub.h>   // Uncomment the three lines if you are using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE
+  #include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
