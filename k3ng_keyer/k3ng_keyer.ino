@@ -149,9 +149,10 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
    CTRL-G           Bug
    CTRL-H           Toggle Hell Mode On/Off              (requires FEATURE_HELL)
    CTRL-I           TX enable / disable
-   CTRL-O           Toggle Sidetone On/Off
    CTRL-M           Set Farnsworth Speed (0 = disabled)  (requires FEATURE_FARNSWORTH)
    CTRL-N           Paddle Reverse
+   CTRL-O           Toggle Sidetone On/Off  
+   CTRL-S           CMOS Superkeyer Timing On/Off 
    CTRL-T           Tune
    CTRL-U           Manual PTT Toggle
    CTRL-W           Set WPM
@@ -663,6 +664,9 @@ Recent Update History
       WD9DMP contribution: Added checks to see that keyer is NOT in command mode before allowing keyboards or CLI to toggle key_tx flag state, otherwise key commands could key transmitter
       Added library.properties file to K3NG_PS2Keyboard library to support the Arduino IDE eye candy bloatware Library Manager
 
+    2017.03.12.02
+      Added CTRL-S keystroke to toggle CMOS Superkeyer Timing on and off in FEATURE_PS2_KEYBOARD and FEATURE_USB_KEYBOARD  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -678,7 +682,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.03.12.01"
+#define CODE_VERSION "2017.03.12.02"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -2824,6 +2828,23 @@ void check_ps2_keyboard()
           }
           config_dirty = 1;
          break;
+        
+        #if defined(FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING)
+          case PS2_S_CTRL :
+            if (configuration.cmos_super_keyer_iambic_b_timing_on){
+              configuration.cmos_super_keyer_iambic_b_timing_on = 0;
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("CMOS Superkeyer Off", 0, default_display_msg_delay);
+              #endif      
+            } else {
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("CMOS Superkeyer Off", 0, default_display_msg_delay);
+              #endif      
+              configuration.cmos_super_keyer_iambic_b_timing_on = 1;
+            }
+            config_dirty = 1;
+            break;
+        #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
         case PS2_T_CTRL :
           #ifdef FEATURE_MEMORIES
@@ -13578,7 +13599,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         config_dirty = 1;
         break;
 
-      case 0x12 : // CTRL-O
+      case 0x12 : // CTRL-O     
         if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
           configuration.sidetone_mode = SIDETONE_OFF;
           #ifdef FEATURE_DISPLAY
@@ -13592,6 +13613,25 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         }
         config_dirty = 1;
        break;
+
+
+        #if defined(FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING)
+          case 0x16 :  // CTRL-S
+            if (configuration.cmos_super_keyer_iambic_b_timing_on){
+              configuration.cmos_super_keyer_iambic_b_timing_on = 0;
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("CMOS Superkeyer Off", 0, default_display_msg_delay);
+              #endif      
+            } else {
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("CMOS Superkeyer Off", 0, default_display_msg_delay);
+              #endif      
+              configuration.cmos_super_keyer_iambic_b_timing_on = 1;
+            }
+            config_dirty = 1;
+            break;
+        #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+
 
       case 0x17 : // CTRL-T
         #ifdef FEATURE_MEMORIES
