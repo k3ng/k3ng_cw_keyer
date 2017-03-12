@@ -653,9 +653,11 @@ Recent Update History
     2017.02.16.01
       Added note: Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
 
+    2017.03.12.01
+      WD9DMP contribution: Added checks to see that keyer is NOT in command mode before allowing keyboards or CLI to toggle key_tx flag state, otherwise key commands could key transmitter
+      Added library.properties file to K3NG_PS2Keyboard library to support the Arduino IDE eye candy bloatware Library Manager
 
-
-  This code is currently maintained for and compiled with Arduino 1.6.1.  Your mileage may vary with other versions.
+  This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -670,7 +672,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.02.16.01"
+#define CODE_VERSION "2017.03.12.01"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -746,7 +748,7 @@ Recent Update History
 #endif 
 
 #if defined(FEATURE_PS2_KEYBOARD)
-  #include <K3NG_PS2Keyboard.h>  
+  #include <K3NG_PS2Keyboard.h>
 #endif
 
 #if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH)
@@ -3216,13 +3218,13 @@ void check_ps2_keyboard()
           break;
 
         case PS2_I_CTRL :
-          if (key_tx) {
+          if (key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP-1)
             key_tx = 0;
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
             #endif
             
-          } else {
+          } else if (!key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP-1)
             key_tx = 1;
             #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("TX On", 0, default_display_msg_delay);
@@ -9540,14 +9542,15 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
 
 
     case 'I':                                                                      // I - transmit line on/off
-      port_to_use->print(F("\r\nTX o"));
-      if (key_tx) {
+      //port_to_use->print(F("\r\nTX o")); //WD9DMP-1
+      if (key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP-1)
         key_tx = 0;
-        port_to_use->println(F("ff"));
-      } else {
+        port_to_use->println(F("\r\nTX off")); //WD9DMP-1
+      } else if (!key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP-1)
         key_tx = 1;
-        port_to_use->println(F("n"));
+        port_to_use->println(F("\r\nTX on")); //WD9DMP-1
       }
+      else {port_to_use->print(F("\r\nERROR: Keyer in Command Mode\r\n"));} //Print error message if keyer in Command Mode and user tries to change tx line(s) on/off. (WD9DMP-1)
       break;
     #ifdef FEATURE_MEMORIES
       case 33: repeat_play_memory(port_to_use); break;      // ! - repeat play
@@ -13524,13 +13527,13 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         break;
 
       case 0x0c : // CTRL-I
-        if (key_tx) {
+        if (key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP-1)
           key_tx = 0;
           #ifdef FEATURE_DISPLAY
           lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
           #endif
           
-        } else {
+        } else if (!key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP)
           key_tx = 1;
           #ifdef FEATURE_DISPLAY
           lcd_center_print_timed("TX On", 0, default_display_msg_delay);
