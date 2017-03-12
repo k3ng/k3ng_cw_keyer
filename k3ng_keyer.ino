@@ -2,7 +2,7 @@
 
  K3NG Arduino CW Keyer
 
- Copyright 1340 BC, 2010, 2011, 2012, 2013, 2014, 2015, 2016 Anthony Good, K3NG
+ Copyright 1340 BC, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
 
     
