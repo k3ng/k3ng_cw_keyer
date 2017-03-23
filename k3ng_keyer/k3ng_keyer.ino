@@ -667,6 +667,9 @@ Recent Update History
     2017.03.12.02
       Added CTRL-S keystroke to toggle CMOS Superkeyer Timing on and off in FEATURE_PS2_KEYBOARD and FEATURE_USB_KEYBOARD  
 
+    2017.03.22.01
+      Commented out include <Keyboard.h> due to unexplained compilation error in Arduino 1.8.1
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -682,7 +685,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.03.12.02"
+#define CODE_VERSION "2017.03.22.01"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -812,7 +815,8 @@ Recent Update History
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
-  #include <Keyboard.h>  // Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
+  //#include <Keyboard.h>  // Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
+                           // For some unknown reason this line uncommented in Arduino 1.8.1 causes compilation error (sigh) 
 #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
 // Variables and stuff

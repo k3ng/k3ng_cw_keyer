@@ -150,4 +150,7 @@
 #define DONT_RAISE_ERROR_MSG 0
 #define RAISE_ERROR_MSG 1
 
+// #define HID_PROTOCOL_KEYBOARD 1
+// #define HID_PROTOCOL_MOUSE 2
+
 #endif //keyer_h
