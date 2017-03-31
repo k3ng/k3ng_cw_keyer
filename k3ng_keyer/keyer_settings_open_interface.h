@@ -177,3 +177,24 @@
 #define FEATURE_INTERNET_LINK_MAX_LINKS 2
 #define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
 #define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500
+
+#if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
+  #define KEYPAD_ROWS 4 //KeyPad Rows
+  #if defined(FEATURE_4x4_KEYPAD)
+    #define KEYPAD_COLS 4 //keypad Columns
+  #else
+    #define KEYPAD_COLS 3
+  #endif
+  #define mem1 0 //Memory numbers for Keypad: Actual memory numbers start with "0"
+  #define mem2 1
+  #define mem3 2
+  #define mem4 3
+  #define mem5 4
+  #define mem6 5
+  #define mem7 6
+  #define mem8 7
+  #define mem9 8
+  #define mem10 9
+  #define mem11 10
+  #define mem12 11
+#endif //#if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)

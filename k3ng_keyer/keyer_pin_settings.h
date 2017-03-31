@@ -111,6 +111,27 @@ FEATURE_SIDETONE_SWITCH
   #define capactive_paddle_pin_inhibit_pin 0     // if this pin is defined and is set high, the capacitive paddle pins will switch to normal (non-capacitive) sensing mode
 #endif
 
+#ifdef FEATURE_4x4_KEYPAD
+  #define Row3 33
+  #define Row2 32
+  #define Row1 31
+  #define Row0 30
+  #define Col3 37
+  #define Col2 36
+  #define Col1 35
+  #define Col0 34
+#endif
+
+#ifdef FEATURE_3x4_KEYPAD
+  #define Row3 33
+  #define Row2 32
+  #define Row1 31
+  #define Row0 30
+  #define Col2 36
+  #define Col1 35
+  #define Col0 34
+#endif
+
 #else
 
   #error "Multiple pin_settings.h files included somehow..."

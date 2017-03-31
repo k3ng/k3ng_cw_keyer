@@ -670,6 +670,9 @@ Recent Update History
     2017.03.22.01
       Commented out include <Keyboard.h> due to unexplained compilation error in Arduino 1.8.1
 
+    2017.03.30.01
+      FEATURE_4x4_KEYPAD and FEATURE_3x4_KEYPAD code contributed by Jack, W0XR
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -685,7 +688,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.03.22.01"
+#define CODE_VERSION "2017.03.30.01"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -815,9 +818,13 @@ Recent Update History
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
-  //#include <Keyboard.h>  // Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
-                           // For some unknown reason this line uncommented in Arduino 1.8.1 causes compilation error (sigh) 
+  #include <Keyboard.h>  // Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
+                           // For some unknown reason this line uncommented in Arduino 1.8.1 <sometimes?> causes compilation error (sigh) 
 #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
+
+#if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
+  #include <Keypad.h>
+#endif
 
 // Variables and stuff
 struct config_t {  //48 bytes
@@ -1253,6 +1260,41 @@ PRIMARY_SERIAL_CLS * debug_serial_port;
 
 unsigned long automatic_sending_interruption_time = 0;     
 
+#ifdef FEATURE_4x4_KEYPAD
+  // Define the Keymap for 4x4 matrix keypad
+  char keys[KEYPAD_ROWS][KEYPAD_COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'#','0','*','D'}
+  };
+#endif
+
+#ifdef FEATURE_3x4_KEYPAD
+  // Define the Keymap for 3x4 matrix keypad
+  char keys[KEYPAD_ROWS][KEYPAD_COLS] = {
+  {'1','2','3'},
+  {'4','5','6'},
+  {'7','8','9'},
+  {'#','0','*'}
+  };
+#endif
+
+// Setup for 4x4 matrix keypad
+#ifdef FEATURE_4x4_KEYPAD
+  byte rowPins[KEYPAD_ROWS] = {Row3,Row2,Row1,Row0}; //Arduino Mega Pins: 30,31,32,33---Keypad Pins 5,6,7,8
+  byte colPins[KEYPAD_COLS] = {Col3,Col2,Col1,Col0}; //Arduino Mega Pins: 34,35,36,37---Keypad Pins 1,2,3,4
+#endif
+
+#ifdef FEATURE_3x4_KEYPAD
+  byte rowPins [KEYPAD_ROWS] = {Row3,Row2,Row1,Row0}; //Arduino Mega Pins: 30,31,32,33--Keypad Pins 4,6,7,2
+  byte colPins [KEYPAD_COLS] = {Col2,Col1,Col0}; //Arduino Mega Pins: 34,35,36-----Keypad Pins 5,1,3
+#endif
+
+#if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
+  Keypad kpd = Keypad(makeKeymap(keys), rowPins, colPins, KEYPAD_ROWS, KEYPAD_COLS);
+#endif
+
 
 /*---------------------------------------------------------------------------------------------------------
 
@@ -1417,6 +1459,9 @@ void loop()
     check_sidetone_switch();
   #endif //FEATURE_SIDETONE_SWITCH
 
+  #if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
+    service_keypad();
+  #endif
   
 }
 
@@ -1479,6 +1524,78 @@ void loop()
 
   }
 #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
+void service_keypad(){
+
+  // Code contributed by Jack, W0XR
+
+  char key = kpd.getKey();
+
+  if(key){ // Check for a valid key.
+
+    #if defined(DEBUG_KEYPAD_SERIAL)
+      debug_serial_port->print("service_keypad: key:");
+      debug_serial_port->println(key);
+    #endif
+
+    switch(key){
+      case '1':
+        play_memory(mem1); //MEMORY 1
+        break;
+      case '2':
+        play_memory(mem2); //MEMORY 2
+        break;
+      case '3':
+        play_memory(mem3); //MEMORY 3
+        break;
+      case '4':
+        play_memory(mem4); //MEMORY 4
+        break;
+      case '5':
+        play_memory(mem5); //MEMORY 5
+        break;
+      case '6':
+        play_memory(mem6); //MEMORY 6
+        break;
+      case '7':
+        play_memory(mem7); //MEMORY 7
+        break;
+      case '8':
+        play_memory(mem8); //MEMORY 8
+        break;
+      case '9':
+        play_memory(mem9); //MEMORY 9
+        break;
+      case '0':
+        play_memory(mem10); //MEMORY 10
+        break;
+      case '#':
+        beep_boop();
+        break;
+      case '*':
+        beep_boop();
+        break;
+      case 'A':
+        beep_boop();
+        break;
+      case 'B':
+        beep_boop();
+        break;
+      case 'C':
+        command_mode();
+        break;
+      case 'D':
+        beep_boop();
+        break;
+    }
+
+  } //if(key)
+
+} // service_keypad()
+#endif //defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -12529,8 +12646,21 @@ void initialize_pins() {
   pinMode(SIDETONE_SWITCH,INPUT);
   #endif //FEATURE_SIDETONE_SWITCH
 
+  #if defined (FEATURE_4x4_KEYPAD)||defined(FEATURE_3x4_KEYPAD)
+    pinMode(Row3,INPUT_PULLUP);
+    pinMode(Row2,INPUT_PULLUP);
+    pinMode(Row1,INPUT_PULLUP);
+    pinMode(Row0,INPUT_PULLUP);
+    pinMode(Col2,INPUT_PULLUP);
+    pinMode(Col1,INPUT_PULLUP);
+    pinMode(Col0,INPUT_PULLUP);
+  #endif
+
+  #if defined (FEATURE_4x4_KEYPAD)
+    pinMode(Col3,INPUT_PULLUP);        //Col3 not used if 3x4 keypad is defined.
+  #endif
   
-}
+} //initialize_pins()
 
 //---------------------------------------------------------------------
 

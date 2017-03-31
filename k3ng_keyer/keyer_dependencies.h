@@ -32,3 +32,6 @@
   #define FEATURE_UDP
 #endif
 
+#if defined(FEATURE_4x4_KEYPAD) && defined(FEATURE_3x4_KEYPAD)
+  #error "You can't use both FEATURE_4x4_KEYPAD and FEATURE_3x4_KEYPAD simultaneously"
+#endif
