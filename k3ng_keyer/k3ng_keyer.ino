@@ -673,6 +673,9 @@ Recent Update History
     2017.03.30.01
       FEATURE_4x4_KEYPAD and FEATURE_3x4_KEYPAD code contributed by Jack, W0XR
 
+    2017.04.19.01
+      Minor change in keyer.h to prevent errors with some versions of Arduino IDE when compiling USB HID features
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -688,7 +691,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.03.30.01"
+#define CODE_VERSION "2017.04.19.01"
 #define eeprom_magic_number 24
 
 #include <stdio.h>

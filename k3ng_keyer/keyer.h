@@ -150,7 +150,9 @@
 #define DONT_RAISE_ERROR_MSG 0
 #define RAISE_ERROR_MSG 1
 
-// #define HID_PROTOCOL_KEYBOARD 1
-// #define HID_PROTOCOL_MOUSE 2
+#if !defined(HID_PROTOCOL_KEYBOARD) && !defined(HID_PROTOCOL_MOUSE)
+  #define HID_PROTOCOL_KEYBOARD 1
+  #define HID_PROTOCOL_MOUSE 2
+#endif
 
 #endif //keyer_h
