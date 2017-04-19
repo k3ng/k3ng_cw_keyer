@@ -676,6 +676,9 @@ Recent Update History
     2017.04.19.01
       Minor change in keyer.h to prevent errors with some versions of Arduino IDE when compiling USB HID features
 
+    2017.04.19.02
+      OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT and two code fixes contributed by Raimo, DL1HTB, thanks!
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -691,7 +694,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.04.19.01"
+#define CODE_VERSION "2017.04.19.02"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -2962,7 +2965,7 @@ void check_ps2_keyboard()
               #endif      
             } else {
               #ifdef FEATURE_DISPLAY
-                lcd_center_print_timed("CMOS Superkeyer Off", 0, default_display_msg_delay);
+                lcd_center_print_timed("CMOS Superkeyer On", 0, default_display_msg_delay);
               #endif      
               configuration.cmos_super_keyer_iambic_b_timing_on = 1;
             }
@@ -13045,6 +13048,10 @@ void initialize_default_modes(){
   configuration.sidetone_mode = SIDETONE_ON;
   char_send_mode = CW;
   
+  #if defined(FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING) && defined(OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT) // DL1HTB initialize CMOS Super Keyer if feature is enabled
+    configuration.cmos_super_keyer_iambic_b_timing_on = 1;
+  #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING // #end DL1HTB initialize CMOS Super Keyer if feature is enabled
+
   delay(250);  // wait a little bit for the caps to charge up on the paddle lines
 
 }  
@@ -13761,7 +13768,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
               #endif      
             } else {
               #ifdef FEATURE_DISPLAY
-                lcd_center_print_timed("CMOS Superkeyer Off", 0, default_display_msg_delay);
+                lcd_center_print_timed("CMOS Superkeyer On", 0, default_display_msg_delay);
               #endif      
               configuration.cmos_super_keyer_iambic_b_timing_on = 1;
             }
