@@ -679,6 +679,10 @@ Recent Update History
     2017.04.19.02
       OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT and two code fixes contributed by Raimo, DL1HTB, thanks!
 
+    2017.04.22.01
+      Webserver About screen now handles millis() uptime rollover 
+      Bug fix in loop_element_lengths and Internet Linking functionality UDP packet handling 
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -694,7 +698,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.04.19.02"
+#define CODE_VERSION "2017.04.22.01"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -824,7 +828,7 @@ Recent Update History
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
-  #include <Keyboard.h>  // Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
+  //#include <Keyboard.h>  // Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
                            // For some unknown reason this line uncommented in Arduino 1.8.1 <sometimes?> causes compilation error (sigh) 
 #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
@@ -1301,6 +1305,8 @@ unsigned long automatic_sending_interruption_time = 0;
   Keypad kpd = Keypad(makeKeymap(keys), rowPins, colPins, KEYPAD_ROWS, KEYPAD_COLS);
 #endif
 
+unsigned long millis_rollover = 0;
+
 
 /*---------------------------------------------------------------------------------------------------------
 
@@ -1468,6 +1474,8 @@ void loop()
   #if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
     service_keypad();
   #endif
+
+  service_millis_rollover();
   
 }
 
@@ -5021,204 +5029,32 @@ void tx_and_sidetone_key (int state)
 
 }
 
+
 //-------------------------------------------------------------------------------------------------------
 
-
-// #ifndef FEATURE_HI_PRECISION_LOOP_TIMING
-
-//   void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in)
-//   {
+void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in)
+   {
 
 
     
-//     if ((lengths == 0) or (lengths < 0)) {
-//       return;
-//     }
+     if ((lengths == 0) or (lengths < 0)) {
+       return;
+     }
 
 
-//     float element_length;
+     float element_length;
 
-//     if (speed_mode == SPEED_NORMAL) {
-//       element_length = 1200/speed_wpm_in;   
-//     } else {
-//       element_length = qrss_dit_length * 1000;
-//     }
-
-
-
-//     #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-//       unsigned long starttime = millis();
-//     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-
-//     unsigned long ticks = long(element_length*lengths) + long(additional_time_ms); // improvement from Paul, K1XM
-//     unsigned long start = millis();
-//     while ((millis() - start) < ticks) {
-
-//       check_ptt_tail();
-
-//       #if defined(FEATURE_INTERNET_LINK) /*&& !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)*/
-//         if ((millis() > 1000)  && ((millis()-start) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
-//           service_udp_send_buffer();
-//           service_udp_receive();
-//           service_internet_link_udp_receive_buffer();
-//         }
-//       #endif //FEATURE_INTERNET_LINK
-
-//       #ifdef OPTION_WATCHDOG_TIMER
-//         wdt_reset();
-//       #endif  //OPTION_WATCHDOG_TIMER
-      
-//       #ifdef FEATURE_ROTARY_ENCODER
-//         check_rotary_encoder();
-//       #endif //FEATURE_ROTARY_ENCODER    
-      
-//       #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
-//         service_usb();
-//       #endif //FEATURE_USB_KEYBOARD || FEATURE_USB_MOUSE
-
-//       #ifdef FEATURE_PTT_INTERLOCK
-//         service_ptt_interlock();
-//       #endif //FEATURE_PTT_INTERLOCK
-      
-//       if ((configuration.keyer_mode != ULTIMATIC) && (configuration.keyer_mode != SINGLE_PADDLE)) {
-//         if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
-//             iambic_flag = 1;
-//         }    
-     
-//         #ifndef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-//           if (being_sent == SENDING_DIT) {
-//             check_dah_paddle();
-//           } else {
-//             if (being_sent == SENDING_DAH) {
-//               check_dit_paddle();
-//             } else {
-//               check_dah_paddle();
-//               check_dit_paddle();                
-//             }
-//           }            
-//         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-//           if (configuration.cmos_super_keyer_iambic_b_timing_on){
-//             if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
-//               if (being_sent == SENDING_DIT) {
-//                 check_dah_paddle();
-//               } else {
-//                 if (being_sent == SENDING_DAH) {
-//                   check_dit_paddle();
-//                 }
-//               }     
-//             } else {
-//               if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
-//                 dah_buffer = 0;
-//                 dit_buffer = 0;         
-//               }              
-//             }
-//           } else {
-//             if (being_sent == SENDING_DIT) {
-//               check_dah_paddle();
-//             } else {
-//               if (being_sent == SENDING_DAH) {
-//                 check_dit_paddle();
-//               } else {
-//                 check_dah_paddle();
-//                 check_dit_paddle();                
-//               }
-//             }  
-//           }  
-//         #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-
-//       } else { //(configuration.keyer_mode != ULTIMATIC)
-
-
-//           if (being_sent == SENDING_DIT) {
-//             check_dah_paddle();
-//           } else {
-//             if (being_sent == SENDING_DAH) {
-//               check_dit_paddle();
-//             } else {
-//               check_dah_paddle();
-//               check_dit_paddle();                
-//             }
-//           }   
-
-//       }
-      
-//       #if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
-//         check_the_memory_buttons();
-//       #endif
-
-//       // blow out prematurely if we're automatic sending and a paddle gets hit
-//       #ifdef FEATURE_COMMAND_BUTTONS
-//         if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
-//           if (keyer_machine_mode == KEYER_NORMAL) {
-//             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
-//             automatic_sending_interruption_time = millis(); 
-//             return;
-//           }
-//         }   
-//       #else
-//         if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
-//           if (keyer_machine_mode == KEYER_NORMAL) {
-//             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
-//             automatic_sending_interruption_time = millis(); 
-//             return;
-//           }
-//         }   
-//       #endif
-
-//       #ifdef FEATURE_STRAIGHT_KEY
-//         service_straight_key();
-//       #endif //FEATURE_STRAIGHT_KEY
-
-
-        // #if defined(FEATURE_WEB_SERVER)
-        //   if (speed_mode == SPEED_QRSS){
-        //     service_web_server();
-        //   }
-        // #endif //FEATURE_WEB_SERVER
-        
-//     }  //while ((millis() < endtime) && (millis() > 200))
-   
-//     if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
-//         iambic_flag = 0;
-//         dit_buffer = 0;
-//         dah_buffer = 0;
-//     }    
-   
-//     if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
-//       if (configuration.dit_buffer_off) {dit_buffer = 0;}
-//       if (configuration.dah_buffer_off) {dah_buffer = 0;}
-//     }  
-
-   
-
-//   } //void loop_element_lengths
-
-
-// #else //FEATURE_HI_PRECISION_LOOP_TIMING------------------------------------------------------------------
-
-  void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in) {
-
-
-    
-    if ((lengths == 0) or (lengths < 0)) {
-      return;
-    }
+     if (speed_mode == SPEED_NORMAL) {
+       element_length = 1200/speed_wpm_in;   
+     } else {
+       element_length = qrss_dit_length * 1000;
+     }
 
 
 
-    float element_length;
-
-    if (speed_mode == SPEED_NORMAL) {
-      element_length = 1200/speed_wpm_in;
-    } else {
-      element_length = qrss_dit_length * 1000;
-    }
-
-    #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-      unsigned long starttime = micros();
-    #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-
-    uint8_t direct_read_paddle_break = 0;
+     #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+       unsigned long starttime = millis();
+     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
     unsigned long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
     unsigned long start = micros();
@@ -5226,136 +5062,149 @@ void tx_and_sidetone_key (int state)
 
     while ((micros() - start) < ticks){
 
-    
-    //while ((micros() < endtime) && (micros() > 200000)) {  // the second condition is to account for millis() rollover
+       check_ptt_tail();
 
-      #ifdef OPTION_WATCHDOG_TIMER
-        wdt_reset();
-      #endif  //OPTION_WATCHDOG_TIMER
+       #if defined(FEATURE_INTERNET_LINK) /*&& !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)*/
+         if ((millis() > 1000)  && ((millis()-start) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
+           service_udp_send_buffer();
+           service_udp_receive();
+           service_internet_link_udp_receive_buffer();
+         }
+       #endif //FEATURE_INTERNET_LINK
+
+       #ifdef OPTION_WATCHDOG_TIMER
+         wdt_reset();
+       #endif  //OPTION_WATCHDOG_TIMER
       
-      #ifdef FEATURE_ROTARY_ENCODER
-        check_rotary_encoder();
-      #endif //FEATURE_ROTARY_ENCODER    
+       #ifdef FEATURE_ROTARY_ENCODER
+         check_rotary_encoder();
+       #endif //FEATURE_ROTARY_ENCODER    
       
-      #ifdef FEATURE_USB_KEYBOARD
-        service_usb();
-      #endif //FEATURE_USB_KEYBOARD
+       #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
+         service_usb();
+       #endif //FEATURE_USB_KEYBOARD || FEATURE_USB_MOUSE
+
+       #ifdef FEATURE_PTT_INTERLOCK
+         service_ptt_interlock();
+       #endif //FEATURE_PTT_INTERLOCK
       
-      if ((configuration.keyer_mode != ULTIMATIC) && (configuration.keyer_mode != SINGLE_PADDLE))  {
-        if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
-            iambic_flag = 1;
-        }    
-    
-        #ifndef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+       if ((configuration.keyer_mode != ULTIMATIC) && (configuration.keyer_mode != SINGLE_PADDLE)) {
+         if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
+             iambic_flag = 1;
+         }    
+     
+         #ifndef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+           if (being_sent == SENDING_DIT) {
+             check_dah_paddle();
+           } else {
+             if (being_sent == SENDING_DAH) {
+               check_dit_paddle();
+             } else {
+               check_dah_paddle();
+               check_dit_paddle();                
+             }
+           }            
+         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+           if (configuration.cmos_super_keyer_iambic_b_timing_on){
+             if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
+               if (being_sent == SENDING_DIT) {
+                 check_dah_paddle();
+               } else {
+                 if (being_sent == SENDING_DAH) {
+                   check_dit_paddle();
+                 }
+               }     
+             } else {
+               if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
+                 dah_buffer = 0;
+                 dit_buffer = 0;         
+               }              
+             }
+           } else {
+             if (being_sent == SENDING_DIT) {
+               check_dah_paddle();
+             } else {
+               if (being_sent == SENDING_DAH) {
+                 check_dit_paddle();
+               } else {
+                 check_dah_paddle();
+                 check_dit_paddle();                
+               }
+             }  
+           }  
+         #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
-          if (being_sent == SENDING_DIT) {
-            check_dah_paddle();
-          } else {
-            if (being_sent == SENDING_DAH) {
-              check_dit_paddle();
-            } else {
-              check_dah_paddle();
-              check_dit_paddle();                
-            }
-          }   
-
-        #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          if (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW) {direct_read_paddle_break = 1;} // zzzzzzzz
-          if (configuration.cmos_super_keyer_iambic_b_timing_on){
-            
-            if ((float(float(micros()-starttime)/float(endtime-starttime))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
-              if (being_sent == SENDING_DIT) {
-                check_dah_paddle();
-              } else {
-                if (being_sent == SENDING_DAH) {
-                  check_dit_paddle();
-                }
-              }     
-            } else {
-              if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
-                dah_buffer = 0;
-                dit_buffer = 0;         
-              }                 
-            }
-          } else {
-            if (being_sent == SENDING_DIT) {
-              check_dah_paddle();
-            } else {
-              if (being_sent == SENDING_DAH) {
-                check_dit_paddle();
-              } else {
-                check_dah_paddle();
-                check_dit_paddle();                
-              }
-            }               
-          }
-        #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-
-        } else { //(configuration.keyer_mode != ULTIMATIC)
-          if (being_sent == SENDING_DIT) {
-            check_dah_paddle();
-          } else {
-            if (being_sent == SENDING_DAH) {
-              check_dit_paddle();
-            } else {
-              check_dah_paddle();
-              check_dit_paddle();                
-            }
-          }   
-        }
+       } else { //(configuration.keyer_mode != ULTIMATIC)
 
 
-        #ifdef FEATURE_STRAIGHT_KEY
-          service_straight_key();
-        #endif //FEATURE_STRAIGHT_KEY
+           if (being_sent == SENDING_DIT) {
+             check_dah_paddle();
+           } else {
+             if (being_sent == SENDING_DAH) {
+               check_dit_paddle();
+             } else {
+               check_dah_paddle();
+               check_dit_paddle();                
+             }
+           }   
+
+       }
+      
+       #if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
+         check_the_memory_buttons();
+       #endif
+
+       // blow out prematurely if we're automatic sending and a paddle gets hit
+       #ifdef FEATURE_COMMAND_BUTTONS
+         if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
+           if (keyer_machine_mode == KEYER_NORMAL) {
+             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+             automatic_sending_interruption_time = millis(); 
+             return;
+           }
+         }   
+       #else
+         if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
+           if (keyer_machine_mode == KEYER_NORMAL) {
+             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+             automatic_sending_interruption_time = millis(); 
+             return;
+           }
+         }   
+       #endif
+
+       #ifdef FEATURE_STRAIGHT_KEY
+         service_straight_key();
+       #endif //FEATURE_STRAIGHT_KEY
+
 
         #if defined(FEATURE_WEB_SERVER)
           if (speed_mode == SPEED_QRSS){
             service_web_server();
           }
         #endif //FEATURE_WEB_SERVER
+        
+     }  //while ((millis() < endtime) && (millis() > 200))
 
-    } //while ((millis() < endtime) && (millis() > 200))
-    
-    #if defined(FEATURE_MEMORIES) && defined(FEATURE_COMMAND_BUTTONS)
-      check_the_memory_buttons();
-    #endif
 
-    // blow out prematurely if we're automatic sending and a paddle gets hit
-    #ifdef FEATURE_COMMAND_BUTTONS
-      if (sending_mode == AUTOMATIC_SENDING && (direct_read_paddle_break || paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
-        if (keyer_machine_mode == KEYER_NORMAL) {
-          sending_mode = AUTOMATIC_SENDING_INTERRUPTED;  // == error fixed 2017-02-12 - Thanks, WD9DMP
-          automatic_sending_interruption_time = millis(); 
-          return;
-        }
-      }   
-    #else
-      if (sending_mode == AUTOMATIC_SENDING && (direct_read_paddle_break || paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
-        if (keyer_machine_mode == KEYER_NORMAL) {
-          sending_mode = AUTOMATIC_SENDING_INTERRUPTED;  // == error fixed 2017-02-12 - Thanks, WD9DMP
-          automatic_sending_interruption_time = millis(); 
-          return;
-        }
-      }   
-    #endif
-  
+
+
    
-    if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
-        iambic_flag = 0;
-        dit_buffer = 0;
-        dah_buffer = 0;
-    }    
+     if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
+         iambic_flag = 0;
+         dit_buffer = 0;
+         dah_buffer = 0;
+     }    
+   
+     if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
+       if (configuration.dit_buffer_off) {dit_buffer = 0;}
+       if (configuration.dah_buffer_off) {dah_buffer = 0;}
+     }  
 
-    if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
-      if (configuration.dit_buffer_off) {dit_buffer = 0;}
-      if (configuration.dah_buffer_off) {dah_buffer = 0;}
-    }  
-  
+   
 
-  } //void loop_element_lengths
+} //void loop_element_lengths
 
-// #endif //FEATURE_HI_PRECISION_LOOP_TIMING
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -14962,7 +14811,10 @@ void web_print_page_about(EthernetClient client){
   web_client_println(client,F(" bytes free<br><br>"));
 
 
-  unsigned long seconds = millis() / 1000L;
+  
+
+  unsigned long seconds = (millis() / 1000L) + ((pow(2,32)/ 1000L) *  millis_rollover);
+
 
   int days = seconds / 86400L;
   seconds = seconds - (long(days) * 86400L);
@@ -16538,3 +16390,16 @@ void service_internet_link_udp_receive_buffer(){
 }
 
 #endif //FEATURE_UDP
+
+//-------------------------------------------------------------------------------------------------------
+
+void service_millis_rollover(){
+
+  static unsigned long last_millis = 0;
+
+  if (millis() < last_millis){
+    millis_rollover++;
+  }
+  last_millis = millis();
+
+}
