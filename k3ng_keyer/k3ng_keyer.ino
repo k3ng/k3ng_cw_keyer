@@ -828,7 +828,7 @@ Recent Update History
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
-  //#include <Keyboard.h>  // Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
+  #include <Keyboard.h>  // Have a problem with Keyboard.h not found?  See https://github.com/k3ng/k3ng_cw_keyer/issues/35
                            // For some unknown reason this line uncommented in Arduino 1.8.1 <sometimes?> causes compilation error (sigh) 
 #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
