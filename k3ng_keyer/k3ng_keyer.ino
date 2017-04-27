@@ -683,6 +683,9 @@ Recent Update History
       Webserver About screen now handles millis() uptime rollover 
       Bug fix in loop_element_lengths and Internet Linking functionality UDP packet handling 
 
+    2017.04.27.01
+      Added bounds checking for void speed_set()
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -698,7 +701,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.04.22.01"
+#define CODE_VERSION "2017.04.27.01"
 #define eeprom_magic_number 24
 
 #include <stdio.h>
@@ -5225,24 +5228,27 @@ void speed_change(int change)
 
 void speed_set(int wpm_set){
 
-  configuration.wpm = wpm_set;
-  config_dirty = 1;
 
-  #ifdef FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
-    if ((configuration.wpm >= DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_WPM) && (configuration.wpm <= DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM)){
-      int dynamicweightvalue=map(configuration.wpm,DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_WPM,DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM,DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_RATIO,DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_RATIO);
-      configuration.dah_to_dit_ratio=dynamicweightvalue;
-    }
-  #endif //FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
+  if ((wpm_set > 0) && (wpm_set < 1000)){
+    configuration.wpm = wpm_set;
+    config_dirty = 1;
 
-    
-  #ifdef FEATURE_LED_RING
-    update_led_ring();
-  #endif //FEATURE_LED_RING
-    
-  #ifdef FEATURE_DISPLAY
-    lcd_center_print_timed_wpm();
-  #endif
+    #ifdef FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
+      if ((configuration.wpm >= DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_WPM) && (configuration.wpm <= DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM)){
+        int dynamicweightvalue=map(configuration.wpm,DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_WPM,DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM,DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_RATIO,DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_RATIO);
+        configuration.dah_to_dit_ratio=dynamicweightvalue;
+      }
+    #endif //FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
+
+      
+    #ifdef FEATURE_LED_RING
+      update_led_ring();
+    #endif //FEATURE_LED_RING
+      
+    #ifdef FEATURE_DISPLAY
+      lcd_center_print_timed_wpm();
+    #endif
+  }
 }
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_DISPLAY
