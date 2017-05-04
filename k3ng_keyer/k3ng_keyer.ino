@@ -26,6 +26,9 @@ Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer
 
 For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
 
+Wordsworth CW training method created by George Allison, K1IG
+English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
+
  Command Line Interface ("CLI") (USB Port) (Note: turn on carriage return if using Arduino Serial Monitor program)
 
     CW Keyboard: type what you want the keyer to send (all commands are preceded with a backslash ( \ )
@@ -41,7 +44,7 @@ For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
     \h     Toggle between CW and Hell sending                    (requires FEATURE_HELL)
     \i     Transmit enable/disable
     \j###  Dah to dit ratio (300 = 3.00, do \j alone to set to default)
-    \k     Callsign receive practice
+    \k     CW Training Module                                     (requires FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
     \l##   Set weighting (50 = normal, do \l alone to set to default)
     \m###  Set Farnsworth speed
     \n     Toggle paddle reverse
@@ -686,6 +689,10 @@ Recent Update History
     2017.04.27.01
       Added bounds checking for void speed_set()
 
+    2017.05.03.01
+      FEATURE_TRAINING_COMMAND_LINE_INTERFACE
+      First releaseof Wordsworth training functionality
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -701,8 +708,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.04.27.01"
-#define eeprom_magic_number 24
+#define CODE_VERSION "2017.05.03.01"
+#define eeprom_magic_number 25
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -806,8 +813,8 @@ Recent Update History
   #include <LiquidCrystal_I2C.h>
 #endif //FEATURE_SAINSMART_I2C_LCD  
 
-#if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
-  #include <BasicTerm.h>
+#if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
+ // #include <BasicTerm.h>
 #endif
 
 #if defined(FEATURE_CW_DECODER) && defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
@@ -868,6 +875,7 @@ struct config_t {  //48 bytes
   int link_receive_udp_port;
   uint8_t link_receive_enabled;
   uint8_t paddle_interruption_quiet_time_element_lengths;
+  uint8_t wordsworth_wordspace;
 } configuration;
 
 byte sending_mode = UNDEFINED_SENDING;
@@ -1190,8 +1198,8 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   MouseRptParser MousePrs;
 #endif //FEATURE_USB_MOUSE
 
-#if defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE)
-  BasicTerm term(&Serial);
+#if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
+  //BasicTerm term(&Serial);
 #endif
 
 PRIMARY_SERIAL_CLS * primary_serial_port;
@@ -1309,6 +1317,11 @@ unsigned long automatic_sending_interruption_time = 0;
 #endif
 
 unsigned long millis_rollover = 0;
+
+#if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
+  byte check_serial_override = 0;
+  #include "keyer_training_text_english.h"
+#endif
 
 
 /*---------------------------------------------------------------------------------------------------------
@@ -9220,6 +9233,11 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
 #if defined(FEATURE_SERIAL)
 void check_serial(){
   
+
+  #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
+    if (check_serial_override){return;}
+  #endif
+
   #ifdef DEBUG_SERIAL_SEND_CW_CALLOUT
     byte debug_serial_send_cw[2];
     byte previous_tx = 0;
@@ -9354,8 +9372,8 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use){
   #endif
   port_to_use->println(F("\\I\t\t: TX line disable/enable"));
   port_to_use->println(F("\\J###\t\t: Set dah to dit ratio")); //Upper case to first letter only(WD9DMP)
-  #ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
-    port_to_use->println(F("\\K\t\t: Callsign receive practice"));
+  #ifdef FEATURE_TRAINING_COMMAND_LINE_INTERFACE
+    port_to_use->println(F("\\K\t\t: Training"));
   #endif
   port_to_use->println(F("\\L##\t\t: Set weighting (50 = normal)"));
   #ifdef FEATURE_FARNSWORTH
@@ -9580,9 +9598,9 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     case 'R': speed_mode = SPEED_NORMAL; port_to_use->println(F("\r\nQRSS Off")); break; // R - activate regular timing mode
     case 'S': serial_status(port_to_use); break;                                              // S - Status command
     case 'J': serial_set_dit_to_dah_ratio(port_to_use); break;                          // J - dit to dah ratio
-    #ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
+    #ifdef FEATURE_TRAINING_COMMAND_LINE_INTERFACE
       case 'K': serial_cw_practice(port_to_use); break;                     // K - CW practice
-    #endif //FEATURE_CALLSIGN_RECEIVE_PRACTICE
+    #endif //FEATURE_TRAINING_COMMAND_LINE_INTERFACE
     case 76: serial_set_weighting(port_to_use); break;
     #ifdef FEATURE_FARNSWORTH
       case 'M': serial_set_farnsworth(port_to_use); break;                                // M - set Farnsworth speed
@@ -10380,7 +10398,7 @@ void serial_tune_command (PRIMARY_SERIAL_CLS * port_to_use)
 }
 #endif
 //---------------------------------------------------------------------
-#ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
+#ifdef FEATURE_TRAINING_COMMAND_LINE_INTERFACE
 
 String generate_callsign() {
 
@@ -10428,268 +10446,271 @@ String generate_callsign() {
   return callsign;
 }
 
-#endif //FEATURE_CALLSIGN_RECEIVE_PRACTICE
+#endif //FEATURE_TRAINING_COMMAND_LINE_INTERFACE
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void paqso_practice(PRIMARY_SERIAL_CLS * port_to_use){
+// #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+// void paqso_practice(PRIMARY_SERIAL_CLS * port_to_use){
   
-  // VT100 emulation in Linux: screen /dev/ttyACM1 115200 term vt100
-  
-  
-  #define CONTEST_PRACTICE_IDLE 0
-  #define CONTEST_PRACTICE_CQ_SENT 1
-  #define CONTEST_PRACTICE_REPORT_SENT 2
+//   // VT100 emulation in Linux: screen /dev/ttyACM1 115200 term vt100
   
   
-  #define FIELD_CALLSIGN 0
-  #define FIELD_NR 1
-  #define FIELD_SECTION 2
+//   #define CONTEST_PRACTICE_IDLE 0
+//   #define CONTEST_PRACTICE_CQ_SENT 1
+//   #define CONTEST_PRACTICE_REPORT_SENT 2
   
   
-  byte overall_state = CONTEST_PRACTICE_IDLE;
-  byte loop1 = 1;
-  byte user_input_buffer[10];
-  byte user_input_buffer_characters = 0;
-  byte incoming_char = 0;
-  byte process_user_input_buffer = 0;
-  unsigned long escape_flag_time = 0;
-  String callsign;
-  String nr;
-  String section;
-  byte cq_answered = 0;
-  unsigned long transition_time = 0;
-  byte current_field = FIELD_CALLSIGN;
+//   #define FIELD_CALLSIGN 0
+//   #define FIELD_NR 1
+//   #define FIELD_SECTION 2
+  
+  
+//   byte overall_state = CONTEST_PRACTICE_IDLE;
+//   byte loop1 = 1;
+//   byte user_input_buffer[10];
+//   byte user_input_buffer_characters = 0;
+//   byte incoming_char = 0;
+//   byte process_user_input_buffer = 0;
+//   unsigned long escape_flag_time = 0;
+//   String callsign;
+//   String nr;
+//   String section;
+//   byte cq_answered = 0;
+//   unsigned long transition_time = 0;
+//   byte current_field = FIELD_CALLSIGN;
 
-  int previous_sidetone = configuration.hz_sidetone;
-  int previous_wpm = configuration.wpm;
-  int caller_sidetone = 0;
-  int caller_wpm_delta = 0;
+//   int previous_sidetone = configuration.hz_sidetone;
+//   int previous_wpm = configuration.wpm;
+//   int caller_sidetone = 0;
+//   int caller_wpm_delta = 0;
 
-  while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
-    port_to_use->read();
-  }  
+//   while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
+//     port_to_use->read();
+//   }  
 
-  term.init();
-  term.cls(); 
-  term.position(0,0);  
-  term.println(F("\nPA QSO Party Practice\n"));
-  term.println(F("This requires VT100 emulation!\n"));
-  term.println(F("F1 - Call CQ"));
-  term.println(F("F2 - Exchange"));
-  term.println(F("F3 - TU"));
-  term.println(F("Insert - Callsign + Exchange"));
-  term.println(F("\\ - Exit\n"));
-  term.println(F("Callsign  NR  Section"));
-  term.println(F("-------- ---- -------\n\n"));    
+//   term.init();
+//   term.cls(); 
+//   term.position(0,0);  
+//   term.println(F("\nPA QSO Party Practice\n"));
+//   term.println(F("This requires VT100 emulation!\n"));
+//   term.println(F("F1 - Call CQ"));
+//   term.println(F("F2 - Exchange"));
+//   term.println(F("F3 - TU"));
+//   term.println(F("Insert - Callsign + Exchange"));
+//   term.println(F("\\ - Exit\n"));
+//   term.println(F("Callsign  NR  Section"));
+//   term.println(F("-------- ---- -------\n\n"));    
   
-  while (loop1){
+//   while (loop1){
     
     
-    // get user keyboard input
-    if (port_to_use->available()){      
-      user_input_buffer[user_input_buffer_characters] = toupper(port_to_use->read());
-      switch(user_input_buffer[user_input_buffer_characters]){                    
-        case 27: //escape
-          escape_flag_time = millis();
-          user_input_buffer_characters++;
-        case 13: //return
-        case 32: //space
-          process_user_input_buffer = 1;
-          break;
-        case 127:
-        case 8: //backspace
-          if (user_input_buffer_characters > 0){user_input_buffer_characters--;}
-          port_to_use->write(27);
-          port_to_use->write(91);
-          port_to_use->write(49);
-          port_to_use->write(68);
-          break;
+//     // get user keyboard input
+//     if (port_to_use->available()){      
+//       user_input_buffer[user_input_buffer_characters] = toupper(port_to_use->read());
+//       switch(user_input_buffer[user_input_buffer_characters]){                    
+//         case 27: //escape
+//           escape_flag_time = millis();
+//           user_input_buffer_characters++;
+//         case 13: //return
+//         case 32: //space
+//           process_user_input_buffer = 1;
+//           break;
+//         case 127:
+//         case 8: //backspace
+//           if (user_input_buffer_characters > 0){user_input_buffer_characters--;}
+//           port_to_use->write(27);
+//           port_to_use->write(91);
+//           port_to_use->write(49);
+//           port_to_use->write(68);
+//           break;
 
           
-        default:
-          if (!(((user_input_buffer[user_input_buffer_characters-1] == 27) && (user_input_buffer[user_input_buffer_characters] == 79) && (user_input_buffer_characters>0)) ||
-          ((user_input_buffer[user_input_buffer_characters-2] == 27) && (user_input_buffer[user_input_buffer_characters-1] == 79) && (user_input_buffer_characters>1)))){
-            port_to_use->write(user_input_buffer[user_input_buffer_characters]);
-          }
-          user_input_buffer_characters++;
-          break;                 
-      } //switch(user_input_buffer[user_input_buffer_characters])
-      if (user_input_buffer_characters == 10){process_user_input_buffer = 1;}
+//         default:
+//           if (!(((user_input_buffer[user_input_buffer_characters-1] == 27) && (user_input_buffer[user_input_buffer_characters] == 79) && (user_input_buffer_characters>0)) ||
+//           ((user_input_buffer[user_input_buffer_characters-2] == 27) && (user_input_buffer[user_input_buffer_characters-1] == 79) && (user_input_buffer_characters>1)))){
+//             port_to_use->write(user_input_buffer[user_input_buffer_characters]);
+//           }
+//           user_input_buffer_characters++;
+//           break;                 
+//       } //switch(user_input_buffer[user_input_buffer_characters])
+//       if (user_input_buffer_characters == 10){process_user_input_buffer = 1;}
         
-    }//(port_to_use->available())
+//     }//(port_to_use->available())
     
     
-    // process user keyboard input
-    if ((process_user_input_buffer) && ((escape_flag_time == 0) || ((millis()-escape_flag_time) > 100))){ 
+//     // process user keyboard input
+//     if ((process_user_input_buffer) && ((escape_flag_time == 0) || ((millis()-escape_flag_time) > 100))){ 
    
-      #ifdef DEBUG_CW_PRACTICE
-      debug_serial_port->print(F("escape_flag_time: process_user_input_buffer user_input_buffer_characters:"));
-      debug_serial_port->println(user_input_buffer_characters);
-      #endif
+//       #ifdef DEBUG_CW_PRACTICE
+//       debug_serial_port->print(F("escape_flag_time: process_user_input_buffer user_input_buffer_characters:"));
+//       debug_serial_port->println(user_input_buffer_characters);
+//       #endif
       
-      if (user_input_buffer_characters > 0){
-        if (user_input_buffer[0] == '\\'){  // does user want to exit?
-          loop1 = 0;
-        } else {
-          if (user_input_buffer[0] == 27){
-            if (user_input_buffer_characters == 3){
-              if ((user_input_buffer[1] == 79) && (user_input_buffer[2] == 80)) {  //VT100 F1 key
-                configuration.hz_sidetone = previous_sidetone;
-                configuration.wpm = previous_wpm;
-                add_to_send_buffer('C');
-                add_to_send_buffer('Q');
-                add_to_send_buffer(' ');
-                add_to_send_buffer('T');
-                add_to_send_buffer('E');
-                add_to_send_buffer('S');
-                add_to_send_buffer('T');
-                add_to_send_buffer(' ');
-                add_to_send_buffer('D');
-                add_to_send_buffer('E');
-                add_to_send_buffer(' ');
-                add_to_send_buffer('K');
-                add_to_send_buffer('3');
-                add_to_send_buffer('N');
-                add_to_send_buffer('G');
-                overall_state = CONTEST_PRACTICE_CQ_SENT;
-                transition_time = millis();
-              } //((user_input_buffer[1] == 79) && (user_input_buffer[2] == 80)) VT100 F1 key       
-            } //(user_input_buffer_characters == 3)
-            if (user_input_buffer_characters == 4){
-              if ((user_input_buffer[1] == 91) && (user_input_buffer[2] == 50)  && (user_input_buffer[3] == 126)) { //VT100 INS key
-                for (byte x = 0; x < user_input_buffer_characters; x++) {
-                  add_to_send_buffer(user_input_buffer[x]);
-                }    
-                add_to_send_buffer(' ');         
-                add_to_send_buffer('0');
-                add_to_send_buffer('0');
-                add_to_send_buffer('1');
-                add_to_send_buffer(' ');
-                add_to_send_buffer('C');
-                add_to_send_buffer('A');
-                add_to_send_buffer('R');
-                configuration.hz_sidetone = previous_sidetone;
-                configuration.wpm = previous_wpm;              
-                overall_state = CONTEST_PRACTICE_REPORT_SENT;
-              }
-            } //(user_input_buffer_characters == 4)
+//       if (user_input_buffer_characters > 0){
+//         if (user_input_buffer[0] == '\\'){  // does user want to exit?
+//           loop1 = 0;
+//         } else {
+//           if (user_input_buffer[0] == 27){
+//             if (user_input_buffer_characters == 3){
+//               if ((user_input_buffer[1] == 79) && (user_input_buffer[2] == 80)) {  //VT100 F1 key
+//                 configuration.hz_sidetone = previous_sidetone;
+//                 configuration.wpm = previous_wpm;
+//                 add_to_send_buffer('C');
+//                 add_to_send_buffer('Q');
+//                 add_to_send_buffer(' ');
+//                 add_to_send_buffer('T');
+//                 add_to_send_buffer('E');
+//                 add_to_send_buffer('S');
+//                 add_to_send_buffer('T');
+//                 add_to_send_buffer(' ');
+//                 add_to_send_buffer('D');
+//                 add_to_send_buffer('E');
+//                 add_to_send_buffer(' ');
+//                 add_to_send_buffer('K');
+//                 add_to_send_buffer('3');
+//                 add_to_send_buffer('N');
+//                 add_to_send_buffer('G');
+//                 overall_state = CONTEST_PRACTICE_CQ_SENT;
+//                 transition_time = millis();
+//               } //((user_input_buffer[1] == 79) && (user_input_buffer[2] == 80)) VT100 F1 key       
+//             } //(user_input_buffer_characters == 3)
+//             if (user_input_buffer_characters == 4){
+//               if ((user_input_buffer[1] == 91) && (user_input_buffer[2] == 50)  && (user_input_buffer[3] == 126)) { //VT100 INS key
+//                 for (byte x = 0; x < user_input_buffer_characters; x++) {
+//                   add_to_send_buffer(user_input_buffer[x]);
+//                 }    
+//                 add_to_send_buffer(' ');         
+//                 add_to_send_buffer('0');
+//                 add_to_send_buffer('0');
+//                 add_to_send_buffer('1');
+//                 add_to_send_buffer(' ');
+//                 add_to_send_buffer('C');
+//                 add_to_send_buffer('A');
+//                 add_to_send_buffer('R');
+//                 configuration.hz_sidetone = previous_sidetone;
+//                 configuration.wpm = previous_wpm;              
+//                 overall_state = CONTEST_PRACTICE_REPORT_SENT;
+//               }
+//             } //(user_input_buffer_characters == 4)
 
-          } else { //(user_input_buffer[0] == 27)
+//           } else { //(user_input_buffer[0] == 27)
           
-          // we have a callsign, nr, or section
+//           // we have a callsign, nr, or section
           
-            switch(current_field){
-              case FIELD_CALLSIGN:
-                callsign = "";
-                for (byte x = 0; x < user_input_buffer_characters; x++) {
-                  callsign.concat(char(user_input_buffer[x]));
-                } 
-                current_field = FIELD_NR;
-                break;
+//             switch(current_field){
+//               case FIELD_CALLSIGN:
+//                 callsign = "";
+//                 for (byte x = 0; x < user_input_buffer_characters; x++) {
+//                   callsign.concat(char(user_input_buffer[x]));
+//                 } 
+//                 current_field = FIELD_NR;
+//                 break;
                 
-              case FIELD_NR:
-                nr = "";
-                for (byte x = 0; x < user_input_buffer_characters; x++) {
-                  nr.concat(char(user_input_buffer[x]));
-                }               
-                current_field = FIELD_SECTION;
-                break;
+//               case FIELD_NR:
+//                 nr = "";
+//                 for (byte x = 0; x < user_input_buffer_characters; x++) {
+//                   nr.concat(char(user_input_buffer[x]));
+//                 }               
+//                 current_field = FIELD_SECTION;
+//                 break;
                 
-              case FIELD_SECTION:
-                section = "";
-                for (byte x = 0; x < user_input_buffer_characters; x++) {
-                  section.concat(char(user_input_buffer[x]));
-                }               
-                current_field = FIELD_CALLSIGN;
-                break;
+//               case FIELD_SECTION:
+//                 section = "";
+//                 for (byte x = 0; x < user_input_buffer_characters; x++) {
+//                   section.concat(char(user_input_buffer[x]));
+//                 }               
+//                 current_field = FIELD_CALLSIGN;
+//                 break;
               
-            }
-            term.position(13,0);
-            term.print(callsign);
-            term.position(13,9);
-            term.print(nr);
-            term.position(13,14);
-            term.println(section);
-            term.position(15,0);
-            term.print(F("                     ")); 
-            term.position(15,0);           
+//             }
+//             term.position(13,0);
+//             term.print(callsign);
+//             term.position(13,9);
+//             term.print(nr);
+//             term.position(13,14);
+//             term.println(section);
+//             term.position(15,0);
+//             term.print(F("                     ")); 
+//             term.position(15,0);           
             
-          }
+//           }
 
-        } //(user_input_buffer[0] == '\\')
-      } //(user_input_buffer_characters > 0)
-      process_user_input_buffer = 0; 
-      user_input_buffer_characters = 0;    
-      escape_flag_time = 0;
-    } //((process_user_input_buffer) && ((escape_flag_time == 0) || ((millis() -escape_flag_time) > 100)))
+//         } //(user_input_buffer[0] == '\\')
+//       } //(user_input_buffer_characters > 0)
+//       process_user_input_buffer = 0; 
+//       user_input_buffer_characters = 0;    
+//       escape_flag_time = 0;
+//     } //((process_user_input_buffer) && ((escape_flag_time == 0) || ((millis() -escape_flag_time) > 100)))
   
-    //do autonomous events
-    service_send_buffer(NOPRINT);
+//     //do autonomous events
+//     service_send_buffer(NOPRINT);
     
-    switch(overall_state){
-      case CONTEST_PRACTICE_CQ_SENT:
-        if (send_buffer_bytes == 0){
-          if (!cq_answered){
-            if (((millis() - transition_time) > random(250,1500))){  // add some random delay
-              callsign = generate_callsign();
-              caller_sidetone = random(500,1000);
-              configuration.hz_sidetone = caller_sidetone;
-              caller_wpm_delta = random(-5,5);
-              configuration.wpm = configuration.wpm + caller_wpm_delta;
-              for (byte x = 0; x < (callsign.length()); x++) {
-                add_to_send_buffer(callsign[x]);
-              }
-              cq_answered = 1;
-              transition_time = millis();
-            }
-          } else {  //send it again
-            if ((cq_answered) && ((millis() - transition_time) > random(2000,4000))){
-              configuration.hz_sidetone = caller_sidetone;
-              configuration.wpm = configuration.wpm + caller_wpm_delta;
-              for (byte x = 0; x < (callsign.length()); x++) {
-                add_to_send_buffer(callsign[x]);
-              }            
-              cq_answered++;
-              transition_time = millis();            
-            }
-          }
-        } else {
-          transition_time = millis();
-        } //send_buffer_bytes == 0
-        break;  //CONTEST_PRACTICE_CQ_SENT
+//     switch(overall_state){
+//       case CONTEST_PRACTICE_CQ_SENT:
+//         if (send_buffer_bytes == 0){
+//           if (!cq_answered){
+//             if (((millis() - transition_time) > random(250,1500))){  // add some random delay
+//               callsign = generate_callsign();
+//               caller_sidetone = random(500,1000);
+//               configuration.hz_sidetone = caller_sidetone;
+//               caller_wpm_delta = random(-5,5);
+//               configuration.wpm = configuration.wpm + caller_wpm_delta;
+//               for (byte x = 0; x < (callsign.length()); x++) {
+//                 add_to_send_buffer(callsign[x]);
+//               }
+//               cq_answered = 1;
+//               transition_time = millis();
+//             }
+//           } else {  //send it again
+//             if ((cq_answered) && ((millis() - transition_time) > random(2000,4000))){
+//               configuration.hz_sidetone = caller_sidetone;
+//               configuration.wpm = configuration.wpm + caller_wpm_delta;
+//               for (byte x = 0; x < (callsign.length()); x++) {
+//                 add_to_send_buffer(callsign[x]);
+//               }            
+//               cq_answered++;
+//               transition_time = millis();            
+//             }
+//           }
+//         } else {
+//           transition_time = millis();
+//         } //send_buffer_bytes == 0
+//         break;  //CONTEST_PRACTICE_CQ_SENT
       
       
-    } //switch(overall_state)
+//     } //switch(overall_state)
     
 
-  } //while (loop1)
+//   } //while (loop1)
   
-  configuration.hz_sidetone = previous_sidetone;
-  configuration.wpm = previous_wpm;
-  send_buffer_bytes = 0;
+//   configuration.hz_sidetone = previous_sidetone;
+//   configuration.wpm = previous_wpm;
+//   send_buffer_bytes = 0;
 
-}  
-#endif
+// }  
+// #endif
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+#if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
   
 
   byte menu_loop = 1;
   byte menu_loop2 = 1;
   char incoming_char = ' ';
+
+  check_serial_override = 1;
   
   while(menu_loop){
   
     while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
       port_to_use->read();
     }  
-    
-    port_to_use->println("CW Practice\n");
-    port_to_use->println("1 - US Callsigns");
-    port_to_use->println("2 - PA QSO Party");
-    port_to_use->println("0 - Exit\n"); //Fixed capitalization error in "eXit" (WD9DMP)
+   
+    port_to_use->println(F("\r\n\nCW Training Menu\n"));
+    port_to_use->println(F("U - US Callsigns"));
+    port_to_use->println(F("W - Wordsworth"));
+    //port_to_use->println("2 - PA QSO Party");   // Don't think this is working right / wasn't finished - Goody 2017-05-01
+    port_to_use->println(F("\nX - Exit\n"));
     
     menu_loop2 = 1;
     
@@ -10702,12 +10723,13 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
     }
       
       
-    //port_to_use->println(incoming_char);
+    incoming_char = toUpperCase(incoming_char);
     
     switch(incoming_char){
-      case '0': menu_loop = 0; break;
-      case '1': us_callsign_practice(port_to_use); break;
-      case '2': paqso_practice(port_to_use); break;
+      case 'X': menu_loop = 0; break;
+      case 'U': us_callsign_practice(port_to_use); break;
+      case 'W': serial_wordsworth_menu(port_to_use); break;
+      //case '2': paqso_practice(port_to_use); break;
         
         
     } //switch(incoming_char)
@@ -10716,21 +10738,276 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
     
   } //while(menu_loop)
       
-  port_to_use->println(F("Exiting practice mode..."));
-  
+  port_to_use->println(F("Exiting Training module..."));
+  check_serial_override = 0;
   
 }
 #endif
 
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void serial_enter_wpm_wordspace(PRIMARY_SERIAL_CLS * port_to_use,byte wpm_or_wordspace){
+
+  byte menu_loop = 1;
+  byte menu_loop2 = 1;
+  char incoming_char = ' ';
+  unsigned int temp_value;
+
+  
+  while(menu_loop){
+  
+    while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
+      port_to_use->read();
+    }  
+  
+    if (wpm_or_wordspace){
+      port_to_use->print(F("\r\nEnter Wordspace >"));
+    } else {
+      port_to_use->print(F("\r\nEnter WPM >"));
+    }
+
+    menu_loop2 = 1;
+    temp_value = 0;
+    
+    while (menu_loop2){
+    
+      if (port_to_use->available()){
+        incoming_char = port_to_use->read();
+        if ((incoming_char > 47) && (incoming_char < 58)){
+          port_to_use->print(incoming_char);
+          temp_value = (temp_value * 10) + (incoming_char - 48);
+        }
+        if (incoming_char == 13){  // Enter Key
+          menu_loop2 = 0;
+        }
+      }
+    }
+      
+    // validate value     
+    if (temp_value == 0){
+      menu_loop = 0;        // just blow out if nothing was entered
+    } else {
+      if ((temp_value > 0) && (temp_value < 101) && (wpm_or_wordspace == 0)){
+        configuration.wpm = temp_value;
+        config_dirty = 1;
+        menu_loop = 0;
+      } else {
+        if ((temp_value > 1) && (temp_value < 13) && (wpm_or_wordspace == 1)){
+          configuration.wordsworth_wordspace = temp_value;
+          config_dirty = 1;
+          menu_loop = 0;     
+        } else { 
+          port_to_use->println(F("\r\nOMG that's an invalid value. Try again, OM..."));
+        }
+      }
+    }
+ 
+    
+  } //while(menu_loop)
+      
+ 
+
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
 
 //---------------------------------------------------------------------
 
-#if defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+#if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void serial_wordsworth_menu(PRIMARY_SERIAL_CLS * port_to_use){
+
+  byte menu_loop = 1;
+  byte menu_loop2 = 1;
+  char incoming_char = ' ';
+  byte effective_wpm_factor[] = {100,93,86,81,76,71,68,64,61,58,56,53};
+  
+  while(menu_loop){
+  
+    while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
+      port_to_use->read();
+    }  
+//zzzzzz    
+    port_to_use->println(F("\r\n\nWordsworth Menu\n"));
+    port_to_use->println(F("2 - Two Letter Words"));
+    port_to_use->println(F("3 - Three Letter Words"));
+    port_to_use->println(F("4 - Four Letter Words"));
+    port_to_use->println(F("N - Names"));
+    port_to_use->println(F("Q - QSO Words"));
+    port_to_use->println(F("M - Mixed\n"));
+    port_to_use->println(F("S - Set wordspace"));
+    port_to_use->println(F("W - Set WPM"));
+    port_to_use->println(F("\nX - Exit\n"));
+    port_to_use->print(F("WPM:"));
+    port_to_use->print(configuration.wpm);
+    port_to_use->print(F(" Wordspace:"));
+    port_to_use->print(configuration.wordsworth_wordspace);
+    port_to_use->print(F(" Effective WPM:"));
+    port_to_use->println(configuration.wpm * (effective_wpm_factor[configuration.wordsworth_wordspace-1]/100.0),0);
+
+    menu_loop2 = 1;
+    
+    while (menu_loop2){
+    
+      if (port_to_use->available()){
+        incoming_char = port_to_use->read();
+        menu_loop2 = 0;
+      }
+    }
+
+    incoming_char = toUpperCase(incoming_char);
+
+    switch(incoming_char){
+      case '2': wordsworth_practice(port_to_use,WORDSWORTH_2_CHAR_WORDS); break;
+      case '3': wordsworth_practice(port_to_use,WORDSWORTH_3_CHAR_WORDS); break;
+      case '4': wordsworth_practice(port_to_use,WORDSWORTH_4_CHAR_WORDS); break;
+      case 'N': wordsworth_practice(port_to_use,WORDSWORTH_NAMES); break;
+      case 'M': wordsworth_practice(port_to_use,WORDSWORTH_MIXED); break;
+      case 'Q': wordsworth_practice(port_to_use,WORDSWORTH_QSO_WORDS); break;
+      case 'W': serial_enter_wpm_wordspace(port_to_use,0); break;
+      case 'S': serial_enter_wpm_wordspace(port_to_use,1); break;
+      case 'X': menu_loop = 0; break;
+      //case '1': us_callsign_practice(port_to_use); break;
+      //case '2': serial_wordsworth_menu(port_to_use); break;
+        
+        
+    } //switch(incoming_char)
+    
+ 
+    
+  } //while(menu_loop)
+      
+  port_to_use->println(F("Exiting Wordsworth module..."));
+
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
+
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
+{
+
+  byte loop1 = 1;
+  byte loop2;
+  unsigned int word_index;
+  char word_buffer[10];
+  byte x;
+  byte not_printed;
+  byte practice_type_called = practice_type;
+
+
+  byte previous_key_tx_state = key_tx;
+  key_tx = 0;
+
+  randomSeed(millis());
+
+  // 
+
+  port_to_use->println(F("Wordsworth practice...\n"));
+
+  while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
+    port_to_use->read();
+  }
+
+
+
+  while (loop1){
+
+    if (practice_type_called == WORDSWORTH_MIXED){
+      practice_type = random(WORDSWORTH_2_CHAR_WORDS,WORDSWORTH_QSO_WORDS+1);
+    } else {
+      practice_type = practice_type_called;
+    }
+
+    switch(practice_type){
+      case WORDSWORTH_2_CHAR_WORDS: 
+        word_index = random(0,s2_size);  // min parm is inclusive, max parm is exclusive
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(s2_table[word_index])));
+        break;
+      case WORDSWORTH_3_CHAR_WORDS: 
+        word_index = random(0,s3_size);  // min parm is inclusive, max parm is exclusive
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(s3_table[word_index])));
+        break;
+      case WORDSWORTH_4_CHAR_WORDS: 
+        word_index = random(0,s4_size);  // min parm is inclusive, max parm is exclusive
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(s4_table[word_index])));
+        break;    
+      case WORDSWORTH_NAMES: 
+        word_index = random(0,name_size);  // min parm is inclusive, max parm is exclusive
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(name_table[word_index])));
+        break; 
+      case WORDSWORTH_QSO_WORDS: 
+        word_index = random(0,qso_size);  // min parm is inclusive, max parm is exclusive
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(qso_table[word_index])));
+        break; 
+    }
+
+    // debug_serial_port->print("wordsworth_practice: word_index:");
+    // debug_serial_port->println(word_index);
+
+    
+
+    // debug_serial_port->print("wordsworth_practice: word_buffer:");
+    // debug_serial_port->println(word_buffer);
+
+    x = 0;
+    loop2 = 1;
+
+    while (loop2){
+//zzzzz
+
+      // debug_serial_port->print("wordsworth_practice: send_char:");
+      // debug_serial_port->println(word_buffer[x]);
+
+      word_buffer[x] = toUpperCase(word_buffer[x]);
+      send_char(word_buffer[x],KEYER_NORMAL);
+      x++;
+      not_printed = 1;
+
+      if ((word_buffer[x] == 0) || (x > 9)){ // are we at the end of the word?
+        loop2 = 0;
+        for (int y = 0;y < (configuration.wordsworth_wordspace-1);y++){  // send extra word spaces
+          send_char(' ',KEYER_NORMAL);
+          if (((y > ((configuration.wordsworth_wordspace-1)/2)) || (configuration.wordsworth_wordspace < 4)) && (not_printed)){
+            port_to_use->println(word_buffer);
+            not_printed = 0;
+          }
+          if (port_to_use->available()){
+            port_to_use->read();
+            y = 99;
+            loop1 = 0;
+            loop2 = 0;
+          }
+        }
+      }
+
+      if (port_to_use->available()){
+        port_to_use->read();
+        loop1 = 0;
+        loop2 = 0;
+      }
+    }
+
+  } //loop1
+  
+  key_tx = previous_key_tx_state;
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
 {
 
   byte loop1 = 1;
   byte loop2 = 0;
+  byte x = 0;
   byte serialwaitloop = 0;
   String callsign(10);
   char incoming_char = ' ';
@@ -10760,17 +11037,26 @@ void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
     
     while (loop2){
 
-      for (byte x = 0; x < (callsign.length()); x++) {
-        send_char(callsign[x],KEYER_NORMAL);
-      }
+      // for (byte x = 0; x < (callsign.length()); x++) {
+      //   send_char(callsign[x],KEYER_NORMAL);
+      // }
   
   
       //port_to_use->println(callsign);
   
       serialwaitloop = 1;
       user_entered_callsign = "";
+      x = 0;
       while (serialwaitloop) {
-        if (port_to_use->available() > 0) {
+
+        if(x < (callsign.length())){
+          send_char(callsign[x],KEYER_NORMAL);
+          x++;
+        }
+//zzzzzz
+        while(port_to_use->available() > 0) {
+
+        //if (port_to_use->available() > 0) {
           incoming_char = port_to_use->read();
           port_to_use->print(incoming_char);
           if (incoming_char == 13) {
@@ -10794,7 +11080,7 @@ void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
             port_to_use->println(F("\nCorrect!"));
             loop2 = 0;
           } else {
-            port_to_use->print(F("\nWrong!"));
+            port_to_use->println(F("\nWrong!"));
             //port_to_use->println(callsign);
             //loop2 = 0;
           }
@@ -10818,8 +11104,9 @@ void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
   } //loop1
   
   key_tx = previous_key_tx_state;
+
 }
-#endif //defined(FEATURE_SERIAL) && defined(FEATURE_CALLSIGN_RECEIVE_PRACTICE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 
 //---------------------------------------------------------------------
 
@@ -12553,8 +12840,8 @@ void initialize_debug_startup(){
   #ifdef FEATURE_BEACON
   debug_serial_port->println(F("FEATURE_BEACON"));
   #endif
-  #ifdef FEATURE_CALLSIGN_RECEIVE_PRACTICE
-  debug_serial_port->println(F("FEATURE_CALLSIGN_RECEIVE_PRACTICE"));
+  #ifdef FEATURE_TRAINING_COMMAND_LINE_INTERFACE
+  debug_serial_port->println(F("FEATURE_TRAINING_COMMAND_LINE_INTERFACE"));
   #endif
   #ifdef FEATURE_POTENTIOMETER
   debug_serial_port->println(F("FEATURE_POTENTIOMETER"));
@@ -12843,23 +13130,18 @@ void initialize_keyer_state(){
   
   key_state = 0;
   key_tx = 1;
+
   configuration.wpm = initial_speed_wpm;
-
   pot_wpm_low_value = initial_pot_wpm_low_value;
-
   configuration.paddle_interruption_quiet_time_element_lengths = default_paddle_interruption_quiet_time_element_lengths;
-  
   configuration.hz_sidetone = initial_sidetone_freq;
   configuration.memory_repeat_time = default_memory_repeat_time;
   configuration.cmos_super_keyer_iambic_b_timing_percent = default_cmos_super_keyer_iambic_b_timing_percent;
-  
   configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
   configuration.length_wordspace = default_length_wordspace;
   configuration.weighting = default_weighting;
-  
-  #ifdef FEATURE_FARNSWORTH
-    configuration.wpm_farnsworth = initial_speed_wpm;
-  #endif //FEATURE_FARNSWORTH
+  configuration.wordsworth_wordspace = default_wordsworth_wordspace;
+  configuration.wpm_farnsworth = initial_speed_wpm;
   
   switch_to_tx_silent(1);
 
@@ -13885,6 +14167,8 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
   
 }
 #endif //FEATURE_USB_KEYBOARD
+
+// few things worse than a cheating spouse
 
 //--------------------------------------------------------------------- 
 #ifdef FEATURE_USB_KEYBOARD

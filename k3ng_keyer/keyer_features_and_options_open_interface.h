@@ -9,7 +9,7 @@
 #define FEATURE_MEMORY_MACROS
 #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
 //#define FEATURE_BEACON
-#define FEATURE_CALLSIGN_RECEIVE_PRACTICE
+#define FEATURE_TRAINING_COMMAND_LINE_INTERFACE
 #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 // #define FEATURE_SIDETONE_SWITCH   // adds switch control for the sidetone output. requires an external toggle switch (assigned to an arduino pin - see keyer_pin_settings.h). 
 #define FEATURE_SERIAL_HELP
