@@ -104,6 +104,9 @@
 // #define OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN
 // #define OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT
 
+// #define OPTION_WORDSWORTH_CZECH
+// #define OPTION_WORDSWORTH_DEUTSCH
+
 // #define FEATURE_COMPETITION_COMPRESSION_DETECTION //(Experimental)
 
 // #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA  // only works with Mega and pins 2 and 5 - minor performance increase... maybe?

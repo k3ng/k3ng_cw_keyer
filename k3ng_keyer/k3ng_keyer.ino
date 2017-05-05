@@ -691,7 +691,11 @@ Recent Update History
 
     2017.05.03.01
       FEATURE_TRAINING_COMMAND_LINE_INTERFACE
-      First releaseof Wordsworth training functionality
+      First release of Wordsworth training functionality
+
+    2017.05.05.01
+      keyer_training_text_czech.h contributed by Martin, OK1RR
+      Czech language support for Wordsworth training: OPTION_WORDSWORTH_CZECH
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -708,7 +712,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.05.03.01"
+#define CODE_VERSION "2017.05.05.01"
 #define eeprom_magic_number 25
 
 #include <stdio.h>
@@ -1320,7 +1324,13 @@ unsigned long millis_rollover = 0;
 
 #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
   byte check_serial_override = 0;
-  #include "keyer_training_text_english.h"
+  #if defined(OPTION_WORDSWORTH_CZECH)
+    #include "keyer_training_text_czech.h"
+  #elif defined(OPTION_WORDSWORTH_DEUTCSH)
+    #include "keyer_training_text_deutsch.h"
+  #else
+    #include "keyer_training_text_english.h"
+  #endif
 #endif
 
 
@@ -14167,8 +14177,6 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
   
 }
 #endif //FEATURE_USB_KEYBOARD
-
-// few things worse than a cheating spouse
 
 //--------------------------------------------------------------------- 
 #ifdef FEATURE_USB_KEYBOARD
