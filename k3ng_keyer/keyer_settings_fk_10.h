@@ -80,6 +80,7 @@
 #define default_paddle_interruption_quiet_time_element_lengths 0
 #define default_wordsworth_wordspace 6
 
+
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_number_of_buttons 4
   #define analog_buttons_r1 10

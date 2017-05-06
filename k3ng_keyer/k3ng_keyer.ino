@@ -697,6 +697,11 @@ Recent Update History
       keyer_training_text_czech.h contributed by Martin, OK1RR
       Czech language support for Wordsworth training: OPTION_WORDSWORTH_CZECH
 
+    2017.05.06.01
+      Lots of new functionality in FEATURE_TRAINING_COMMAND_LINE_INTERFACE
+      keyer_training_text_norsk.h content contributed by Martin, OK1RR
+      Norwegian language support for Wordsworth training: OPTION_WORDSWORTH_NORSK
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -704,7 +709,7 @@ Recent Update History
   FOR EXAMPLE:
 
     K3NG_PS2Keyboard.h, K3NG_PS2Keyboard.cpp ----->  \Arduino\Sketchbook\libraries\K3NG_PS2Keyboard\
-    Goertz.h, Gooertz.cpp ------------------------>  \Arduino\Sketchbook\libraries\Goertz\
+    Goertz.h, Goertz.cpp ------------------------>  \Arduino\Sketchbook\libraries\Goertz\
     BasicTerm.h, BasicTerm.cpp ------------------->  \Arduino\Sketchbook\libraries\BasicTerm\
 
   
@@ -712,8 +717,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.05.05.01"
-#define eeprom_magic_number 25
+#define CODE_VERSION "2017.05.06.01"
+#define eeprom_magic_number 26
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -880,6 +885,7 @@ struct config_t {  //48 bytes
   uint8_t link_receive_enabled;
   uint8_t paddle_interruption_quiet_time_element_lengths;
   uint8_t wordsworth_wordspace;
+  uint8_t wordsworth_repetition;
 } configuration;
 
 byte sending_mode = UNDEFINED_SENDING;
@@ -1328,9 +1334,13 @@ unsigned long millis_rollover = 0;
     #include "keyer_training_text_czech.h"
   #elif defined(OPTION_WORDSWORTH_DEUTCSH)
     #include "keyer_training_text_deutsch.h"
+  #elif defined(OPTION_WORDSWORTH_NORSK)
+    #include "keyer_training_text_norsk.h"  
   #else
     #include "keyer_training_text_english.h"
   #endif
+
+  #include "keyer_callsign_prefixes.h"
 #endif
 
 
@@ -10410,42 +10420,81 @@ void serial_tune_command (PRIMARY_SERIAL_CLS * port_to_use)
 //---------------------------------------------------------------------
 #ifdef FEATURE_TRAINING_COMMAND_LINE_INTERFACE
 
-String generate_callsign() {
+String generate_callsign(byte callsign_mode) {
 
-  String callsign(10);
+  static String callsign(10);
   char nextchar;
-  long random_number = 0;
+  char word_buffer[10];
 
-  switch (random(1,5)) {
-    case 1: callsign = "K"; break;
-    case 2: callsign = "W"; break;
-    case 3: callsign = "N"; break;
-    case 4: callsign = "A"; break;
-  }
-  if (callsign == "A") {                   // if the first letter is A, we definitely need a second letter before the number
-    nextchar = random(65,91);
-    callsign = callsign + nextchar;
-  } else {
-    random_number = random(0,1);           // randomly add a second letter for K, W, N prefixes
-    if (random_number) {
+  callsign = "";
+
+  if (callsign_mode == CALLSIGN_INTERNATIONAL){
+    if (random(1,101) < 96) {
+      // start with a letter 96% of the time
       nextchar = random(65,91);
       callsign = callsign + nextchar;
+      if (random(1,101) < 20) {   // randomly add second prefix letter 20% of the time
+        nextchar = random(65,91);
+        callsign = callsign + nextchar;
+      }
+    } else {
+      // start with a number
+      nextchar = random(49,58);    // generate the number
+      callsign = callsign + nextchar;
+      nextchar = random(65,91);   // must add a letter next
+      callsign = callsign + nextchar;
     }
+  } //CALLSIGN_INTERNATIONAL
+
+  if (callsign_mode == CALLSIGN_US){
+    switch (random(1,5)) {
+      case 1: callsign = "K"; break;
+      case 2: callsign = "W"; break;
+      case 3: callsign = "N"; break;
+      case 4: callsign = "A"; break;
+    }
+    if (callsign == "A") {                   // if the first letter is A, we definitely need a second letter before the number
+      nextchar = random(65,91);
+      callsign = callsign + nextchar;
+    } else {
+      // randomly add a second letter for K, W, N prefixes
+      if (random(1,101) < 51) {
+        nextchar = random(65,91);
+        callsign = callsign + nextchar;
+      }
+    }
+  } //CALLSIGN_US
+
+  if (callsign_mode == CALLSIGN_CANADA){
+    strcpy_P(word_buffer, (char*)pgm_read_word(&(canadian_prefix_table[random(0,canadian_prefix_size)])));
+    callsign = word_buffer;
   }
-  nextchar = random(48,58);               // generate the number
-  callsign = callsign + nextchar;
+
+  if (callsign_mode == CALLSIGN_EUROPEAN){
+
+    strcpy_P(word_buffer, (char*)pgm_read_word(&(eu_prefix_table[random(0,eu_prefix_size)])));
+    callsign = word_buffer;
+  }
+
+  if (callsign_mode != CALLSIGN_CANADA){
+    nextchar = random(48,58);               // generate the number
+    callsign = callsign + nextchar;
+  }
+
+
   nextchar = random(65,91);               // generate first letter after number
   callsign = callsign + nextchar;
-  if (random(1,5) < 4) {                  // randomly put a second character after the number
+  if ((random(1,101) < 40) || (callsign_mode == CALLSIGN_CANADA)) {                  // randomly put a second character after the number
     nextchar = random(65,91);
     callsign = callsign + nextchar;
-    if (random_number < 3) {              // randomly put a third character after the number
+    if ((random(1,101) < 96) || (callsign_mode == CALLSIGN_CANADA)) {              // randomly put a third character after the number
       nextchar = random(65,91);
       callsign = callsign + nextchar;
     }
   }
-  if (random(1,16) == 1) {                // randomly put a slash something on the end like /QRP or /#
-    if (random(1,4) == 1) {
+
+  if (random(1,101) < 10) {                // randomly put a slash something on the end like /QRP or /#
+    if (random(1,101) < 25) {
       callsign = callsign + "/QRP";
     } else {
        nextchar = random(48,58);
@@ -10709,6 +10758,9 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
   char incoming_char = ' ';
 
   check_serial_override = 1;
+
+  byte previous_key_tx_state = key_tx;
+  key_tx = 0;
   
   while(menu_loop){
   
@@ -10717,7 +10769,8 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
     }  
    
     port_to_use->println(F("\r\n\nCW Training Menu\n"));
-    port_to_use->println(F("U - US Callsigns"));
+    port_to_use->println(F("C - Callsigns"));
+    port_to_use->println(F("I - Callsigns - Interactive Practice"));
     port_to_use->println(F("W - Wordsworth"));
     //port_to_use->println("2 - PA QSO Party");   // Don't think this is working right / wasn't finished - Goody 2017-05-01
     port_to_use->println(F("\nX - Exit\n"));
@@ -10737,19 +10790,75 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
     
     switch(incoming_char){
       case 'X': menu_loop = 0; break;
-      case 'U': us_callsign_practice(port_to_use); break;
+      case 'C': serial_callsign_practice_menu(port_to_use,PRACTICE_NON_INTERACTIVE); break;
+      case 'I': serial_callsign_practice_menu(port_to_use,PRACTICE_INTERACTIVE); break;
       case 'W': serial_wordsworth_menu(port_to_use); break;
       //case '2': paqso_practice(port_to_use); break;
-        
-        
     } //switch(incoming_char)
-    
- 
     
   } //while(menu_loop)
       
   port_to_use->println(F("Exiting Training module..."));
   check_serial_override = 0;
+  key_tx = previous_key_tx_state;
+  
+}
+#endif
+
+//---------------------------------------------------------------------
+#if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void serial_callsign_practice_menu(PRIMARY_SERIAL_CLS * port_to_use,byte practice_mode){
+  
+
+  byte menu_loop = 1;
+  byte menu_loop2 = 1;
+  char incoming_char = ' ';
+  
+  while(menu_loop){
+  
+    while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
+      port_to_use->read();
+    }  
+   
+    port_to_use->println(F("\r\n\nCallsign Practice Menu\n"));
+    port_to_use->println(F("I - International Callsigns"));
+    port_to_use->println(F("U - US Callsigns"));
+    port_to_use->println(F("E - European Callsigns"));
+    port_to_use->println(F("C - Canadian Callsigns"));
+    port_to_use->println(F("\nX - Exit\n"));
+    
+    menu_loop2 = 1;
+    
+    while (menu_loop2){
+    
+      if (port_to_use->available()){
+        incoming_char = port_to_use->read();
+        menu_loop2 = 0;
+      }
+    }
+      
+    incoming_char = toUpperCase(incoming_char);
+    
+    if (practice_mode == PRACTICE_INTERACTIVE){
+      switch(incoming_char){
+        case 'X': menu_loop = 0; break;
+        case 'I': callsign_practice_interactive(port_to_use,CALLSIGN_INTERNATIONAL); break;
+        case 'U': callsign_practice_interactive(port_to_use,CALLSIGN_US); break;
+        case 'E': callsign_practice_interactive(port_to_use,CALLSIGN_EUROPEAN); break;
+        case 'C': callsign_practice_interactive(port_to_use,CALLSIGN_CANADA); break;        
+      } //switch(incoming_char)
+    } else {
+      switch(incoming_char){
+        case 'X': menu_loop = 0; break;
+        case 'I': callsign_practice_non_interactive(port_to_use,CALLSIGN_INTERNATIONAL); break;
+        case 'U': callsign_practice_non_interactive(port_to_use,CALLSIGN_US); break;
+        case 'E': callsign_practice_non_interactive(port_to_use,CALLSIGN_EUROPEAN); break;
+        case 'C': callsign_practice_non_interactive(port_to_use,CALLSIGN_CANADA); break;        
+      } //switch(incoming_char)
+    }
+  } //while(menu_loop)
+      
+  port_to_use->println(F("Exiting callsign training..."));
   
 }
 #endif
@@ -10757,7 +10866,7 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_enter_wpm_wordspace(PRIMARY_SERIAL_CLS * port_to_use,byte wpm_or_wordspace){
+void serial_set_wordspace_parameters(PRIMARY_SERIAL_CLS * port_to_use,byte mode_select){
 
   byte menu_loop = 1;
   byte menu_loop2 = 1;
@@ -10771,11 +10880,12 @@ void serial_enter_wpm_wordspace(PRIMARY_SERIAL_CLS * port_to_use,byte wpm_or_wor
       port_to_use->read();
     }  
   
-    if (wpm_or_wordspace){
-      port_to_use->print(F("\r\nEnter Wordspace >"));
-    } else {
-      port_to_use->print(F("\r\nEnter WPM >"));
+    switch(mode_select){
+      case WORDSWORTH_WORDSPACE: port_to_use->print(F("\r\nEnter Wordspace >")); break;
+      case WORDSWORTH_WPM: port_to_use->print(F("\r\nEnter WPM >")); break;
+      case WORDSWORTH_REPETITION: port_to_use->print(F("\r\nEnter Repetition >")); break;
     }
+
 
     menu_loop2 = 1;
     temp_value = 0;
@@ -10798,31 +10908,31 @@ void serial_enter_wpm_wordspace(PRIMARY_SERIAL_CLS * port_to_use,byte wpm_or_wor
     if (temp_value == 0){
       menu_loop = 0;        // just blow out if nothing was entered
     } else {
-      if ((temp_value > 0) && (temp_value < 101) && (wpm_or_wordspace == 0)){
+      if ((temp_value > 0) && (temp_value < 101) && (mode_select == WORDSWORTH_WPM)){
         configuration.wpm = temp_value;
         config_dirty = 1;
         menu_loop = 0;
       } else {
-        if ((temp_value > 1) && (temp_value < 13) && (wpm_or_wordspace == 1)){
+        if ((temp_value > 1) && (temp_value < 13) && (mode_select == WORDSWORTH_WORDSPACE)){
           configuration.wordsworth_wordspace = temp_value;
           config_dirty = 1;
           menu_loop = 0;     
         } else { 
-          port_to_use->println(F("\r\nOMG that's an invalid value. Try again, OM..."));
+          if ((temp_value > 0) && (temp_value < 11) && (mode_select == WORDSWORTH_REPETITION)){
+            configuration.wordsworth_repetition = temp_value;
+            config_dirty = 1;
+            menu_loop = 0;     
+          } else {           
+            port_to_use->println(F("\r\nOMG that's an invalid value. Try again, OM..."));
+          }
         }
       }
     }
- 
     
   } //while(menu_loop)
       
- 
-
-
 }
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-
-
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
@@ -10846,15 +10956,18 @@ void serial_wordsworth_menu(PRIMARY_SERIAL_CLS * port_to_use){
     port_to_use->println(F("N - Names"));
     port_to_use->println(F("Q - QSO Words"));
     port_to_use->println(F("M - Mixed\n"));
-    port_to_use->println(F("S - Set wordspace"));
+    port_to_use->println(F("O - Set Wordspace"));
     port_to_use->println(F("W - Set WPM"));
+    port_to_use->println(F("R - Set Repetition"));
     port_to_use->println(F("\nX - Exit\n"));
     port_to_use->print(F("WPM:"));
     port_to_use->print(configuration.wpm);
     port_to_use->print(F(" Wordspace:"));
     port_to_use->print(configuration.wordsworth_wordspace);
     port_to_use->print(F(" Effective WPM:"));
-    port_to_use->println(configuration.wpm * (effective_wpm_factor[configuration.wordsworth_wordspace-1]/100.0),0);
+    port_to_use->print(configuration.wpm * (effective_wpm_factor[configuration.wordsworth_wordspace-1]/100.0),0);
+    port_to_use->print(F(" Repetition:"));
+    port_to_use->println(configuration.wordsworth_repetition);
 
     menu_loop2 = 1;
     
@@ -10875,13 +10988,10 @@ void serial_wordsworth_menu(PRIMARY_SERIAL_CLS * port_to_use){
       case 'N': wordsworth_practice(port_to_use,WORDSWORTH_NAMES); break;
       case 'M': wordsworth_practice(port_to_use,WORDSWORTH_MIXED); break;
       case 'Q': wordsworth_practice(port_to_use,WORDSWORTH_QSO_WORDS); break;
-      case 'W': serial_enter_wpm_wordspace(port_to_use,0); break;
-      case 'S': serial_enter_wpm_wordspace(port_to_use,1); break;
-      case 'X': menu_loop = 0; break;
-      //case '1': us_callsign_practice(port_to_use); break;
-      //case '2': serial_wordsworth_menu(port_to_use); break;
-        
-        
+      case 'W': serial_set_wordspace_parameters(port_to_use,WORDSWORTH_WPM); break;
+      case 'O': serial_set_wordspace_parameters(port_to_use,WORDSWORTH_WORDSPACE); break;
+      case 'R': serial_set_wordspace_parameters(port_to_use,WORDSWORTH_REPETITION); break;
+      case 'X': menu_loop = 0; break;        
     } //switch(incoming_char)
     
  
@@ -10903,19 +11013,18 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
 
   byte loop1 = 1;
   byte loop2;
+  byte loop3;
   unsigned int word_index;
   char word_buffer[10];
   byte x;
   byte not_printed;
   byte practice_type_called = practice_type;
+  byte repetitions;
 
 
-  byte previous_key_tx_state = key_tx;
-  key_tx = 0;
+
 
   randomSeed(millis());
-
-  // 
 
   port_to_use->println(F("Wordsworth practice...\n"));
 
@@ -10956,55 +11065,66 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
         break; 
     }
 
-    // debug_serial_port->print("wordsworth_practice: word_index:");
-    // debug_serial_port->println(word_index);
-
+    #if defined(DEBUG_WORDSWORTH)
+      debug_serial_port->print("wordsworth_practice: word_index:");
+      debug_serial_port->println(word_index);
+      debug_serial_port->print("wordsworth_practice: word_buffer:");
+      debug_serial_port->println(word_buffer);
+    #endif
     
+    loop3 = 1;
+    repetitions = 0;
 
-    // debug_serial_port->print("wordsworth_practice: word_buffer:");
-    // debug_serial_port->println(word_buffer);
+    while ((loop3) && (repetitions < configuration.wordsworth_repetition)){ // word sending loop
 
-    x = 0;
-    loop2 = 1;
+      loop2 = 1;
+      x = 0;
 
-    while (loop2){
-//zzzzz
+      while (loop2){ //character sending loop
 
-      // debug_serial_port->print("wordsworth_practice: send_char:");
-      // debug_serial_port->println(word_buffer[x]);
+        #if defined(DEBUG_WORDSWORTH)
+          debug_serial_port->print("wordsworth_practice: send_char:");
+          debug_serial_port->println(word_buffer[x]);
+        #endif
 
-      word_buffer[x] = toUpperCase(word_buffer[x]);
-      send_char(word_buffer[x],KEYER_NORMAL);
-      x++;
-      not_printed = 1;
+        word_buffer[x] = toUpperCase(word_buffer[x]);
+        send_char(word_buffer[x],KEYER_NORMAL);
+        x++;
+        not_printed = 1;
 
-      if ((word_buffer[x] == 0) || (x > 9)){ // are we at the end of the word?
-        loop2 = 0;
-        for (int y = 0;y < (configuration.wordsworth_wordspace-1);y++){  // send extra word spaces
-          send_char(' ',KEYER_NORMAL);
-          if (((y > ((configuration.wordsworth_wordspace-1)/2)) || (configuration.wordsworth_wordspace < 4)) && (not_printed)){
-            port_to_use->println(word_buffer);
-            not_printed = 0;
-          }
-          if (port_to_use->available()){
-            port_to_use->read();
-            y = 99;
-            loop1 = 0;
-            loop2 = 0;
+        if ((word_buffer[x] == 0) || (x > 9)){ // are we at the end of the word?
+          loop2 = 0;
+          for (int y = 0;y < (configuration.wordsworth_wordspace-1);y++){  // send extra word spaces
+            send_char(' ',KEYER_NORMAL);
+            if (((y > ((configuration.wordsworth_wordspace-1)/2)) || (configuration.wordsworth_wordspace < 4)) && (not_printed)){
+              port_to_use->println(word_buffer);
+              not_printed = 0;
+            }
+            if (port_to_use->available()){
+              port_to_use->read();
+              y = 99;
+              loop1 = 0;
+              loop2 = 0;
+              loop3 = 0;
+            }
           }
         }
-      }
 
-      if (port_to_use->available()){
-        port_to_use->read();
-        loop1 = 0;
-        loop2 = 0;
-      }
-    }
+        if (port_to_use->available()){
+          port_to_use->read();
+          loop1 = 0;
+          loop2 = 0;
+          loop3 = 0;
+        }
+      }  //loop2
+
+      repetitions++;
+
+    } //loop3
 
   } //loop1
   
-  key_tx = previous_key_tx_state;
+ 
 
 }
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
@@ -11012,7 +11132,7 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
+void callsign_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte callsign_mode)
 {
 
   byte loop1 = 1;
@@ -11023,17 +11143,14 @@ void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
   char incoming_char = ' ';
   String user_entered_callsign = "";
 
-  byte previous_key_tx_state = key_tx;
-  key_tx = 0;
-  //randomSeed(analogRead(0));
   randomSeed(millis());
-  port_to_use->println(F("Callsign receive practice; type in callsign and hit ENTER."));
+  port_to_use->println(F("Interactive callsign receive practice\r\n\r\nCopy callsign, type it in, and hit ENTER."));
   port_to_use->println(F("If you are using the Arduino serial monitor, select \"Carriage Return\" line ending."));
-  port_to_use->println(F("Enter a blackslash \\ to exit."));
+  port_to_use->println(F("Enter a blackslash \\ to exit.\r\n"));
   while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
     incoming_char = port_to_use->read();
   }
-  port_to_use->print(F("Press enter to start..."));
+  port_to_use->print(F("Press enter to start...\r\n"));
   while (port_to_use->available() == 0) {
   }
   while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
@@ -11042,17 +11159,14 @@ void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
 
   while (loop1){
 
-    callsign = generate_callsign();
+    callsign = generate_callsign(callsign_mode);
     loop2 = 1;
     
     while (loop2){
-
-      // for (byte x = 0; x < (callsign.length()); x++) {
-      //   send_char(callsign[x],KEYER_NORMAL);
-      // }
   
-  
-      //port_to_use->println(callsign);
+      #if defined(DEBUG_CALLSIGN_PRACTICE_SHOW_CALLSIGN)
+        port_to_use->println(callsign);
+      #endif
   
       serialwaitloop = 1;
       user_entered_callsign = "";
@@ -11063,11 +11177,10 @@ void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
           send_char(callsign[x],KEYER_NORMAL);
           x++;
         }
-//zzzzzz
-        while(port_to_use->available() > 0) {
 
-        //if (port_to_use->available() > 0) {
+        while(port_to_use->available() > 0) {
           incoming_char = port_to_use->read();
+          incoming_char = toUpperCase(incoming_char);
           port_to_use->print(incoming_char);
           if (incoming_char == 13) {
             serialwaitloop = 0;
@@ -11111,6 +11224,71 @@ void us_callsign_practice(PRIMARY_SERIAL_CLS * port_to_use)
       #endif //FEATURE_COMMAND_BUTTONS
       delay(10);
     } //loop2
+  } //loop1
+  
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void callsign_practice_non_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte callsign_mode)
+{
+
+  byte loop1 = 1;
+  byte loop2;
+  byte x;
+  String callsign(10);
+  char incoming_char = ' ';
+
+  byte previous_key_tx_state = key_tx;
+  key_tx = 0;
+  randomSeed(millis());
+  port_to_use->println(F("Callsign receive practice\r\n"));
+
+  while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
+    incoming_char = port_to_use->read();
+  }
+
+//zzzzzz
+
+  while (loop1){
+
+    callsign = generate_callsign(callsign_mode) + "    ";
+    loop2 = 1;
+    x = 0;
+
+    while ((loop2) && (x < (callsign.length()))) {
+
+      send_char(callsign[x],KEYER_NORMAL);
+      x++;
+    
+      if (port_to_use->available()){
+        port_to_use->read();
+        loop1 = 0;
+        loop2 = 0;
+        x = 99;
+      }
+
+      #ifdef FEATURE_COMMAND_BUTTONS
+        while ((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) {
+          loop1 = 0;
+          loop2 = 0;
+          x = 99;
+        }
+      #else 
+        while ((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW)) {
+          loop1 = 0;
+          loop2 = 0;
+          x = 99;
+        }    
+      #endif //FEATURE_COMMAND_BUTTONS
+
+    } //loop2
+
+    port_to_use->println(callsign);
+
   } //loop1
   
   key_tx = previous_key_tx_state;
@@ -13151,6 +13329,7 @@ void initialize_keyer_state(){
   configuration.length_wordspace = default_length_wordspace;
   configuration.weighting = default_weighting;
   configuration.wordsworth_wordspace = default_wordsworth_wordspace;
+  configuration.wordsworth_repetition = default_wordsworth_repetition;
   configuration.wpm_farnsworth = initial_speed_wpm;
   
   switch_to_tx_silent(1);

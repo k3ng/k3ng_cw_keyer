@@ -59,6 +59,7 @@
 #define potentiometer_check_interval_ms 150
 #define default_paddle_interruption_quiet_time_element_lengths 7
 #define default_wordsworth_wordspace 6
+#define default_wordsworth_repetition 1
 
 #ifdef FEATURE_COMMAND_BUTTONS
 #define analog_buttons_number_of_buttons 1
