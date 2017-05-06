@@ -699,7 +699,7 @@ Recent Update History
 
     2017.05.06.01
       Lots of new functionality in FEATURE_TRAINING_COMMAND_LINE_INTERFACE
-      keyer_training_text_norsk.h content contributed by Martin, OK1RR
+      keyer_training_text_norsk.h content contributed by Karl, LA3FY
       Norwegian language support for Wordsworth training: OPTION_WORDSWORTH_NORSK
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
