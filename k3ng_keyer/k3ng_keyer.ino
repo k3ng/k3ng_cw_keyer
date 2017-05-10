@@ -705,6 +705,9 @@ Recent Update History
     2017.05.09.01
       FEATURE_TRAINING_COMMAND_LINE_INTERFACE - fixed issue with carriage returns and line feeds causing menus to reprint
 
+    2017.05.09.02
+      Updated FEATURE_4x4_KEYPAD and FEATURE_3x4_KEYPAD to allow memory stacking
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -720,7 +723,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.05.09.01"
+#define CODE_VERSION "2017.05.09.02"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -1596,34 +1599,54 @@ void service_keypad(){
 
     switch(key){
       case '1':
-        play_memory(mem1); //MEMORY 1
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(mem1);
+        //play_memory(mem1); //MEMORY 1
         break;
       case '2':
-        play_memory(mem2); //MEMORY 2
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(mem2);      
+        //play_memory(mem2); //MEMORY 2
         break;
       case '3':
-        play_memory(mem3); //MEMORY 3
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(mem3);      
+        //play_memory(mem3); //MEMORY 3
         break;
       case '4':
-        play_memory(mem4); //MEMORY 4
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(mem4);      
+        //play_memory(mem4); //MEMORY 4
         break;
       case '5':
-        play_memory(mem5); //MEMORY 5
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(mem5);      
+        //play_memory(mem5); //MEMORY 5
         break;
       case '6':
-        play_memory(mem6); //MEMORY 6
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(mem6);      
+        //play_memory(mem6); //MEMORY 6
         break;
       case '7':
-        play_memory(mem7); //MEMORY 7
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(mem7);      
+        //play_memory(mem7); //MEMORY 7
         break;
       case '8':
-        play_memory(mem8); //MEMORY 8
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(mem8);      
+        //play_memory(mem8); //MEMORY 8
         break;
       case '9':
-        play_memory(mem9); //MEMORY 9
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(mem9);      
+        //play_memory(mem9); //MEMORY 9
         break;
       case '0':
-        play_memory(mem10); //MEMORY 10
+        add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+        add_to_send_buffer(mem10);      
+        //play_memory(mem10); //MEMORY 10
         break;
       case '#':
         beep_boop();
@@ -5111,11 +5134,11 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
          }
        #endif //FEATURE_INTERNET_LINK
 
-       #ifdef OPTION_WATCHDOG_TIMER
+       #if defined(OPTION_WATCHDOG_TIMER)
          wdt_reset();
        #endif  //OPTION_WATCHDOG_TIMER
       
-       #ifdef FEATURE_ROTARY_ENCODER
+       #if defined(FEATURE_ROTARY_ENCODER)
          check_rotary_encoder();
        #endif //FEATURE_ROTARY_ENCODER    
       
@@ -5123,9 +5146,13 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
          service_usb();
        #endif //FEATURE_USB_KEYBOARD || FEATURE_USB_MOUSE
 
-       #ifdef FEATURE_PTT_INTERLOCK
+       #if defined(FEATURE_PTT_INTERLOCK)
          service_ptt_interlock();
        #endif //FEATURE_PTT_INTERLOCK
+
+       #if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
+         service_keypad();
+       #endif
       
        if ((configuration.keyer_mode != ULTIMATIC) && (configuration.keyer_mode != SINGLE_PADDLE)) {
          if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
