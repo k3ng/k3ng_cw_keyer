@@ -702,6 +702,9 @@ Recent Update History
       keyer_training_text_norsk.h content contributed by Karl, LA3FY
       Norwegian language support for Wordsworth training: OPTION_WORDSWORTH_NORSK
 
+    2017.05.09.01
+      FEATURE_TRAINING_COMMAND_LINE_INTERFACE - fixed issue with carriage returns and line feeds causing menus to reprint
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -717,7 +720,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.05.06.01"
+#define CODE_VERSION "2017.05.09.01"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -10781,7 +10784,9 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
     
       if (port_to_use->available()){
         incoming_char = port_to_use->read();
-        menu_loop2 = 0;
+        if ((incoming_char != 10) && (incoming_char != 13)){
+          menu_loop2 = 0;
+        }
       }
     }
       
@@ -10833,7 +10838,9 @@ void serial_callsign_practice_menu(PRIMARY_SERIAL_CLS * port_to_use,byte practic
     
       if (port_to_use->available()){
         incoming_char = port_to_use->read();
-        menu_loop2 = 0;
+        if ((incoming_char != 10) && (incoming_char != 13)){
+          menu_loop2 = 0;
+        }
       }
     }
       
@@ -10975,7 +10982,9 @@ void serial_wordsworth_menu(PRIMARY_SERIAL_CLS * port_to_use){
     
       if (port_to_use->available()){
         incoming_char = port_to_use->read();
-        menu_loop2 = 0;
+        if ((incoming_char != 10) && (incoming_char != 13)){
+          menu_loop2 = 0;
+        }
       }
     }
 
