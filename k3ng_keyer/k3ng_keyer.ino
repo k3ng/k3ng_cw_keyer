@@ -718,6 +718,9 @@ Recent Update History
     2017.05.13.01
       Improved reading of serial receive buffer in serial_program_memory to facilitate programming of large memories.  Related parameter: serial_program_memory_buffer_size
 
+    2017.05.13.02
+      Added random code group practice
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -733,7 +736,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.05.13.01"
+#define CODE_VERSION "2017.05.13.02"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -10811,6 +10814,7 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
     port_to_use->println(F("\r\n\nCW Training Menu\n"));
     port_to_use->println(F("C - Callsigns"));
     port_to_use->println(F("I - Callsigns - Interactive Practice"));
+    port_to_use->println(F("R - Random Groups"));
     port_to_use->println(F("W - Wordsworth"));
     //port_to_use->println("2 - PA QSO Party");   // Don't think this is working right / wasn't finished - Goody 2017-05-01
     port_to_use->println(F("\nX - Exit\n"));
@@ -10834,6 +10838,7 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
       case 'X': menu_loop = 0; break;
       case 'C': serial_callsign_practice_menu(port_to_use,PRACTICE_NON_INTERACTIVE); break;
       case 'I': serial_callsign_practice_menu(port_to_use,PRACTICE_INTERACTIVE); break;
+      case 'R': serial_random_menu(port_to_use); break;
       case 'W': serial_wordsworth_menu(port_to_use); break;
       //case '2': paqso_practice(port_to_use); break;
     } //switch(incoming_char)
@@ -10977,6 +10982,125 @@ void serial_set_wordspace_parameters(PRIMARY_SERIAL_CLS * port_to_use,byte mode_
       
 }
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
+
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void serial_random_menu(PRIMARY_SERIAL_CLS * port_to_use){
+
+  byte menu_loop = 1;
+  byte menu_loop2 = 1;
+  char incoming_char = ' ';
+  
+  while(menu_loop){
+  
+    while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
+      port_to_use->read();
+    }  
+    
+    port_to_use->println(F("\r\n\nRandom Code Menu\n"));
+    port_to_use->println(F("A - Letter Groups"));
+    port_to_use->println(F("1 - Number Groups"));
+    port_to_use->println(F("M - Mixed Groups"));
+    port_to_use->println(F("\nX - Exit\n"));
+
+    menu_loop2 = 1;
+    
+    while (menu_loop2){
+    
+      if (port_to_use->available()){
+        incoming_char = port_to_use->read();
+        if ((incoming_char != 10) && (incoming_char != 13)){
+          menu_loop2 = 0;
+        }
+      }
+    }
+
+    incoming_char = toUpperCase(incoming_char);
+
+    switch(incoming_char){
+      case 'A': random_practice(port_to_use,RANDOM_LETTER_GROUPS,5); break;
+      case '1': random_practice(port_to_use,RANDOM_NUMBER_GROUPS,5); break;
+      case 'M': random_practice(port_to_use,RANDOM_MIXED_GROUPS,5); break;
+      case 'X': menu_loop = 0; break;        
+    } //switch(incoming_char)
+    
+  } //while(menu_loop)
+      
+  port_to_use->println(F("Exiting Random code module..."));
+
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+void random_practice(PRIMARY_SERIAL_CLS * port_to_use,byte random_mode,byte group_size)
+{
+
+  byte loop1 = 1;
+  byte x = 0;
+  byte y = 0;
+  char incoming_char = ' ';
+  char random_character;
+
+  randomSeed(millis());
+  port_to_use->println(F("Random group practice\r\n"));
+
+  while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
+    incoming_char = port_to_use->read();
+  }
+
+  while (loop1){
+
+    switch(random_mode){
+      case RANDOM_LETTER_GROUPS: random_character = random(65,91); break;
+      case RANDOM_NUMBER_GROUPS: random_character = random(48,58); break;
+      case RANDOM_MIXED_GROUPS: 
+        random_character = random(65,101);
+        if (random_character > 90) {random_character = random_character - 43;};
+        break;
+    }
+
+    send_char(random_character,KEYER_NORMAL);
+    port_to_use->print(random_character);
+    x++;
+
+    if (x == group_size){
+      send_char(' ',KEYER_NORMAL);
+      port_to_use->print(" ");
+      x = 0;
+      y++;
+    }
+
+    if (y > 4){
+      port_to_use->println("");
+      y = 0;
+    }
+
+    if (port_to_use->available()){
+      port_to_use->read();
+      loop1 = 0;
+    }
+
+    #ifdef FEATURE_COMMAND_BUTTONS
+      while ((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) {
+        loop1 = 0;
+      }
+    #else 
+      while ((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW)) {
+        loop1 = 0;
+      }    
+    #endif //FEATURE_COMMAND_BUTTONS
+
+  } //loop1
+  
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
@@ -11068,8 +11192,6 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
   byte repetitions;
 
 
-
-
   randomSeed(millis());
 
   port_to_use->println(F("Wordsworth practice...\n"));
@@ -11077,7 +11199,6 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
   while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
     port_to_use->read();
   }
-
 
 
   while (loop1){
@@ -11135,8 +11256,7 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
           debug_serial_port->println((byte)word_buffer[x]);
         #endif
 
-        //word_buffer[x] = toUpperCase(word_buffer[x]);
-//zzzzzz
+        //word_buffer[x] = toUpperCase(word_buffer[x]); // word files should be in CAPS
 
         #if defined(OPTION_NON_ENGLISH_EXTENSIONS)
           if (((byte)word_buffer[x] == 195) || ((byte)word_buffer[x] == 197)){  // do we have a unicode character?
@@ -11306,7 +11426,6 @@ void callsign_practice_non_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte cal
   String callsign(10);
   char incoming_char = ' ';
 
-  byte previous_key_tx_state = key_tx;
   key_tx = 0;
   randomSeed(millis());
   port_to_use->println(F("Callsign receive practice\r\n"));
@@ -11354,8 +11473,7 @@ void callsign_practice_non_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte cal
     port_to_use->println(callsign);
 
   } //loop1
-  
-  key_tx = previous_key_tx_state;
+
 
 }
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
