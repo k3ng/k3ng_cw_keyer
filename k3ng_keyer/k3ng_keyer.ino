@@ -712,6 +712,9 @@ Recent Update History
       Fixed bug with \< and \> commands and carriage returns, and now handle serial number sending through the send buffer rather than direct sending
       Fixed issue with non-English characters in Wordsworth by implementing OPTION_NON_ENGLISH_EXTENSIONS within Wordsworth
 
+    2017.05.12.02
+      Added DEBUG_MEMORY_LOCATIONS
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -727,7 +730,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.05.12.01"
+#define CODE_VERSION "2017.05.12.02"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -11773,6 +11776,17 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
         }
       }
     }
+
+    #if defined(DEBUG_MEMORY_LOCATIONS)
+      port_to_use->print("  start: ");
+      port_to_use->print(memory_start(x));
+      port_to_use->print(" end: ");
+      port_to_use->print(memory_end(x));
+      port_to_use->print(" size: ");
+      port_to_use->print(memory_end(x)-memory_start(x));
+
+    #endif
+
     port_to_use->println();
   }
 }
