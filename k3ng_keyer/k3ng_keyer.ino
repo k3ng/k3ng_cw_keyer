@@ -714,6 +714,9 @@ Recent Update History
 
     2017.05.12.02
       Added DEBUG_MEMORY_LOCATIONS
+  
+    2017.05.13.01
+      Improved reading of serial receive buffer in serial_program_memory to facilitate programming of large memories.  Related parameter: serial_program_memory_buffer_size
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -730,7 +733,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.05.12.02"
+#define CODE_VERSION "2017.05.13.01"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -11808,6 +11811,9 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
   uint8_t error_flag = 0;
   uint8_t memory_1_or_1x_flag = 0;
 
+  
+  uint8_t incoming_serial_byte_buffer[serial_program_memory_buffer_size];
+  unsigned int incoming_serial_byte_buffer_size = 0;
 
 
   while (looping){
@@ -11815,9 +11821,26 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
       check_paddles();
       service_dit_dah_buffers();
     }
-    if (port_to_use->available()){
-      incoming_serial_byte = uppercase(port_to_use->read());
-      port_to_use->write(incoming_serial_byte); 
+
+// old 
+//    if (port_to_use->available()){
+//      incoming_serial_byte = uppercase(port_to_use->read());
+//      port_to_use->write(incoming_serial_byte); 
+
+
+    //new part --------
+    while ((port_to_use->available()) && (incoming_serial_byte_buffer_size < serial_program_memory_buffer_size)){  // get serial data if available
+      incoming_serial_byte_buffer[incoming_serial_byte_buffer_size] = uppercase(port_to_use->read()); 
+      incoming_serial_byte_buffer_size++;
+    }
+    if (incoming_serial_byte_buffer_size){
+      incoming_serial_byte = incoming_serial_byte_buffer[0];
+      port_to_use->write(incoming_serial_byte);
+      for (unsigned int x = 0;x < (incoming_serial_byte_buffer_size - 1);x++){
+        incoming_serial_byte_buffer[x] = incoming_serial_byte_buffer[x+1];
+      }
+      incoming_serial_byte_buffer_size--;
+      //---------
 
       if ((memory_1_or_1x_flag) && ((incoming_serial_byte < 48) || (incoming_serial_byte > 57))){  // do we have something other than a number?
         memory_1_or_1x_flag = 0;
@@ -11855,8 +11878,26 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
 
         } else {  // looking for memory data
           memory_data_entered = 1;
+          #if !defined(OPTION_SAVE_MEMORY_NANOKEYER)
+            while ((port_to_use->available()) && (incoming_serial_byte_buffer_size < serial_program_memory_buffer_size)){  // get serial data if available
+              incoming_serial_byte_buffer[incoming_serial_byte_buffer_size] = uppercase(port_to_use->read()); 
+              incoming_serial_byte_buffer_size++;
+            }  
+          #endif           
           EEPROM.write((memory_start(memory_number-1)+memory_index),incoming_serial_byte);
+          #if !defined(OPTION_SAVE_MEMORY_NANOKEYER)
+            while ((port_to_use->available()) && (incoming_serial_byte_buffer_size < serial_program_memory_buffer_size)){  // get serial data if available
+              incoming_serial_byte_buffer[incoming_serial_byte_buffer_size] = uppercase(port_to_use->read()); 
+              incoming_serial_byte_buffer_size++;
+            }   
+          #endif       
           EEPROM.write((memory_start(memory_number-1)+memory_index+1),255);
+          #if !defined(OPTION_SAVE_MEMORY_NANOKEYER)
+            while ((port_to_use->available()) && (incoming_serial_byte_buffer_size < serial_program_memory_buffer_size)){  // get serial data if available
+              incoming_serial_byte_buffer[incoming_serial_byte_buffer_size] = uppercase(port_to_use->read()); 
+              incoming_serial_byte_buffer_size++;
+            } 
+          #endif         
           #ifdef DEBUG_EEPROM
             debug_serial_port->print(F("serial_program_memory: wrote "));
             debug_serial_port->print(incoming_serial_byte);
@@ -11882,65 +11923,6 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
   } else {
     port_to_use->println(F("\n\rError"));
   }
-
-
-
-
-  // byte incoming_serial_byte;
-  // byte memory_number;
-  // byte looping = 1;
-  // int memory_index = 0;
-
-  // while (port_to_use->available() == 0) {        // wait for the next keystroke
-  //   if (keyer_machine_mode == KEYER_NORMAL) {          // might as well do something while we're waiting
-  //     check_paddles();
-  //     service_dit_dah_buffers();
-  //   }
-  // }
-  // incoming_serial_byte = port_to_use->read();
-  // if (incoming_serial_byte == 48) {incoming_serial_byte = 58;} // 0 = memory 10
-  // if ((incoming_serial_byte > 48) && (incoming_serial_byte < (49 + number_of_memories))) {    
-  //   memory_number = incoming_serial_byte - 49;
-  //   port_to_use->print(memory_number+1);
-  //   while (looping) {
-  //     while (port_to_use->available() == 0) {
-  //       if (keyer_machine_mode == KEYER_NORMAL) {          // might as well do something while we're waiting
-  //         check_paddles();
-  //         service_dit_dah_buffers();
-  //       }
-  //     }
-  //     incoming_serial_byte = port_to_use->read();
-  //     if (incoming_serial_byte == 13) {        // did we get a carriage return?
-  //       looping = 0;
-  //     } else {
-  //       incoming_serial_byte = uppercase(incoming_serial_byte);
-  //       port_to_use->write(incoming_serial_byte); 
-  //       EEPROM.write((memory_start(memory_number)+memory_index),incoming_serial_byte);
-  //       #ifdef DEBUG_EEPROM
-  //         debug_serial_port->print(F("serial_program_memory: wrote "));
-  //         debug_serial_port->print(incoming_serial_byte);
-  //         debug_serial_port->print(F(" to location "));
-  //         debug_serial_port->println((memory_start(memory_number)+memory_index));
-  //       #endif
-  //       memory_index++;
-  //       if ((memory_start(memory_number) + memory_index) == memory_end(memory_number)) {    // are we at last memory location?
-  //         looping = 0;
-  //         port_to_use->println(F("Memory full, truncating."));
-  //       }
-  //     }
-  //   }  //while (looping)
-  //   // write terminating 255
-  //   EEPROM.write((memory_start(memory_number)+memory_index),255);
-  //   #ifdef DEBUG_EEPROM
-  //     debug_serial_port->print(F("serial_program_memory: wrote 255 to location "));
-  //     debug_serial_port->println((memory_start(memory_number)+memory_index));
-  //   #endif
-  //   port_to_use->print(F("\n\rWrote memory "));
-  //   port_to_use->println(memory_number+1);
-  //   //port_to_use->println();
-  // } else {
-  //   port_to_use->println(F("\n\rError"));
-  // }
 
 }
 
