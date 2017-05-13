@@ -35,3 +35,7 @@
 #if defined(FEATURE_4x4_KEYPAD) && defined(FEATURE_3x4_KEYPAD)
   #error "You can't use both FEATURE_4x4_KEYPAD and FEATURE_3x4_KEYPAD simultaneously"
 #endif
+
+#if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(OPTION_WORDSWORTH_NORSK) && !defined(OPTION_NON_ENGLISH_EXTENSIONS)
+  #define OPTION_NON_ENGLISH_EXTENSIONS
+#endif

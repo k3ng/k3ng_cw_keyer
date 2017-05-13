@@ -708,6 +708,10 @@ Recent Update History
     2017.05.09.02
       Updated FEATURE_4x4_KEYPAD and FEATURE_3x4_KEYPAD to allow memory stacking
 
+    2017.05.12.01
+      Fixed bug with \< and \> commands and carriage returns, and now handle serial number sending through the send buffer rather than direct sending
+      Fixed issue with non-English characters in Wordsworth by implementing OPTION_NON_ENGLISH_EXTENSIONS within Wordsworth
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -723,7 +727,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.05.09.02"
+#define CODE_VERSION "2017.05.12.01"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -10982,7 +10986,7 @@ void serial_wordsworth_menu(PRIMARY_SERIAL_CLS * port_to_use){
     while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
       port_to_use->read();
     }  
-//zzzzzz    
+    
     port_to_use->println(F("\r\n\nWordsworth Menu\n"));
     port_to_use->println(F("2 - Two Letter Words"));
     port_to_use->println(F("3 - Three Letter Words"));
@@ -11120,12 +11124,30 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
 
         #if defined(DEBUG_WORDSWORTH)
           debug_serial_port->print("wordsworth_practice: send_char:");
-          debug_serial_port->println(word_buffer[x]);
+          debug_serial_port->print(word_buffer[x]);
+          debug_serial_port->print(" ");
+          debug_serial_port->println((byte)word_buffer[x]);
         #endif
 
-        word_buffer[x] = toUpperCase(word_buffer[x]);
-        send_char(word_buffer[x],KEYER_NORMAL);
-        x++;
+        //word_buffer[x] = toUpperCase(word_buffer[x]);
+//zzzzzz
+
+        #if defined(OPTION_NON_ENGLISH_EXTENSIONS)
+          if (((byte)word_buffer[x] == 195) || ((byte)word_buffer[x] == 197)){  // do we have a unicode character?
+            x++;
+            if ((word_buffer[x] != 0) && (x < 10)){
+              send_char(convert_unicode_to_send_char_code((byte)word_buffer[x-1],(byte)word_buffer[x]),KEYER_NORMAL);
+              x++;
+            }
+          } else {
+            send_char(word_buffer[x],KEYER_NORMAL);
+            x++;
+          }
+        #else //OPTION_NON_ENGLISH_EXTENSIONS
+          send_char(word_buffer[x],KEYER_NORMAL);
+          x++;
+        #endif //OPTION_NON_ENGLISH_EXTENSIONS
+
         not_printed = 1;
 
         if ((word_buffer[x] == 0) || (x > 9)){ // are we at the end of the word?
@@ -12000,33 +12022,40 @@ void send_serial_number(byte cut_numbers,int increment_serial_number){
   serial_number_string = String(serial_number, DEC);
   if (serial_number_string.length() < 3 ) {
     if (cut_numbers){
-      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      send_char('T',KEYER_NORMAL);
+      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      //send_char('T',KEYER_NORMAL);
+      add_to_send_buffer('T');
     } else {
-      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      send_char('0',KEYER_NORMAL);
+      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      //send_char('0',KEYER_NORMAL);
+      add_to_send_buffer('0');
     }
   }
   if (serial_number_string.length() == 1) {
     if (cut_numbers){
-      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      send_char('T',KEYER_NORMAL);
+      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      //send_char('T',KEYER_NORMAL);
+      add_to_send_buffer('T');
     } else {
-      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      send_char('0',KEYER_NORMAL);
+      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      //send_char('0',KEYER_NORMAL);
+      add_to_send_buffer('0');
     }
   }
   for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
     if ((serial_number_string[a] == '0') && (cut_numbers)){
-      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      send_char('T',KEYER_NORMAL);
+      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      //send_char('T',KEYER_NORMAL);
+      add_to_send_buffer('T');
     } else {
      if ((serial_number_string[a] == '9') && (cut_numbers)) {
-      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('N');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      send_char('N',KEYER_NORMAL);
+      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('N');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      //send_char('N',KEYER_NORMAL);
+      add_to_send_buffer('N');
      } else {
-      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character(serial_number_string[a]);} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      send_char(serial_number_string[a],KEYER_NORMAL);
+      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character(serial_number_string[a]);} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      //send_char(serial_number_string[a],KEYER_NORMAL);
+      add_to_send_buffer(serial_number_string[a]);
      }
     }
   }
@@ -16916,3 +16945,37 @@ void service_millis_rollover(){
   last_millis = millis();
 
 }
+//-------------------------------------------------------------------------------------------------------
+#ifdef OPTION_NON_ENGLISH_EXTENSIONS
+byte convert_unicode_to_send_char_code(byte first_byte,byte second_byte){
+
+
+  if (first_byte == 195){
+    switch(second_byte){
+      case 133: return 197; // Å AA_capital (OZ, LA, SM)
+      case 134: return 198; // Æ (OZ, LA)
+      case 152: return 216; // Ø (OZ, LA)
+      case 128: return 192; // À - A accent   
+      case 132: return 196; // Ä - A_umlaut (D, SM, OH, ...)
+      case 145: return 209; // Ñ - (EA)               
+      case 150: return 214; // Ö – O_umlaut  (D, SM, OH, ...)
+      case 146: return 211; // Ò - O accent  
+      case 156: return 220; // Ü - U_umlaut     (D, ...)  
+      case 135: return 199; // Ç
+      case 144: return 208; // Ð
+      case 136: return 200; // È
+      case 137: return 201; // É
+    }
+
+    if (first_byte == 197){
+      switch(second_byte){
+        case 189: return 142; // Ž
+      }
+    }
+
+  }
+
+  return(0);
+
+}
+#endif
