@@ -721,6 +721,9 @@ Recent Update History
     2017.05.13.02
       Added random code group practice
 
+    2017.05.14.01
+      Optimization of serial_program_memory()
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -736,7 +739,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.05.13.02"
+#define CODE_VERSION "2017.05.14.01"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -11905,7 +11908,6 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
       port_to_use->print(memory_end(x));
       port_to_use->print(" size: ");
       port_to_use->print(memory_end(x)-memory_start(x));
-
     #endif
 
     port_to_use->println();
@@ -11919,6 +11921,14 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
 void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
 {
 
+
+  /*
+
+  CLI memory programming test string
+
+  WE LOVE RADIO AND SMALL COMPUTING DEVICES AND WE COMBINE THE TWO TO AUTOMATE EXPERIMENT OR JUST SEE IF SOMETHING CAN BE DONE WE BELIEVE ITS BETTER TO BUILD SOMETHING WITH OUR OWN HANDS HOWEVER SMALL OR IMPERFECT AND IMPROVE AND EXPAND IT OVER TIME WE SUPPORT EXPERIMENTERS OF ALL LEVELS AND EXCHANGE IDEAS ABOUT AMATEUR RADIO HARDWARE HOMEBREWING AND SOFTWARE DEVELOPMENT
+
+  */
 
   uint8_t incoming_serial_byte;
   uint8_t memory_number;
@@ -11940,17 +11950,11 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
       service_dit_dah_buffers();
     }
 
-// old 
-//    if (port_to_use->available()){
-//      incoming_serial_byte = uppercase(port_to_use->read());
-//      port_to_use->write(incoming_serial_byte); 
-
-
-    //new part --------
     while ((port_to_use->available()) && (incoming_serial_byte_buffer_size < serial_program_memory_buffer_size)){  // get serial data if available
       incoming_serial_byte_buffer[incoming_serial_byte_buffer_size] = uppercase(port_to_use->read()); 
       incoming_serial_byte_buffer_size++;
     }
+
     if (incoming_serial_byte_buffer_size){
       incoming_serial_byte = incoming_serial_byte_buffer[0];
       port_to_use->write(incoming_serial_byte);
@@ -11958,7 +11962,6 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
         incoming_serial_byte_buffer[x] = incoming_serial_byte_buffer[x+1];
       }
       incoming_serial_byte_buffer_size--;
-      //---------
 
       if ((memory_1_or_1x_flag) && ((incoming_serial_byte < 48) || (incoming_serial_byte > 57))){  // do we have something other than a number?
         memory_1_or_1x_flag = 0;
@@ -11993,7 +11996,7 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
 
         if (incoming_serial_byte == 13){  // we got a carriage return
           looping = 0;
-
+          EEPROM.write((memory_start(memory_number-1)+memory_index),255);
         } else {  // looking for memory data
           memory_data_entered = 1;
           #if !defined(OPTION_SAVE_MEMORY_NANOKEYER)
@@ -12008,14 +12011,7 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
               incoming_serial_byte_buffer[incoming_serial_byte_buffer_size] = uppercase(port_to_use->read()); 
               incoming_serial_byte_buffer_size++;
             }   
-          #endif       
-          EEPROM.write((memory_start(memory_number-1)+memory_index+1),255);
-          #if !defined(OPTION_SAVE_MEMORY_NANOKEYER)
-            while ((port_to_use->available()) && (incoming_serial_byte_buffer_size < serial_program_memory_buffer_size)){  // get serial data if available
-              incoming_serial_byte_buffer[incoming_serial_byte_buffer_size] = uppercase(port_to_use->read()); 
-              incoming_serial_byte_buffer_size++;
-            } 
-          #endif         
+          #endif              
           #ifdef DEBUG_EEPROM
             debug_serial_port->print(F("serial_program_memory: wrote "));
             debug_serial_port->print(incoming_serial_byte);
@@ -12025,6 +12021,7 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
           memory_index++;
           if ((memory_start(memory_number-1) + memory_index) > (memory_end(memory_number-1)-2)) {    // are we at last memory location?
             looping = 0;
+            EEPROM.write((memory_start(memory_number-1)+memory_index),255);
             port_to_use->println(F("Memory full, truncating."));
           }
 

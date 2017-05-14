@@ -22,7 +22,7 @@
 #if !defined(FEATURE_ETHERNET)
   #define sidetone_line 4         // connect a speaker for sidetone 
 #else
-  #define sidetone_line 31        // pin 4 is used by Ethernet shield so we'll use ping 31 on the test jig...
+  #define sidetone_line 31        // pin 4 is used by Ethernet shield so we'll use pin 31 on the test jig...
 #endif
 #define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
 #define ptt_tx_1 13              // PTT ("push to talk") lines
