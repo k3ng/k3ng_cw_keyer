@@ -724,6 +724,9 @@ Recent Update History
     2017.05.14.01
       Optimization of serial_program_memory()
 
+    2017.06.03.01
+      Fixed a bug I introduced back in version 2017.05.12.01 or so with memory serial number macros not playing in right sequence (Thanks, Fred, VK2EFL)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -739,7 +742,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.05.14.01"
+#define CODE_VERSION "2017.06.03.01"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -12133,40 +12136,40 @@ void send_serial_number(byte cut_numbers,int increment_serial_number){
   serial_number_string = String(serial_number, DEC);
   if (serial_number_string.length() < 3 ) {
     if (cut_numbers){
-      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      //send_char('T',KEYER_NORMAL);
-      add_to_send_buffer('T');
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      send_char('T',KEYER_NORMAL);
+      //add_to_send_buffer('T'); // Don't do this!  It will make memory serial number macros not work correctly.
     } else {
-      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      //send_char('0',KEYER_NORMAL);
-      add_to_send_buffer('0');
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      send_char('0',KEYER_NORMAL);
+      //add_to_send_buffer('0'); // Don't do this!  It will make memory serial number macros not work correctly.
     }
   }
   if (serial_number_string.length() == 1) {
     if (cut_numbers){
-      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      //send_char('T',KEYER_NORMAL);
-      add_to_send_buffer('T');
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      send_char('T',KEYER_NORMAL);
+      //add_to_send_buffer('T'); // Don't do this!  It will make memory serial number macros not work correctly.
     } else {
-      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      //send_char('0',KEYER_NORMAL);
-      add_to_send_buffer('0');
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      send_char('0',KEYER_NORMAL);
+      //add_to_send_buffer('0'); // Don't do this!  It will make memory serial number macros not work correctly.
     }
   }
   for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
     if ((serial_number_string[a] == '0') && (cut_numbers)){
-      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      //send_char('T',KEYER_NORMAL);
-      add_to_send_buffer('T');
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      send_char('T',KEYER_NORMAL);
+      //add_to_send_buffer('T'); // Don't do this!  It will make memory serial number macros not work correctly.
     } else {
      if ((serial_number_string[a] == '9') && (cut_numbers)) {
-      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('N');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      //send_char('N',KEYER_NORMAL);
-      add_to_send_buffer('N');
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('N');} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      send_char('N',KEYER_NORMAL);
+      //add_to_send_buffer('N'); // Don't do this!  It will make memory serial number macros not work correctly.
      } else {
-      //if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character(serial_number_string[a]);} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
-      //send_char(serial_number_string[a],KEYER_NORMAL);
-      add_to_send_buffer(serial_number_string[a]);
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character(serial_number_string[a]);} //Display the SN as well as play it unless playing back after programming for verification(WD9DMP)
+      send_char(serial_number_string[a],KEYER_NORMAL);
+      //add_to_send_buffer(serial_number_string[a]); // Don't do this!  It will make memory serial number macros not work correctly.
      }
     }
   }
@@ -12510,7 +12513,7 @@ byte play_memory(byte memory_number)
                 break;  // case 68
 
               case 69:                       // E - play serial number, then increment
-                  send_serial_number(0,1);
+                  send_serial_number(0,1); //qqqqqq
                   // serial_number_string = String(serial_number, DEC);
                   // for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
                   //   send_char(serial_number_string[a],KEYER_NORMAL);
