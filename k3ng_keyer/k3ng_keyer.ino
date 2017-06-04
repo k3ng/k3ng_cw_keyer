@@ -727,6 +727,9 @@ Recent Update History
     2017.06.03.01
       Fixed a bug I introduced back in version 2017.05.12.01 or so with memory serial number macros not playing in right sequence (Thanks, Fred, VK2EFL)
 
+    2017.06.03.02
+      Added OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE which changes the sidetone line to go high/low rather than output square wave, for driving an external audio amplifier
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -742,7 +745,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.06.03.01"
+#define CODE_VERSION "2017.06.03.02"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -5038,7 +5041,11 @@ void tx_and_sidetone_key (int state)
         }
       }
       if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_mode == MANUAL_SENDING))) {
-        tone(sidetone_line, configuration.hz_sidetone);
+        #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
+          tone(sidetone_line, configuration.hz_sidetone);
+        #else
+          digitalWrite(sidetone_line, HIGH);
+        #endif
       }
       key_state = 1;
     } else {
@@ -5053,7 +5060,11 @@ void tx_and_sidetone_key (int state)
           ptt_key();
         }
         if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_mode == MANUAL_SENDING))) {
-          noTone(sidetone_line);
+          #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
+            noTone(sidetone_line);
+          #else
+            digitalWrite(sidetone_line, LOW);
+          #endif
         }
         key_state = 0;
       }
@@ -5076,7 +5087,11 @@ void tx_and_sidetone_key (int state)
         }
       }
       if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_mode == MANUAL_SENDING))) {
-        tone(sidetone_line, configuration.hz_sidetone);
+        #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
+          tone(sidetone_line, configuration.hz_sidetone);
+        #else
+          digitalWrite(sidetone_line, HIGH);
+        #endif          
       }
       key_state = 1;
     } else {
@@ -5093,7 +5108,11 @@ void tx_and_sidetone_key (int state)
           }
         }
         if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_mode == MANUAL_SENDING))) {
-          noTone(sidetone_line);
+          #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
+            noTone(sidetone_line);
+          #else
+            digitalWrite(sidetone_line, LOW);
+          #endif
         }
         key_state = 0;
       }
@@ -5606,7 +5625,9 @@ void command_mode()
           #endif                    
           send_dit();
           break; 
-        case 1121: command_sidetone_freq_adj(); break;                    // F - adjust sidetone frequency
+        #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
+          case 1121: command_sidetone_freq_adj(); break;                    // F - adjust sidetone frequency
+        #endif
         case 221: // G - switch to buG mode
           configuration.keyer_mode = BUG;
           keyer_mode_before = BUG;
@@ -6113,7 +6134,7 @@ void sidetone_adj(int hz) {
 }
 
 //-------------------------------------------------------------------------------------------------------
-#ifdef FEATURE_COMMAND_BUTTONS
+#if defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
 void command_sidetone_freq_adj() {
 
   byte looping = 1;
@@ -6787,38 +6808,62 @@ void service_dit_dah_buffers()
 
 void beep()
 {
- tone(sidetone_line, hz_high_beep, 200);
+  #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
+    tone(sidetone_line, hz_high_beep, 200);
+  #else
+    digitalWrite(sidetone_line, HIGH);
+    delay(200);
+    digitalWrite(sidetone_line, LOW);
+  #endif
 }
 
 //-------------------------------------------------------------------------------------------------------
 
 void boop()
 {
-  tone(sidetone_line, hz_low_beep);
-  delay(100);
-  noTone(sidetone_line);
+  #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
+    tone(sidetone_line, hz_low_beep);
+    delay(100);
+    noTone(sidetone_line);
+  #else
+    digitalWrite(sidetone_line, HIGH);
+    delay(100);
+    digitalWrite(sidetone_line, LOW);
+  #endif    
 }
 
 //-------------------------------------------------------------------------------------------------------
 
 void beep_boop()
 {
-  tone(sidetone_line, hz_high_beep);
-  delay(100);
-  tone(sidetone_line, hz_low_beep);
-  delay(100);
-  noTone(sidetone_line);
+  #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
+    tone(sidetone_line, hz_high_beep);
+    delay(100);
+    tone(sidetone_line, hz_low_beep);
+    delay(100);
+    noTone(sidetone_line);
+  #else
+    digitalWrite(sidetone_line, HIGH);
+    delay(200);
+    digitalWrite(sidetone_line, LOW);
+  #endif     
 }
 
 //-------------------------------------------------------------------------------------------------------
 
 void boop_beep()
 {
-  tone(sidetone_line, hz_low_beep);
-  delay(100);
-  tone(sidetone_line, hz_high_beep);
-  delay(100);
-  noTone(sidetone_line);
+  #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
+    tone(sidetone_line, hz_low_beep);
+    delay(100);
+    tone(sidetone_line, hz_high_beep);
+    delay(100);
+    noTone(sidetone_line);
+  #else
+    digitalWrite(sidetone_line, HIGH);
+    delay(200);
+    digitalWrite(sidetone_line, LOW);
+  #endif         
 }
 
 
@@ -12513,7 +12558,7 @@ byte play_memory(byte memory_number)
                 break;  // case 68
 
               case 69:                       // E - play serial number, then increment
-                  send_serial_number(0,1); //qqqqqq
+                  send_serial_number(0,1);
                   // serial_number_string = String(serial_number, DEC);
                   // for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
                   //   send_char(serial_number_string[a],KEYER_NORMAL);
