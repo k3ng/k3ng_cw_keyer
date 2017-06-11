@@ -1,11 +1,6 @@
-update=dom 22 gen 2017 22:04:03 CET
+update=dom 16 apr 2017 11:11:37 CEST
 version=1
 last_client=kicad
-[cvpcb]
-version=1
-NetIExt=net
-[cvpcb/libraries]
-EquName1=devcms
 [general]
 version=1
 [pcbnew]
@@ -27,31 +22,9 @@ SolderMaskMinWidth=0.000000000000
 DrawSegmentWidth=0.200000000000
 BoardOutlineThickness=0.100000000000
 ModuleOutlineThickness=0.150000000000
-[pcbnew/libraries]
-LibDir=
-LibName1=sockets
-LibName2=connect
-LibName3=discret
-LibName4=pin_array
-LibName5=divers
-LibName6=smd_capacitors
-LibName7=smd_resistors
-LibName8=smd_transistors
-LibName9=libcms
-LibName10=display
-LibName11=led
-LibName12=dip_sockets
-LibName13=pga_sockets
-LibName14=valves
-LibName15=smd_soic_packages
-LibName16=smd_ssop_packages
-LibName17=smd_crystal_and_oscillator
-LibName18=../lib/w_conn_misc
-LibName19=../lib/ms-conn
-LibName20=../lib/r_mini_din
-LibName21=../lib/f_rcas
-LibName22=../lib/lumberg1
-LibName23=../lib/IC-Socket_UniversalDIP8-SO8_RevB
+[cvpcb]
+version=1
+NetIExt=net
 [eeschema]
 version=1
 LibDir=../lib;../lib/w_conn_misc.pretty;../lib/w_misc_comp.pretty
@@ -89,6 +62,7 @@ LibName30=valves
 LibName31=ms-conn
 LibName32=w_device
 LibName33=w_connectors
+LibName34=custom_kicad_symbols
 [schematic_editor]
 version=1
 PageLayoutDescrFile=

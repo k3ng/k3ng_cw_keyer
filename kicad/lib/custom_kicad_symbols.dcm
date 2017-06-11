@@ -1,0 +1,76 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP 2pos_switch
+D inverseur
+K switch
+$ENDCMP
+#
+$CMP 3.5mm_4_conductors_audio_plug
+D Phone jack with microphone, 3.5mm 6 contacts 4 conductors audio plug.
+K 3.5mm, jack, mic, microphone, phones, headphones, 4 pins, audio, plug
+$ENDCMP
+#
+$CMP 3.5mm_4_conductors_audio_plug_2
+D Phone jack with microphone, 3.5mm 6 contacts 4 conductors audio plug.
+K 3.5mm, jack, mic, microphone, phones, headphones, 4 pins, audio, plug
+$ENDCMP
+#
+$CMP CH340G
+D CH340G USB UART
+K ch340g, usb, uart
+$ENDCMP
+#
+$CMP GY-NEO6MV2
+D GY-NEO6MV2 GPS module based on ublox NEO-6M chip
+K gps neo ublox
+$ENDCMP
+#
+$CMP Gms-g9_GNSS_Module
+D Gms-g9 GNSS Module
+K gms-g9, g.top015, gps, glonass, gnss
+$ENDCMP
+#
+$CMP Microampermeter
+D Microampermeter
+$ENDCMP
+#
+$CMP Mini-DIN_6pins
+D Mini-DIN 6 pins connector with shell
+K connector DIN Mini-DIN 5-pins 41524
+$ENDCMP
+#
+$CMP Mini-DIN_6pins_ver2
+D Mini-DIN 6 pins connector with shell
+K connector DIN Mini-DIN 5-pins 41524
+$ENDCMP
+#
+$CMP Mini-DIN_6pins_ver3
+D Mini-DIN 6 pins connector with shell
+K connector DIN Mini-DIN 5-pins 41524
+$ENDCMP
+#
+$CMP Mini-DIN_6pins_ver4
+D Mini-DIN 6 pins connector with shell
+K connector DIN Mini-DIN 5-pins 41524
+$ENDCMP
+#
+$CMP PJ320D_3.5mm_4_conductors_audio_plug
+D Phone jack with microphone, 3.5mm 6 contacts 4 conductors audio plug.
+K 3.5mm, jack, mic, microphone, phones, headphones, 4 pins, audio, plug
+$ENDCMP
+#
+$CMP PJ320E_3.5mm_4_conductors_audio_plug
+D Phone jack with microphone, 3.5mm 6 contacts 4 conductors audio plug.
+K 3.5mm, jack, mic, microphone, phones, headphones, 4 pins, audio, plug
+$ENDCMP
+#
+$CMP SW_PUSH_BUTTON
+D Button
+K Switch
+$ENDCMP
+#
+$CMP uA_meter
+D Microampermeter
+$ENDCMP
+#
+#End Doc Library
