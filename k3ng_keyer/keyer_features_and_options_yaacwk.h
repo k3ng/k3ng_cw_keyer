@@ -1,3 +1,7 @@
+// This file is for the Yaacwk interface http://i1cra.briata.org/yaacwk/
+// YAACWK stands for Yet Another Arduino CW Keyer, it's based on AtMega 644p 
+// for more info see http://i1cra.briata.org/yaacwk/ for more info
+
 // compile time features and options - comment or uncomment to add or delete features
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 

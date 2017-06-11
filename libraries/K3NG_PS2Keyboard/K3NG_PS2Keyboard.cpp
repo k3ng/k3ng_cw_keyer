@@ -44,15 +44,17 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-// K3NG Version 2015101401  
+// K3NG Version 2017.05.12.01 
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
+#if !defined(ARDUINO_SAM_DUE)
+  #include <avr/io.h>
+  #include <avr/interrupt.h>
+  #include <avr/pgmspace.h>
+#endif
 #if defined(ARDUINO) && ARDUINO >= 100
-#include "Arduino.h" // for attachInterrupt, FALLING
+  #include "Arduino.h" // for attachInterrupt, FALLING
 #else
-#include "WProgram.h"
+  #include "WProgram.h"
 #endif
 #include "K3NG_PS2Keyboard.h"
 
@@ -166,7 +168,7 @@ const PROGMEM unsigned char scan2ascii_ctrl[] = {
 	0, PS2_F10_CTRL, PS2_F8_CTRL, PS2_F6_CTRL, PS2_F4_CTRL, PS2_TAB_SHIFT, '~', 0,
 	0, 0 /*Lalt*/, 0 /*Lshift*/, 0, 0 /*Lctrl*/, 'Q', '!', 0,
 	0, 0, PS2_Z_CTRL, 'S', PS2_A_CTRL, PS2_W_CTRL, '@', 0,
-	0, 'C', 'X', PS2_D_CTRL, PS2_E_CTRL, '$', '#', 0,
+	0, PS2_C_CTRL /*'C'*/, 'X', PS2_D_CTRL, PS2_E_CTRL, '$', '#', 0,
 	0, ' ', 'V', 'F', PS2_T_CTRL, 'R', '%', 0,
 	0, PS2_N_CTRL, PS2_B_CTRL, PS2_H_CTRL, PS2_G_CTRL, 'Y', '^', 0,
 	0, 0, PS2_M_CTRL, 'J', PS2_U_CTRL, '&', '*', 0,
@@ -245,7 +247,7 @@ const PROGMEM unsigned char scan2ascii_ctrl[] =  // this needs to be updated!!! 
 	0, PS2_F10_CTRL, PS2_F8_CTRL, PS2_F6_CTRL, PS2_F4_CTRL, PS2_TAB_SHIFT, '~', 0,
 	0, 0 /*Lalt*/, 0 /*Lshift*/, 0, 0 /*Lctrl*/, 'Q', '!', 0,
 	0, 0, PS2_Z_CTRL, 'S', PS2_A_CTRL, PS2_W_CTRL, '@', 0,
-	0, 'C', 'X', PS2_D_CTRL, PS2_E_CTRL, '$', '#', 0,
+	0, PS2_C_CTRL /*'C'*/, 'X', PS2_D_CTRL, PS2_E_CTRL, '$', '#', 0,
 	0, ' ', 'V', 'F', PS2_T_CTRL, 'R', '%', 0,
 	0, PS2_N_CTRL, PS2_B_CTRL, PS2_H_CTRL, PS2_G_CTRL, 'Y', '^', 0,
 	0, 0, PS2_M_CTRL, 'J', PS2_U_CTRL, '&', '*', 0,
@@ -325,7 +327,7 @@ const PROGMEM unsigned char scan2ascii_ctrl[] =  // this needs to be updated!!! 
 	0, PS2_F10_CTRL, PS2_F8_CTRL, PS2_F6_CTRL, PS2_F4_CTRL, PS2_TAB, '~', 0,
 	0, 0 /*Lalt*/, 0 /*Lshift*/, 0, 0 /*Lctrl*/, 'Q', '!', 0,
 	0, 0, PS2_Z_CTRL, 'S', PS2_A_CTRL, PS2_W_CTRL, '@', 0,
-	0, 'C', 'X', PS2_D_CTRL, PS2_E_CTRL, '$', '#', 0,
+	0, PS2_C_CTRL /*'C'*/, 'X', PS2_D_CTRL, PS2_E_CTRL, '$', '#', 0,
 	0, ' ', 'V', 'F', PS2_T_CTRL, 'R', '%', 0,
 	0, PS2_N_CTRL, PS2_B_CTRL, PS2_H_CTRL, PS2_G_CTRL, 'Y', '^', 0,
 	0, 0, PS2_M_CTRL, 'J', PS2_U_CTRL, '&', '*', 0,

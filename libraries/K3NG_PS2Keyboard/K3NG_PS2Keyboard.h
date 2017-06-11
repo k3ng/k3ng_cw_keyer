@@ -41,7 +41,7 @@ K3NG Updates
 
 
 
-// K3NG Version 2015101401
+// K3NG Version 2017.05.12.01
 
 #ifndef K3NG_PS2Keyboard_h
 #define K3NG_PS2Keyboard_h
@@ -50,9 +50,11 @@ K3NG Updates
 // #define OPTION_PS2_KEYBOARD_GERMAN
 // #define OPTION_PS2_KEYBOARD_FRENCH
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
+#if !defined(ARDUINO_SAM_DUE)
+  #include <avr/io.h>
+  #include <avr/interrupt.h>
+  #include <avr/pgmspace.h>
+#endif
 
 // Every call to read() returns a single byte for each
 // keystroke.  These configure what byte will be returned

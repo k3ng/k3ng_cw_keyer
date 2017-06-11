@@ -20,12 +20,12 @@
 #define tx_key_line_5 0
 #define tx_key_line_6 0
 #if !defined(FEATURE_ETHERNET)
-  #define sidetone_line 4         // connect a speaker for sidetone - (pin 4 is used by Ethernet shield and will conflict with that)
+  #define sidetone_line 4         // connect a speaker for sidetone 
 #else
-  #define sidetone_line 31
+  #define sidetone_line 31        // pin 4 is used by Ethernet shield so we'll use pin 31 on the test jig...
 #endif
 #define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
-#define ptt_tx_1 0              // PTT ("push to talk") lines
+#define ptt_tx_1 13              // PTT ("push to talk") lines
 #define ptt_tx_2 0              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
 #define ptt_tx_3 0              //   These are optional - set to 0 if unused
 #define ptt_tx_4 0
@@ -109,6 +109,46 @@
 #if defined(FEATURE_SLEEP)
   #define keyer_awake 13       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
 #endif
+
+#if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
+  #define capactive_paddle_pin_inhibit_pin 0     // if this pin is defined and is set high, the capacitive paddle pins will switch to normal (non-capacitive) sensing mode
+#endif
+
+/*
+FEATURE_SIDETONE_SWITCH
+  Enabling this feature and an external toggle switch  adds switch control for playing cw sidetone.
+  ST Switch status is displayed in the status command.  This feature will override the software control of the sidetone (\o).
+  Arduino pin is assigned by SIDETONE_SWITCH 
+*/
+
+#ifdef FEATURE_SIDETONE_SWITCH
+  #define SIDETONE_SWITCH 8
+#endif //FEATURE_SIDETONE_SWITCH
+
+#ifdef FEATURE_4x4_KEYPAD
+  #define Row3 33
+  #define Row2 32
+  #define Row1 31
+  #define Row0 30
+  #define Col3 37
+  #define Col2 36
+  #define Col1 35
+  #define Col0 34
+#endif
+
+#ifdef FEATURE_3x4_KEYPAD
+  #define Row3 33
+  #define Row2 32
+  #define Row1 31
+  #define Row0 30
+  #define Col2 36
+  #define Col1 35
+  #define Col0 34
+#endif
+
+#else
+
+  #error "Multiple pin_settings.h files included somehow..."
 
 #endif //keyer_pin_settings_h
 

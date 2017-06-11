@@ -1,11 +1,22 @@
+// Initial and hardcoded settings
 
-// ######## ########  ######  ######## 
-//    ##    ##       ##    ##    ##    
-//    ##    ##       ##          ##    
-//    ##    ######    ######     ##    
-//    ##    ##             ##    ##    
-//    ##    ##       ##    ##    ##    
-//    ##    ########  ######     ##    
+
+// ######## ##     ## ##    ## ##    ## ######## ##    ## ######## ########  
+// ##       ##     ## ###   ## ##   ##  ##        ##  ##  ##       ##     ## 
+// ##       ##     ## ####  ## ##  ##   ##         ####   ##       ##     ## 
+// ######   ##     ## ## ## ## #####    ######      ##    ######   ########  
+// ##       ##     ## ##  #### ##  ##   ##          ##    ##       ##   ##   
+// ##       ##     ## ##   ### ##   ##  ##          ##    ##       ##    ##  
+// ##        #######  ##    ## ##    ## ########    ##    ######## ##     ## 
+
+
+// ######## ##    ##    ##     #####   
+// ##       ##   ##   ####    ##   ##  
+// ##       ##  ##      ##   ##     ## 
+// ######   #####       ##   ##     ## 
+// ##       ##  ##      ##   ##     ## 
+// ##       ##   ##     ##    ##   ##  
+// ##       ##    ##  ######   #####  
 
 
 
@@ -40,7 +51,7 @@
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
-#define memory_area_start 30             // the eeprom location where memory space starts
+#define memory_area_start 60             // the eeprom location where memory space starts
 #define memory_area_end 1023             // the eeprom location where memory space ends
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
 #define winkey_command_timeout_ms 5000
@@ -63,8 +74,13 @@
 #define unknown_cw_character '*'
 #define cli_paddle_echo_on_at_boot 1
 #define cli_straight_key_echo_on_at_boot 1
-#define tx_key_dit_and_dah_pins_active_state LOW
-#define tx_key_dit_and_dah_pins_inactive_state HIGH
+#define tx_key_dit_and_dah_pins_active_state HIGH
+#define tx_key_dit_and_dah_pins_inactive_state LOW
+#define potentiometer_check_interval_ms 150
+#define default_paddle_interruption_quiet_time_element_lengths 0
+#define default_wordsworth_wordspace 6
+#define serial_program_memory_buffer_size 500
+
 
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_number_of_buttons 4
@@ -98,7 +114,11 @@
 
 
 #ifdef FEATURE_WINKEY_EMULATION
-  #define WINKEY_DEFAULT_BAUD 1200
+  #ifdef OPTION_WINKEY_UCXLOG_9600_BAUD
+    #define WINKEY_DEFAULT_BAUD 9600
+  #else
+    #define WINKEY_DEFAULT_BAUD 1200
+  #endif //OPTION_WINKEY_UCXLOG_9600_BAUD
 // alter these below to map alternate sidetones for Winkey interface protocol emulation
 #ifdef OPTION_WINKEY_2_SUPPORT
 	#define WINKEY_SIDETONE_1 3759
@@ -136,6 +156,7 @@
 #endif //FEATURE_WINKEY_EMULATION
 
 
+
 #define PRIMARY_SERIAL_PORT &Serial
 #define PRIMARY_SERIAL_PORT_BAUD 115200     // This applies only when the port is in Command Line Interface mode.  In Winkey mode it will default to 1200.
 
@@ -169,13 +190,13 @@
 #if defined(FEATURE_SLEEP)
   #define KEYER_AWAKE_PIN_AWAKE_STATE HIGH
   #define KEYER_AWAKE_PIN_ASLEEP_STATE LOW
-#endif
+#endif 
 
 #if defined(FEATURE_ETHERNET)
-  #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
-  #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
-  // #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.178")
-  // #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
+  // #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
+  // #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
+  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.178")
+  #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
 
   #define FEATURE_ETHERNET_GATEWAY {192,168,1,1}                   // default gateway
   #define FEATURE_ETHERNET_SUBNET_MASK {255,255,255,0}                  // default subnet mask
@@ -184,16 +205,29 @@
   #define FEATURE_UDP_RECEIVE_BUFFER_SIZE 128
 #endif //FEATURE_ETHERNET
 
+#define WEB_SERVER_CONTROL_TX_KEY_TIME_LIMIT_SECS 10
+
 #define FEATURE_INTERNET_LINK_MAX_LINKS 2
 #define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
-#define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500            // increase this time if you have greater than 500 ms latency on your link
-#define FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS 20
-#define FEATURE_INTERNET_LINK_KEY_DOWN_TIMEOUT_SECS 8
+#define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500 
 
-// ######## ########  ######  ######## 
-//    ##    ##       ##    ##    ##    
-//    ##    ##       ##          ##    
-//    ##    ######    ######     ##    
-//    ##    ##             ##    ##    
-//    ##    ##       ##    ##    ##    
-//    ##    ########  ######     ##    
+#if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
+  #define KEYPAD_ROWS 4 //KeyPad Rows
+  #if defined(FEATURE_4x4_KEYPAD)
+    #define KEYPAD_COLS 4 //keypad Columns
+  #else
+    #define KEYPAD_COLS 3
+  #endif
+  #define mem1 0 //Memory numbers for Keypad: Actual memory numbers start with "0"
+  #define mem2 1
+  #define mem3 2
+  #define mem4 3
+  #define mem5 4
+  #define mem6 5
+  #define mem7 6
+  #define mem8 7
+  #define mem9 8
+  #define mem10 9
+  #define mem11 10
+  #define mem12 11
+#endif //#if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
