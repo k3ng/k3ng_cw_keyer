@@ -55,6 +55,12 @@
 #define cli_straight_key_echo_on_at_boot 1
 #define tx_key_dit_and_dah_pins_active_state HIGH
 #define tx_key_dit_and_dah_pins_inactive_state LOW
+#define potentiometer_check_interval_ms 150
+#define default_paddle_interruption_quiet_time_element_lengths 0
+#define default_wordsworth_wordspace 6
+#define default_wordsworth_repetition 1
+#define serial_program_memory_buffer_size 500
+
 
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_number_of_buttons 5
@@ -88,7 +94,11 @@
 
 
 #ifdef FEATURE_WINKEY_EMULATION
-  #define WINKEY_DEFAULT_BAUD 1200
+  #ifdef OPTION_WINKEY_UCXLOG_9600_BAUD
+    #define WINKEY_DEFAULT_BAUD 9600
+  #else
+    #define WINKEY_DEFAULT_BAUD 1200
+  #endif //OPTION_WINKEY_UCXLOG_9600_BAUD
 // alter these below to map alternate sidetones for Winkey interface protocol emulation
 #ifdef OPTION_WINKEY_2_SUPPORT
 	#define WINKEY_SIDETONE_1 3759
@@ -139,12 +149,21 @@
 #define CW_DECODER_SPACE_DECODE_THRESH 2.0  // invoke character decode if no tone for this many element lengths
 #define CW_DECODER_NOISE_FILTER 20          // ignore elements shorter than this (mS)
 
+#define STRAIGHT_KEY_ACTIVE_STATE LOW
+
 #ifdef FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
   #define DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_WPM 30
   #define DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_RATIO 300 // 300 = 3:1 ratio
   #define DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM 70
   #define DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_RATIO 240 // 240 = 2.4:1 ratio
 #endif //FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
+
+#if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
+  #define COMPETITION_COMPRESSION_DETECTION_ARRAY_SIZE 16
+  #define COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_LOWER_LIMIT 1
+  #define COMPETITION_COMPRESSION_DETECTION_TIME_INTERCHAR_UPPER_LIMIT 6.0
+  #define COMPETITION_COMPRESSION_DETECTION_AVERAGE_ALARM_THRESHOLD 3.0
+#endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
 
 #if defined(FEATURE_SLEEP)
   #define KEYER_AWAKE_PIN_AWAKE_STATE HIGH
@@ -163,6 +182,8 @@
   #define FEATURE_UDP_SEND_BUFFER_SIZE 128
   #define FEATURE_UDP_RECEIVE_BUFFER_SIZE 128
 #endif //FEATURE_ETHERNET
+
+#define WEB_SERVER_CONTROL_TX_KEY_TIME_LIMIT_SECS 10
 
 #define FEATURE_INTERNET_LINK_MAX_LINKS 2
 #define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
