@@ -736,6 +736,9 @@ Recent Update History
     2017.06.28.01
       Fixed bug with \T command when FEATURE_COMMAND_BUTTONS is not activated. (Thanks, Павел Бирюков)
 
+    2017.06.28.02
+      Keyer now reports rotary encoder speed changes in K1EL Winkey emulation (Thanks, Marc-Andre, VE2EVN)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -751,7 +754,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.06.28.01"
+#define CODE_VERSION "2017.06.28.02"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -4032,6 +4035,15 @@ void check_rotary_encoder(){
       if (elapsed_time < 250) {speed_change(-2);} else {speed_change(-1);};
     }
     
+    // Start of Winkey Speed change mod for Rotary Encoder -- VE2EVN
+    #ifdef FEATURE_WINKEY_EMULATION
+      if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
+        winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128));
+        winkey_last_unbuffered_speed_wpm = configuration.wpm;
+      }
+    #endif    
+    // End of Winkey Speed change mod for Rotary Encoder -- VE2EVN
+
   } // if (result)
 
   
