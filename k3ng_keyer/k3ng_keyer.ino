@@ -733,6 +733,9 @@ Recent Update History
     2017.06.14.02
       Fixed command line interface bug with /> and /< commands and carriage returns
 
+    2017.06.28.01
+      Fixed bug with \T command when FEATURE_COMMAND_BUTTONS is not activated. (Thanks, Павел Бирюков)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -748,7 +751,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.06.14.02"
+#define CODE_VERSION "2017.06.28.01"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -10503,9 +10506,11 @@ void serial_tune_command (PRIMARY_SERIAL_CLS * port_to_use)
 
   sending_mode = MANUAL_SENDING;
   tx_and_sidetone_key(1);
-  port_to_use->println("Keying tx - press a key to unkey");
+  port_to_use->println("\r\nKeying tx - press a key to unkey");
   #ifdef FEATURE_COMMAND_BUTTONS
-  while ((port_to_use->available() == 0) && (!analogbuttonread(0))) {}  // keystroke or button0 hit gets us out of here
+    while ((port_to_use->available() == 0) && (!analogbuttonread(0))) {}  // keystroke or button0 hit gets us out of here
+  #else
+    while (port_to_use->available() == 0) {}
   #endif
   while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
     incoming = port_to_use->read();
