@@ -739,6 +739,9 @@ Recent Update History
     2017.06.28.02
       Keyer now reports rotary encoder speed changes in K1EL Winkey emulation (Thanks, Marc-Andre, VE2EVN)
 
+    2017.07.24.01"
+      Fixed keypad asterisk and pound definitions (Thanks, Fred, VK2EFL)  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -754,7 +757,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.06.28.02"
+#define CODE_VERSION "2017.07.24.01"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -1334,7 +1337,7 @@ unsigned long automatic_sending_interruption_time = 0;
   {'1','2','3','A'},
   {'4','5','6','B'},
   {'7','8','9','C'},
-  {'#','0','*','D'}
+  {'*','0','#','D'}
   };
 #endif
 
@@ -1344,7 +1347,7 @@ unsigned long automatic_sending_interruption_time = 0;
   {'1','2','3'},
   {'4','5','6'},
   {'7','8','9'},
-  {'#','0','*'}
+  {'*','0','#'}
   };
 #endif
 
