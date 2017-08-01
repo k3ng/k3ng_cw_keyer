@@ -739,8 +739,11 @@ Recent Update History
     2017.06.28.02
       Keyer now reports rotary encoder speed changes in K1EL Winkey emulation (Thanks, Marc-Andre, VE2EVN)
 
-    2017.07.24.01"
+    2017.07.24.01
       Fixed keypad asterisk and pound definitions (Thanks, Fred, VK2EFL)  
+
+    2017.07.31.01
+      Fixed bug with memory macro \X not switching to transmitters 4, 5, or 6 (Thanks, Larry, DL6YY)
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -757,7 +760,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2017.07.24.01"
+#define CODE_VERSION "2017.07.31.01"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -12532,11 +12535,11 @@ byte play_memory(byte memory_number)
                 send_char(' ',KEYER_NORMAL);
                 break;
 
-              case 88:                         // X - switch transmitter
+              case 'X':                         // X - switch transmitter
                 y++;
                 if (y < (memory_end(memory_number)+1)) {
                   eeprom_byte_read2 = EEPROM.read(y);
-                  if ((eeprom_byte_read2 > 48) && (eeprom_byte_read2 < 52)) {
+                  if ((eeprom_byte_read2 > 48) && (eeprom_byte_read2 < 55)) {
                      switch (eeprom_byte_read2) {
                        case 49: switch_to_tx_silent(1); break;
                        case 50: if ((ptt_tx_2) || (tx_key_line_2)) {switch_to_tx_silent(2); } break;
@@ -12548,13 +12551,13 @@ byte play_memory(byte memory_number)
                   }
 
                 }
-                break;  // case 84
+                break;  // case X
 
-              case 67:                       // C - play serial number with cut numbers T and N, then increment
+              case 'C':                       // C - play serial number with cut numbers T and N, then increment
                   send_serial_number(1,1,0);
                 break;
 
-              case 68:                      // D - delay for ### seconds
+              case 'D':                      // D - delay for ### seconds
                 int_from_macro = 0;
                 z = 100;
                 input_error = 0;
@@ -12581,13 +12584,13 @@ byte play_memory(byte memory_number)
                 if (delay_result) {   // if a paddle or button0 was hit during the delay, exit
                   return 0;
                 }
-                break;  // case 68
+                break;  // case D
 
-              case 69:                       // E - play serial number, then increment
+              case 'E':                       // E - play serial number, then increment
                   send_serial_number(0,1,0);
                 break;
 
-              case 70:                       // F - change sidetone frequency
+              case 'F':                       // F - change sidetone frequency
                 int_from_macro = 0;
                 z = 1000;
                 input_error = 0;
@@ -12614,23 +12617,23 @@ byte play_memory(byte memory_number)
                 break;
 
 
-              case 72:                       // H - Switch to Hell
+              case 'H':                       // H - Switch to Hell
                 char_send_mode = HELL;
                 break;
 
-              case 76:                       // L - Switch to CW
+              case 'L':                       // L - Switch to CW
                 char_send_mode = CW;
                 break;
 
-              case 78:                       // N - decrement serial number (do not play)
+              case 'N':                       // N - decrement serial number (do not play)
                 serial_number--;
                 break;
 
-              case 43:                       // + - Prosign
+              case '+':                       // + - Prosign
                 prosign_flag = 1;
                 break;
 
-              case 81:                       // Q - QRSS mode and set dit length to ##
+              case 'Q':                       // Q - QRSS mode and set dit length to ##
                 int_from_macro = 0;
                 z = 10;
                 input_error = 0;
@@ -12656,14 +12659,14 @@ byte play_memory(byte memory_number)
                   qrss_dit_length =  int_from_macro;
                   //calculate_element_length();
                 }
-              break;  //case 81
+              break;  //case Q
 
-              case 82:                       // R - regular speed mode
+              case 'R':                       // R - regular speed mode
                 speed_mode = SPEED_NORMAL;
                 //calculate_element_length();
               break;
 
-              case 84:                      // T - transmit for ### seconds
+              case 'T':                      // T - transmit for ### seconds
                 int_from_macro = 0;
                 z = 100;
                 input_error = 0;
@@ -12693,19 +12696,19 @@ byte play_memory(byte memory_number)
                 if (delay_result) {   // if a paddle or button0 was hit during the delay, exit
                   return 0;
                 }
-                break;  // case 84
+                break;  // case T
 
-              case 85:                      // U - turn on PTT
+              case 'U':                      // U - turn on PTT
                 manual_ptt_invoke = 1;
                 ptt_key();
                 break;
 
-              case 86:                      // V - turn off PTT
+              case 'V':                      // V - turn off PTT
                 manual_ptt_invoke = 0;
                 ptt_unkey();
                 break;
 
-              case 87:                      // W - change speed to ### WPM
+              case 'W':                      // W - change speed to ### WPM
                 int_from_macro = 0;
                 z = 100;
                 input_error = 0;
@@ -12730,9 +12733,9 @@ byte play_memory(byte memory_number)
                   speed_mode = SPEED_NORMAL;
                   speed_set(int_from_macro);
                 }
-                break;  // case 87
+                break;  // case W
 
-                case 89:                // Y - Relative WPM change (positive)
+                case 'Y':                // Y - Relative WPM change (positive)
                   y++;
                   if ((y < (memory_end(memory_number)+1)) && (speed_mode == SPEED_NORMAL)) {
                     eeprom_byte_read2 = EEPROM.read(y);
@@ -12743,9 +12746,9 @@ byte play_memory(byte memory_number)
                     }
                   } else {
                   }
-                  break; // case 89
+                  break; // case Y
 
-                case 90:                // Z - Relative WPM change (positive)
+                case 'Z':                // Z - Relative WPM change (positive)
                   y++;
                   if ((y < (memory_end(memory_number)+1)) && (speed_mode == SPEED_NORMAL)) {
                     eeprom_byte_read2 = EEPROM.read(y);
@@ -12756,7 +12759,7 @@ byte play_memory(byte memory_number)
                     }
                   } else {
                   }
-                  break; // case 90
+                  break; // case Z
 
             }
 
