@@ -79,6 +79,7 @@
 #define potentiometer_check_interval_ms 150
 #define default_paddle_interruption_quiet_time_element_lengths 0
 #define default_wordsworth_wordspace 6
+#define default_wordsworth_repetition 1
 #define serial_program_memory_buffer_size 500
 
 
