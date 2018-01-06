@@ -2,10 +2,10 @@
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
 #define FEATURE_COMMAND_BUTTONS
-// #define FEATURE_COMMAND_LINE_INTERFACE        // (this no longer requires FEATURE_SERIAL)
+#define FEATURE_COMMAND_LINE_INTERFACE        // (this no longer requires FEATURE_SERIAL)
 #define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
-#define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
+// #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
 //#define FEATURE_BEACON
 //#define FEATURE_TRAINING_COMMAND_LINE_INTERFACE
 #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes

@@ -7,6 +7,13 @@
 //    ##    ##       ##    ##    ##    
 //    ##    ########  ######     ##    
 
+//#define USE_THIS_BLOCK
+
+#if defined(USE_THIS_BLOCK)
+
+
+#else
+
 
 #define FEATURE_COMMAND_BUTTONS
 #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
@@ -23,7 +30,7 @@
 // #define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code - Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
 // #define FEATURE_CW_COMPUTER_KEYBOARD  // Have an Arduino Due or Leonardo act as a USB HID (Human Interface Device) keyboard and use the paddle to "type" characters on the computer
 // #define FEATURE_DEAD_OP_WATCHDOG
-#define FEATURE_AUTOSPACE
+// #define FEATURE_AUTOSPACE
 #define FEATURE_FARNSWORTH
 // #define FEATURE_DL2SBA_BANKSWITCH       // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
 // #define FEATURE_LCD_4BIT                // classic LCD display using 4 I/O lines
@@ -91,7 +98,7 @@
 // #define OPTION_DO_NOT_SAY_HI
 // #define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 // #define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
-// #define OPTION_SAVE_MEMORY_NANOKEYER
+#define OPTION_SAVE_MEMORY_NANOKEYER
 #define OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
 // #define OPTION_CW_KEYBOARD_ITALIAN
 // #define OPTION_CW_KEYBOARD_GERMAN
@@ -102,7 +109,7 @@
 // #define OPTION_RUSSIAN_LANGUAGE_SEND_CLI // Russian language CLI sending support (contributed by Павел Бирюков, UA1AQC)
 #define OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION
 // #define OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN
-// #define OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT
+#define OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT
 // #define OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE
 
 // #define OPTION_WORDSWORTH_CZECH
@@ -113,6 +120,8 @@
 
 // #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA  // only works with Mega and pins 2 and 5 - minor performance increase... maybe?
 
+
+#endif
 
 // ######## ########  ######  ######## 
 //    ##    ##       ##    ##    ##    
