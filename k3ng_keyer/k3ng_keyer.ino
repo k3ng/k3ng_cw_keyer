@@ -749,6 +749,9 @@ Recent Update History
       When entering into program memory mode in command mode, a beep is now emitted rather than a dit
       Implemented CLI Receive / Transmit Echo Practice  (\K E)
 
+    2018.01.06.01  
+      Enhancements to CLI CW Training module
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -764,7 +767,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.01.05.01"
+#define CODE_VERSION "2018.01.06.01"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -5830,6 +5833,13 @@ void command_mode()
             stay_in_command_mode = 0;
             break;
         #endif  //FEATURE_ALPHABET_SEND_PRACTICE
+ 
+        #ifdef FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE
+          case 112:
+            command_progressive_5_char_echo_practice();
+            stay_in_command_mode = 0;
+            break;
+        #endif //FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_PRACTICE
 
         case 112211: // ? - status
           
@@ -5924,6 +5934,234 @@ void command_mode()
 }
 #endif //FEATURE_COMMAND_BUTTONS
 
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE) && defined(FEATURE_COMMAND_BUTTONS)
+void command_progressive_5_char_echo_practice(){
+
+  //zzzzzzz
+
+
+  byte loop1 = 1;
+  byte loop2 = 0;
+  byte x = 0;
+  byte user_send_loop = 0;
+  String cw_to_send_to_user(10);
+  char incoming_char = ' ';
+  String user_sent_cw = "";
+  byte paddle_hit = 0;
+  unsigned long last_element_time = 0;
+  unsigned long cw_char;
+  byte speed_mode_before = speed_mode;
+  byte keyer_mode_before = configuration.keyer_mode;
+  byte progressive_step_counter;
+  byte practice_mode;
+  char word_buffer[10];
+
+  speed_mode = SPEED_NORMAL;                 // put us in normal speed mode 
+  if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B)) {
+    configuration.keyer_mode = IAMBIC_B;                   // we got to be in iambic mode (life is too short to make this work in bug mode)
+  }  
+
+  randomSeed(millis());
+
+  #ifdef FEATURE_DISPLAY
+    lcd.clear();
+    lcd_center_print_timed("Receive / Transmit Echo Practice", 0, default_display_msg_delay);
+    service_display();
+  #endif 
+
+
+  send_char('E',0);
+  send_char('C',0);
+  send_char('H',0);
+  send_char('O',0);
+  send_char(' ',0);
+  send_char(' ',0);
+  send_char(' ',0);
+  beep();
+  beep();
+
+
+
+  while (loop1){
+
+
+    // if (practice_mode_called == ECHO_MIXED){
+    //   practice_mode = random(ECHO_2_CHAR_WORDS,ECHO_QSO_WORDS+1);
+    // } else {
+    //   practice_mode = practice_mode_called;
+    // }
+
+    // progressive_step_counter = 255;
+    
+    // switch (practice_mode){
+    //   case CALLSIGN_INTERNATIONAL:
+    //   case CALLSIGN_US:
+    //   case CALLSIGN_EUROPEAN:
+    //   case CALLSIGN_CANADA:
+    //     cw_to_send_to_user = generate_callsign(practice_mode);
+    //     break;
+    //   case ECHO_PROGRESSIVE_5:
+        cw_to_send_to_user = (char)random(65,91);
+        cw_to_send_to_user.concat((char)random(65,91));
+        cw_to_send_to_user.concat((char)random(65,91));
+        cw_to_send_to_user.concat((char)random(65,91));
+        cw_to_send_to_user.concat((char)random(65,91));
+        progressive_step_counter = 1;
+    //     break; 
+    //   case ECHO_2_CHAR_WORDS: 
+    //     //word_index = random(0,s2_size);  // min parm is inclusive, max parm is exclusive
+    //     strcpy_P(word_buffer, (char*)pgm_read_word(&(s2_table[random(0,s2_size)])));
+    //     cw_to_send_to_user = word_buffer;
+    //     break;
+    //   case ECHO_3_CHAR_WORDS: 
+    //     //word_index = random(0,s3_size);  // min parm is inclusive, max parm is exclusive
+    //     strcpy_P(word_buffer, (char*)pgm_read_word(&(s3_table[random(0,s3_size)])));
+    //     cw_to_send_to_user = word_buffer;
+    //     break;
+    //   case ECHO_4_CHAR_WORDS: 
+    //     //word_index = random(0,s4_size);  // min parm is inclusive, max parm is exclusive
+    //     strcpy_P(word_buffer, (char*)pgm_read_word(&(s4_table[random(0,s4_size)])));
+    //     cw_to_send_to_user = word_buffer;
+    //     break;    
+    //   case ECHO_NAMES: 
+    //     //word_index = random(0,name_size);  // min parm is inclusive, max parm is exclusive
+    //     strcpy_P(word_buffer, (char*)pgm_read_word(&(name_table[random(0,name_size)])));
+    //     cw_to_send_to_user = word_buffer;
+    //     break; 
+    //   case ECHO_QSO_WORDS: 
+    //     //word_index = random(0,qso_size);  // min parm is inclusive, max parm is exclusive
+    //     strcpy_P(word_buffer, (char*)pgm_read_word(&(qso_table[random(0,qso_size)])));
+    //     cw_to_send_to_user = word_buffer;
+    //     break; 
+    // } //switch (practice_mode)
+    
+    
+    loop2 = 1;
+    
+    while (loop2){
+  
+      user_send_loop = 1;
+      user_sent_cw = "";
+      cw_char = 0;
+      x = 0;
+
+      // send the CW to the user
+      while ((x < (cw_to_send_to_user.length())) && (x < progressive_step_counter)){
+        send_char(cw_to_send_to_user[x],KEYER_NORMAL);
+        // test
+        // port_to_use->print(cw_to_send_to_user[x]);
+        //
+        x++;
+      }
+      //port_to_use->println();
+
+      while (user_send_loop) {
+        // get their paddle input
+
+
+        #ifdef FEATURE_DISPLAY
+          service_display();
+        #endif
+
+        #ifdef FEATURE_POTENTIOMETER
+          if (configuration.pot_activated) {
+            check_potentiometer();
+          }
+        #endif
+        
+        #ifdef FEATURE_ROTARY_ENCODER
+          check_rotary_encoder();
+        #endif //FEATURE_ROTARY_ENCODER    
+
+        check_paddles();
+
+        if (dit_buffer) {
+          sending_mode = MANUAL_SENDING;
+          send_dit();
+          dit_buffer = 0;
+          paddle_hit = 1;
+          cw_char = (cw_char * 10) + 1;
+          last_element_time = millis();
+        }
+        if (dah_buffer) {
+          sending_mode = MANUAL_SENDING;
+          send_dah();
+          dah_buffer = 0;
+          paddle_hit = 1;
+          cw_char = (cw_char * 10) + 2;
+          last_element_time = millis();
+        }
+ 
+        // have we hit letterspace time (end of a letter?)
+        if ((paddle_hit) && (millis() > (last_element_time + (float(600/configuration.wpm) * length_letterspace)))) {
+          #ifdef DEBUG_PRACTICE_CMD_MODE
+            debug_serial_port->println(F("command_progressive_5_char_echo_practice: user_send_loop: hit length_letterspace"));
+          #endif
+          incoming_char = convert_cw_number_to_ascii(cw_char);
+          //port_to_use->print(incoming_char);
+          user_sent_cw.concat(incoming_char);
+          cw_char = 0;
+          paddle_hit = 0;
+          // TODO - print it to serial and lcd
+        }
+
+        // do we have all the characters from the user? - if so, get out of user_send_loop
+        if ((user_sent_cw.length() >= cw_to_send_to_user.length()) || ((progressive_step_counter < 255) && (user_sent_cw.length() == progressive_step_counter))) {
+          user_send_loop = 0;
+          //port_to_use->println();
+        }
+
+
+        // does the user want to exit?
+        while (analogbuttonread(0)) {
+          user_send_loop = 0;
+          loop1 = 0;
+          loop2 = 0;
+        }
+
+
+      } //while (user_send_loop)
+
+      if (loop1 && loop2){
+        if (progressive_step_counter < 255){  // we're in progressive mode 
+          if (user_sent_cw.substring(0,progressive_step_counter) == cw_to_send_to_user.substring(0,progressive_step_counter)){ 
+            send_char(' ',0);
+            send_char(' ',0);
+            progressive_step_counter++;
+            if (progressive_step_counter == 6){
+              loop2 = 0;
+              beep();
+              send_char(' ',0);
+              send_char(' ',0);
+            }
+          } else {
+            boop();
+            send_char(' ',0);
+            send_char(' ',0);
+          }
+        } else {  
+          if (user_sent_cw == cw_to_send_to_user){     
+            beep();
+            send_char(' ',0);
+            send_char(' ',0);        
+            loop2 = 0;
+          } else {
+            boop();
+            send_char(' ',0);
+            send_char(' ',0);
+          }
+        } //if (progressive_step_counter < 255)
+      } //if (loop1 && loop2)
+    } //loop2
+  } //loop1
+  
+
+  speed_mode = speed_mode_before; 
+  configuration.keyer_mode = keyer_mode_before;
+
+}
+#endif //defined(FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE) && defined(FEATURE_COMMAND_BUTTONS)
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_COMMAND_BUTTONS)
@@ -10894,8 +11132,8 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
     }  
    
     port_to_use->println(F("\r\n\nCW Training Menu\n"));
-    port_to_use->println(F("C - Callsign Receive Practice"));
-    port_to_use->println(F("I - Keyboard Interactive Callsign Receive Practice"));
+    port_to_use->println(F("C - Receive Practice"));
+    port_to_use->println(F("I - Keyboard Interactive Receive Practice"));
     port_to_use->println(F("R - Random Groups Receive Practice"));
     port_to_use->println(F("W - Wordsworth Receive Practice"));
     port_to_use->println(F("E - Receive / Transmit Echo Practice"));
@@ -10919,8 +11157,8 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
     
     switch(incoming_char){
       case 'X': menu_loop = 0; break;
-      case 'C': serial_callsign_practice_menu(port_to_use,PRACTICE_NON_INTERACTIVE); break;
-      case 'I': serial_callsign_practice_menu(port_to_use,PRACTICE_INTERACTIVE); break;
+      case 'C': serial_receive_practice_menu(port_to_use,PRACTICE_NON_INTERACTIVE); break;
+      case 'I': serial_receive_practice_menu(port_to_use,PRACTICE_INTERACTIVE); break;
       case 'R': serial_random_menu(port_to_use); break;
       case 'W': serial_wordsworth_menu(port_to_use); break;
       case 'E': serial_receive_transmit_echo_menu(port_to_use); break;
@@ -11080,27 +11318,22 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
         progressive_step_counter = 1;
         break; 
       case ECHO_2_CHAR_WORDS: 
-        //word_index = random(0,s2_size);  // min parm is inclusive, max parm is exclusive
         strcpy_P(word_buffer, (char*)pgm_read_word(&(s2_table[random(0,s2_size)])));
         cw_to_send_to_user = word_buffer;
         break;
       case ECHO_3_CHAR_WORDS: 
-        //word_index = random(0,s3_size);  // min parm is inclusive, max parm is exclusive
         strcpy_P(word_buffer, (char*)pgm_read_word(&(s3_table[random(0,s3_size)])));
         cw_to_send_to_user = word_buffer;
         break;
       case ECHO_4_CHAR_WORDS: 
-        //word_index = random(0,s4_size);  // min parm is inclusive, max parm is exclusive
         strcpy_P(word_buffer, (char*)pgm_read_word(&(s4_table[random(0,s4_size)])));
         cw_to_send_to_user = word_buffer;
         break;    
       case ECHO_NAMES: 
-        //word_index = random(0,name_size);  // min parm is inclusive, max parm is exclusive
         strcpy_P(word_buffer, (char*)pgm_read_word(&(name_table[random(0,name_size)])));
         cw_to_send_to_user = word_buffer;
         break; 
       case ECHO_QSO_WORDS: 
-        //word_index = random(0,qso_size);  // min parm is inclusive, max parm is exclusive
         strcpy_P(word_buffer, (char*)pgm_read_word(&(qso_table[random(0,qso_size)])));
         cw_to_send_to_user = word_buffer;
         break; 
@@ -11205,7 +11438,6 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
       if (loop1 && loop2){
 
         if (progressive_step_counter < 255){  // we're in progressive mode
-          //if (user_sent_cw.substring(1,progressive_step_counter+1) == cw_to_send_to_user.substring(1,progressive_step_counter+1)){ 
           if (user_sent_cw.substring(0,progressive_step_counter) == cw_to_send_to_user.substring(0,progressive_step_counter)){ 
             send_char(' ',0);
             send_char(' ',0);
@@ -11234,13 +11466,10 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
           }
         }
       }
-  
-      // check for user requested exit again?
 
     } //loop2
   } //loop1
   
-
   speed_mode = speed_mode_before; 
   configuration.keyer_mode = keyer_mode_before;
 
@@ -11250,7 +11479,7 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_callsign_practice_menu(PRIMARY_SERIAL_CLS * port_to_use,byte practice_mode){
+void serial_receive_practice_menu(PRIMARY_SERIAL_CLS * port_to_use,byte practice_mode){
   
 
   byte menu_loop = 1;
@@ -11263,13 +11492,22 @@ void serial_callsign_practice_menu(PRIMARY_SERIAL_CLS * port_to_use,byte practic
       port_to_use->read();
     }  
    
-    port_to_use->println(F("\r\n\nCallsign Receive Practice Menu\n"));
+    if (practice_mode == PRACTICE_INTERACTIVE){
+      port_to_use->println(F("\r\n\nInteractive Receive Practice Menu\n"));
+    } else {
+      port_to_use->println(F("\r\n\nReceive Practice Menu\n"));
+    }
     port_to_use->println(F("I - International Callsigns"));
     port_to_use->println(F("U - US Callsigns"));
     port_to_use->println(F("E - European Callsigns"));
     port_to_use->println(F("C - Canadian Callsigns"));
+    port_to_use->println(F("2 - Two Letter Words"));
+    port_to_use->println(F("3 - Three Letter Words"));
+    port_to_use->println(F("4 - Four Letter Words"));
+    port_to_use->println(F("N - Names"));
+    port_to_use->println(F("Q - QSO Words"));
+    port_to_use->println(F("M - Mixed Words\n"));    
     port_to_use->println(F("\nX - Exit\n"));
-    
     menu_loop2 = 1;
     
     while (menu_loop2){
@@ -11287,19 +11525,32 @@ void serial_callsign_practice_menu(PRIMARY_SERIAL_CLS * port_to_use,byte practic
     if (practice_mode == PRACTICE_INTERACTIVE){
       switch(incoming_char){
         case 'X': menu_loop = 0; break;
-        case 'I': callsign_practice_interactive(port_to_use,CALLSIGN_INTERNATIONAL); break;
-        case 'U': callsign_practice_interactive(port_to_use,CALLSIGN_US); break;
-        case 'E': callsign_practice_interactive(port_to_use,CALLSIGN_EUROPEAN); break;
-        case 'C': callsign_practice_interactive(port_to_use,CALLSIGN_CANADA); break;        
+        case 'I': serial_practice_interactive(port_to_use,CALLSIGN_INTERNATIONAL); break;
+        case 'U': serial_practice_interactive(port_to_use,CALLSIGN_US); break;
+        case 'E': serial_practice_interactive(port_to_use,CALLSIGN_EUROPEAN); break;
+        case 'C': serial_practice_interactive(port_to_use,CALLSIGN_CANADA); break;  
+        case '2': serial_practice_interactive(port_to_use,PRACTICE_2_CHAR_WORDS); break;
+        case '3': serial_practice_interactive(port_to_use,PRACTICE_3_CHAR_WORDS); break;
+        case '4': serial_practice_interactive(port_to_use,PRACTICE_4_CHAR_WORDS); break;
+        case 'N': serial_practice_interactive(port_to_use,PRACTICE_NAMES); break;
+        case 'M': serial_practice_interactive(port_to_use,PRACTICE_MIXED); break;
+        case 'Q': serial_practice_interactive(port_to_use,PRACTICE_QSO_WORDS); break;
       } //switch(incoming_char)
     } else {
       switch(incoming_char){
         case 'X': menu_loop = 0; break;
-        case 'I': callsign_practice_non_interactive(port_to_use,CALLSIGN_INTERNATIONAL); break;
-        case 'U': callsign_practice_non_interactive(port_to_use,CALLSIGN_US); break;
-        case 'E': callsign_practice_non_interactive(port_to_use,CALLSIGN_EUROPEAN); break;
-        case 'C': callsign_practice_non_interactive(port_to_use,CALLSIGN_CANADA); break;        
+        case 'I': serial_practice_non_interactive(port_to_use,CALLSIGN_INTERNATIONAL); break;
+        case 'U': serial_practice_non_interactive(port_to_use,CALLSIGN_US); break;
+        case 'E': serial_practice_non_interactive(port_to_use,CALLSIGN_EUROPEAN); break;
+        case 'C': serial_practice_non_interactive(port_to_use,CALLSIGN_CANADA); break; 
+        case '2': serial_practice_non_interactive(port_to_use,PRACTICE_2_CHAR_WORDS); break;
+        case '3': serial_practice_non_interactive(port_to_use,PRACTICE_3_CHAR_WORDS); break;
+        case '4': serial_practice_non_interactive(port_to_use,PRACTICE_4_CHAR_WORDS); break;
+        case 'N': serial_practice_non_interactive(port_to_use,PRACTICE_NAMES); break;
+        case 'M': serial_practice_non_interactive(port_to_use,PRACTICE_MIXED); break;
+        case 'Q': serial_practice_non_interactive(port_to_use,PRACTICE_QSO_WORDS); break;               
       } //switch(incoming_char)
+
     }
   } //while(menu_loop)
       
@@ -11713,19 +11964,21 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void callsign_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte callsign_mode)
+void serial_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type_called)
 {
 
   byte loop1 = 1;
   byte loop2 = 0;
   byte x = 0;
   byte serialwaitloop = 0;
-  String callsign(10);
+  String cw_to_send_to_user(10);
   char incoming_char = ' ';
-  String user_entered_callsign = "";
+  String user_entered_cw = "";
+  byte practice_type = 0;
+  char word_buffer[10];
 
   randomSeed(millis());
-  port_to_use->println(F("Interactive callsign receive practice\r\n\r\nCopy callsign, type it in, and hit ENTER."));
+  port_to_use->println(F("Interactive receive practice\r\n\r\nCopy the code, type it in, and hit ENTER."));
   port_to_use->println(F("If you are using the Arduino serial monitor, select \"Carriage Return\" line ending."));
   port_to_use->println(F("Enter a blackslash \\ to exit.\r\n"));
   while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
@@ -11740,7 +11993,59 @@ void callsign_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte callsig
 
   while (loop1){
 
-    callsign = generate_callsign(callsign_mode);
+
+//zzzzzz
+
+    if (practice_type_called == PRACTICE_MIXED){
+      practice_type = random(PRACTICE_2_CHAR_WORDS,PRACTICE_QSO_WORDS+1);
+    } else {
+      practice_type = practice_type_called;
+    }
+
+    switch(practice_type){
+      case CALLSIGN_INTERNATIONAL:
+      case CALLSIGN_US:
+      case CALLSIGN_EUROPEAN:
+      case CALLSIGN_CANADA:  
+        cw_to_send_to_user = generate_callsign(practice_type);
+        break;
+      case PRACTICE_2_CHAR_WORDS: 
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(s2_table[random(0,s2_size)])));
+        cw_to_send_to_user = word_buffer;
+        #ifdef DEBUG_PRACTICE_SERIAL
+          debug_serial_port->print("serial_practice_interactive: PRACTICE_2_CHAR_WORDS:");
+        #endif
+        break;
+      case PRACTICE_3_CHAR_WORDS:
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(s3_table[random(0,s3_size)])));
+        cw_to_send_to_user = word_buffer;
+        #ifdef DEBUG_PRACTICE_SERIAL
+          debug_serial_port->print("serial_practice_interactive: PRACTICE_3_CHAR_WORDS:");
+        #endif        
+        break;
+      case PRACTICE_4_CHAR_WORDS: 
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(s4_table[random(0,s4_size)])));
+        cw_to_send_to_user = word_buffer;
+        #ifdef DEBUG_PRACTICE_SERIAL
+          debug_serial_port->print("serial_practice_interactive: PRACTICE_4_CHAR_WORDS:");
+        #endif        
+        break;    
+      case PRACTICE_NAMES: 
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(name_table[random(0,name_size)])));
+        cw_to_send_to_user = word_buffer;
+        #ifdef DEBUG_PRACTICE_SERIAL
+          debug_serial_port->print("serial_practice_interactive: PRACTICE_NAMES:");
+        #endif        
+        break; 
+      case PRACTICE_QSO_WORDS: 
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(qso_table[random(0,qso_size)])));
+        cw_to_send_to_user = word_buffer;
+        #ifdef DEBUG_PRACTICE_SERIAL
+          debug_serial_port->print("serial_practice_interactive: PRACTICE_QSO_WORDS:");
+        #endif        
+        break; 
+    } //switch(practice_type)
+
     loop2 = 1;
     
     while (loop2){
@@ -11750,12 +12055,12 @@ void callsign_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte callsig
       #endif
   
       serialwaitloop = 1;
-      user_entered_callsign = "";
+      user_entered_cw = "";
       x = 0;
       while (serialwaitloop) {
 
-        if(x < (callsign.length())){
-          send_char(callsign[x],KEYER_NORMAL);
+        if(x < (cw_to_send_to_user.length())){
+          send_char(cw_to_send_to_user[x],KEYER_NORMAL);
           x++;
         }
 
@@ -11767,20 +12072,20 @@ void callsign_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte callsig
             serialwaitloop = 0;
           } else {
             if (incoming_char != 10) {
-              user_entered_callsign = user_entered_callsign + incoming_char;
+              user_entered_cw = user_entered_cw + incoming_char;
             }
           }
         }
       }
   
-      if (user_entered_callsign[0] != '?') {
-        if ((user_entered_callsign[0] == '\\')){
+      if (user_entered_cw[0] != '?') {
+        if ((user_entered_cw[0] == '\\')){
           port_to_use->println(F("Exiting...\n"));
           loop1 = 0;
           loop2 = 0;
         } else {
-          user_entered_callsign.toUpperCase();  // the toUpperCase function was modified in 1.0; now it changes string in place
-          if (callsign.compareTo(user_entered_callsign) == 0) {
+          user_entered_cw.toUpperCase();  // the toUpperCase function was modified in 1.0; now it changes string in place
+          if (cw_to_send_to_user.compareTo(user_entered_cw) == 0) {
             port_to_use->println(F("\nCorrect!"));
             loop2 = 0;
           } else {
@@ -11814,14 +12119,16 @@ void callsign_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte callsig
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void callsign_practice_non_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte callsign_mode)
+void serial_practice_non_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type_called)
 {
 
   byte loop1 = 1;
   byte loop2;
   byte x;
-  String callsign(10);
+  String cw_to_send_to_user(10);
   char incoming_char = ' ';
+  byte practice_type;
+  char word_buffer[10];
 
   key_tx = 0;
   randomSeed(millis());
@@ -11835,13 +12142,68 @@ void callsign_practice_non_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte cal
 
   while (loop1){
 
-    callsign = generate_callsign(callsign_mode) + "    ";
+
+
+    if (practice_type_called == PRACTICE_MIXED){
+      practice_type = random(PRACTICE_2_CHAR_WORDS,PRACTICE_QSO_WORDS+1);
+    } else {
+      practice_type = practice_type_called;
+    }
+
+    switch(practice_type){
+      case CALLSIGN_INTERNATIONAL:
+      case CALLSIGN_US:
+      case CALLSIGN_EUROPEAN:
+      case CALLSIGN_CANADA:  
+        cw_to_send_to_user = generate_callsign(practice_type);
+        break;
+      case PRACTICE_2_CHAR_WORDS: 
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(s2_table[random(0,s2_size)])));
+        cw_to_send_to_user = word_buffer;
+        #ifdef DEBUG_PRACTICE_SERIAL
+          debug_serial_port->print("serial_practice_non_interactive: PRACTICE_2_CHAR_WORDS:");
+        #endif
+        break;
+      case PRACTICE_3_CHAR_WORDS:
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(s3_table[random(0,s3_size)])));
+        cw_to_send_to_user = word_buffer;
+        #ifdef DEBUG_PRACTICE_SERIAL
+          debug_serial_port->print("serial_practice_non_interactive: PRACTICE_3_CHAR_WORDS:");
+        #endif        
+        break;
+      case PRACTICE_4_CHAR_WORDS: 
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(s4_table[random(0,s4_size)])));
+        cw_to_send_to_user = word_buffer;
+        #ifdef DEBUG_PRACTICE_SERIAL
+          debug_serial_port->print("serial_practice_non_interactive: PRACTICE_4_CHAR_WORDS:");
+        #endif        
+        break;    
+      case PRACTICE_NAMES: 
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(name_table[random(0,name_size)])));
+        cw_to_send_to_user = word_buffer;
+        #ifdef DEBUG_PRACTICE_SERIAL
+          debug_serial_port->print("serial_practice_non_interactive: PRACTICE_NAMES:");
+        #endif        
+        break; 
+      case PRACTICE_QSO_WORDS: 
+        strcpy_P(word_buffer, (char*)pgm_read_word(&(qso_table[random(0,qso_size)])));
+        cw_to_send_to_user = word_buffer;
+        #ifdef DEBUG_PRACTICE_SERIAL
+          debug_serial_port->print("serial_practice_non_interactive: PRACTICE_QSO_WORDS:");
+        #endif        
+        break; 
+    } //switch(practice_type)
+
+
+    cw_to_send_to_user = cw_to_send_to_user + "    ";
+
+
     loop2 = 1;
     x = 0;
 
-    while ((loop2) && (x < (callsign.length()))) {
+    while ((loop2) && (x < (cw_to_send_to_user.length()))) {
 
-      send_char(callsign[x],KEYER_NORMAL);
+      send_char(cw_to_send_to_user[x],KEYER_NORMAL);
       x++;
     
       if (port_to_use->available()){
@@ -11867,7 +12229,7 @@ void callsign_practice_non_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte cal
 
     } //loop2
 
-    port_to_use->println(callsign);
+    port_to_use->println(cw_to_send_to_user);
 
   } //loop1
 
