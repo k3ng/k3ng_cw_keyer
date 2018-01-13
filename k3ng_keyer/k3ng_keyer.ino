@@ -108,6 +108,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     R####  Set serial number to ####
     S  Alphabet code practice (FEATURE_ALPHABET_SEND_PRACTICE)
     T  Tune mode
+    U  Receive / Send Echo Practice
     V  Toggle potentiometer active / inactive
     W  Change speed
     X  Exit command mode (you can also press the command button (button0) to exit)
@@ -755,6 +756,11 @@ Recent Update History
     2018.01.13.01
       O command in command mode, keyboard input, and CLI enhanced to cycle through sidetone on / off / paddle only; code provided by Marc-Andre, VE2EVN  
 
+    2018.01.13.02
+      Improvements to LCD display in practice modes; code provided by Fred, VK2EFL
+      Minor tweaks to handle LCD displays with lesser number of columns
+      Bug fixes involving practice modes and garbage left in paddle_echo_buffer
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -770,7 +776,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.01.13.01"
+#define CODE_VERSION "2018.01.13.02"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -3086,7 +3092,12 @@ void check_ps2_keyboard()
             delay(200);
             beep();
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+              if (LCD_COLUMNS > 19){
+                lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Sidetone", 0, default_display_msg_delay);
+                lcd_center_print_timed("Paddle Only", 1, default_display_msg_delay);
+              }
             #endif
           } else {
             #ifdef FEATURE_DISPLAY
@@ -3592,7 +3603,12 @@ void check_ps2_keyboard()
             delay(200);
             beep();
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+              if (LCD_COLUMNS > 19){
+                lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Sidetone", 0, default_display_msg_delay);
+                lcd_center_print_timed("Paddle Only", 1, default_display_msg_delay);
+              }
             #endif
           } else {
             #ifdef FEATURE_DISPLAY
@@ -5829,7 +5845,12 @@ void command_mode()
             boop();
           } else if (configuration.sidetone_mode == SIDETONE_ON) {
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+              if (LCD_COLUMNS > 19){
+                lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Sidetone", 0, default_display_msg_delay);
+                lcd_center_print_timed("Paddle Only", 1, default_display_msg_delay);
+              }
             #endif 
             #ifdef DEBUG_COMMAND_MODE
               debug_serial_port->println(F("command_mode: SIDETONE_PADDLE_ONLY"));
@@ -5913,15 +5934,29 @@ void command_mode()
         #endif
         case 121212:send_char(75,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(78,KEYER_NORMAL);send_char(71,KEYER_NORMAL);send_char(32,KEYER_NORMAL);
                     send_char(55,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(32,KEYER_NORMAL);send_char(69,KEYER_NORMAL);send_char(69,KEYER_NORMAL);
-                    break;          
-        #ifdef FEATURE_ALPHABET_SEND_PRACTICE
+                    break;   
+
+        // #ifdef FEATURE_ALPHABET_SEND_PRACTICE
+        //   case 111:
+        //     //send_dit();
+        //     beep(); 
+        //     command_alphabet_send_practice(); // S - Alphabet Send Practice
+        //     stay_in_command_mode = 0;
+        //     break;
+        // #endif  //FEATURE_ALPHABET_SEND_PRACTICE
+
+        #ifdef FEATURE_ALPHABET_SEND_PRACTICE // enhanced by Fred, VK2EFL
           case 111:
-            //send_dit();
-            beep(); 
+            #ifdef FEATURE_DISPLAY
+               lcd_center_print_timed("Send Practice", 0, default_display_msg_delay);
+               lcd_center_print_timed("Cmd button to exit", 1, default_display_msg_delay);
+            #endif
+            beep();
             command_alphabet_send_practice(); // S - Alphabet Send Practice
             stay_in_command_mode = 0;
             break;
         #endif  //FEATURE_ALPHABET_SEND_PRACTICE
+
  
         #ifdef FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE
           case 112:
@@ -6053,22 +6088,34 @@ void command_progressive_5_char_echo_practice(){
 
   randomSeed(millis());
 
-  #ifdef FEATURE_DISPLAY
+  #ifdef FEATURE_DISPLAY // enhanced by Fred, VK2EFL
+
     lcd.clear();
-    lcd_center_print_timed("Receive / Transmit Echo Practice", 0, default_display_msg_delay);
+    if (LCD_COLUMNS > 17){
+      lcd_center_print_timed("Receive / Transmit", 0, default_display_msg_delay);
+      lcd_center_print_timed("5 Char Echo Practice", 1, default_display_msg_delay);
+      if (LCD_ROWS > 2){
+        lcd_center_print_timed("Cmd button to exit", 2, default_display_msg_delay);
+      }
+    } else {
+      lcd_center_print_timed("RX / TX 5 Char", 0, default_display_msg_delay);
+      lcd_center_print_timed("Echo Practice", 1, default_display_msg_delay);
+    }
     service_display();
+    
+  #else
+
+    send_char('E',0);
+    send_char('C',0);
+    send_char('H',0);
+    send_char('O',0);
+    send_char(' ',0);
+    send_char(' ',0);
+    send_char(' ',0);
+    beep();
+    beep();
+
   #endif 
-
-
-  send_char('E',0);
-  send_char('C',0);
-  send_char('H',0);
-  send_char('O',0);
-  send_char(' ',0);
-  send_char(' ',0);
-  send_char(' ',0);
-  beep();
-  beep();
 
 
 
@@ -6248,6 +6295,7 @@ void command_progressive_5_char_echo_practice(){
 
   speed_mode = speed_mode_before; 
   configuration.keyer_mode = keyer_mode_before;
+  paddle_echo_buffer = 0;
 
 }
 #endif //defined(FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE) && defined(FEATURE_COMMAND_BUTTONS)
@@ -11282,6 +11330,7 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
   port_to_use->println(F("Exiting Training module..."));
   check_serial_override = 0;
   key_tx = previous_key_tx_state;
+  paddle_echo_buffer = 0;
   
 }
 #endif
@@ -11584,6 +11633,7 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
   
   speed_mode = speed_mode_before; 
   configuration.keyer_mode = keyer_mode_before;
+  paddle_echo_buffer = 0;
 
 }
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
@@ -15145,7 +15195,12 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
              delay(200);
           beep();
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+            if (LCD_COLUMNS > 19){
+              lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Sidetone", 0, default_display_msg_delay);
+              lcd_center_print_timed("Paddle Only", 1, default_display_msg_delay);
+            }
           #endif      
         } else {
           #ifdef FEATURE_DISPLAY
