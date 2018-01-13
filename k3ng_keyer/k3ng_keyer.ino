@@ -752,6 +752,9 @@ Recent Update History
     2018.01.06.01  
       Enhancements to CLI CW Training module
 
+    2018.01.13.01
+      O command in command mode, keyboard input, and CLI enhanced to cycle through sidetone on / off / paddle only; code provided by Marc-Andre, VE2EVN  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -767,7 +770,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.01.06.01"
+#define CODE_VERSION "2018.01.13.01"
 #define eeprom_magic_number 26
 
 #include <stdio.h>
@@ -3055,20 +3058,46 @@ void check_ps2_keyboard()
           config_dirty = 1;
           break;
 
-        case PS2_O_CTRL :
-          if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
+        // case PS2_O_CTRL :
+        //   if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
+        //     configuration.sidetone_mode = SIDETONE_OFF;
+        //     #ifdef FEATURE_DISPLAY
+        //       lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+        //     #endif      
+        //   } else {
+        //     #ifdef FEATURE_DISPLAY
+        //       lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+        //     #endif      
+        //     configuration.sidetone_mode = SIDETONE_ON;
+        //   }
+        //   config_dirty = 1;
+        //  break;
+
+        case PS2_O_CTRL : // CTRL-O - cycle through sidetone modes on, paddle only and off - New code Marc-Andre, VE2EVN
+          if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
             configuration.sidetone_mode = SIDETONE_OFF;
+            boop();      
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
-            #endif      
+            #endif
+          } else if (configuration.sidetone_mode == SIDETONE_ON) {
+            configuration.sidetone_mode = SIDETONE_PADDLE_ONLY;
+            beep();
+            delay(200);
+            beep();
+            #ifdef FEATURE_DISPLAY
+              lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+            #endif
           } else {
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
             #endif      
             configuration.sidetone_mode = SIDETONE_ON;
+            beep();
           }
           config_dirty = 1;
          break;
+
         
         #if defined(FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING)
           case PS2_S_CTRL :
@@ -3535,20 +3564,45 @@ void check_ps2_keyboard()
           config_dirty = 1;
           break;
 
-        case PS2_O_CTRL :
-          if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
+        // case PS2_O_CTRL :
+        //   if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
+        //     configuration.sidetone_mode = SIDETONE_OFF;
+        //     #ifdef FEATURE_DISPLAY
+        //     lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+        //     #endif      
+        //   } else {
+        //     #ifdef FEATURE_DISPLAY
+        //     lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+        //     #endif      
+        //     configuration.sidetone_mode = SIDETONE_ON;
+        //   }
+        //   config_dirty = 1;
+        //  break;
+
+        case PS2_O_CTRL : // CTRL-O - cycle through sidetone modes on, paddle only and off - New code Marc-Andre, VE2EVN
+          if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
             configuration.sidetone_mode = SIDETONE_OFF;
+            boop();      
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
-            #endif      
+              lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+            #endif
+          } else if (configuration.sidetone_mode == SIDETONE_ON) {
+            configuration.sidetone_mode = SIDETONE_PADDLE_ONLY;
+            beep();
+            delay(200);
+            beep();
+            #ifdef FEATURE_DISPLAY
+              lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+            #endif
           } else {
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+              lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
             #endif      
             configuration.sidetone_mode = SIDETONE_ON;
+            beep();
           }
           config_dirty = 1;
-         break;
+         break;         
 
         case PS2_T_CTRL :
           #ifdef FEATURE_MEMORIES
@@ -5739,8 +5793,32 @@ void command_mode()
           config_dirty = 1;
           send_dit();
           break;  
-        case 222: // O - toggle sidetone on and off
-          if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {
+        // case 222: // O - toggle sidetone on and off
+        //   if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {
+        //     #ifdef FEATURE_DISPLAY
+        //       lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+        //     #endif 
+        //     #ifdef DEBUG_COMMAND_MODE
+        //       debug_serial_port->println(F("command_mode: SIDETONE_OFF"));
+        //     #endif
+        //     configuration.sidetone_mode = SIDETONE_OFF;
+        //     //boop();
+        //   } else {
+        //     #ifdef FEATURE_DISPLAY
+        //       lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+        //     #endif 
+        //     #ifdef DEBUG_COMMAND_MODE
+        //       debug_serial_port->println(F("command_mode: SIDETONE_ON"));
+        //     #endif             
+        //     configuration.sidetone_mode = SIDETONE_ON;
+        //     //beep();
+        //   }
+        //   config_dirty = 1;        
+        //   send_dit();
+        //   break; 
+
+        case 222: // O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN
+          if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
             #endif 
@@ -5748,7 +5826,18 @@ void command_mode()
               debug_serial_port->println(F("command_mode: SIDETONE_OFF"));
             #endif
             configuration.sidetone_mode = SIDETONE_OFF;
-            //boop();
+            boop();
+          } else if (configuration.sidetone_mode == SIDETONE_ON) {
+            #ifdef FEATURE_DISPLAY
+              lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
+            #endif 
+            #ifdef DEBUG_COMMAND_MODE
+              debug_serial_port->println(F("command_mode: SIDETONE_PADDLE_ONLY"));
+            #endif             
+            configuration.sidetone_mode = SIDETONE_PADDLE_ONLY;
+            beep();
+            delay(200);
+            beep();
           } else {
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
@@ -5757,11 +5846,11 @@ void command_mode()
               debug_serial_port->println(F("command_mode: SIDETONE_ON"));
             #endif             
             configuration.sidetone_mode = SIDETONE_ON;
-            //beep();
+            beep();
           }
           config_dirty = 1;        
-          send_dit();
           break; 
+
 
         case 121: command_set_serial_number(); break;  // R - Set serial number
 
@@ -9997,17 +10086,40 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       }
       config_dirty = 1;
     break;
-    case 'O':                                                                // O - toggle sidetone on/off
-      port_to_use->print(F("\r\nSidetone O"));
-      if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {
+
+    // case 'O':                                                                // O - toggle sidetone on/off
+    //   port_to_use->print(F("\r\nSidetone O"));
+    //   if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {
+    //     configuration.sidetone_mode = SIDETONE_OFF;
+    //     port_to_use->println(F("FF"));
+    //   } else {
+    //     configuration.sidetone_mode = SIDETONE_ON;
+    //     port_to_use->println(F("N"));
+    //   }
+    //   config_dirty = 1;
+    // break;
+
+    case 'O': // O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN
+      port_to_use->print(F("\r\nSidetone "));
+      if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
         configuration.sidetone_mode = SIDETONE_OFF;
-        port_to_use->println(F("FF"));
+        boop();      
+        port_to_use->println(F("OFF"));
+      } else if (configuration.sidetone_mode == SIDETONE_ON) {
+        configuration.sidetone_mode = SIDETONE_PADDLE_ONLY;
+        beep();
+        delay(200);
+        beep();
+        port_to_use->println(F("PADDLE ONLY"));
       } else {
         configuration.sidetone_mode = SIDETONE_ON;
-        port_to_use->println(F("N"));
+        beep();
+        port_to_use->println(F("ON"));
       }
       config_dirty = 1;
     break;
+
+
     case 'T': // T - tune
       #ifdef FEATURE_MEMORIES
         repeat_memory = 255;
@@ -14303,6 +14415,11 @@ void initialize_default_modes(){
   configuration.paddle_mode = PADDLE_NORMAL;
   configuration.keyer_mode = IAMBIC_B;
   configuration.sidetone_mode = SIDETONE_ON;
+
+  #ifdef initial_sidetone_mode
+    configuration.sidetone_mode = initial_sidetone_mode;
+  #endif
+
   char_send_mode = CW;
   
   #if defined(FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING) && defined(OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT) // DL1HTB initialize CMOS Super Keyer if feature is enabled
@@ -15000,21 +15117,45 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         config_dirty = 1;
         break;
 
-      case 0x12 : // CTRL-O     
-        if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
+      // case 0x12 : // CTRL-O     
+      //   if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
+      //     configuration.sidetone_mode = SIDETONE_OFF;
+      //     #ifdef FEATURE_DISPLAY
+      //     lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+      //     #endif      
+      //   } else {
+      //     #ifdef FEATURE_DISPLAY
+      //     lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+      //     #endif      
+      //     configuration.sidetone_mode = SIDETONE_ON;
+      //   }
+      //   config_dirty = 1;
+      //  break;
+
+      case 0x12 : // CTRL-O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN  
+        if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
           configuration.sidetone_mode = SIDETONE_OFF;
           #ifdef FEATURE_DISPLAY
           lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+          #endif
+          boop();
+        } else if (configuration.sidetone_mode == SIDETONE_ON) {
+          configuration.sidetone_mode = SIDETONE_PADDLE_ONLY;
+          beep();
+             delay(200);
+          beep();
+          #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
           #endif      
         } else {
           #ifdef FEATURE_DISPLAY
           lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
           #endif      
           configuration.sidetone_mode = SIDETONE_ON;
+          beep();
         }
         config_dirty = 1;
        break;
-
 
         #if defined(FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING)
           case 0x16 :  // CTRL-S
