@@ -22,7 +22,7 @@
 // #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
 // #define FEATURE_BEACON
 #define FEATURE_TRAINING_COMMAND_LINE_INTERFACE
-// #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
+#define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 // #define FEATURE_SIDETONE_SWITCH   // adds switch control for the sidetone output. requires an external toggle switch (assigned to an arduino pin - see keyer_pin_settings.h). 
 #define FEATURE_SERIAL_HELP
 // #define FEATURE_HELL
@@ -33,7 +33,7 @@
 // #define FEATURE_AUTOSPACE
 #define FEATURE_FARNSWORTH
 // #define FEATURE_DL2SBA_BANKSWITCH       // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
-#define FEATURE_LCD_4BIT                // classic LCD display using 4 I/O lines
+// #define FEATURE_LCD_4BIT                // classic LCD display using 4 I/O lines
 // #define FEATURE_LCD_ADAFRUIT_I2C          // Adafruit I2C LCD display using MCP23017 at addr 0x20
 // #define FEATURE_LCD_ADAFRUIT_BACKPACK    // Adafruit I2C LCD Backup using MCP23008 (courtesy Josiah Ritchie, KE0BLL)
 // #define FEATURE_LCD_YDv1                // YourDuino I2C LCD display with old LCM 1602 V1 ic
@@ -62,6 +62,7 @@
 // #define FEATURE_4x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
 // #define FEATURE_3x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
 // #define FEATURE_EXPERIMENTAL_DDS_SINEWAVE_SIDETONE_MEGA // DDS output Mega Digital Pin 46
+// #define FEATURE_CLOCK  // NOT FINISHED YET
 
 // #define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
 #define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 
@@ -82,6 +83,7 @@
 // #define OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE  // use this only with UCXlog if having issues with function key macros
 // #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET  // activate this when using Winkey 2 emulation and Win-Test
 // #define OPTION_WINKEY_FREQUENT_STATUS_REPORT         // activate this to make Winkey emulation play better with RUMlog and RUMped
+// #define OPTION_WINKEY_EXTENDED_COMMANDS_WITH_DOLLAR_SIGNS // experimental
 #define OPTION_WINKEY_IGNORE_LOWERCASE               // Enable for typical K1EL Winkeyer behavior (use for SkookumLogger version 1.10.14 and prior to workaround "r" bug)
 // #define OPTION_WINKEY_ECHO_7C_BYTE                    // For debugging purposes only (only in this test feature and options file) (7C = half space character)
 // #define OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE         // For debugging purposes only (only in this test feature and options file)
@@ -99,7 +101,7 @@
 // #define OPTION_DO_NOT_SAY_HI
 // #define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 // #define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
-#define OPTION_SAVE_MEMORY_NANOKEYER
+// #define OPTION_SAVE_MEMORY_NANOKEYER
 #define OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
 // #define OPTION_CW_KEYBOARD_ITALIAN
 // #define OPTION_CW_KEYBOARD_GERMAN
@@ -110,7 +112,7 @@
 // #define OPTION_RUSSIAN_LANGUAGE_SEND_CLI // Russian language CLI sending support (contributed by Павел Бирюков, UA1AQC)
 #define OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION
 // #define OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN
-#define OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT
+// #define OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT
 // #define OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE
 
 // #define OPTION_WORDSWORTH_CZECH
