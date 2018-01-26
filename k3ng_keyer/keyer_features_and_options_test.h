@@ -50,7 +50,7 @@
 #define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
 #define FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE // enables command mode U
 // #define FEATURE_PTT_INTERLOCK 
-#define FEATURE_QLF
+// #define FEATURE_QLF
 // #define FEATURE_EEPROM_E24C1024
 // #define FEATURE_STRAIGHT_KEY
 // #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO

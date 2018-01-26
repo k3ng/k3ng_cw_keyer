@@ -774,6 +774,9 @@ Recent Update History
       ESC in CLI will now dump type ahead buffer and stop memory repeat, just like \\
       Added /} CLI command to set potentiometer range
 
+    2018.01.25.01
+      Fixed bug in FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING  
+
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -790,7 +793,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.01.14.01"
+#define CODE_VERSION "2018.01.25.01"
 #define eeprom_magic_number 27
 
 #include <stdio.h>
@@ -5270,8 +5273,7 @@ void tx_and_sidetone_key (int state)
 
 //-------------------------------------------------------------------------------------------------------
 
-void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in)
-   {
+void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in){
 
 
     
@@ -5290,9 +5292,10 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
 
 
-     #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-       unsigned long starttime = millis();
-     #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+     //#ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+       //unsigned long starttime = millis();
+       //unsigned long starttime = micros();
+     //#endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
     unsigned long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
     unsigned long start = micros();
@@ -5348,7 +5351,8 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
            }            
          #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
            if (configuration.cmos_super_keyer_iambic_b_timing_on){
-             if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
+             if ((float(float(micros()-start)/float(ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
+             //if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
                if (being_sent == SENDING_DIT) {
                  check_dah_paddle();
                } else {
