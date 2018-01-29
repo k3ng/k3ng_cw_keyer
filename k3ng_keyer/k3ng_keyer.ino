@@ -109,6 +109,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     J  Dah to dit ratio adjust
     K  Toggle Dit and Dah Buffers on and off
     L  Adjust weighting
+    M  Change command mode speed
     N  Toggle paddle reverse
     O  Toggle sidetone on / off
     P#(#) Program a memory
@@ -777,6 +778,10 @@ Recent Update History
     2018.01.25.01
       Fixed bug in FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING  
 
+    2018.01.28.01
+      Added carriage return and newline to the beginning of several CLI command responses  
+      Add command mode command M - set command mode WPM (command mode now has a speed setting independent of regular keyer speed)
+
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -793,8 +798,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.01.25.01"
-#define eeprom_magic_number 27
+#define CODE_VERSION "2018.01.28.01"
+#define eeprom_magic_number 28               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -934,23 +939,23 @@ Recent Update History
 // Variables and stuff
 struct config_t {  //48 bytes
   unsigned int wpm;
-  byte paddle_mode;  
-  byte keyer_mode;   
-  byte sidetone_mode;
+  uint8_t paddle_mode;                                                   
+  uint8_t keyer_mode;            
+  uint8_t sidetone_mode;
   unsigned int hz_sidetone;
   unsigned int dah_to_dit_ratio;
-  byte pot_activated;
-  byte length_wordspace;
-  byte autospace_active;
+  uint8_t pot_activated;
+  uint8_t length_wordspace;
+  uint8_t autospace_active;
   unsigned int wpm_farnsworth;
-  byte current_ptt_line;
-  byte current_tx;
-  byte weighting;
+  uint8_t current_ptt_line;
+  uint8_t current_tx;
+  uint8_t weighting;
   unsigned int memory_repeat_time;
-  byte dit_buffer_off;
-  byte dah_buffer_off;
-  byte cmos_super_keyer_iambic_b_timing_percent;
-  byte cmos_super_keyer_iambic_b_timing_on;
+  uint8_t dit_buffer_off;
+  uint8_t dah_buffer_off;
+  uint8_t cmos_super_keyer_iambic_b_timing_percent;
+  uint8_t cmos_super_keyer_iambic_b_timing_on;
   uint8_t ip[4];
   uint8_t gateway[4];  
   uint8_t subnet[4]; 
@@ -963,6 +968,7 @@ struct config_t {  //48 bytes
   uint8_t wordsworth_wordspace;
   uint8_t wordsworth_repetition;
   uint8_t cli_mode;
+  uint8_t command_mode_wpm;
 } configuration;
 
 byte sending_mode = UNDEFINED_SENDING;
@@ -4923,12 +4929,20 @@ void send_dit(){
   // notes: key_compensation is a straight x mS lengthening or shortening of the key down time
   //        weighting is
 
-  unsigned int character_wpm = configuration.wpm;
+  unsigned int character_wpm;
+
+
   #ifdef FEATURE_FARNSWORTH
     if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
       character_wpm = configuration.wpm_farnsworth;
     }
   #endif //FEATURE_FARNSWORTH
+
+  if (keyer_machine_mode == KEYER_COMMAND_MODE){
+    character_wpm = configuration.command_mode_wpm;
+  } else {
+    character_wpm = configuration.wpm;
+  }
 
   being_sent = SENDING_DIT;
   tx_and_sidetone_key(1);
@@ -5010,13 +5024,19 @@ void send_dit(){
 
 void send_dah(){
 
-  unsigned int character_wpm = configuration.wpm;
+  unsigned int character_wpm;
 
   #ifdef FEATURE_FARNSWORTH
     if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
       character_wpm = configuration.wpm_farnsworth;
     }
   #endif //FEATURE_FARNSWORTH
+
+  if (keyer_machine_mode == KEYER_COMMAND_MODE){
+    character_wpm = configuration.command_mode_wpm;
+  } else {
+    character_wpm = configuration.wpm;
+  }
 
   being_sent = SENDING_DAH;
   tx_and_sidetone_key(1);
@@ -5469,6 +5489,21 @@ void speed_change(int change)
 
 //-------------------------------------------------------------------------------------------------------
 
+void speed_change_command_mode(int change)
+{
+  if (((configuration.command_mode_wpm + change) > wpm_limit_low) && ((configuration.command_mode_wpm + change) < wpm_limit_high)) {
+    configuration.command_mode_wpm = configuration.command_mode_wpm + change;
+    config_dirty = 1;
+  }
+  
+
+  #ifdef FEATURE_DISPLAY
+    lcd_center_print_timed(String(configuration.command_mode_wpm) + " wpm", 0, default_display_msg_delay);
+  #endif
+}
+
+//-------------------------------------------------------------------------------------------------------
+
 void speed_set(int wpm_set){
 
 
@@ -5619,6 +5654,9 @@ void command_mode()
   byte speed_mode_before = speed_mode;
   speed_mode = SPEED_NORMAL;                 // put us in normal speed mode (life is too short to do command mode in QRSS)
   byte keyer_mode_before = configuration.keyer_mode;
+  //uint8_t speed_wpm_before = configuration.wpm;
+  //uint8_t command_mode_speed_change_wpm_temp;
+  //configuration.wpm = configuration.command_mode_wpm;
   char c[4];
   if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B)) {
     configuration.keyer_mode = IAMBIC_B;                   // we got to be in iambic mode (life is too short to make this work in bug mode)
@@ -5832,6 +5870,12 @@ void command_mode()
           }
           break;
         case 1211: command_weighting_adjust();break; // L - weight adjust
+
+        case 22: // M - Set command mode WPM
+          command_speed_mode(COMMAND_SPEED_MODE_COMMAND_MODE_WPM); 
+          break;
+
+
         #ifdef FEATURE_MEMORIES
           case 1221: command_program_memory(); break;                       // P - program a memory
         #endif //FEATURE_MEMORIES  Acknowledgement: LA3ZA fixed!
@@ -5935,7 +5979,16 @@ void command_mode()
             send_dit();
             break; 
         #endif
-        case 122: command_speed_mode(); break;                            // W - change wpm
+        case 122: // W - change wpm
+
+
+//zzzzzzz
+
+          //command_mode_speed_change_wpm_temp = configuration.wpm;
+          command_speed_mode(COMMAND_SPEED_MODE_KEYER_WPM); 
+          //speed_wpm_before = configuration.wpm;
+          //configuration.wpm = command_mode_speed_change_wpm_temp;
+          break;                            
         #ifdef FEATURE_MEMORIES
           case 2122: command_set_mem_repeat_delay(); break; // Y - set memory repeat delay
         #endif  
@@ -5977,30 +6030,22 @@ void command_mode()
                     send_char(55,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(32,KEYER_NORMAL);send_char(69,KEYER_NORMAL);send_char(69,KEYER_NORMAL);
                     break;   
 
-        // #ifdef FEATURE_ALPHABET_SEND_PRACTICE
-        //   case 111:
-        //     //send_dit();
-        //     beep(); 
-        //     command_alphabet_send_practice(); // S - Alphabet Send Practice
-        //     stay_in_command_mode = 0;
-        //     break;
-        // #endif  //FEATURE_ALPHABET_SEND_PRACTICE
 
         #ifdef FEATURE_ALPHABET_SEND_PRACTICE // enhanced by Fred, VK2EFL
-          case 111:
+          case 111:   // S - Alphabet Send Practice
             #ifdef FEATURE_DISPLAY
                lcd_center_print_timed("Send Practice", 0, default_display_msg_delay);
                lcd_center_print_timed("Cmd button to exit", 1, default_display_msg_delay);
             #endif
             beep();
-            command_alphabet_send_practice(); // S - Alphabet Send Practice
+            command_alphabet_send_practice();
             stay_in_command_mode = 0;
             break;
         #endif  //FEATURE_ALPHABET_SEND_PRACTICE
 
  
         #ifdef FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE
-          case 112:
+          case 112:  // U - 5 Character Echo Practice
             command_progressive_5_char_echo_practice();
             stay_in_command_mode = 0;
             break;
@@ -6081,7 +6126,7 @@ void command_mode()
   #endif //command_mode_active_led
 
   keyer_machine_mode = KEYER_NORMAL;
-
+  //configuration.wpm = speed_wpm_before;  
   speed_mode = speed_mode_before;   // go back to whatever speed mode we were in before
   configuration.keyer_mode = keyer_mode_before;
 
@@ -6622,24 +6667,41 @@ void command_sidetone_freq_adj() {
 #endif //FEATURE_COMMAND_BUTTONS
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_COMMAND_BUTTONS
-void command_speed_mode()
+void command_speed_mode(byte mode)
 {
 
   byte looping = 1;
-  String wpm_string;
-  
-  #ifdef FEATURE_DISPLAY
-  lcd_center_print_timed("Adjust Speed", 0, default_display_msg_delay);        
+  #ifndef FEATURE_DISPLAY
+    static char c[4];
   #endif
+  //static String wpm_string;
   
-
+  if (mode == COMMAND_SPEED_MODE_KEYER_WPM){
+    #ifdef FEATURE_DISPLAY
+      lcd_center_print_timed("Adjust Speed", 0, default_display_msg_delay); 
+    #endif
+    keyer_machine_mode = KEYER_COMMAND_MODE_SPEED_OVERRIDE;
+  } else {
+    #ifdef FEATURE_DISPLAY
+      lcd_center_print_timed("Cmd Mode Speed", 0, default_display_msg_delay);
+    #endif  
+  }         
+  
   while (looping) {
     send_dit();
     if ((paddle_pin_read(paddle_left) == LOW)) {
-      speed_change(1);
+      if (mode == COMMAND_SPEED_MODE_KEYER_WPM){
+        speed_change(1);
+      } else {
+        speed_change_command_mode(1);
+      }
     }
     if ((paddle_pin_read(paddle_right) == LOW)) {
-      speed_change(-1);
+      if (mode == COMMAND_SPEED_MODE_KEYER_WPM){
+        speed_change(-1);
+      } else {
+        speed_change_command_mode(-1);
+      }
     }
     while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0) ))  // if paddles are squeezed or button0 pressed - exit
     {
@@ -6651,16 +6713,26 @@ void command_speed_mode()
     #endif  //OPTION_WATCHDOG_TIMER
 
   }
-  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
-  #ifndef FEATURE_DISPLAY
-    // announce speed in CW
-    wpm_string = String(configuration.wpm, DEC);
-    send_char(wpm_string[0],KEYER_NORMAL);
-    send_char(wpm_string[1],KEYER_NORMAL);
-  #endif
+
+  keyer_machine_mode = KEYER_COMMAND_MODE;
 
   dit_buffer = 0;
   dah_buffer = 0;
+
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  #ifndef FEATURE_DISPLAY
+    // announce speed in CW
+    if (mode == COMMAND_SPEED_MODE_KEYER_WPM){
+      sprintf(c, "%d", configuration.wpm);
+    } else {
+      sprintf(c, "%d", configuration.command_mode_wpm);
+    }  
+    send_char(' ',KEYER_NORMAL);
+    send_char(c[0],KEYER_NORMAL);
+    send_char(c[1],KEYER_NORMAL);    
+  #endif
+
+ 
 
 }
 #endif //FEATURE_COMMAND_BUTTONS
@@ -11006,7 +11078,7 @@ void serial_change_wordspace(PRIMARY_SERIAL_CLS * port_to_use)
   if (set_wordspace_to > 0) {
     config_dirty = 1;
     configuration.length_wordspace = set_wordspace_to;
-    port_to_use->write("Wordspace set to ");
+    port_to_use->write("\r\nWordspace set to ");
     port_to_use->println(set_wordspace_to,DEC);
   }
 }
@@ -11019,12 +11091,12 @@ void serial_switch_tx(PRIMARY_SERIAL_CLS * port_to_use)
   int set_tx_to = serial_get_number_input(1,0,7,port_to_use,RAISE_ERROR_MSG);
   if (set_tx_to > 0) {
     switch (set_tx_to){
-      case 1: switch_to_tx_silent(1); port_to_use->print(F("Switching to TX #")); port_to_use->println(F("1")); break;
-      case 2: if ((ptt_tx_2) || (tx_key_line_2)) {switch_to_tx_silent(2); port_to_use->print(F("Switching to TX #"));} port_to_use->println(F("2")); break;
-      case 3: if ((ptt_tx_3) || (tx_key_line_3)) {switch_to_tx_silent(3); port_to_use->print(F("Switching to TX #"));} port_to_use->println(F("3")); break;
-      case 4: if ((ptt_tx_4) || (tx_key_line_4)) {switch_to_tx_silent(4); port_to_use->print(F("Switching to TX #"));} port_to_use->println(F("4")); break;
-      case 5: if ((ptt_tx_5) || (tx_key_line_5)) {switch_to_tx_silent(5); port_to_use->print(F("Switching to TX #"));} port_to_use->println(F("5")); break;
-      case 6: if ((ptt_tx_6) || (tx_key_line_6)) {switch_to_tx_silent(6); port_to_use->print(F("Switching to TX #"));} port_to_use->println(F("6")); break;
+      case 1: switch_to_tx_silent(1); port_to_use->print(F("\r\nSwitching to TX #")); port_to_use->println(F("1")); break;
+      case 2: if ((ptt_tx_2) || (tx_key_line_2)) {switch_to_tx_silent(2); port_to_use->print(F("\r\nSwitching to TX #"));} port_to_use->println(F("2")); break;
+      case 3: if ((ptt_tx_3) || (tx_key_line_3)) {switch_to_tx_silent(3); port_to_use->print(F("\r\nSwitching to TX #"));} port_to_use->println(F("3")); break;
+      case 4: if ((ptt_tx_4) || (tx_key_line_4)) {switch_to_tx_silent(4); port_to_use->print(F("\r\nSwitching to TX #"));} port_to_use->println(F("4")); break;
+      case 5: if ((ptt_tx_5) || (tx_key_line_5)) {switch_to_tx_silent(5); port_to_use->print(F("\r\nSwitching to TX #"));} port_to_use->println(F("5")); break;
+      case 6: if ((ptt_tx_6) || (tx_key_line_6)) {switch_to_tx_silent(6); port_to_use->print(F("\r\nSwitching to TX #"));} port_to_use->println(F("6")); break;
     }
   }
 }
@@ -11046,7 +11118,7 @@ void serial_set_dit_to_dah_ratio(PRIMARY_SERIAL_CLS * port_to_use)
       set_ratio_to = 300;
     }
     configuration.dah_to_dit_ratio = set_ratio_to;
-    port_to_use->print(F("Dah to dit ratio set to "));
+    port_to_use->write("\r\nDah to dit ratio set to ");
     port_to_use->println((float(configuration.dah_to_dit_ratio)/100));
     config_dirty = 1;
    
@@ -11060,7 +11132,7 @@ void serial_set_serial_number(PRIMARY_SERIAL_CLS * port_to_use)
   int set_serial_number_to = serial_get_number_input(4,0,10000, port_to_use,RAISE_ERROR_MSG);
   if (set_serial_number_to > 0) {
     serial_number = set_serial_number_to;
-    port_to_use->print(F("\nSetting serial number to "));
+    port_to_use->write("\r\nSetting serial number to ");
     port_to_use->println(serial_number);
   }
 }
@@ -11074,7 +11146,7 @@ void serial_set_pot_low_high(PRIMARY_SERIAL_CLS * port_to_use)
   int low_number = (serial_get_number / 100);
   int high_number = serial_get_number % (int(serial_get_number / 100)*100);
   if ((low_number < high_number) && (low_number >= wpm_limit_low) && (high_number <= wpm_limit_high)){
-    port_to_use->print(F("\nSetting potentiometer range to "));
+    port_to_use->print(F("\r\nSetting potentiometer range to "));
     port_to_use->print(low_number);
     port_to_use->print(F(" - "));
     port_to_use->print(high_number);
@@ -11093,7 +11165,7 @@ void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use)
 {
   int set_sidetone_hz = serial_get_number_input(4,(SIDETONE_HZ_LOW_LIMIT-1),(SIDETONE_HZ_HIGH_LIMIT+1), port_to_use, RAISE_ERROR_MSG);
   if ((set_sidetone_hz > SIDETONE_HZ_LOW_LIMIT) && (set_sidetone_hz < SIDETONE_HZ_HIGH_LIMIT)) {
-    port_to_use->write("Setting sidetone to ");
+    port_to_use->write("\r\nSetting sidetone to ");
     port_to_use->print(set_sidetone_hz,DEC);
     port_to_use->println(F(" hz"));
     configuration.hz_sidetone = set_sidetone_hz;
@@ -11109,7 +11181,7 @@ void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use)
   int set_wpm = serial_get_number_input(3,0,1000, port_to_use, RAISE_ERROR_MSG);
   if (set_wpm > 0) {
     speed_set(set_wpm);
-    port_to_use->write("Setting WPM to ");
+    port_to_use->write("\r\nSetting WPM to ");
     port_to_use->println(set_wpm,DEC);
     config_dirty = 1;
   }
@@ -11123,7 +11195,7 @@ void serial_set_farnsworth(PRIMARY_SERIAL_CLS * port_to_use)
   int set_farnsworth_wpm = serial_get_number_input(3,-1,1000, port_to_use, RAISE_ERROR_MSG);
   if (set_farnsworth_wpm > 0) {
     configuration.wpm_farnsworth = set_farnsworth_wpm;
-    port_to_use->write("Setting Farnworth WPM to ");
+    port_to_use->write("\r\nSetting Farnworth WPM to ");
     port_to_use->println(set_farnsworth_wpm,DEC);
     config_dirty = 1;
   }
@@ -11139,7 +11211,7 @@ void serial_set_weighting(PRIMARY_SERIAL_CLS * port_to_use)
     set_weighting = 50;
   }
   configuration.weighting = set_weighting;
-  port_to_use->write("Setting weighting to ");
+  port_to_use->write("\r\nSetting weighting to ");
   port_to_use->println(set_weighting,DEC);
 }
 #endif
@@ -11157,7 +11229,7 @@ void serial_tune_command (PRIMARY_SERIAL_CLS * port_to_use)
 
   sending_mode = MANUAL_SENDING;
   tx_and_sidetone_key(1);
-  port_to_use->println("\r\nKeying tx - press a key to unkey");
+  port_to_use->println(F("\r\nKeying tx - press a key to unkey"));
   #ifdef FEATURE_COMMAND_BUTTONS
     while ((port_to_use->available() == 0) && (!analogbuttonread(0))) {}  // keystroke or button0 hit gets us out of here
   #else
@@ -12691,6 +12763,8 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   if (speed_mode == SPEED_NORMAL) {
     port_to_use->print(F("WPM: "));
     port_to_use->println(configuration.wpm,DEC);
+    port_to_use->print(F("Command Mode WPM: "));
+    port_to_use->println(configuration.command_mode_wpm,DEC);
     #ifdef FEATURE_FARNSWORTH
       port_to_use->print(F("Farnsworth WPM: "));
       if (configuration.wpm_farnsworth < configuration.wpm) {
@@ -14662,6 +14736,7 @@ void initialize_keyer_state(){
   configuration.wordsworth_repetition = default_wordsworth_repetition;
   configuration.wpm_farnsworth = initial_speed_wpm;
   configuration.cli_mode = CLI_NORMAL_MODE;
+  configuration.command_mode_wpm = initial_command_mode_speed_wpm;
   
   switch_to_tx_silent(1);
 

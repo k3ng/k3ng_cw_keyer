@@ -25,7 +25,6 @@
 //#define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power
 //#define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
 //#define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-//#define FEATURE_HI_PRECISION_LOOP_TIMING
 //#define FEATURE_USB_MOUSE
 //#define FEATURE_CAPACITIVE_PADDLE_PINS  // remove the bypass capacitors on the paddle_left and paddle_right lines when using capactive paddles
 //#define FEATURE_LED_RING                // Mayhew Labs Led Ring support

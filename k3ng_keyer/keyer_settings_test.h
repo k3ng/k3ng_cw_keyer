@@ -10,6 +10,7 @@
 
 
 #define initial_speed_wpm 26             // "factory default" keyer speed setting
+#define initial_command_mode_speed_wpm 20 // "factory default" command mode speed setting 
 #define initial_sidetone_freq 600        // "factory default" sidetone frequency setting
 #define hz_high_beep 1500                // frequency in hertz of high beep
 #define hz_low_beep 400                  // frequency in hertz of low beep
