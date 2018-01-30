@@ -782,6 +782,10 @@ Recent Update History
       Added carriage return and newline to the beginning of several CLI command responses  
       Add command mode command M - set command mode WPM (command mode now has a speed setting independent of regular keyer speed)
 
+    2018.01.29.01
+      Working on FEATURE_CLI_EXPERT_MENU and FEATURE_SD_CARD_SUPPORT
+      CLI status now shows speed potentiometer range 
+
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -798,7 +802,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.01.28.01"
+#define CODE_VERSION "2018.01.29.01"
 #define eeprom_magic_number 28               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -935,6 +939,11 @@ Recent Update History
 #if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
   #include <Keypad.h>
 #endif
+
+#if defined(FEATURE_SD_CARD_SUPPORT)
+  #include <SPI.h>
+  #include <SD.h>
+#endif //FEATURE_SD_CARD_SUPPORT
 
 // Variables and stuff
 struct config_t {  //48 bytes
@@ -1449,6 +1458,13 @@ unsigned long millis_rollover = 0;
   unsigned long millis_at_last_calibration = 0;
 #endif // FEATURE_CLOCK
 
+#if defined(FEATURE_SD_CARD_SUPPORT)
+  uint8_t sd_card_state = SD_CARD_UNINITIALIZED;
+  File sdfile;
+  File sdlogfile;
+  uint8_t sd_card_log_state = SD_CARD_LOG_NOT_OPEN;
+#endif //FEATURE_SD_CARD_SUPPORT  
+
 /*---------------------------------------------------------------------------------------------------------
 
 
@@ -1479,6 +1495,7 @@ void setup()
   initialize_ethernet();
   initialize_udp();
   initialize_web_server();
+  initialize_sd_card();  
   initialize_debug_startup();
 
 }
@@ -1614,6 +1631,11 @@ void loop()
 
   #if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
     service_keypad();
+  #endif
+
+
+  #ifdef FEATURE_SD_CARD_SUPPORT
+    service_sd_card();    
   #endif
 
   service_millis_rollover();
@@ -5980,14 +6002,7 @@ void command_mode()
             break; 
         #endif
         case 122: // W - change wpm
-
-
-//zzzzzzz
-
-          //command_mode_speed_change_wpm_temp = configuration.wpm;
           command_speed_mode(COMMAND_SPEED_MODE_KEYER_WPM); 
-          //speed_wpm_before = configuration.wpm;
-          //configuration.wpm = command_mode_speed_change_wpm_temp;
           break;                            
         #ifdef FEATURE_MEMORIES
           case 2122: command_set_mem_repeat_delay(); break; // Y - set memory repeat delay
@@ -9835,6 +9850,10 @@ void service_winkey(byte action) {
 void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
  
   static byte cli_wait_for_cr_flag = 0; 
+
+  #ifdef FEATURE_SD_CARD_SUPPORT
+    char temp_string[2];
+  #endif
   
   if (serial_backslash_command == 0) {
     incoming_serial_byte = uppercase(incoming_serial_byte);
@@ -9869,6 +9888,10 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
         if (configuration.cli_mode == CLI_MILL_MODE_KEYBOARD_RECEIVE){
           port_to_use->write(incoming_serial_byte);
           if (incoming_serial_byte == 13){port_to_use->println();}
+          #ifdef FEATURE_SD_CARD_SUPPORT
+            strcpy(temp_string,incoming_serial_byte);
+            sd_card_log(temp_string);
+          #endif            
           //zzzzzz
         } else { // configuration.cli_mode == CLI_MILL_MODE_PADDLE_SEND
           port_to_use->println();
@@ -9876,6 +9899,11 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
           if (incoming_serial_byte == 13){port_to_use->println();}
           port_to_use->write(incoming_serial_byte);
           configuration.cli_mode = CLI_MILL_MODE_KEYBOARD_RECEIVE;
+          #ifdef FEATURE_SD_CARD_SUPPORT
+            sd_card_log("\r\nRX:");
+            strcpy(temp_string,incoming_serial_byte);
+            sd_card_log(temp_string);
+          #endif          
         }
       } //if (configuration.cli_mode == CLI_NORMAL_MODE)
       #ifdef FEATURE_MEMORIES
@@ -10453,9 +10481,9 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       config_dirty = 1;
       break;
 
-    #if defined(DEBUG_ACTIVATE_SERIAL_DEBUG_MENU)
+    #if defined(FEATURE_CLI_EXPERT_MENU)
     case '"':
-      cli_debug_menu(port_to_use);
+      cli_expert_menu(port_to_use);
       break;
     #endif
 
@@ -10467,12 +10495,8 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
 
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(DEBUG_ACTIVATE_SERIAL_DEBUG_MENU)
-void cli_debug_menu(PRIMARY_SERIAL_CLS * port_to_use){
-
-//zzzzz
-
-
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
+void cli_expert_menu(PRIMARY_SERIAL_CLS * port_to_use){
 
   byte menu_loop = 1;
   byte menu_loop2 = 1;
@@ -10484,8 +10508,12 @@ void cli_debug_menu(PRIMARY_SERIAL_CLS * port_to_use){
       port_to_use->read();
     }  
    
-    port_to_use->println(F("\r\n\nDebug Menu\n"));
+    port_to_use->println(F("\r\n\nExpert Menu\n"));
     port_to_use->println(F("E - EEPROM Dump"));
+    #if defined(FEATURE_SD_CARD_SUPPORT)
+      port_to_use->println(F("S - Save EEPROM to SD card file eeprom.sav"));
+      port_to_use->println(F("L - Load EEPROM from SD card file eeprom.lod"));
+    #endif //FEATURE_SD_CARD_SUPPORT
     port_to_use->println(F("\nX - Exit\n"));
     
     menu_loop2 = 1;
@@ -10506,20 +10534,96 @@ void cli_debug_menu(PRIMARY_SERIAL_CLS * port_to_use){
     switch(incoming_char){
       case 'X': menu_loop = 0; break;
       case 'E': cli_debug_eeprom_dump(port_to_use); break;
+      #if defined(FEATURE_SD_CARD_SUPPORT)
+        case 'S': sd_card_save_eeprom_to_file(port_to_use);break;
+        case 'L': sd_card_load_eeprom_from_file(port_to_use);break;
+      #endif   //FEATURE_SD_CARD_SUPPORT
     } //switch(incoming_char)
     
   } //while(menu_loop)
       
-  port_to_use->println(F("Exiting debug..."));
+  port_to_use->println(F("Exiting expert menu..."));
 
 
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
+
+
+//---------------------------------------------------------------------
+
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU) && defined(FEATURE_SD_CARD_SUPPORT)
+void sd_card_load_eeprom_from_file(PRIMARY_SERIAL_CLS * port_to_use) {
+
+  uint8_t eeprom_byte_;
+  unsigned int x;
+
+
+
+  sdfile = SD.open("/keyer/eeprom.lod", FILE_READ);
+
+  if (sdfile) {
+    port_to_use->print(F("Loading eeprom from /keyer/eeprom.lod"));
+  } else {
+    port_to_use->println(F("Error opening file.  Exiting."));
+    return;
+  }
+
+  for (x = 0; x < memory_area_end; x++) {
+    if (sdfile.available()){
+      EEPROM.write(x,sdfile.read());
+      if ((x % 16) == 0){port_to_use->print("#");}
+    } else {
+      x = memory_area_end;
+      port_to_use->println(F("\r\nHit end of file before end of eeprom"));
+    }
+  }
+
+  sdfile.close();
+  port_to_use->println(F("\r\nReading settings from eeprom."));
+  read_settings_from_eeprom();
+  port_to_use->println(F("Done."));
 
 
 
 }
-#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(DEBUG_ACTIVATE_SERIAL_DEBUG_MENU)
+
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU) 
+
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(DEBUG_ACTIVATE_SERIAL_DEBUG_MENU)
+
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU) && defined(FEATURE_SD_CARD_SUPPORT)
+void sd_card_save_eeprom_to_file(PRIMARY_SERIAL_CLS * port_to_use) {
+
+  uint8_t eeprom_byte_in;
+  unsigned int x;
+
+  SD.remove("/keyer/eeprom.sav");
+  sdfile = SD.open("/keyer/eeprom.sav", FILE_WRITE);
+
+  if (sdfile) {
+    port_to_use->print(F("Writing to /keyer/eeprom.sav"));
+  } else {
+    port_to_use->println(F("Error opening file.  Exiting."));
+    return;
+  }
+
+  for (x = 0; x < memory_area_end; x++) {
+    eeprom_byte_in = EEPROM.read(x);
+    sdfile.write(eeprom_byte_in);
+    if ((x % 16) == 0){port_to_use->print(".");}
+  }
+
+  sdfile.close();
+  port_to_use->println(F("Done."));
+
+}
+
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU) 
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
 void cli_debug_eeprom_dump(PRIMARY_SERIAL_CLS * port_to_use){
 
   byte eeprom_byte_in;
@@ -10580,7 +10684,7 @@ void cli_debug_eeprom_dump(PRIMARY_SERIAL_CLS * port_to_use){
   }
 
 }
-#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(DEBUG_ACTIVATE_SERIAL_DEBUG_MENU)
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
 //---------------------------------------------------------------------
 #ifdef FEATURE_PADDLE_ECHO
 void service_paddle_echo()
@@ -10609,6 +10713,10 @@ void service_paddle_echo()
     if (paddle_echo_buffer == 111111) {paddle_echo_buffer_decode_time = 0; backspace_flag = 1;}  //this is a special hack to make repeating backspace work
   #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
   
+  #ifdef FEATURE_SD_CARD_SUPPORT
+    char temp_string[2];
+  #endif  
+
   
   if ((paddle_echo_buffer) && (millis() > paddle_echo_buffer_decode_time)) {
 
@@ -10877,13 +10985,20 @@ void service_paddle_echo()
               #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                 secondary_serial_port->println();
                 secondary_serial_port->println();
-              #endif              
+              #endif    
+              #ifdef FEATURE_SD_CARD_SUPPORT
+                sd_card_log("\r\nTX:");
+              #endif                        
               configuration.cli_mode = CLI_MILL_MODE_PADDLE_SEND;
             }  
             primary_serial_port->write(byte_temp);
             #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT             
               secondary_serial_port->write(byte_temp);
             #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+            #ifdef FEATURE_SD_CARD_SUPPORT
+              strcpy(temp_string,incoming_serial_byte);
+              sd_card_log(temp_string);
+            #endif                  
           }
 
         } 
@@ -10897,12 +11012,19 @@ void service_paddle_echo()
               secondary_serial_port->println();
               secondary_serial_port->println();
             #endif
+            #ifdef FEATURE_SD_CARD_SUPPORT
+              sd_card_log("\r\nTX:");
+            #endif
             configuration.cli_mode = CLI_MILL_MODE_PADDLE_SEND;
           }
           primary_serial_port->write(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
           #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT      
             secondary_serial_port->write(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
           #endif
+          #ifdef FEATURE_SD_CARD_SUPPORT
+            strcpy(temp_string,convert_cw_number_to_ascii(paddle_echo_buffer));
+            sd_card_log(temp_string);
+          #endif            
         } 
       #endif //OPTION_PROSIGN_SUPPORT
     #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)   
@@ -11871,7 +11993,6 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
           paddle_hit = 0;
           // TODO - print it to serial and lcd
         }
-//zzzzzzzzz
 
         // do we have all the characters from the user? - if so, get out of user_send_loop
         if ((user_sent_cw.length() >= cw_to_send_to_user.length()) || ((progressive_step_counter < 255) && (user_sent_cw.length() == progressive_step_counter))) {
@@ -12457,9 +12578,6 @@ void serial_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte practice_
 
   while (loop1){
 
-
-//zzzzzz
-
     if (practice_type_called == PRACTICE_MIXED){
       practice_type = random(PRACTICE_2_CHAR_WORDS,PRACTICE_QSO_WORDS+1);
     } else {
@@ -12745,7 +12863,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     break;
     case SINGLE_PADDLE: port_to_use->print(F("Single Paddle")); break;
 
-    break; //zzzz
+    break;
   }
   port_to_use->println();
   port_to_use->print(F("Buffers: Dit O"));
@@ -12804,7 +12922,11 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     if (configuration.pot_activated != 1) {
       port_to_use->print(F("Not "));
     }
-    port_to_use->println(F("Activated)"));
+    port_to_use->print(F("Activated) Range: "));
+    port_to_use->print(pot_wpm_low_value);
+    port_to_use->print(" - ");
+    port_to_use->print(pot_wpm_high_value);
+    port_to_use->println(F(" WPM"));
   #endif
   #ifdef FEATURE_AUTOSPACE
     port_to_use->print(F("Autospace O"));
@@ -18355,11 +18477,121 @@ byte convert_unicode_to_send_char_code(byte first_byte,byte second_byte){
 }
 #endif
 
+//-------------------------------------------------------------------------------------------------------
+
+void initialize_sd_card(){
+
+  #if defined(FEATURE_SD_CARD_SUPPORT)
+    if (!SD.begin(sd_card_spi_ss_line)) {
+      #if defined(DEBUG_SD_CARD)
+        debug_serial_port->println(F("initialize_sd_card: initialization failed"));
+      #endif
+      return;
+    }
+
+    sd_card_state = SD_CARD_AVAILABLE;
+
+    // This causes a problem with directory listing...
+    // if (!SD.exists("/keyer")){
+    //  SD.mkdir("/keyer");
+    //   #if defined(DEBUG_SD_CARD)
+    //     debug_serial_port->println(F("initialize_sd_card: created /keyer"));
+    //   #endif      
+    // }
+
+    if (SD.exists("/keyer/beacon.txt")){
+      sd_card_state = SD_CARD_AVAILABLE_BEACON_FILE_FOUND;
+    }
+
+    #if defined(DEBUG_SD_CARD)
+      debug_serial_port->println(F("initialize_sd_card: initialization done"));
+    #endif  
+
+  #endif //FEATURE_SD_CARD_SUPPORT
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_SD_CARD_SUPPORT)
+void service_sd_card(){
+
+  static unsigned long last_sd_log_file_save = 0;
+
+  if (sd_card_state == SD_CARD_AVAILABLE_BEACON_FILE_RUNNING){
+    if (dit_buffer || dah_buffer){
+      sd_card_state = SD_CARD_AVAILABLE;
+      sdfile.close();
+    } else {
+      if (send_buffer_bytes == 0){
+        if (sdfile.available()){
+          add_to_send_buffer(uppercase(sdfile.read()));
+        } else {
+          sdfile.seek(0);
+        }
+      }
+    }
+  }
+
+
+  if (sd_card_state == SD_CARD_AVAILABLE_BEACON_FILE_FOUND){
+    sdfile = SD.open("/keyer/beacon.txt");
+    if (sdfile){
+      sd_card_state = SD_CARD_AVAILABLE_BEACON_FILE_RUNNING;
+    } else {
+      sd_card_state = SD_CARD_ERROR;
+    }
+  }
+
+
+  if ((sd_card_log_state == SD_CARD_LOG_OPEN) && ((millis() - last_sd_log_file_save) > 60000)){
+    sdlogfile.flush();
+    last_sd_log_file_save = millis();
+  }
+
+}
+#endif //FEATURE_SD_CARD_SUPPORT
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_SD_CARD_SUPPORT)
+void sd_card_log(String string_to_log){
+
+  char logchar[10];
+
+  if (sd_card_log_state == SD_CARD_LOG_OPEN){
+    string_to_log.toCharArray(logchar,9);
+    sdlogfile.print(logchar);
+  }
+
+
+
+  if ((sd_card_log_state == SD_CARD_LOG_NOT_OPEN) && (sd_card_state == SD_CARD_AVAILABLE)){
+    sdlogfile = SD.open("/keyer/keyer.log",FILE_WRITE);
+    if (!sdlogfile){
+      sd_card_log_state = SD_CARD_LOG_ERROR;
+    } else {
+      sd_card_log_state = SD_CARD_LOG_OPEN; 
+      sdlogfile.println("\r\nstart of log");    
+      if (configuration.cli_mode == CLI_MILL_MODE_PADDLE_SEND){
+        sdlogfile.print("TX:");
+      } else {
+        sdlogfile.print("RX:");
+      }
+    }
+  }
+
+}
+#endif //FEATURE_SD_CARD_SUPPORT
+//-------------------------------------------------------------------------------------------------------
+
 //
 //
 // Congratulations.  You've gotten to the end.  But this is just the beginning.
 //
 //
+
+
+
+
 
 
 /*
