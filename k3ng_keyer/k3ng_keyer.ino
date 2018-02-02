@@ -801,6 +801,9 @@ Recent Update History
         cat <filename>
       Added serial support for ARDUINO_AVR_LEONARDO_ETH 
 
+    2018.02.01.02
+      Fixed bug with dit_buffer_off and dah_buffer_off not being initialized from eeprom settings at boot up (Thanks, YU7MW)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -816,7 +819,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.02.01.01"
+#define CODE_VERSION "2018.02.01.02"
 #define eeprom_magic_number 28               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -4802,12 +4805,8 @@ int read_settings_from_eeprom() {
         *p++ = EEPROM.read(ee++);  
       }
     
-    //if (configuration.magic_number == eeprom_magic_number) {
       switch_to_tx_silent(configuration.current_tx);
       config_dirty = 0;
-
-      configuration.dit_buffer_off = 0;
-      configuration.dah_buffer_off = 0;
 
       return 0;
     } else {
@@ -5877,7 +5876,7 @@ void command_mode()
           send_dit();
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
-        case 212:                                                                   // K - turn dit and dah buffers on and off in Ulitmatic mode
+        case 212:                                                                   // K - turn dit and dah buffers on and off in Ultimatic mode
           if (configuration.keyer_mode == ULTIMATIC){
             send_char('O',KEYER_NORMAL);
             if (configuration.dit_buffer_off){
