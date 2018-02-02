@@ -72,7 +72,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \.     Toggle dit buffer on/off
     \-     Toggle dah buffer on/off
     \~     Reset unit
-    \:     Toggle cw send echo
+    \;     Toggle cw send echo
     \{     QLF mode on/off
     \>     Send serial number, then increment
     \<     Send current serial number
@@ -82,7 +82,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \=     Toggle American Morse mode    (requires FEATURE_AMERICAN_MORSE)
     \@     Mill Mode
     \}#### Set potentiometer range - low ## / high ##
-    \"     Debug Menu   (requires DEBUG_ACTIVATE_SERIAL_DEBUG_MENU)
+    \"     (Expert Menu - Under construction)
     \;     FUTURE
     \]     FUTURE
     \_     FUTURE - Set Clock
@@ -786,6 +786,20 @@ Recent Update History
       Working on FEATURE_CLI_EXPERT_MENU and FEATURE_SD_CARD_SUPPORT
       CLI status now shows speed potentiometer range 
 
+    2018.02.01.01
+      Changed Toggle cw send echo CLI command from \: to \;
+      Deprecated FEATURE_CLI_EXPERT_MENU
+      Working on Extended CLI Commands /:
+      Added OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
+      Extended CLI Commands
+        eepromdump
+        saveeeprom <filename>
+        loadeeprom <filename>
+        printlog
+        clearlog
+        ls <directory>
+        cat <filename>
+      Added serial support for ARDUINO_AVR_LEONARDO_ETH 
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -802,7 +816,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.01.29.01"
+#define CODE_VERSION "2018.02.01.01"
 #define eeprom_magic_number 28               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -9850,10 +9864,6 @@ void service_winkey(byte action) {
 void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
  
   static byte cli_wait_for_cr_flag = 0; 
-
-  #ifdef FEATURE_SD_CARD_SUPPORT
-    char temp_string[2];
-  #endif
   
   if (serial_backslash_command == 0) {
     incoming_serial_byte = uppercase(incoming_serial_byte);
@@ -9889,8 +9899,7 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
           port_to_use->write(incoming_serial_byte);
           if (incoming_serial_byte == 13){port_to_use->println();}
           #ifdef FEATURE_SD_CARD_SUPPORT
-            strcpy(temp_string,incoming_serial_byte);
-            sd_card_log(temp_string);
+            sd_card_log("",incoming_serial_byte);
           #endif            
           //zzzzzz
         } else { // configuration.cli_mode == CLI_MILL_MODE_PADDLE_SEND
@@ -9900,9 +9909,8 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
           port_to_use->write(incoming_serial_byte);
           configuration.cli_mode = CLI_MILL_MODE_KEYBOARD_RECEIVE;
           #ifdef FEATURE_SD_CARD_SUPPORT
-            sd_card_log("\r\nRX:");
-            strcpy(temp_string,incoming_serial_byte);
-            sd_card_log(temp_string);
+            sd_card_log("\r\nRX:",0);
+            sd_card_log("",incoming_serial_byte);
           #endif          
         }
       } //if (configuration.cli_mode == CLI_NORMAL_MODE)
@@ -10430,7 +10438,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       }
       config_dirty = 1;    
       break;
-    case ':':
+    case ';':
       if (cw_send_echo_inhibit) cw_send_echo_inhibit = 0; else cw_send_echo_inhibit = 1;
       break;
     #ifdef FEATURE_QLF
@@ -10487,6 +10495,12 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       break;
     #endif
 
+    #if !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) 
+    case ':':
+      cli_extended_commands(port_to_use);
+      break;    
+    #endif 
+
     default: port_to_use->println(F("\r\nUnknown command")); break;
   }
 
@@ -10495,75 +10509,200 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
 
 
 //---------------------------------------------------------------------
-#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
-void cli_expert_menu(PRIMARY_SERIAL_CLS * port_to_use){
 
-  byte menu_loop = 1;
-  byte menu_loop2 = 1;
-  char incoming_char = ' ';
-  
-  while(menu_loop){
-  
-    while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
-      port_to_use->read();
-    }  
-   
-    port_to_use->println(F("\r\n\nExpert Menu\n"));
-    port_to_use->println(F("E - EEPROM Dump"));
-    #if defined(FEATURE_SD_CARD_SUPPORT)
-      port_to_use->println(F("S - Save EEPROM to SD card file eeprom.sav"));
-      port_to_use->println(F("L - Load EEPROM from SD card file eeprom.lod"));
-    #endif //FEATURE_SD_CARD_SUPPORT
-    port_to_use->println(F("\nX - Exit\n"));
-    
-    menu_loop2 = 1;
-    
-    while (menu_loop2){
-    
-      if (port_to_use->available()){
-        incoming_char = port_to_use->read();
-        if ((incoming_char != 10) && (incoming_char != 13)){
-          menu_loop2 = 0;
-        }
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+int cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
+{
+  byte incoming_serial_byte = 0;
+  byte looping = 1;
+  String userinput = "";
+
+  while (looping) {
+    if (port_to_use->available() == 0) {        // wait for the next keystroke
+      if (keyer_machine_mode == KEYER_NORMAL) {          // might as well do something while we're waiting
+        check_paddles();
+        service_dit_dah_buffers();
+        service_send_buffer(PRINTCHAR);
+
+        check_ptt_tail();
+        #ifdef FEATURE_POTENTIOMETER
+          if (configuration.pot_activated) {
+            check_potentiometer();
+          }
+        #endif
+        
+        #ifdef FEATURE_ROTARY_ENCODER
+          check_rotary_encoder();
+        #endif //FEATURE_ROTARY_ENCODER        
+      }
+    } else {
+      incoming_serial_byte = port_to_use->read();
+      port_to_use->write(incoming_serial_byte);
+      if ((incoming_serial_byte == 8) || (incoming_serial_byte == 127)){   // backspace / DEL
+        userinput.remove(userinput.length()-1,1);
+      }        
+      incoming_serial_byte = uppercase(incoming_serial_byte);
+      if ((incoming_serial_byte > 31) && (incoming_serial_byte < 127)) {
+        userinput.concat((char)incoming_serial_byte);
+      }
+      if (incoming_serial_byte == 13) {   // carriage return - get out
+        looping = 0;
       }
     }
-      
-      
-    incoming_char = toUpperCase(incoming_char);
-    
-    switch(incoming_char){
-      case 'X': menu_loop = 0; break;
-      case 'E': cli_debug_eeprom_dump(port_to_use); break;
-      #if defined(FEATURE_SD_CARD_SUPPORT)
-        case 'S': sd_card_save_eeprom_to_file(port_to_use);break;
-        case 'L': sd_card_load_eeprom_from_file(port_to_use);break;
-      #endif   //FEATURE_SD_CARD_SUPPORT
-    } //switch(incoming_char)
-    
-  } //while(menu_loop)
-      
-  port_to_use->println(F("Exiting expert menu..."));
+  } //while (looping)
 
+  if (userinput.startsWith("EEPROMDUMP")){cli_eeprom_dump(port_to_use);return;}
+  #if defined(FEATURE_SD_CARD_SUPPORT)
+    if (userinput.startsWith("SAVEEEPROM ")){sd_card_save_eeprom_to_file(port_to_use,userinput.substring(11));return;}
+    if (userinput.startsWith("LOADEEPROM ")){sd_card_load_eeprom_from_file(port_to_use,userinput.substring(11));return;}
+    if (userinput.startsWith("PRINTLOG")){sd_card_print_file(port_to_use,"/keyer/keyer.log");return;}
+    if (userinput.startsWith("CLEARLOG")){sd_card_clear_log_file(port_to_use,"/keyer/keyer.log");return;}
+    if (userinput.startsWith("LS ")){cli_sd_ls_command(port_to_use,userinput.substring(3));return;}
+    if (userinput.startsWith("CAT ")){sd_card_print_file(port_to_use,userinput.substring(4));return;}    
+  #endif // defined(FEATURE_SD_CARD_SUPPORT)
+
+  port_to_use->println(F("\r\nError"));
 
 }
-#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
+#endif
+
+//---------------------------------------------------------------------
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)  && defined(FEATURE_SD_CARD_SUPPORT)
+void cli_sd_ls_command(PRIMARY_SERIAL_CLS * port_to_use,String directory){
+
+  port_to_use->println();
+
+  File dir = SD.open(directory);
+
+  while (true) {
+    File entry =  dir.openNextFile();
+    if (! entry) {
+      // no more files
+      break;
+    }
+    if (entry.isDirectory()) {
+      port_to_use->print("/");
+      port_to_use->println(entry.name());
+    } else {
+      // files have sizes, directories do not
+      port_to_use->print(entry.name());
+      port_to_use->print("\t\t");
+      port_to_use->println(entry.size(), DEC);
+    }
+    entry.close();
+  }
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)  && defined(FEATURE_SD_CARD_SUPPORT)
+//---------------------------------------------------------------------
+// #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
+// void cli_expert_menu(PRIMARY_SERIAL_CLS * port_to_use){
+
+//   byte menu_loop = 1;
+//   byte menu_loop2 = 1;
+//   char incoming_char = ' ';
+  
+//   while(menu_loop){
+  
+//     while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
+//       port_to_use->read();
+//     }  
+   
+//     port_to_use->println(F("\r\n\nExpert Menu\n"));
+//     port_to_use->println(F("E - EEPROM Dump"));
+//     #if defined(FEATURE_SD_CARD_SUPPORT)
+//       port_to_use->println(F("S - Save EEPROM to SD card file eeprom.sav"));
+//       port_to_use->println(F("L - Load EEPROM from SD card file eeprom.lod"));
+//       port_to_use->println(F("F - Print keyer.log"));
+//       port_to_use->println(F("C - Clear keyer.log"));
+//     #endif //FEATURE_SD_CARD_SUPPORT
+//     port_to_use->println(F("\nX - Exit\n"));
+    
+//     menu_loop2 = 1;
+    
+//     while (menu_loop2){
+    
+//       if (port_to_use->available()){
+//         incoming_char = port_to_use->read();
+//         if ((incoming_char != 10) && (incoming_char != 13)){
+//           menu_loop2 = 0;
+//         }
+//       }
+//     }
+      
+      
+//     incoming_char = toUpperCase(incoming_char);
+    
+//     switch(incoming_char){
+//       case 'X': menu_loop = 0; break;
+//       case 'E': cli_eeprom_dump(port_to_use); break;
+//       #if defined(FEATURE_SD_CARD_SUPPORT)
+//         case 'S': sd_card_save_eeprom_to_file(port_to_use);break;
+//         case 'L': sd_card_load_eeprom_from_file(port_to_use);break;
+//         case 'F': sd_card_print_file(port_to_use,"/keyer/keyer.log");break;
+//         case 'C': sd_card_clear_log_file(port_to_use);break;
+//       #endif   //FEATURE_SD_CARD_SUPPORT
+//     } //switch(incoming_char)
+    
+//   } //while(menu_loop)
+      
+//   port_to_use->println(F("Exiting expert menu..."));
 
 
+// }
+// #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
+//---------------------------------------------------------------------
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_SD_CARD_SUPPORT)
+void sd_card_clear_log_file(PRIMARY_SERIAL_CLS * port_to_use,String filename) {
+
+  if(sd_card_log_state == SD_CARD_LOG_OPEN){
+    sdlogfile.close();
+  }
+  SD.remove(filename);
+  sdlogfile = SD.open(filename,FILE_WRITE);
+  sd_card_log_state = SD_CARD_LOG_NOT_OPEN;
+  if (!sdfile){
+    port_to_use->println(F("Unable to open file "));
+    sd_card_state = SD_CARD_ERROR;
+    sd_card_log_state = SD_CARD_LOG_ERROR;
+  }
+  sdlogfile.close();
+
+}
+#endif
+//---------------------------------------------------------------------
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_SD_CARD_SUPPORT)
+void sd_card_print_file(PRIMARY_SERIAL_CLS * port_to_use,String filename) {
+
+  sdfile = SD.open(filename);
+  if (!sdfile){
+    port_to_use->print(F("Unable to open file "));
+    port_to_use->println(filename);
+  } else {
+    port_to_use->println(F("\r\nSTART"));
+    while(sdfile.available()){
+      port_to_use->write(sdfile.read());
+    }
+    port_to_use->println(F("\r\nEND"));
+  }
+
+}
+#endif
 //---------------------------------------------------------------------
 
 
-#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU) && defined(FEATURE_SD_CARD_SUPPORT)
-void sd_card_load_eeprom_from_file(PRIMARY_SERIAL_CLS * port_to_use) {
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_SD_CARD_SUPPORT)
+void sd_card_load_eeprom_from_file(PRIMARY_SERIAL_CLS * port_to_use,String filename) {
 
   uint8_t eeprom_byte_;
   unsigned int x;
 
 
 
-  sdfile = SD.open("/keyer/eeprom.lod", FILE_READ);
+  sdfile = SD.open(filename, FILE_READ);
 
   if (sdfile) {
-    port_to_use->print(F("Loading eeprom from /keyer/eeprom.lod"));
+    port_to_use->print(F("Loading eeprom from "));
+    port_to_use->print(filename);
   } else {
     port_to_use->println(F("Error opening file.  Exiting."));
     return;
@@ -10593,17 +10732,18 @@ void sd_card_load_eeprom_from_file(PRIMARY_SERIAL_CLS * port_to_use) {
 //---------------------------------------------------------------------
 
 
-#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU) && defined(FEATURE_SD_CARD_SUPPORT)
-void sd_card_save_eeprom_to_file(PRIMARY_SERIAL_CLS * port_to_use) {
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_SD_CARD_SUPPORT)
+void sd_card_save_eeprom_to_file(PRIMARY_SERIAL_CLS * port_to_use,String filename) {
 
   uint8_t eeprom_byte_in;
   unsigned int x;
 
-  SD.remove("/keyer/eeprom.sav");
-  sdfile = SD.open("/keyer/eeprom.sav", FILE_WRITE);
+  SD.remove(filename);
+  sdfile = SD.open(filename, FILE_WRITE);
 
   if (sdfile) {
-    port_to_use->print(F("Writing to /keyer/eeprom.sav"));
+    port_to_use->print(F("Writing to "));
+    port_to_use->print(filename);
   } else {
     port_to_use->println(F("Error opening file.  Exiting."));
     return;
@@ -10620,11 +10760,11 @@ void sd_card_save_eeprom_to_file(PRIMARY_SERIAL_CLS * port_to_use) {
 
 }
 
-#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU) 
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && d!defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
 //---------------------------------------------------------------------
 
-#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
-void cli_debug_eeprom_dump(PRIMARY_SERIAL_CLS * port_to_use){
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+void cli_eeprom_dump(PRIMARY_SERIAL_CLS * port_to_use){
 
   byte eeprom_byte_in;
   byte y = 0;
@@ -10684,7 +10824,7 @@ void cli_debug_eeprom_dump(PRIMARY_SERIAL_CLS * port_to_use){
   }
 
 }
-#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
 //---------------------------------------------------------------------
 #ifdef FEATURE_PADDLE_ECHO
 void service_paddle_echo()
@@ -10987,7 +11127,7 @@ void service_paddle_echo()
                 secondary_serial_port->println();
               #endif    
               #ifdef FEATURE_SD_CARD_SUPPORT
-                sd_card_log("\r\nTX:");
+                sd_card_log("\r\nTX:",0);
               #endif                        
               configuration.cli_mode = CLI_MILL_MODE_PADDLE_SEND;
             }  
@@ -10996,8 +11136,7 @@ void service_paddle_echo()
               secondary_serial_port->write(byte_temp);
             #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
             #ifdef FEATURE_SD_CARD_SUPPORT
-              strcpy(temp_string,incoming_serial_byte);
-              sd_card_log(temp_string);
+              sd_card_log("",incoming_serial_byte);
             #endif                  
           }
 
@@ -11013,7 +11152,7 @@ void service_paddle_echo()
               secondary_serial_port->println();
             #endif
             #ifdef FEATURE_SD_CARD_SUPPORT
-              sd_card_log("\r\nTX:");
+              sd_card_log("\r\nTX:",0);
             #endif
             configuration.cli_mode = CLI_MILL_MODE_PADDLE_SEND;
           }
@@ -11022,8 +11161,7 @@ void service_paddle_echo()
             secondary_serial_port->write(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
           #endif
           #ifdef FEATURE_SD_CARD_SUPPORT
-            strcpy(temp_string,convert_cw_number_to_ascii(paddle_echo_buffer));
-            sd_card_log(temp_string);
+            sd_card_log("",convert_cw_number_to_ascii(paddle_echo_buffer));
           #endif            
         } 
       #endif //OPTION_PROSIGN_SUPPORT
@@ -11062,7 +11200,10 @@ void service_paddle_echo()
 
        }    
     #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-    
+
+    #ifdef FEATURE_SD_CARD_SUPPORT
+      sd_card_log(" ",0);
+    #endif     
     
     paddle_echo_space_sent = 1;
   }
@@ -18550,16 +18691,33 @@ void service_sd_card(){
 
 }
 #endif //FEATURE_SD_CARD_SUPPORT
+//-------------------------------------------------------------------------------------------------------
+byte is_visible_character(byte char_in){
+
+  if((char_in > 31) || (char_in == 9) || (char_in == 10) || (char_in == 13)){
+    return 1;
+  } else {
+    return 0;
+  }
+
+}
+
 
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_SD_CARD_SUPPORT)
-void sd_card_log(String string_to_log){
+void sd_card_log(String string_to_log,byte byte_to_log){
 
   char logchar[10];
 
   if (sd_card_log_state == SD_CARD_LOG_OPEN){
-    string_to_log.toCharArray(logchar,9);
-    sdlogfile.print(logchar);
+    if (string_to_log.length() > 0){
+      string_to_log.toCharArray(logchar,9);
+      sdlogfile.print(logchar);
+    } else {
+      if (is_visible_character(byte_to_log)){
+        sdlogfile.write(byte_to_log);
+      }
+    }
   }
 
 
@@ -18570,11 +18728,13 @@ void sd_card_log(String string_to_log){
       sd_card_log_state = SD_CARD_LOG_ERROR;
     } else {
       sd_card_log_state = SD_CARD_LOG_OPEN; 
-      sdlogfile.println("\r\nstart of log");    
+      sdlogfile.println("\r\nstart of log ");
       if (configuration.cli_mode == CLI_MILL_MODE_PADDLE_SEND){
         sdlogfile.print("TX:");
+        sdlogfile.flush();
       } else {
         sdlogfile.print("RX:");
+        sdlogfile.flush();
       }
     }
   }
