@@ -804,6 +804,9 @@ Recent Update History
     2018.02.01.02
       Fixed bug with dit_buffer_off and dah_buffer_off not being initialized from eeprom settings at boot up (Thanks, YU7MW)
 
+    2018.02.05.01
+      Typo fix: ifdef defined(__AVR__) (Thanks, Glen https://github.com/k3ng/k3ng_cw_keyer/issues/19) 
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -819,7 +822,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.02.01.02"
+#define CODE_VERSION "2018.02.05.01"
 #define eeprom_magic_number 28               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -9590,7 +9593,7 @@ void service_winkey(byte action) {
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND 0x01");
             #endif //DEBUG_WINKEY          
-            #ifdef defined(__AVR__) //#ifndef ARDUINO_SAM_DUE
+            #if defined(__AVR__) //#ifndef ARDUINO_SAM_DUE
               asm volatile ("jmp 0"); /*wdt_enable(WDTO_30MS); while(1) {};*/ 
             #else
               setup();
