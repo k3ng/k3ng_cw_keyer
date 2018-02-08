@@ -811,6 +811,9 @@ Recent Update History
     2018.02.05.02
       Fixed https://github.com/k3ng/k3ng_cw_keyer/issues/40 (Thanks, Glen, N1XF)
 
+    2018.02.07.01
+      Added support for 8 column LCD displays  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -826,7 +829,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.02.05.02"
+#define CODE_VERSION "2018.02.07.01"
 #define eeprom_magic_number 28               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -2813,7 +2816,11 @@ void repeat_memory_msg(byte memory_number){
   #ifdef FEATURE_MEMORIES
     repeat_memory = memory_number;
     #ifdef FEATURE_DISPLAY
-      lcd_center_print_timed("Repeat Memory " + String(memory_number+1), 0, default_display_msg_delay); 
+      if (LCD_COLUMNS < 9){
+        lcd_center_print_timed("RptMem" + String(memory_number+1), 0, default_display_msg_delay); 
+      } else {
+        lcd_center_print_timed("Repeat Memory " + String(memory_number+1), 0, default_display_msg_delay); 
+      }
       service_display();
     #endif //FEATURE_DISPLAY
   #endif //FEATURE_MEMORIES
@@ -2868,7 +2875,11 @@ void check_ps2_keyboard()
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
             #ifdef OPTION_MORE_DISPLAY_MSGS
-              lcd_center_print_timed("Default ratio", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("DfltRtio", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Default ratio", 0, default_display_msg_delay);
+              }
               service_display();
             #endif
           #endif           
@@ -3020,7 +3031,11 @@ void check_ps2_keyboard()
           case PS2_BACKSPACE_SHIFT :    // decrement serial number
             serial_number--;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Serial: " + String(serial_number), 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("SN " + String(serial_number), 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Serial: " + String(serial_number), 0, default_display_msg_delay);
+              }
             #endif          
             break;
           
@@ -3053,7 +3068,11 @@ void check_ps2_keyboard()
         case PS2_C_CTRL :
           configuration.keyer_mode = SINGLE_PADDLE;
           #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("SnglePdl", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+            }
           #endif          
           config_dirty = 1;
           break;
@@ -3061,7 +3080,11 @@ void check_ps2_keyboard()
         case PS2_D_CTRL :
           configuration.keyer_mode = ULTIMATIC;
           #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("Ultimatc", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
+            }          
           #endif        
           config_dirty = 1;
           break;
@@ -3069,7 +3092,11 @@ void check_ps2_keyboard()
         #ifndef OPTION_SAVE_MEMORY_NANOKEYER
           case PS2_E_CTRL :
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Enter Serial #", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("EnterSN", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Enter Serial #", 0, default_display_msg_delay);
+              }            
             #else        
               boop_beep();
             #endif
@@ -3123,7 +3150,11 @@ void check_ps2_keyboard()
         #ifdef FEATURE_FARNSWORTH
           case PS2_M_CTRL:         
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Farnsworth WPM", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("Frnswrth", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Farnsworth WPM", 0, default_display_msg_delay);
+              }
             #else          
               boop_beep();
             #endif
@@ -3145,38 +3176,35 @@ void check_ps2_keyboard()
           if (configuration.paddle_mode == PADDLE_NORMAL) {
             configuration.paddle_mode = PADDLE_REVERSE;
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("Pdl Rev", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
+              }
             #endif
           } else {
             configuration.paddle_mode = PADDLE_NORMAL;
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("Pdl Norm", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
+              }      
             #endif      
           }
           config_dirty = 1;
           break;
-
-        // case PS2_O_CTRL :
-        //   if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
-        //     configuration.sidetone_mode = SIDETONE_OFF;
-        //     #ifdef FEATURE_DISPLAY
-        //       lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
-        //     #endif      
-        //   } else {
-        //     #ifdef FEATURE_DISPLAY
-        //       lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
-        //     #endif      
-        //     configuration.sidetone_mode = SIDETONE_ON;
-        //   }
-        //   config_dirty = 1;
-        //  break;
 
         case PS2_O_CTRL : // CTRL-O - cycle through sidetone modes on, paddle only and off - New code Marc-Andre, VE2EVN
           if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
             configuration.sidetone_mode = SIDETONE_OFF;
             boop();      
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("ST Off", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+              }
             #endif
           } else if (configuration.sidetone_mode == SIDETONE_ON) {
             configuration.sidetone_mode = SIDETONE_PADDLE_ONLY;
@@ -3184,6 +3212,9 @@ void check_ps2_keyboard()
             delay(200);
             beep();
             #ifdef FEATURE_DISPLAY
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("ST Pdl O", 0, default_display_msg_delay);
+              }            
               if (LCD_COLUMNS > 19){
                 lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
               } else {
@@ -3193,7 +3224,11 @@ void check_ps2_keyboard()
             #endif
           } else {
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("ST On", 0, default_display_msg_delay);
+              } else {            
+                lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+              }
             #endif      
             configuration.sidetone_mode = SIDETONE_ON;
             beep();
@@ -3249,7 +3284,11 @@ void check_ps2_keyboard()
             #endif // FEATURE_DISPLAY            
           } else {
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("PTT Invoke", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("PTTInvk", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("PTT Invoke", 0, default_display_msg_delay);
+              }
             #endif      
             manual_ptt_invoke = 1;
             ptt_key();
@@ -3258,7 +3297,11 @@ void check_ps2_keyboard()
 
         case PS2_W_CTRL :
           #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("WPM Adjust", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("WPM Adj", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("WPM Adjust", 0, default_display_msg_delay);
+            }        
           #else
             boop_beep();
           #endif
@@ -3333,13 +3376,21 @@ void check_ps2_keyboard()
             configuration.autospace_active = 0;
             config_dirty = 1;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("AutoSOff", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
+              }
             #endif                                  
           } else {
             configuration.autospace_active = 1;
             config_dirty = 1;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("AutoSpOn", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
+              }            
             #endif                                  
           }
           break;
@@ -3392,10 +3443,14 @@ void check_ps2_keyboard()
           key_tx = 1;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
-          #ifdef OPTION_MORE_DISPLAY_MSGS
-          lcd_center_print_timed("Default ratio", 0, default_display_msg_delay);
-          service_display();
-          #endif
+            #ifdef OPTION_MORE_DISPLAY_MSGS
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("DfltRtio", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Default ratio", 0, default_display_msg_delay);
+              }
+              service_display();
+            #endif
           #endif           
           break;
         case PS2_TAB :
@@ -3537,20 +3592,24 @@ void check_ps2_keyboard()
         case PS2_BACKSPACE_SHIFT :    // decrement serial number
           serial_number--;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Serial: " + String(serial_number), 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("SN " + String(serial_number), 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Serial: " + String(serial_number), 0, default_display_msg_delay);
+            }
           #endif          
           break;
 
         case PS2_LEFT_ALT :
           #ifdef DEBUG_PS2_KEYBOARD
-          debug_serial_port->println("PS2_LEFT_ALT\n");
+            debug_serial_port->println("PS2_LEFT_ALT\n");
           #endif
           break;
 
         case PS2_A_CTRL :
           configuration.keyer_mode = IAMBIC_A;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
+            lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
           #endif
 
           config_dirty = 1;
@@ -3559,7 +3618,7 @@ void check_ps2_keyboard()
         case PS2_B_CTRL :
           configuration.keyer_mode = IAMBIC_B;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
+            lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
           #endif          
           config_dirty = 1;
           break;
@@ -3567,7 +3626,11 @@ void check_ps2_keyboard()
         case PS2_C_CTRL :
           configuration.keyer_mode = SINGLE_PADDLE;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("Sngl Pdl", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+            }
           #endif          
           config_dirty = 1;
           break;
@@ -3575,24 +3638,32 @@ void check_ps2_keyboard()
         case PS2_D_CTRL :
           configuration.keyer_mode = ULTIMATIC;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("Ultimatc", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
+            }          
           #endif        
           config_dirty = 1;
           break;
 
         case PS2_E_CTRL :
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Enter Serial #", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("Enter SN", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Enter Serial #", 0, default_display_msg_delay);
+            }            
           #else        
-          boop_beep();
+            boop_beep();
           #endif
           work_int = ps2_keyboard_get_number_input(4,0,10000);
           if (work_int > 0) {
             serial_number = work_int;
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #else             
-            beep();
+              beep();
             #endif
           }
           break;
@@ -3600,20 +3671,20 @@ void check_ps2_keyboard()
         case PS2_G_CTRL :
           configuration.keyer_mode = BUG;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Bug", 0, default_display_msg_delay);
+            lcd_center_print_timed("Bug", 0, default_display_msg_delay);
           #endif
           config_dirty = 1;
           break;
 
         case PS2_H_CTRL :
           #ifdef FEATURE_HELL
-          if (char_send_mode == CW) {
-            char_send_mode = HELL;
-            beep();
-          } else {
-            char_send_mode = CW;
-            beep();
-          }
+            if (char_send_mode == CW) {
+              char_send_mode = HELL;
+              beep();
+            } else {
+              char_send_mode = CW;
+              beep();
+            }
           #endif //FEATURE_HELL
           break;
 
@@ -3621,31 +3692,35 @@ void check_ps2_keyboard()
           if (key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP-1)
             key_tx = 0;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
             #endif
             
           } else if (!key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP-1)
             key_tx = 1;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("TX On", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX On", 0, default_display_msg_delay);
             #endif      
           }
           break;
 
         case PS2_M_CTRL:
           #ifdef FEATURE_FARNSWORTH
-          #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Farnsworth WPM", 0, default_display_msg_delay);
-          #else          
-          boop_beep();
+            #ifdef FEATURE_DISPLAY
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("Frnswrth", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Farnsworth WPM", 0, default_display_msg_delay);
+              }        
+            #else          
+              boop_beep();
           #endif
           work_int = ps2_keyboard_get_number_input(3,-1,1000);
           if (work_int > -1) {
             configuration.wpm_farnsworth = work_int;
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #else
-            beep();
+              beep();
             #endif
             config_dirty = 1;
           }
@@ -3656,38 +3731,35 @@ void check_ps2_keyboard()
           if (configuration.paddle_mode == PADDLE_NORMAL) {
             configuration.paddle_mode = PADDLE_REVERSE;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("Pdl Rev", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
+              }                    
             #endif
           } else {
             configuration.paddle_mode = PADDLE_NORMAL;
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("Pdl Norm", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
+              }                    
             #endif      
           }
           config_dirty = 1;
           break;
-
-        // case PS2_O_CTRL :
-        //   if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
-        //     configuration.sidetone_mode = SIDETONE_OFF;
-        //     #ifdef FEATURE_DISPLAY
-        //     lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
-        //     #endif      
-        //   } else {
-        //     #ifdef FEATURE_DISPLAY
-        //     lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
-        //     #endif      
-        //     configuration.sidetone_mode = SIDETONE_ON;
-        //   }
-        //   config_dirty = 1;
-        //  break;
 
         case PS2_O_CTRL : // CTRL-O - cycle through sidetone modes on, paddle only and off - New code Marc-Andre, VE2EVN
           if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
             configuration.sidetone_mode = SIDETONE_OFF;
             boop();      
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("ST Off", 0, default_display_msg_delay);
+              } else {            
+                lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+              }
             #endif
           } else if (configuration.sidetone_mode == SIDETONE_ON) {
             configuration.sidetone_mode = SIDETONE_PADDLE_ONLY;
@@ -3695,6 +3767,9 @@ void check_ps2_keyboard()
             delay(200);
             beep();
             #ifdef FEATURE_DISPLAY
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("ST Pdl O", 0, default_display_msg_delay);
+              }
               if (LCD_COLUMNS > 19){
                 lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
               } else {
@@ -3704,7 +3779,11 @@ void check_ps2_keyboard()
             #endif
           } else {
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("ST On", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+              }
             #endif      
             configuration.sidetone_mode = SIDETONE_ON;
             beep();
@@ -3714,18 +3793,18 @@ void check_ps2_keyboard()
 
         case PS2_T_CTRL :
           #ifdef FEATURE_MEMORIES
-          repeat_memory = 255;
+            repeat_memory = 255;
           #endif
           if (keyboard_tune_on) {
             sending_mode = MANUAL_SENDING;
             tx_and_sidetone_key(0);
             keyboard_tune_on = 0;
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #endif // FEATURE_DISPLAY
           } else {
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Tune", 0, default_display_msg_delay);
+              lcd_center_print_timed("Tune", 0, default_display_msg_delay);
             #endif      
             sending_mode = MANUAL_SENDING;
             tx_and_sidetone_key(1);
@@ -3738,11 +3817,15 @@ void check_ps2_keyboard()
             manual_ptt_invoke = 0;
             ptt_unkey();
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #endif // FEATURE_DISPLAY            
           } else {
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("PTT Invoke", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("PTT Invk", 0, default_display_msg_delay);
+              } else {            
+                lcd_center_print_timed("PTT Invoke", 0, default_display_msg_delay);
+              }            
             #endif      
             manual_ptt_invoke = 1;
             ptt_key();
@@ -3751,71 +3834,65 @@ void check_ps2_keyboard()
 
         case PS2_W_CTRL :
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("WPM Adjust", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("WPM Adj", 0, default_display_msg_delay);
+            } else {            
+              lcd_center_print_timed("WPM Adjust", 0, default_display_msg_delay);
+            }        
           #else
-          boop_beep();
+            boop_beep();
           #endif
           work_int = ps2_keyboard_get_number_input(3,0,1000);
           if (work_int > 0) {
             speed_set(work_int);
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #else
-            beep();
+              beep();
             #endif
             config_dirty = 1;
           }
           break;
 
         case PS2_F1_CTRL :
-          //current_ptt_line = ptt_tx_1;
-          //current_tx_key_line = tx_key_line_1;
           switch_to_tx_silent(1);
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("TX 1", 0, default_display_msg_delay);
+            lcd_center_print_timed("TX 1", 0, default_display_msg_delay);
           #endif          
           break;
 
         case PS2_F2_CTRL :
           if ((ptt_tx_2) || (tx_key_line_2)) {
-            switch_to_tx_silent(2);
-            //current_ptt_line = ptt_tx_2;
-            //current_tx_key_line = tx_key_line_2;           
+            switch_to_tx_silent(2);         
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("TX 2", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX 2", 0, default_display_msg_delay);
             #endif                      
           }
           break;
 
         case PS2_F3_CTRL :
           if ((ptt_tx_3)  || (tx_key_line_3)) {
-            switch_to_tx_silent(3);
-            //current_ptt_line = ptt_tx_3;
-            //current_tx_key_line = tx_key_line_3;                       
+            switch_to_tx_silent(3);                     
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("TX 3", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX 3", 0, default_display_msg_delay);
             #endif                                  
           }
           break;
 
         case PS2_F4_CTRL :
           if ((ptt_tx_4)  || (tx_key_line_4)) {
-            switch_to_tx_silent(4);
-            //current_ptt_line = ptt_tx_4;
-            //current_tx_key_line = tx_key_line_4;     
+            switch_to_tx_silent(4); 
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("TX 4", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX 4", 0, default_display_msg_delay);
             #endif                                  
           }
           break;
 
         case PS2_F5_CTRL :
           if ((ptt_tx_5)  || (tx_key_line_5)) {
-            switch_to_tx_silent(5);
-            //current_ptt_line = ptt_tx_5;
-            //current_tx_key_line = tx_key_line_5;  
+            switch_to_tx_silent(5); 
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("TX 5", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX 5", 0, default_display_msg_delay);
             #endif                      
           }
           break;
@@ -3823,30 +3900,36 @@ void check_ps2_keyboard()
         case PS2_F6_CTRL :
           if ((ptt_tx_6)  || (tx_key_line_6)) {
             switch_to_tx_silent(6);
-            //current_ptt_line = ptt_tx_6;
-            //current_tx_key_line = tx_key_line_6; 
             #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("TX 6", 0, default_display_msg_delay);
+              lcd_center_print_timed("TX 6", 0, default_display_msg_delay);
             #endif                                  
           }
           break;
 
         #ifdef FEATURE_AUTOSPACE
-        case PS2_Z_CTRL:
-          if (configuration.autospace_active) {
-            configuration.autospace_active = 0;
-            config_dirty = 1;
-            #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
-            #endif                                  
-          } else {
-            configuration.autospace_active = 1;
-            config_dirty = 1;
-            #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
-            #endif                                  
-          }
-          break;
+          case PS2_Z_CTRL:
+            if (configuration.autospace_active) {
+              configuration.autospace_active = 0;
+              config_dirty = 1;
+              #ifdef FEATURE_DISPLAY
+                if (LCD_COLUMNS < 9){
+                  lcd_center_print_timed("AutoSOff", 0, default_display_msg_delay);
+                } else {            
+                  lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
+                }             
+              #endif                                  
+            } else {
+              configuration.autospace_active = 1;
+              config_dirty = 1;
+              #ifdef FEATURE_DISPLAY
+                if (LCD_COLUMNS < 9){
+                  lcd_center_print_timed("AutoS On", 0, default_display_msg_delay);
+                } else {            
+                  lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
+                }              
+              #endif                                  
+            }
+            break;
         #endif
 
         default :
@@ -3858,7 +3941,7 @@ void check_ps2_keyboard()
             keystroke = uppercase(keystroke);
             add_to_send_buffer(keystroke);
             #ifdef FEATURE_MEMORIES
-            repeat_memory = 255;
+              repeat_memory = 255;
             #endif
           }
           break;
@@ -3896,7 +3979,16 @@ void ps2_keyboard_program_memory(byte memory_number)
   byte temp_memory[(memory_end(memory_number)-memory_start(memory_number) + 1)];
   int x;
   String keyboard_string;
-  String lcd_string = "Program Memory";
+
+  #ifdef FEATURE_DISPLAY
+    String lcd_string;
+    if (LCD_COLUMNS < 9){
+      lcd_string = "Pgm Mem";
+    } else {
+      lcd_string = "Program Memory";
+    }
+  #endif
+
 
   if (memory_number > (number_of_memories - 1)) {
     boop();
@@ -3904,13 +3996,13 @@ void ps2_keyboard_program_memory(byte memory_number)
   }
   
   #ifdef FEATURE_DISPLAY
-  if (memory_number < 9) {
-    lcd_string.concat(' ');
-  }
-  lcd_string.concat(memory_number+1);
-  lcd_center_print_timed(lcd_string, 0, default_display_msg_delay);
+    if (memory_number < 9) {
+      lcd_string.concat(' ');
+    }
+    lcd_string.concat(memory_number+1);
+    lcd_center_print_timed(lcd_string, 0, default_display_msg_delay);
   #else
-  boop_beep();
+    boop_beep();
   #endif
   repeat_memory = 255;
   while (looping) {
@@ -3922,7 +4014,7 @@ void ps2_keyboard_program_memory(byte memory_number)
     }
     keystroke = keyboard.read();
     #ifdef DEBUG_PS2_KEYBOARD
-    debug_serial_port->println(keystroke,DEC);
+      debug_serial_port->println(keystroke,DEC);
     #endif
     if (keystroke == 13) {        // did we get a carriage return?
       looping = 0;
@@ -3931,8 +4023,8 @@ void ps2_keyboard_program_memory(byte memory_number)
         if (temp_memory_index) {
           temp_memory_index--;
           #ifdef FEATURE_DISPLAY
-          keyboard_string = keyboard_string.substring(0,keyboard_string.length()-1);
-          lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
+            keyboard_string = keyboard_string.substring(0,keyboard_string.length()-1);
+            lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
           #endif            
         }
       } else {
@@ -3942,12 +4034,12 @@ void ps2_keyboard_program_memory(byte memory_number)
         } else {
           keystroke = uppercase(keystroke);
           #ifdef FEATURE_DISPLAY
-          keyboard_string.concat(char(keystroke));
-          if (keyboard_string.length() > LCD_COLUMNS) {
-            lcd_center_print_timed(keyboard_string.substring((keyboard_string.length()-LCD_COLUMNS)), 1, default_display_msg_delay);
-          } else {         
-            lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
-          }
+            keyboard_string.concat(char(keystroke));
+            if (keyboard_string.length() > LCD_COLUMNS) {
+              lcd_center_print_timed(keyboard_string.substring((keyboard_string.length()-LCD_COLUMNS)), 1, default_display_msg_delay);
+            } else {         
+              lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
+            }
           #endif
           temp_memory[temp_memory_index] = keystroke;
           temp_memory_index++;
@@ -3961,7 +4053,7 @@ void ps2_keyboard_program_memory(byte memory_number)
 
   if (error) {
     #ifdef FEATURE_DISPLAY
-    lcd_status = LCD_REVERT;
+      lcd_status = LCD_REVERT;
     #else
     boop();
     #endif
@@ -3975,9 +4067,9 @@ void ps2_keyboard_program_memory(byte memory_number)
     // write terminating 255
     EEPROM.write((memory_start(memory_number)+x),255);
     #ifdef FEATURE_DISPLAY
-    lcd_center_print_timed("Done", 0, default_display_msg_delay);
+      lcd_center_print_timed("Done", 0, default_display_msg_delay);
     #else    
-    beep();
+      beep();
     #endif
   }
 }
@@ -5696,9 +5788,6 @@ void command_mode()
   byte speed_mode_before = speed_mode;
   speed_mode = SPEED_NORMAL;                 // put us in normal speed mode (life is too short to do command mode in QRSS)
   byte keyer_mode_before = configuration.keyer_mode;
-  //uint8_t speed_wpm_before = configuration.wpm;
-  //uint8_t command_mode_speed_change_wpm_temp;
-  //configuration.wpm = configuration.command_mode_wpm;
   char c[4];
   if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B)) {
     configuration.keyer_mode = IAMBIC_B;                   // we got to be in iambic mode (life is too short to make this work in bug mode)
@@ -5713,7 +5802,11 @@ void command_mode()
 
   #ifdef FEATURE_DISPLAY
     lcd_clear();
-    lcd_center_print_timed("Command Mode", 0, default_display_msg_delay);
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed("Cmd Mode", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Command Mode", 0, default_display_msg_delay);
+    }
   #endif 
 
   #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE)
@@ -5722,8 +5815,6 @@ void command_mode()
 
   while (stay_in_command_mode) {
     cw_char = 0;
- //   cw_char = get_cw_input_from_user(0);
-
 
     // #ifdef OPTION_WATCHDOG_TIMER
     //   wdt_reset();
@@ -5826,7 +5917,11 @@ void command_mode()
           keyer_mode_before = SINGLE_PADDLE;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("Sngl Pdl", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+            }
           #endif          
           send_dit();
           break;          
@@ -5843,7 +5938,11 @@ void command_mode()
           configuration.dah_buffer_off = 1;           
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("Ultimatc", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
+            }          
           #endif                    
           send_dit();
           break; 
@@ -5864,7 +5963,11 @@ void command_mode()
           configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Dflt Wght & Ratio", 0, default_display_msg_delay); 
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("Dflt W+R", 0, default_display_msg_delay); 
+            } else {
+              lcd_center_print_timed("Dflt Wght & Ratio", 0, default_display_msg_delay); 
+            }              
           #endif         
           send_dit();
           break;  
@@ -5890,14 +5993,28 @@ void command_mode()
               configuration.dit_buffer_off = 0;
               configuration.dah_buffer_off = 0;
               #ifdef FEATURE_DISPLAY
-                lcd_center_print_timed("Dit Dah Buffers On", 0, default_display_msg_delay);
+                if (LCD_COLUMNS < 9){
+                  lcd_center_print_timed("BffersOn", 0, default_display_msg_delay);
+                }
+                if (LCD_COLUMNS > 17){
+                  lcd_center_print_timed("Dit Dah Buffers On", 0, default_display_msg_delay);                  
+                } else {
+                  lcd_center_print_timed("Buffers On", 0, default_display_msg_delay);
+                }                 
               #endif
               send_char('N',KEYER_NORMAL);           
             } else {
               configuration.dit_buffer_off = 1;
               configuration.dah_buffer_off = 1;
               #ifdef FEATURE_DISPLAY
-                lcd_center_print_timed("Dit Dah Buffers Off", 0, default_display_msg_delay);
+                if (LCD_COLUMNS < 9){
+                  lcd_center_print_timed("BffrsOff", 0, default_display_msg_delay);
+                }
+                if (LCD_COLUMNS > 18){
+                  lcd_center_print_timed("Dit Dah Buffers Off", 0, default_display_msg_delay);                  
+                } else {
+                  lcd_center_print_timed("Buffers Off", 0, default_display_msg_delay);
+                }                                  
               #endif 
               send_char('F',KEYER_NORMAL);
               send_char('F',KEYER_NORMAL);             
@@ -5925,45 +6042,34 @@ void command_mode()
           if (configuration.paddle_mode == PADDLE_NORMAL) {
             configuration.paddle_mode = PADDLE_REVERSE;
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("Pdl Rev", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
+              }               
             #endif //FEATURE_DISPLAY
           } else {
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("Pdl Norm", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
+              }               
             #endif //FEATURE_DISPLAY         
             configuration.paddle_mode = PADDLE_NORMAL;
           }
           config_dirty = 1;
           send_dit();
           break;  
-        // case 222: // O - toggle sidetone on and off
-        //   if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {
-        //     #ifdef FEATURE_DISPLAY
-        //       lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
-        //     #endif 
-        //     #ifdef DEBUG_COMMAND_MODE
-        //       debug_serial_port->println(F("command_mode: SIDETONE_OFF"));
-        //     #endif
-        //     configuration.sidetone_mode = SIDETONE_OFF;
-        //     //boop();
-        //   } else {
-        //     #ifdef FEATURE_DISPLAY
-        //       lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
-        //     #endif 
-        //     #ifdef DEBUG_COMMAND_MODE
-        //       debug_serial_port->println(F("command_mode: SIDETONE_ON"));
-        //     #endif             
-        //     configuration.sidetone_mode = SIDETONE_ON;
-        //     //beep();
-        //   }
-        //   config_dirty = 1;        
-        //   send_dit();
-        //   break; 
 
         case 222: // O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN
           if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("ST Off", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+              }
             #endif 
             #ifdef DEBUG_COMMAND_MODE
               debug_serial_port->println(F("command_mode: SIDETONE_OFF"));
@@ -5972,6 +6078,9 @@ void command_mode()
             boop();
           } else if (configuration.sidetone_mode == SIDETONE_ON) {
             #ifdef FEATURE_DISPLAY
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("ST Pdl O", 0, default_display_msg_delay);
+              }
               if (LCD_COLUMNS > 19){
                 lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
               } else {
@@ -5988,7 +6097,11 @@ void command_mode()
             beep();
           } else {
             #ifdef FEATURE_DISPLAY
-              lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+              if (LCD_COLUMNS < 9){
+                lcd_center_print_timed("ST On", 0, default_display_msg_delay);
+              } else {
+                lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+              }
             #endif 
             #ifdef DEBUG_COMMAND_MODE
               debug_serial_port->println(F("command_mode: SIDETONE_ON"));
@@ -6009,12 +6122,20 @@ void command_mode()
             if (configuration.pot_activated) {
               configuration.pot_activated = 0; 
               #ifdef FEATURE_DISPLAY
-                lcd_center_print_timed("Pot Deactivated", 0, default_display_msg_delay);
+                if (LCD_COLUMNS > 14){
+                  lcd_center_print_timed("Pot Deactivated", 0, default_display_msg_delay);                  
+                } else {
+                  lcd_center_print_timed("Pot Off", 0, default_display_msg_delay);
+                }
               #endif             
             } else {
               configuration.pot_activated = 1;
               #ifdef FEATURE_DISPLAY
-                lcd_center_print_timed("Pot Activated", 0, default_display_msg_delay);
+                if (LCD_COLUMNS > 13){
+                  lcd_center_print_timed("Pot Activated", 0, default_display_msg_delay);
+                } else {
+                  lcd_center_print_timed("Pot On", 0, default_display_msg_delay);
+                }
               #endif 
             }
             config_dirty = 1;
@@ -6034,7 +6155,11 @@ void command_mode()
               configuration.autospace_active = 0;
               config_dirty = 1;
               #ifdef FEATURE_DISPLAY
-                lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
+                if (LCD_COLUMNS < 9){
+                  lcd_center_print_timed("AutoSOff", 0, default_display_msg_delay);
+                } else {
+                  lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
+                }              
                 send_dit();
               #else
                 send_char('O',KEYER_NORMAL);
@@ -6045,7 +6170,11 @@ void command_mode()
               configuration.autospace_active = 1;
               config_dirty = 1;
               #ifdef FEATURE_DISPLAY
-                lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
+                if (LCD_COLUMNS < 9){
+                  lcd_center_print_timed("AutoS On", 0, default_display_msg_delay);
+                } else {
+                  lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
+                }  
                 send_dit();
               #else            
                 send_char('O',KEYER_NORMAL);
@@ -6069,8 +6198,14 @@ void command_mode()
         #ifdef FEATURE_ALPHABET_SEND_PRACTICE // enhanced by Fred, VK2EFL
           case 111:   // S - Alphabet Send Practice
             #ifdef FEATURE_DISPLAY
-               lcd_center_print_timed("Send Practice", 0, default_display_msg_delay);
-               lcd_center_print_timed("Cmd button to exit", 1, default_display_msg_delay);
+               if (LCD_COLUMNS < 9){
+                 lcd_center_print_timed("SendPrct", 0, default_display_msg_delay);
+               } else {
+                 lcd_center_print_timed("Send Practice", 0, default_display_msg_delay);
+                 if (LCD_ROWS > 1){
+                   lcd_center_print_timed("Cmd button to exit", 1, default_display_msg_delay);
+                 }
+               }
             #endif
             beep();
             command_alphabet_send_practice();
@@ -6144,7 +6279,11 @@ void command_mode()
           break;                           
         default: // unknown command, send a ?
           #ifdef FEATURE_DISPLAY
-            lcd_center_print_timed("Unknown command", 0, default_display_msg_delay);          
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("???", 0, default_display_msg_delay); 
+            } else {
+              lcd_center_print_timed("Unknown command", 0, default_display_msg_delay); 
+            }         
           #endif
           send_char('?',KEYER_NORMAL); 
           break;                                   
@@ -6217,8 +6356,17 @@ void command_progressive_5_char_echo_practice(){
         lcd_center_print_timed("Cmd button to exit", 2, default_display_msg_delay);
       }
     } else {
-      lcd_center_print_timed("RX / TX 5 Char", 0, default_display_msg_delay);
-      lcd_center_print_timed("Echo Practice", 1, default_display_msg_delay);
+      if (LCD_COLUMNS < 9){
+        lcd_center_print_timed("RXTX 5Ch", 0, default_display_msg_delay);
+        if (LCD_ROWS > 1){
+          lcd_center_print_timed("EchoPrct", 1, default_display_msg_delay);
+        }           
+      } else {
+        lcd_center_print_timed("RX / TX 5 Char", 0, default_display_msg_delay);
+        if (LCD_ROWS > 1){
+          lcd_center_print_timed("Echo Practice", 1, default_display_msg_delay);
+        }        
+      }
     }
     service_display();
     
@@ -6492,7 +6640,11 @@ void adjust_dah_to_dit_ratio(int adjustment) {
    configuration.dah_to_dit_ratio = configuration.dah_to_dit_ratio + adjustment;
    #ifdef FEATURE_DISPLAY
      #ifdef OPTION_MORE_DISPLAY_MSGS
-       lcd_center_print_timed("Dah/Dit: " + String(configuration.dah_to_dit_ratio), 0, default_display_msg_delay);
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed("DDR:" + String(configuration.dah_to_dit_ratio), 0, default_display_msg_delay);
+        } else {   
+          lcd_center_print_timed("Dah/Dit: " + String(configuration.dah_to_dit_ratio), 0, default_display_msg_delay);
+        }
        service_display();
      #endif
    #endif   
@@ -6509,7 +6661,11 @@ void command_dah_to_dit_ratio_adjust() {
   byte looping = 1;
 
   #ifdef FEATURE_DISPLAY
-    lcd_center_print_timed("Adj dah to dit", 0, default_display_msg_delay);          
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed("Adj DTDR", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Adj dah to dit", 0, default_display_msg_delay);  
+    }        
   #endif
 
   while (looping) {
@@ -6545,7 +6701,11 @@ void command_weighting_adjust() {
   byte looping = 1;
 
   #ifdef FEATURE_DISPLAY
-    lcd_center_print_timed("Adj weighting", 0, default_display_msg_delay);          
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed("Weight", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Adj weighting", 0, default_display_msg_delay);
+    }          
   #endif
 
   while (looping) {
@@ -6584,7 +6744,11 @@ void command_tuning_mode() {
   
   
   #ifdef FEATURE_DISPLAY
-  lcd_center_print_timed("Tune Mode", 0, default_display_msg_delay);          
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed("TuneMode", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Tune Mode", 0, default_display_msg_delay);  
+    }        
   #endif  
   
   send_dit();
@@ -6650,7 +6814,11 @@ void sidetone_adj(int hz) {
     configuration.hz_sidetone = configuration.hz_sidetone + hz;
     config_dirty = 1;
     #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
-      lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+      if (LCD_COLUMNS < 9){
+        lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+      } else {
+        lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+      }
     #endif   
   }
 
@@ -6663,26 +6831,38 @@ void command_sidetone_freq_adj() {
   byte looping = 1;
 
   #ifdef FEATURE_DISPLAY
-  lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);   
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);  
+    } 
   #endif
 
   while (looping) {
     tone(sidetone_line, configuration.hz_sidetone);
     if (paddle_pin_read(paddle_left) == LOW) {
       #ifdef FEATURE_DISPLAY
-      sidetone_adj(5);      
-      lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);        
+        sidetone_adj(5);   
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        } else {   
+          lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);  
+        }      
       #else
-      sidetone_adj(1);
+        sidetone_adj(1);
       #endif
       delay(10);
     }
     if (paddle_pin_read(paddle_right) == LOW) {
       #ifdef FEATURE_DISPLAY
-      sidetone_adj(-5);
-      lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);       
+        sidetone_adj(-5);
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        } else {   
+          lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);  
+        }        
       #else
-      sidetone_adj(-1);
+        sidetone_adj(-1);
       #endif
       delay(10);
     }
@@ -6713,12 +6893,20 @@ void command_speed_mode(byte mode)
   
   if (mode == COMMAND_SPEED_MODE_KEYER_WPM){
     #ifdef FEATURE_DISPLAY
-      lcd_center_print_timed("Adjust Speed", 0, default_display_msg_delay); 
+      if (LCD_COLUMNS < 9){
+        lcd_center_print_timed("AdjSpeed", 0, default_display_msg_delay);
+      } else {
+        lcd_center_print_timed("Adjust Speed", 0, default_display_msg_delay); 
+      }
     #endif
     keyer_machine_mode = KEYER_COMMAND_MODE_SPEED_OVERRIDE;
   } else {
     #ifdef FEATURE_DISPLAY
-      lcd_center_print_timed("Cmd Mode Speed", 0, default_display_msg_delay);
+      if (LCD_COLUMNS < 9){
+        lcd_center_print_timed("CmdSpeed", 0, default_display_msg_delay);
+      } else {
+        lcd_center_print_timed("Cmd Mode Speed", 0, default_display_msg_delay); 
+      }    
     #endif  
   }         
   
@@ -12013,7 +12201,13 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
       lcd_center_print_timed("Echo Practice", 1, default_display_msg_delay);
     } else {
       lcd_center_print_timed("RX / TX", 0, default_display_msg_delay);
-      lcd_center_print_timed("Echo Practice", 1, default_display_msg_delay);      
+      if (LCD_ROWS > 1){
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed("EchoPrct", 1, default_display_msg_delay);
+        } else {
+          lcd_center_print_timed("Echo Practice", 1, default_display_msg_delay); 
+        }
+      }     
     }
     service_display();
   #endif 
@@ -12446,8 +12640,14 @@ void random_practice(PRIMARY_SERIAL_CLS * port_to_use,byte random_mode,byte grou
 
   #ifdef FEATURE_DISPLAY
     lcd_clear();
-    lcd_center_print_timed("Random Group", 0, default_display_msg_delay);
-    lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed("RndGroup", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Random Group", 0, default_display_msg_delay);
+    }
+    if (LCD_ROWS > 1){
+      lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    }
     service_display();
   #endif
 
@@ -12610,8 +12810,14 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
 
   #ifdef FEATURE_DISPLAY
     lcd_clear();
-    lcd_center_print_timed("Wordsworth", 0, default_display_msg_delay);
-    lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed("Wrdswrth", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Wordsworth", 0, default_display_msg_delay);      
+    }
+    if (LCD_ROWS > 1){
+      lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    }
     service_display();
   #endif
 
@@ -12768,8 +12974,14 @@ void serial_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte practice_
 
   #ifdef FEATURE_DISPLAY
     lcd_clear();
-    lcd_center_print_timed("Interactive RX", 0, default_display_msg_delay);
-    lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed("IntrctRX", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Interactive RX", 0, default_display_msg_delay);      
+    }
+    if (LCD_ROWS > 1){
+      lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    }
     service_display();
   #endif
 
@@ -12939,8 +13151,14 @@ void serial_practice_non_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte pract
 
   #ifdef FEATURE_DISPLAY
     lcd_clear();
-    lcd_center_print_timed("Callsign RX", 0, default_display_msg_delay);
-    lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed("Call RX", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Callsign RX", 0, default_display_msg_delay);      
+    }
+    if (LCD_ROWS > 1){
+      lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    }
     service_display();
   #endif
 
@@ -14307,9 +14525,13 @@ byte play_memory(byte memory_number)
         if (y == (memory_start(memory_number))) {      // memory is totally empty - do a boop
           repeat_memory = 255;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Memory empty", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("MemEmpty", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Memory empty", 0, default_display_msg_delay);            
+            }
           #else
-          boop();
+            boop();
           #endif
         }
         
@@ -14385,7 +14607,11 @@ void program_memory(int memory_number)
   
   #ifdef FEATURE_DISPLAY
     String lcd_print_string;
-    lcd_print_string.concat("Pgm Memory ");
+    if (LCD_COLUMNS < 9){
+      lcd_print_string.concat("PgmMem");
+    } else {
+      lcd_print_string.concat("Pgm Memory ");
+    }
     lcd_print_string.concat(memory_number+1);
     lcd_center_print_timed(lcd_print_string, 0, default_display_msg_delay);
   #endif
@@ -15421,8 +15647,11 @@ void initialize_display(){
       lcd.clear(); // you have to ;o)
     #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
 
-
-    lcd_center_print_timed("K3NG Keyer",0,4000);
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed("K3NGKeyr",0,4000);
+    } else {
+      lcd_center_print_timed("K3NG Keyer",0,4000);
+    }
   #endif //FEATURE_DISPLAY
 
   if (keyer_machine_mode != BEACON) {
@@ -15667,7 +15896,11 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       case 0x2a:    // BACKSPACE - decrement serial number
         serial_number--;
         #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("Serial: " + String(serial_number), 0, default_display_msg_delay);
+          if (LCD_COLUMNS < 9){
+            lcd_center_print_timed("SN " + String(serial_number), 0, default_display_msg_delay);
+          } else {
+            lcd_center_print_timed("Serial: " + String(serial_number), 0, default_display_msg_delay);
+          }
         #endif  
         return;      
         break;  
@@ -15683,7 +15916,11 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       usb_keyboard_special_mode_start_time = millis();
       usb_keyboard_mode = USB_KEYBOARD_PROGRAM_MEM;     
       #ifdef FEATURE_DISPLAY
-      String lcd_string = "Program Memory";
+        if (LCD_COLUMNS < 9){
+          String lcd_string = "PgmMem";
+        } else {
+          String lcd_string = "Program Memory";
+        }
       if (usb_keyboard_program_memory < 9) {
         lcd_string.concat(' ');
       }
@@ -15722,23 +15959,22 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
 
   if ((modifier.bmLeftCtrl) || (modifier.bmRightCtrl)) {
     #ifdef DEBUG_USB_KEYBOARD
-    debug_serial_port->print(F("KbdRptParser::OnKeyDown: CTRL-"));
-    debug_serial_port->println(keystroke);
+      debug_serial_port->print(F("KbdRptParser::OnKeyDown: CTRL-"));
+      debug_serial_port->println(keystroke);
     #endif //DEBUG_USB_KEYBOARD
     switch(key){
       case 0x04 : // CTRL-A
         configuration.keyer_mode = IAMBIC_A;
         #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
+          lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
         #endif
-
         config_dirty = 1;
         break;
 
       case 0x05 : // CTRL-B
         configuration.keyer_mode = IAMBIC_B;
         #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
+          lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
         #endif          
         config_dirty = 1;
         break;
@@ -15746,7 +15982,11 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       case 0x06 : // CTRL-C
         configuration.keyer_mode = SINGLE_PADDLE;
         #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+          if (LCD_COLUMNS < 9){
+            lcd_center_print_timed("SnglePdl", 0, default_display_msg_delay);
+          } else {
+            lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
+          }
         #endif          
         config_dirty = 1;
         break;
@@ -15754,14 +15994,22 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       case 0x07 : // CTRL-D
         configuration.keyer_mode = ULTIMATIC;
         #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
+          if (LCD_COLUMNS < 9){
+            lcd_center_print_timed("Ultimatc", 0, default_display_msg_delay);
+          } else {
+            lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);            
+          }        
         #endif        
         config_dirty = 1;
         break;
 
       case 0x08 : // CTRL-E
         #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("Enter Serial #", 0, default_display_msg_delay);
+          if (LCD_COLUMNS < 9){
+            lcd_center_print_timed("Entr SN", 0, default_display_msg_delay);
+          } else {
+            lcd_center_print_timed("Enter Serial #", 0, default_display_msg_delay);            
+          }      
         #else        
         boop_beep();
         #endif
@@ -15775,20 +16023,20 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       case 0x0a : // CTRL-G
         configuration.keyer_mode = BUG;
         #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("Bug", 0, default_display_msg_delay);
+          lcd_center_print_timed("Bug", 0, default_display_msg_delay);
         #endif
         config_dirty = 1;
         break;
 
       case 0x0b : // CTRL-H
         #ifdef FEATURE_HELL
-        if (char_send_mode == CW) {
-          char_send_mode = HELL;
-          beep();
-        } else {
-          char_send_mode = CW;
-          beep();
-        }
+          if (char_send_mode == CW) {
+            char_send_mode = HELL;
+            beep();
+          } else {
+            char_send_mode = CW;
+            beep();
+          }
         #endif //FEATURE_HELL
         break;
 
@@ -15796,29 +16044,33 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         if (key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP-1)
           key_tx = 0;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
+            lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
           #endif
           
         } else if (!key_tx && keyer_machine_mode != KEYER_COMMAND_MODE) { //Added check that keyer is NOT in command mode or keyer might be enabled for paddle commands (WD9DMP)
           key_tx = 1;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("TX On", 0, default_display_msg_delay);
+            lcd_center_print_timed("TX On", 0, default_display_msg_delay);
           #endif      
         }
         break;
 
       case 0x10: // CTRL-M
         #ifdef FEATURE_FARNSWORTH
-        #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("Farnsworth WPM", 0, default_display_msg_delay);
-        #else          
-        boop_beep();
-        #endif
-        usb_keyboard_mode = USB_KEYBOARD_FARNS_WPM_ADJUST;
-        user_num_input_places = 3;
-        user_num_input_lower_limit = -1;
-        user_num_input_upper_limit = 1000;    
-        usb_keyboard_special_mode_start_time = millis();      
+          #ifdef FEATURE_DISPLAY
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("Frns WPM", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Farnsworth WPM", 0, default_display_msg_delay);
+            }
+          #else          
+            boop_beep();
+          #endif
+          usb_keyboard_mode = USB_KEYBOARD_FARNS_WPM_ADJUST;
+          user_num_input_places = 3;
+          user_num_input_lower_limit = -1;
+          user_num_input_upper_limit = 1000;    
+          usb_keyboard_special_mode_start_time = millis();      
         #endif
 
         break;
@@ -15827,37 +16079,34 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         if (configuration.paddle_mode == PADDLE_NORMAL) {
           configuration.paddle_mode = PADDLE_REVERSE;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("Pdl Rev", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
+            }          
           #endif
         } else {
           configuration.paddle_mode = PADDLE_NORMAL;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("Pdl Norm", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
+            }          
           #endif      
         }
         config_dirty = 1;
         break;
 
-      // case 0x12 : // CTRL-O     
-      //   if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)){
-      //     configuration.sidetone_mode = SIDETONE_OFF;
-      //     #ifdef FEATURE_DISPLAY
-      //     lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
-      //     #endif      
-      //   } else {
-      //     #ifdef FEATURE_DISPLAY
-      //     lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
-      //     #endif      
-      //     configuration.sidetone_mode = SIDETONE_ON;
-      //   }
-      //   config_dirty = 1;
-      //  break;
-
       case 0x12 : // CTRL-O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN  
         if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
           configuration.sidetone_mode = SIDETONE_OFF;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("ST Off", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
+            }
           #endif
           boop();
         } else if (configuration.sidetone_mode == SIDETONE_ON) {
@@ -15866,6 +16115,9 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
              delay(200);
           beep();
           #ifdef FEATURE_DISPLAY
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("ST Pdl O", 0, default_display_msg_delay);
+            }          
             if (LCD_COLUMNS > 19){
               lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
             } else {
@@ -15875,7 +16127,11 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
           #endif      
         } else {
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("ST On", 0, default_display_msg_delay);
+            } else {            
+              lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
+            }
           #endif      
           configuration.sidetone_mode = SIDETONE_ON;
           beep();
@@ -15888,11 +16144,25 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
             if (configuration.cmos_super_keyer_iambic_b_timing_on){
               configuration.cmos_super_keyer_iambic_b_timing_on = 0;
               #ifdef FEATURE_DISPLAY
-                lcd_center_print_timed("CMOS Superkeyer Off", 0, default_display_msg_delay);
+                if (LCD_COLUMNS < 9){
+                  lcd_center_print_timed("CMOS Off", 0, default_display_msg_delay);
+                }
+                if (LCD_COLUMNS > 18){
+                  lcd_center_print_timed("CMOS Superkeyer Off", 0, default_display_msg_delay);                  
+                } else {            
+                  lcd_center_print_timed("CMOS SK Off", 0, default_display_msg_delay);
+                }              
               #endif      
             } else {
               #ifdef FEATURE_DISPLAY
-                lcd_center_print_timed("CMOS Superkeyer On", 0, default_display_msg_delay);
+                if (LCD_COLUMNS < 9){
+                  lcd_center_print_timed("CMOS On", 0, default_display_msg_delay);
+                } 
+                if (LCD_COLUMNS > 17){
+                  lcd_center_print_timed("CMOS Superkeyer On", 0, default_display_msg_delay);                  
+                } else {            
+                  lcd_center_print_timed("CMOS SK On", 0, default_display_msg_delay);
+                }                
               #endif      
               configuration.cmos_super_keyer_iambic_b_timing_on = 1;
             }
@@ -15910,11 +16180,11 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
           tx_and_sidetone_key(0);
           keyboard_tune_on = 0;
           #ifdef FEATURE_DISPLAY
-          lcd_status = LCD_REVERT;
+            lcd_status = LCD_REVERT;
           #endif // FEATURE_DISPLAY
         } else {
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Tune", 0, default_display_msg_delay);
+            lcd_center_print_timed("Tune", 0, default_display_msg_delay);
           #endif 
           sending_mode = MANUAL_SENDING;     
           tx_and_sidetone_key(1);
@@ -15931,7 +16201,11 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
           #endif // FEATURE_DISPLAY            
         } else {
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("PTT Invoke", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("PTTInvke", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("PTT Invoke", 0, default_display_msg_delay);
+            }
           #endif      
           manual_ptt_invoke = 1;
           ptt_key();
@@ -15940,9 +16214,13 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
 
       case 0x1a : // CTRL-W        
         #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("WPM Adjust", 0, default_display_msg_delay);
+          if (LCD_COLUMNS < 9){
+            lcd_center_print_timed("WPM Adj", 0, default_display_msg_delay);
+          } else {
+            lcd_center_print_timed("WPM Adjust", 0, default_display_msg_delay);
+          }
         #else
-        boop_beep();
+          boop_beep();
         #endif
         usb_keyboard_mode = USB_KEYBOARD_WPM_ADJUST;
         user_num_input_places = 3;
@@ -15954,7 +16232,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       case 0x3a : // CTRL-F1
         switch_to_tx_silent(1);
         #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("TX 1", 0, default_display_msg_delay);
+          lcd_center_print_timed("TX 1", 0, default_display_msg_delay);
         #endif          
         break;
 
@@ -15962,7 +16240,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         if ((ptt_tx_2) || (tx_key_line_2)) {
           switch_to_tx_silent(2);           
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("TX 2", 0, default_display_msg_delay);
+            lcd_center_print_timed("TX 2", 0, default_display_msg_delay);
           #endif                      
         }
         break;
@@ -15971,7 +16249,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         if ((ptt_tx_3)  || (tx_key_line_3)) {
           switch_to_tx_silent(3);                      
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("TX 3", 0, default_display_msg_delay);
+            lcd_center_print_timed("TX 3", 0, default_display_msg_delay);
           #endif                                  
         }
         break;
@@ -15980,7 +16258,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         if ((ptt_tx_4)  || (tx_key_line_4)) {
           switch_to_tx_silent(4);    
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("TX 4", 0, default_display_msg_delay);
+            lcd_center_print_timed("TX 4", 0, default_display_msg_delay);
           #endif                                  
         }
         break;
@@ -15989,7 +16267,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         if ((ptt_tx_5)  || (tx_key_line_5)) {
           switch_to_tx_silent(5); 
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("TX 5", 0, default_display_msg_delay);
+            lcd_center_print_timed("TX 5", 0, default_display_msg_delay);
           #endif                      
         }
         break;
@@ -15998,7 +16276,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         if ((ptt_tx_6)  || (tx_key_line_6)) {
           switch_to_tx_silent(6);
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("TX 6", 0, default_display_msg_delay);
+            lcd_center_print_timed("TX 6", 0, default_display_msg_delay);
           #endif                                  
         }
         break;
@@ -16009,13 +16287,21 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
           configuration.autospace_active = 0;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("AutoSOff", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);              
+            }
           #endif                                  
         } else {
           configuration.autospace_active = 1;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
-          lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
+            if (LCD_COLUMNS < 9){
+              lcd_center_print_timed("AutoS On", 0, default_display_msg_delay);
+            } else {
+              lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);              
+            }          
           #endif                                  
         }
         break;
@@ -16037,10 +16323,14 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       key_tx = 1;
       config_dirty = 1;
       #ifdef FEATURE_DISPLAY
-      #ifdef OPTION_MORE_DISPLAY_MSGS
-      lcd_center_print_timed("Default ratio", 0, default_display_msg_delay);
-      service_display();
-      #endif
+        #ifdef OPTION_MORE_DISPLAY_MSGS
+          if (LCD_COLUMNS < 9){
+            lcd_center_print_timed("DfltRtio", 0, default_display_msg_delay);
+          } else {
+            lcd_center_print_timed("Default ratio", 0, default_display_msg_delay);
+          }
+          service_display();
+        #endif
       #endif 
       return;           
       break;
@@ -16048,9 +16338,9 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       if (pause_sending_buffer) {
         pause_sending_buffer = 0;
         #ifdef FEATURE_DISPLAY
-        #ifdef OPTION_MORE_DISPLAY_MSGS
-        lcd_center_print_timed("Resume", 0, default_display_msg_delay);
-        #endif
+          #ifdef OPTION_MORE_DISPLAY_MSGS
+            lcd_center_print_timed("Resume", 0, default_display_msg_delay);
+          #endif
         #endif                 
       } else {
         pause_sending_buffer = 1;
@@ -16586,7 +16876,11 @@ void service_ptt_interlock(){
       if (!ptt_interlock_active){
         ptt_interlock_active = 1;
         #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("PTT Interlock",0,2000);
+          if (LCD_COLUMNS < 9){
+            lcd_center_print_timed("PTT Lock",0,2000);
+          } else {
+            lcd_center_print_timed("PTT Interlock",0,2000);
+          }
         #endif //FEATURE_DISPLAY
       }
     } else {

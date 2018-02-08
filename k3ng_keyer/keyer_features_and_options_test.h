@@ -7,9 +7,9 @@
 //    ##    ##       ##    ##    ##    
 //    ##    ########  ######     ##    
 
-#define TEST_CONFIG_1
+// #define TEST_CONFIG_1
 // #define TEST_CONFIG_2
-// #define TEST_CONFIG_EVERYTHING
+#define TEST_CONFIG_EVERYTHING
 
 #if defined(TEST_CONFIG_1)
 
