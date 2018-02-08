@@ -82,7 +82,8 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \=     Toggle American Morse mode    (requires FEATURE_AMERICAN_MORSE)
     \@     Mill Mode
     \}#### Set potentiometer range - low ## / high ##
-    \"     (Expert Menu - Under construction)
+    \:     Extended CLLI commands
+    \"     FUTURE
     \;     FUTURE
     \]     FUTURE
     \_     FUTURE - Set Clock
@@ -805,7 +806,10 @@ Recent Update History
       Fixed bug with dit_buffer_off and dah_buffer_off not being initialized from eeprom settings at boot up (Thanks, YU7MW)
 
     2018.02.05.01
-      Typo fix: ifdef defined(__AVR__) (Thanks, Glen https://github.com/k3ng/k3ng_cw_keyer/issues/19) 
+      Typo fix: ifdef defined(__AVR__) (Thanks, Glen, N1XF https://github.com/k3ng/k3ng_cw_keyer/issues/19) 
+
+    2018.02.05.02
+      Fixed https://github.com/k3ng/k3ng_cw_keyer/issues/40 (Thanks, Glen, N1XF)
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -822,7 +826,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.02.05.01"
+#define CODE_VERSION "2018.02.05.02"
 #define eeprom_magic_number 28               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5708,7 +5712,7 @@ void command_mode()
   #endif //command_mode_active_led
 
   #ifdef FEATURE_DISPLAY
-    lcd.clear();
+    lcd_clear();
     lcd_center_print_timed("Command Mode", 0, default_display_msg_delay);
   #endif 
 
@@ -6205,7 +6209,7 @@ void command_progressive_5_char_echo_practice(){
 
   #ifdef FEATURE_DISPLAY // enhanced by Fred, VK2EFL
 
-    lcd.clear();
+    lcd_clear();
     if (LCD_COLUMNS > 17){
       lcd_center_print_timed("Receive / Transmit", 0, default_display_msg_delay);
       lcd_center_print_timed("5 Char Echo Practice", 1, default_display_msg_delay);
@@ -10513,7 +10517,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
-int cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
+void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
 {
   byte incoming_serial_byte = 0;
   byte looping = 1;
@@ -12003,8 +12007,15 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
   randomSeed(millis());
 
   #ifdef FEATURE_DISPLAY
-    lcd.clear();
-    lcd_center_print_timed("Receive / Transmit Echo Practice", 0, default_display_msg_delay);
+    lcd_clear();
+    if (LCD_COLUMNS > 17){
+      lcd_center_print_timed("Receive / Transmit", 0, default_display_msg_delay);
+      lcd_center_print_timed("Echo Practice", 1, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("RX / TX", 0, default_display_msg_delay);
+      lcd_center_print_timed("Echo Practice", 1, default_display_msg_delay);      
+    }
+    service_display();
   #endif 
 
   port_to_use->println(F("Receive / Transmit Echo Practice\r\n\r\nCopy the code and send it back using the paddle."));
@@ -12131,6 +12142,10 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
           #endif
           incoming_char = convert_cw_number_to_ascii(cw_char);
           port_to_use->print(incoming_char);
+          #ifdef FEATURE_DISPLAY
+            display_scroll_print_char(incoming_char);
+            service_display();
+          #endif
           user_sent_cw.concat(incoming_char);
           cw_char = 0;
           paddle_hit = 0;
@@ -12141,6 +12156,11 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
         if ((user_sent_cw.length() >= cw_to_send_to_user.length()) || ((progressive_step_counter < 255) && (user_sent_cw.length() == progressive_step_counter))) {
           user_send_loop = 0;
           port_to_use->println();
+          #ifdef FEATURE_DISPLAY
+            display_scroll_print_char(' ');
+            service_display();
+          #endif
+
         }
 
 
@@ -12424,6 +12444,13 @@ void random_practice(PRIMARY_SERIAL_CLS * port_to_use,byte random_mode,byte grou
   randomSeed(millis());
   port_to_use->println(F("Random group practice\r\n"));
 
+  #ifdef FEATURE_DISPLAY
+    lcd_clear();
+    lcd_center_print_timed("Random Group", 0, default_display_msg_delay);
+    lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    service_display();
+  #endif
+
   while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
     incoming_char = port_to_use->read();
   }
@@ -12441,11 +12468,21 @@ void random_practice(PRIMARY_SERIAL_CLS * port_to_use,byte random_mode,byte grou
 
     send_char(random_character,KEYER_NORMAL);
     port_to_use->print(random_character);
+    #ifdef FEATURE_DISPLAY
+      display_scroll_print_char(random_character);
+      service_display();
+    #endif
+
+
     x++;
 
     if (x == group_size){
       send_char(' ',KEYER_NORMAL);
       port_to_use->print(" ");
+      #ifdef FEATURE_DISPLAY
+        display_scroll_print_char(' ');
+        service_display();
+      #endif
       x = 0;
       y++;
     }
@@ -12569,8 +12606,14 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
 
 
   randomSeed(millis());
-
   port_to_use->println(F("Wordsworth practice...\n"));
+
+  #ifdef FEATURE_DISPLAY
+    lcd_clear();
+    lcd_center_print_timed("Wordsworth", 0, default_display_msg_delay);
+    lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    service_display();
+  #endif
 
   while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
     port_to_use->read();
@@ -12639,14 +12682,26 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
             x++;
             if ((word_buffer[x] != 0) && (x < 10)){
               send_char(convert_unicode_to_send_char_code((byte)word_buffer[x-1],(byte)word_buffer[x]),KEYER_NORMAL);
+              #ifdef FEATURE_DISPLAY
+                display_scroll_print_char(convert_unicode_to_send_char_code((byte)word_buffer[x-1],(byte)word_buffer[x]));
+                service_display();
+              #endif                 
               x++;
             }
           } else {
             send_char(word_buffer[x],KEYER_NORMAL);
+            #ifdef FEATURE_DISPLAY
+              display_scroll_print_char(word_buffer[x]);
+              service_display();
+            #endif            
             x++;
           }
         #else //OPTION_NON_ENGLISH_EXTENSIONS
           send_char(word_buffer[x],KEYER_NORMAL);
+          #ifdef FEATURE_DISPLAY
+            display_scroll_print_char(word_buffer[x]);
+            service_display();
+          #endif             
           x++;
         #endif //OPTION_NON_ENGLISH_EXTENSIONS
 
@@ -12656,6 +12711,10 @@ void wordsworth_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_type)
           loop2 = 0;
           for (int y = 0;y < (configuration.wordsworth_wordspace-1);y++){  // send extra word spaces
             send_char(' ',KEYER_NORMAL);
+            #ifdef FEATURE_DISPLAY
+              display_scroll_print_char(' ');
+              service_display();
+            #endif                 
             if (((y > ((configuration.wordsworth_wordspace-1)/2)) || (configuration.wordsworth_wordspace < 4)) && (not_printed)){
               port_to_use->println(word_buffer);
               not_printed = 0;
@@ -12706,6 +12765,14 @@ void serial_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte practice_
   char word_buffer[10];
 
   randomSeed(millis());
+
+  #ifdef FEATURE_DISPLAY
+    lcd_clear();
+    lcd_center_print_timed("Interactive RX", 0, default_display_msg_delay);
+    lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    service_display();
+  #endif
+
   port_to_use->println(F("Interactive receive practice\r\n\r\nCopy the code, type it in, and hit ENTER."));
   port_to_use->println(F("If you are using the Arduino serial monitor, select \"Carriage Return\" line ending."));
   port_to_use->println(F("Enter a blackslash \\ to exit.\r\n"));
@@ -12786,6 +12853,10 @@ void serial_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte practice_
 
         if(x < (cw_to_send_to_user.length())){
           send_char(cw_to_send_to_user[x],KEYER_NORMAL);
+          #ifdef FEATURE_DISPLAY
+            display_scroll_print_char(cw_to_send_to_user[x]);
+            service_display();
+          #endif    
           x++;
         }
 
@@ -12812,11 +12883,19 @@ void serial_practice_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte practice_
           user_entered_cw.toUpperCase();  // the toUpperCase function was modified in 1.0; now it changes string in place
           if (cw_to_send_to_user.compareTo(user_entered_cw) == 0) {
             port_to_use->println(F("\nCorrect!"));
+            #ifdef FEATURE_DISPLAY
+              lcd_clear();
+              lcd_center_print_timed("Correct!", 0, default_display_msg_delay);
+              service_display();
+            #endif
             loop2 = 0;
           } else {
             port_to_use->println(F("\nWrong!"));
-            //port_to_use->println(callsign);
-            //loop2 = 0;
+            #ifdef FEATURE_DISPLAY
+              lcd_clear();
+              lcd_center_print_timed("Wrong!", 0, default_display_msg_delay);
+              service_display();
+            #endif            
           }
         }
       }
@@ -12857,6 +12936,14 @@ void serial_practice_non_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte pract
 
   key_tx = 0;
   randomSeed(millis());
+
+  #ifdef FEATURE_DISPLAY
+    lcd_clear();
+    lcd_center_print_timed("Callsign RX", 0, default_display_msg_delay);
+    lcd_center_print_timed("Practice", 1, default_display_msg_delay);
+    service_display();
+  #endif
+
   port_to_use->println(F("Callsign receive practice\r\n"));
 
   while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
@@ -12929,6 +13016,10 @@ void serial_practice_non_interactive(PRIMARY_SERIAL_CLS * port_to_use,byte pract
     while ((loop2) && (x < (cw_to_send_to_user.length()))) {
 
       send_char(cw_to_send_to_user[x],KEYER_NORMAL);
+      #ifdef FEATURE_DISPLAY
+        display_scroll_print_char(cw_to_send_to_user[x]);
+        service_display();
+      #endif  
       x++;
     
       if (port_to_use->available()){
@@ -15188,6 +15279,7 @@ void initialize_serial_ports(){
         #if defined(FEATURE_SERIAL_HELP)
           primary_serial_port->println(F("\n\rEnter \\? for help\n"));
         #endif
+        while(primary_serial_port->available()){primary_serial_port->read();}  //clear out buffer at boot
       }
       #ifdef DEBUG_MEMORYCHECK
         memorycheck();
@@ -15211,13 +15303,14 @@ void initialize_serial_ports(){
         #if defined(FEATURE_SERIAL_HELP)
           secondary_serial_port->println(F("\n\rEnter \\? for help\n"));
         #endif
+        while(secondary_serial_port->available()){secondary_serial_port->read();}  //clear out buffer at boot
       #endif
     #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT 
 
     #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-    debug_serial_port = secondary_serial_port;
+      debug_serial_port = secondary_serial_port;
     #else
-    debug_serial_port = primary_serial_port;
+      debug_serial_port = primary_serial_port;
     #endif
 
   #endif //FEATURE_SERIAL
