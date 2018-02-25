@@ -814,6 +814,9 @@ Recent Update History
     2018.02.07.01
       Added support for 8 column LCD displays  
 
+    2018.02.25.01
+        FEATURE_SIDETONE_SWITCH switch line is now set for internal pullup so it won't cause a problem if left floating 
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -829,7 +832,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.02.07.01"
+#define CODE_VERSION "2018.02.25.01"
 #define eeprom_magic_number 28               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -14965,7 +14968,7 @@ void initialize_pins() {
   #endif //FEATURE_SLEEP
 
   #ifdef FEATURE_SIDETONE_SWITCH
-  pinMode(SIDETONE_SWITCH,INPUT);
+    pinMode(SIDETONE_SWITCH,INPUT_PULLUP);
   #endif //FEATURE_SIDETONE_SWITCH
 
   #if defined (FEATURE_4x4_KEYPAD)||defined(FEATURE_3x4_KEYPAD)
