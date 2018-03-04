@@ -237,6 +237,33 @@
 
 #define sd_card_spi_ss_line 4
 
+
+#if defined(OPTION_DFROBOT_LCD_COMMAND_BUTTONS)
+
+  // For V1.1 board use these values
+  #define dfrobot_btnRIGHT_analog 50
+  #define dfrobot_btnUP_analog 250
+  #define dfrobot_btnDOWN_analog 450
+  #define dfrobot_btnLEFT_analog 650
+  #define dfrobot_btnSELECT_analog 850  
+
+  // For V1.0 board use these values
+  // #define dfrobot_btnRIGHT_analog 50
+  // #define dfrobot_btnUP_analog 195
+  // #define dfrobot_btnDOWN_analog 380
+  // #define dfrobot_btnLEFT_analog 555
+  // #define dfrobot_btnSELECT_analog 790  
+  
+  // button to memory mappings (0 = command button, 1 = memory 1, 2 = memory 2, etc.)
+  #define dfrobot_btnRIGHT  2
+  #define dfrobot_btnUP     1
+  #define dfrobot_btnDOWN   3
+  #define dfrobot_btnLEFT   4
+  #define dfrobot_btnSELECT 0
+  #define dfrobot_btnNONE   255 // do not change
+
+#endif
+
 #endif //TEST_SETTINGS_1
 
 //*********************************************************************************************************************
@@ -463,9 +490,31 @@
 #define initial_sidetone_mode 1            // Sidetone mode, 0=OFF, 1=ON, 2=PADDLE_ONLY
 #define initial_command_mode_speed_wpm 20
 
+#if defined(OPTION_DFROBOT_LCD_COMMAND_BUTTONS)
 
-     
+  // For V1.1 board use these values
+  #define dfrobot_btnRIGHT_analog 50
+  #define dfrobot_btnUP_analog 250
+  #define dfrobot_btnDOWN_analog 450
+  #define dfrobot_btnLEFT_analog 650
+  #define dfrobot_btnSELECT_analog 850  
 
+  // For V1.0 board use these values
+  // #define dfrobot_btnRIGHT_analog 50
+  // #define dfrobot_btnUP_analog 195
+  // #define dfrobot_btnDOWN_analog 380
+  // #define dfrobot_btnLEFT_analog 555
+  // #define dfrobot_btnSELECT_analog 790  
+  
+  // button to memory mappings (0 = command button, 1 = memory 1, 2 = memory 2, etc.)
+  #define dfrobot_btnRIGHT  2
+  #define dfrobot_btnUP     1
+  #define dfrobot_btnDOWN   3
+  #define dfrobot_btnLEFT   4
+  #define dfrobot_btnSELECT 0
+  #define dfrobot_btnNONE   255 // do not change
+
+#endif
 
 #endif //TEST_SETTINGS_2
 

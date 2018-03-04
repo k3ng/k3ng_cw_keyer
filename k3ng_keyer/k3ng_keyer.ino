@@ -821,6 +821,9 @@ Recent Update History
       Changed command_mode_wpm from uint8_t to unsigned int
       Fixed minor bug with junk left in paddle echo buffer after exiting command mode
 
+    2018.03.04.02
+      Added OPTION_DFROBOT_LCD_COMMAND_BUTTONS to use this board https://www.dfrobot.com/wiki/index.php/Arduino_LCD_KeyPad_Shield_(SKU:_DFR0009) with FEATURE_COMMAND_BUTTONS
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -836,7 +839,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.04.01"
+#define CODE_VERSION "2018.03.04.02"
 #define eeprom_magic_number 29               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -7131,119 +7134,92 @@ byte analogbuttonpressed() {
 
   int analog_line_read_average = 0;
   int analog_read_temp = 0;
-  
-  #if !defined(OPTION_REVERSE_BUTTON_ORDER)
-    if (analogRead(analog_buttons_pin) <= button_array_high_limit[analog_buttons_number_of_buttons-1]) {
-      
-      for (byte x = 0;x < 19;x++){
-        analog_read_temp = analogRead(analog_buttons_pin);
-        if (analog_read_temp <= button_array_high_limit[analog_buttons_number_of_buttons-1]){
-          analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2;
-        }
+
+  #if defined(OPTION_DFROBOT_LCD_COMMAND_BUTTONS)
+
+    // code from: https://www.dfrobot.com/wiki/index.php/Arduino_LCD_KeyPad_Shield_(SKU:_DFR0009)#Pin_Allocation
+
+    for (byte x = 0;x < 19;x++){
+      analog_read_temp = analogRead(analog_buttons_pin);
+      if (analog_read_temp <= button_array_high_limit[analog_buttons_number_of_buttons-1]){
+        analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2;
       }
-      
-      for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
-        if ((analog_line_read_average > button_array_low_limit[x]) && (analog_line_read_average <=  button_array_high_limit[x])) {
-          #ifdef DEBUG_BUTTONS
-          //if (!debug_flag) {
-            debug_serial_port->print(F(" analogbuttonpressed: returning: "));
-            debug_serial_port->println(x);
-          //  debug_flag = 1;
-          //}
-          #endif         
-          return x;
-        }  
-      }    
-      
     }
 
-  #else //OPTION_REVERSE_BUTTON_ORDER
+    // my buttons when read are centered at these values: 0, 144, 329, 504, 741
+    // we add approx 50 to those values and check to see if we are close
+    if (analog_line_read_average > 1000) return dfrobot_btnNONE;
+    // For V1.1 use this threshold
+    if (analog_line_read_average < dfrobot_btnRIGHT_analog)   return dfrobot_btnRIGHT;  
+    if (analog_line_read_average < dfrobot_btnUP_analog)  return dfrobot_btnUP; 
+    if (analog_line_read_average < dfrobot_btnDOWN_analog)  return dfrobot_btnDOWN; 
+    if (analog_line_read_average < dfrobot_btnLEFT_analog)  return dfrobot_btnLEFT; 
+    if (analog_line_read_average < dfrobot_btnSELECT_analog)  return dfrobot_btnSELECT; 
 
-    if (analogRead(analog_buttons_pin) <= button_array_high_limit[0]) {
-      \
-      for (byte x = 0;x < 19;x++){
-        analog_read_temp = analogRead(analog_buttons_pin);
-        if (analog_read_temp <= button_array_high_limit[0]){
-          analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2;
-        }
-      }
-      
-      #ifdef DEBUG_BUTTONS
-      debug_serial_port->print(F(" analogbuttonpressed: analog_line_read_average: "));
-      debug_serial_port->println(analog_line_read_average);
-      #endif 
 
-      for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
-        if ((analog_line_read_average > button_array_low_limit[x]) && (analog_line_read_average <=  button_array_high_limit[x])) {
-          #ifdef DEBUG_BUTTONS
-          //if (!debug_flag) {
-            debug_serial_port->print(F(" analogbuttonpressed: returning: "));
-            debug_serial_port->println(x);
-          //  debug_flag = 1;
-          //}
-          #endif         
-          return x;
-        }  
-      }    
-      
-    }
-
-  #endif //OPTION_REVERSE_BUTTON_ORDER
+  #else  // OPTION_DFROBOT_LCD_COMMAND_BUTTONS
   
-
-  /*
-
-  int analog_line_read = analogRead(analog_buttons_pin);
-  
-  static byte samplecounts = 0;
-  static int running_analog_line_read_average = 0;
-  
-  #ifdef DEBUG_BUTTONS
-  static byte debug_flag = 0;
-  #endif
-  
-  if (analog_line_read < 1000) {
-
-    running_analog_line_read_average = running_analog_line_read_average + analog_line_read;
-    samplecounts++;
-    if (samplecounts > 19) {        
-      analog_line_read = running_analog_line_read_average / samplecounts;
-      
-      #ifdef DEBUG_BUTTONS
-      if (!debug_flag) {
-        primary_serial_port->print(F("\nanalogbuttonpressed: analog_line_read: "));
-        primary_serial_port->print(analog_line_read);
-        primary_serial_port->print(F(" samplecounts: "));
-        primary_serial_port->print(samplecounts);
-      }
-      #endif        
-      
-      for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
-        if ((analog_line_read > button_array_low_limit[x]) && (analog_line_read <=  button_array_high_limit[x])) {
-          #ifdef DEBUG_BUTTONS
-          if (!debug_flag) {
-            primary_serial_port->print(F(" analogbuttonpressed: returning: "));
-            primary_serial_port->println(x);
-            debug_flag = 1;
+    #if !defined(OPTION_REVERSE_BUTTON_ORDER)
+      if (analogRead(analog_buttons_pin) <= button_array_high_limit[analog_buttons_number_of_buttons-1]) {
+        
+        for (byte x = 0;x < 19;x++){
+          analog_read_temp = analogRead(analog_buttons_pin);
+          if (analog_read_temp <= button_array_high_limit[analog_buttons_number_of_buttons-1]){
+            analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2;
           }
-          #endif
-          samplecounts = 0;
-          running_analog_line_read_average = 0;          
-          return x;
-        }  
+        }
+        
+        for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
+          if ((analog_line_read_average > button_array_low_limit[x]) && (analog_line_read_average <=  button_array_high_limit[x])) {
+            #ifdef DEBUG_BUTTONS
+            //if (!debug_flag) {
+              debug_serial_port->print(F(" analogbuttonpressed: returning: "));
+              debug_serial_port->println(x);
+            //  debug_flag = 1;
+            //}
+            #endif         
+            return x;
+          }  
+        }    
+        
       }
-    }  //(samplecounts > 9)
-  } else {  //(analog_line_read < 1000)
-    samplecounts = 0;
-    running_analog_line_read_average = 0;
-  }
-   
-  #ifdef DEBUG_BUTTONS
-  debug_flag = 0;
-  #endif
+
+    #else //OPTION_REVERSE_BUTTON_ORDER
+
+      if (analogRead(analog_buttons_pin) <= button_array_high_limit[0]) {
+        \
+        for (byte x = 0;x < 19;x++){
+          analog_read_temp = analogRead(analog_buttons_pin);
+          if (analog_read_temp <= button_array_high_limit[0]){
+            analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2;
+          }
+        }
+        
+        #ifdef DEBUG_BUTTONS
+        debug_serial_port->print(F(" analogbuttonpressed: analog_line_read_average: "));
+        debug_serial_port->println(analog_line_read_average);
+        #endif 
+
+        for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
+          if ((analog_line_read_average > button_array_low_limit[x]) && (analog_line_read_average <=  button_array_high_limit[x])) {
+            #ifdef DEBUG_BUTTONS
+            //if (!debug_flag) {
+              debug_serial_port->print(F(" analogbuttonpressed: returning: "));
+              debug_serial_port->println(x);
+            //  debug_flag = 1;
+            //}
+            #endif         
+            return x;
+          }  
+        }    
+        
+      }
+
+    #endif //OPTION_REVERSE_BUTTON_ORDER
+
+
+  #endif  
   
-  
-  */
   
   return 255; 
 }
