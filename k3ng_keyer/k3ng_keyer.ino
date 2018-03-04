@@ -817,6 +817,10 @@ Recent Update History
     2018.02.25.01
         FEATURE_SIDETONE_SWITCH switch line is now set for internal pullup so it won't cause a problem if left floating 
 
+    2018.03.04.01
+      Changed command_mode_wpm from uint8_t to unsigned int
+      Fixed minor bug with junk left in paddle echo buffer after exiting command mode
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -832,8 +836,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.02.25.01"
-#define eeprom_magic_number 28               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2018.03.04.01"
+#define eeprom_magic_number 29               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -976,7 +980,7 @@ Recent Update History
 #endif //FEATURE_SD_CARD_SUPPORT
 
 // Variables and stuff
-struct config_t {  //48 bytes
+struct config_t {  //49 bytes
   unsigned int wpm;
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1007,7 +1011,7 @@ struct config_t {  //48 bytes
   uint8_t wordsworth_wordspace;
   uint8_t wordsworth_repetition;
   uint8_t cli_mode;
-  uint8_t command_mode_wpm;
+  unsigned int command_mode_wpm;
 } configuration;
 
 byte sending_mode = UNDEFINED_SENDING;
@@ -4778,9 +4782,9 @@ void ptt_key()
     if (configuration.current_ptt_line) {
       digitalWrite (configuration.current_ptt_line, HIGH);    
       #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
-      if ((wk2_both_tx_activated) && (ptt_tx_2)) {
-        digitalWrite (ptt_tx_2, HIGH);
-      }
+        if ((wk2_both_tx_activated) && (ptt_tx_2)) {
+          digitalWrite (ptt_tx_2, HIGH);
+        }
       #endif
       delay(ptt_lead_time[configuration.current_tx-1]);
     }
@@ -4796,9 +4800,9 @@ void ptt_unkey()
     if (configuration.current_ptt_line) {
       digitalWrite (configuration.current_ptt_line, LOW);
       #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
-      if ((wk2_both_tx_activated) && (ptt_tx_2)) {
-        digitalWrite (ptt_tx_2, LOW);
-      }
+        if ((wk2_both_tx_activated) && (ptt_tx_2)) {
+          digitalWrite (ptt_tx_2, LOW);
+        }
       #endif
 
     }
@@ -4810,7 +4814,7 @@ void ptt_unkey()
 void check_ptt_tail()
 {
   #ifdef DEBUG_LOOP
-  debug_serial_port->println(F("loop: entering check_ptt_tail"));
+    debug_serial_port->println(F("loop: entering check_ptt_tail"));
   #endif
 
   if (key_state) {
@@ -6313,6 +6317,9 @@ void command_mode()
     }
   #endif //DEBUG_COMMAND_MODE
 
+  #if defined(FEATURE_PADDLE_ECHO)
+    paddle_echo_buffer = 0;
+  #endif
 
   #ifdef OPTION_WATCHDOG_TIMER
     wdt_enable(WDTO_4S);

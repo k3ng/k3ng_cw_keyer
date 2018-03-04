@@ -463,6 +463,10 @@
 #define initial_sidetone_mode 1            // Sidetone mode, 0=OFF, 1=ON, 2=PADDLE_ONLY
 #define initial_command_mode_speed_wpm 20
 
+
+     
+
+
 #endif //TEST_SETTINGS_2
 
 // ######## ########  ######  ######## 
