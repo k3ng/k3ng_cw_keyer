@@ -824,6 +824,9 @@ Recent Update History
     2018.03.04.02
       Added OPTION_DFROBOT_LCD_COMMAND_BUTTONS to use this board https://www.dfrobot.com/wiki/index.php/Arduino_LCD_KeyPad_Shield_(SKU:_DFR0009) with FEATURE_COMMAND_BUTTONS
 
+    2018.03.08.01
+      Additional OPTION_DFROBOT_LCD_COMMAND_BUTTONS code and corresponding DEBUG_BUTTONS code
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -839,7 +842,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.04.02"
+#define CODE_VERSION "2018.03.08.01"
 #define eeprom_magic_number 29               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -7137,7 +7140,7 @@ byte analogbuttonpressed() {
 
   #if defined(OPTION_DFROBOT_LCD_COMMAND_BUTTONS)
 
-    // code from: https://www.dfrobot.com/wiki/index.php/Arduino_LCD_KeyPad_Shield_(SKU:_DFR0009)#Pin_Allocation
+    // based on code from: https://www.dfrobot.com/wiki/index.php/Arduino_LCD_KeyPad_Shield_(SKU:_DFR0009)#Pin_Allocation
 
     for (byte x = 0;x < 19;x++){
       analog_read_temp = analogRead(analog_buttons_pin);
@@ -7146,15 +7149,39 @@ byte analogbuttonpressed() {
       }
     }
 
-    // my buttons when read are centered at these values: 0, 144, 329, 504, 741
-    // we add approx 50 to those values and check to see if we are close
-    if (analog_line_read_average > 1000) return dfrobot_btnNONE;
-    // For V1.1 use this threshold
-    if (analog_line_read_average < dfrobot_btnRIGHT_analog)   return dfrobot_btnRIGHT;  
-    if (analog_line_read_average < dfrobot_btnUP_analog)  return dfrobot_btnUP; 
-    if (analog_line_read_average < dfrobot_btnDOWN_analog)  return dfrobot_btnDOWN; 
-    if (analog_line_read_average < dfrobot_btnLEFT_analog)  return dfrobot_btnLEFT; 
-    if (analog_line_read_average < dfrobot_btnSELECT_analog)  return dfrobot_btnSELECT; 
+    if (analog_line_read_average > 1000){
+      return dfrobot_btnNONE;
+    }
+    if (analog_line_read_average < dfrobot_btnRIGHT_analog){
+      #ifdef DEBUG_BUTTONS
+        debug_serial_port->println(F(" analogbuttonpressed: dfrobot_btnRIGHT"));
+      #endif        
+      return dfrobot_btnRIGHT;  
+    }
+    if (analog_line_read_average < dfrobot_btnUP_analog){
+      #ifdef DEBUG_BUTTONS
+        debug_serial_port->println(F(" analogbuttonpressed: dfrobot_btnUP"));
+      #endif       
+      return dfrobot_btnUP; 
+    }
+    if (analog_line_read_average < dfrobot_btnDOWN_analog){
+      #ifdef DEBUG_BUTTONS
+        debug_serial_port->println(F(" analogbuttonpressed: dfrobot_btnDOWN"));
+      #endif       
+      return dfrobot_btnDOWN; 
+    }
+    if (analog_line_read_average < dfrobot_btnLEFT_analog){
+      #ifdef DEBUG_BUTTONS
+        debug_serial_port->println(F(" analogbuttonpressed: dfrobot_btnLEFT"));
+      #endif       
+      return dfrobot_btnLEFT; 
+    }
+    if (analog_line_read_average < dfrobot_btnSELECT_analog){
+      #ifdef DEBUG_BUTTONS
+        debug_serial_port->println(F(" analogbuttonpressed: dfrobot_btnSELECT"));
+      #endif       
+      return dfrobot_btnSELECT; 
+    }
 
 
   #else  // OPTION_DFROBOT_LCD_COMMAND_BUTTONS
@@ -7172,11 +7199,8 @@ byte analogbuttonpressed() {
         for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
           if ((analog_line_read_average > button_array_low_limit[x]) && (analog_line_read_average <=  button_array_high_limit[x])) {
             #ifdef DEBUG_BUTTONS
-            //if (!debug_flag) {
               debug_serial_port->print(F(" analogbuttonpressed: returning: "));
               debug_serial_port->println(x);
-            //  debug_flag = 1;
-            //}
             #endif         
             return x;
           }  
@@ -7187,7 +7211,7 @@ byte analogbuttonpressed() {
     #else //OPTION_REVERSE_BUTTON_ORDER
 
       if (analogRead(analog_buttons_pin) <= button_array_high_limit[0]) {
-        \
+      
         for (byte x = 0;x < 19;x++){
           analog_read_temp = analogRead(analog_buttons_pin);
           if (analog_read_temp <= button_array_high_limit[0]){
@@ -7196,8 +7220,8 @@ byte analogbuttonpressed() {
         }
         
         #ifdef DEBUG_BUTTONS
-        debug_serial_port->print(F(" analogbuttonpressed: analog_line_read_average: "));
-        debug_serial_port->println(analog_line_read_average);
+          debug_serial_port->print(F(" analogbuttonpressed: analog_line_read_average: "));
+          debug_serial_port->println(analog_line_read_average);
         #endif 
 
         for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
@@ -7218,13 +7242,13 @@ byte analogbuttonpressed() {
     #endif //OPTION_REVERSE_BUTTON_ORDER
 
 
-  #endif  
+  #endif  // OPTION_DFROBOT_LCD_COMMAND_BUTTONS
   
   
   return 255; 
 }
   
-#endif
+#endif //FEATURE_COMMAND_BUTTONS
 
 //------------------------------------------------------------------
 #ifdef FEATURE_COMMAND_BUTTONS
@@ -7234,28 +7258,84 @@ byte analogbuttonread(byte button_number) {
   
   int analog_line_read = analogRead(analog_buttons_pin);
 
-  #ifdef DEBUG_BUTTONS
-  static byte debug_flag = 0;
-  #endif
-  
-  if (analog_line_read < 1000) {  
-    if ((analog_line_read > button_array_low_limit[button_number])&& (analog_line_read <  button_array_high_limit[button_number])) {
+
+
+  #if defined(OPTION_DFROBOT_LCD_COMMAND_BUTTONS)
+
+    // based on code from: https://www.dfrobot.com/wiki/index.php/Arduino_LCD_KeyPad_Shield_(SKU:_DFR0009)#Pin_Allocation
+
+    if ((analog_line_read < dfrobot_btnRIGHT_analog) && (button_number == dfrobot_btnRIGHT)){
       #ifdef DEBUG_BUTTONS
-      if (!debug_flag) {
         debug_serial_port->print(F("\nanalogbuttonread: analog_line_read: "));
         debug_serial_port->print(analog_line_read);
-        debug_serial_port->print(F("  button pressed: "));
-        debug_serial_port->println(button_number);
-        debug_flag = 1;
-      }
-      #endif
+        debug_serial_port->println(F(" dfrobot_btnRIGHT"));
+      #endif      
+      return 1;  
+    }
+    if ((analog_line_read < dfrobot_btnUP_analog) && (button_number == dfrobot_btnUP)){
+      #ifdef DEBUG_BUTTONS
+        debug_serial_port->print(F("\nanalogbuttonread: analog_line_read: "));
+        debug_serial_port->print(analog_line_read);
+        debug_serial_port->println(F(" dfrobot_btnUP"));
+      #endif         
+      return 1; 
+    }
+    if ((analog_line_read < dfrobot_btnDOWN_analog) && (button_number == dfrobot_btnDOWN)){
+      #ifdef DEBUG_BUTTONS
+        debug_serial_port->print(F("\nanalogbuttonread: analog_line_read: "));
+        debug_serial_port->print(analog_line_read);
+        debug_serial_port->println(F(" dfrobot_btnDOWN"));
+      #endif         
       return 1;
-    }  
-  }
-  #ifdef DEBUG_BUTTONS
-  debug_flag = 0;
-  #endif  
-  return 0;
+    } 
+    if ((analog_line_read < dfrobot_btnLEFT_analog) && (button_number == dfrobot_btnLEFT)){
+      #ifdef DEBUG_BUTTONS
+        debug_serial_port->print(F("\nanalogbuttonread: analog_line_read: "));
+        debug_serial_port->print(analog_line_read);
+        debug_serial_port->println(F(" dfrobot_btnLEFT"));
+      #endif         
+      return 1;
+    } 
+    if ((analog_line_read < dfrobot_btnSELECT_analog) && (button_number == dfrobot_btnSELECT)){
+      #ifdef DEBUG_BUTTONS
+        debug_serial_port->print(F("\nanalogbuttonread: analog_line_read: "));
+        debug_serial_port->print(analog_line_read);
+        debug_serial_port->println(F(" dfrobot_btnSELECT"));
+      #endif         
+      return 1; 
+    }
+
+    return 0;
+
+  #else  // OPTION_DFROBOT_LCD_COMMAND_BUTTONS
+
+
+
+    #ifdef DEBUG_BUTTONS
+      static byte debug_flag = 0;
+    #endif
+    
+    if (analog_line_read < 1000) {  
+      if ((analog_line_read > button_array_low_limit[button_number]) && (analog_line_read <  button_array_high_limit[button_number])) {
+        #ifdef DEBUG_BUTTONS
+          if (!debug_flag) {
+            debug_serial_port->print(F("\nanalogbuttonread: analog_line_read: "));
+            debug_serial_port->print(analog_line_read);
+            debug_serial_port->print(F("  button pressed: "));
+            debug_serial_port->println(button_number);
+            debug_flag = 1;
+          }
+        #endif
+        return 1;
+      }  
+    }
+    #ifdef DEBUG_BUTTONS
+      debug_flag = 0;
+    #endif  
+    return 0;
+
+  #endif //OPTION_DFROBOT_LCD_COMMAND_BUTTONS
+
 }
 #endif
 

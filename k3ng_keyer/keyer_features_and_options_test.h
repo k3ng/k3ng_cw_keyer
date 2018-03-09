@@ -246,6 +246,7 @@
 
 // #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA  // only works with Mega and pins 2 and 5 - minor performance increase... maybe?
 
+// #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
 
 #endif
 
@@ -352,6 +353,7 @@
 // #define OPTION_WORDSWORTH_DEUTSCH
 // #define OPTION_WORDSWORTH_NORSK
 
+// #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
 
 #endif //TEST_CONFIG_2
 
