@@ -63,7 +63,7 @@
 #define serial_program_memory_buffer_size 500
 
 #ifdef FEATURE_COMMAND_BUTTONS
-  #define analog_buttons_number_of_buttons 4
+  #define analog_buttons_number_of_buttons 4  // includes the command button (command button + 3 memory buttons = 4)
   #define analog_buttons_r1 10
   #define analog_buttons_r2 1
 #endif

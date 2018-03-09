@@ -827,6 +827,9 @@ Recent Update History
     2018.03.08.01
       Additional OPTION_DFROBOT_LCD_COMMAND_BUTTONS code and corresponding DEBUG_BUTTONS code
 
+    2018.03.08.02
+      Added OPTION_EXCLUDE_MILL_MODE
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -842,7 +845,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.08.01"
+#define CODE_VERSION "2018.03.08.02"
 #define eeprom_magic_number 29               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -10129,7 +10132,56 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
     incoming_serial_byte = uppercase(incoming_serial_byte);
     if ((incoming_serial_byte != 92) && (incoming_serial_byte != 27)) { // we do not have a backslash or ESC
 
-      if (configuration.cli_mode == CLI_NORMAL_MODE){
+
+      #if !defined(OPTION_EXCLUDE_MILL_MODE)
+        if (configuration.cli_mode == CLI_NORMAL_MODE){
+          if (cli_prosign_flag) {
+            add_to_send_buffer(SERIAL_SEND_BUFFER_PROSIGN);
+            cli_prosign_flag = 0;
+          }
+          if (cli_wait_for_cr_to_send_cw) {
+            if (cli_wait_for_cr_flag == 0) {
+              if (incoming_serial_byte > 31) {
+                #ifdef DEBUG_CHECK_SERIAL
+                  port_to_use->println(F("check_serial: add_to_send_buffer(SERIAL_SEND_BUFFER_HOLD_SEND)"));
+                #endif
+                add_to_send_buffer(SERIAL_SEND_BUFFER_HOLD_SEND);
+                cli_wait_for_cr_flag = 1;
+              }
+            } else {
+              if (incoming_serial_byte == 13) {
+                #ifdef DEBUG_CHECK_SERIAL
+                  port_to_use->println(F("check_serial: add_to_send_buffer(SERIAL_SEND_BUFFER_HOLD_SEND_RELEASE)"));
+                #endif
+                add_to_send_buffer(SERIAL_SEND_BUFFER_HOLD_SEND_RELEASE);
+                cli_wait_for_cr_flag = 0;
+              }
+            }
+          }
+          add_to_send_buffer(incoming_serial_byte);
+        } else {  // configuration.cli_mode != CLI_NORMAL_MODE
+          if (configuration.cli_mode == CLI_MILL_MODE_KEYBOARD_RECEIVE){
+            port_to_use->write(incoming_serial_byte);
+            if (incoming_serial_byte == 13){port_to_use->println();}
+            #ifdef FEATURE_SD_CARD_SUPPORT
+              sd_card_log("",incoming_serial_byte);
+            #endif            
+            //zzzzzz
+          } else { // configuration.cli_mode == CLI_MILL_MODE_PADDLE_SEND
+            port_to_use->println();
+            port_to_use->println();
+            if (incoming_serial_byte == 13){port_to_use->println();}
+            port_to_use->write(incoming_serial_byte);
+            configuration.cli_mode = CLI_MILL_MODE_KEYBOARD_RECEIVE;
+            #ifdef FEATURE_SD_CARD_SUPPORT
+              sd_card_log("\r\nRX:",0);
+              sd_card_log("",incoming_serial_byte);
+            #endif          
+          }
+        } //if (configuration.cli_mode == CLI_NORMAL_MODE)
+
+      #else //!defined(OPTION_EXCLUDE_MILL_MODE)
+
         if (cli_prosign_flag) {
           add_to_send_buffer(SERIAL_SEND_BUFFER_PROSIGN);
           cli_prosign_flag = 0;
@@ -10138,7 +10190,7 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
           if (cli_wait_for_cr_flag == 0) {
             if (incoming_serial_byte > 31) {
               #ifdef DEBUG_CHECK_SERIAL
-              port_to_use->println(F("check_serial: add_to_send_buffer(SERIAL_SEND_BUFFER_HOLD_SEND)"));
+                port_to_use->println(F("check_serial: add_to_send_buffer(SERIAL_SEND_BUFFER_HOLD_SEND)"));
               #endif
               add_to_send_buffer(SERIAL_SEND_BUFFER_HOLD_SEND);
               cli_wait_for_cr_flag = 1;
@@ -10146,7 +10198,7 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
           } else {
             if (incoming_serial_byte == 13) {
               #ifdef DEBUG_CHECK_SERIAL
-              port_to_use->println(F("check_serial: add_to_send_buffer(SERIAL_SEND_BUFFER_HOLD_SEND_RELEASE)"));
+                port_to_use->println(F("check_serial: add_to_send_buffer(SERIAL_SEND_BUFFER_HOLD_SEND_RELEASE)"));
               #endif
               add_to_send_buffer(SERIAL_SEND_BUFFER_HOLD_SEND_RELEASE);
               cli_wait_for_cr_flag = 0;
@@ -10154,26 +10206,9 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
           }
         }
         add_to_send_buffer(incoming_serial_byte);
-      } else {  // configuration.cli_mode != CLI_NORMAL_MODE
-        if (configuration.cli_mode == CLI_MILL_MODE_KEYBOARD_RECEIVE){
-          port_to_use->write(incoming_serial_byte);
-          if (incoming_serial_byte == 13){port_to_use->println();}
-          #ifdef FEATURE_SD_CARD_SUPPORT
-            sd_card_log("",incoming_serial_byte);
-          #endif            
-          //zzzzzz
-        } else { // configuration.cli_mode == CLI_MILL_MODE_PADDLE_SEND
-          port_to_use->println();
-          port_to_use->println();
-          if (incoming_serial_byte == 13){port_to_use->println();}
-          port_to_use->write(incoming_serial_byte);
-          configuration.cli_mode = CLI_MILL_MODE_KEYBOARD_RECEIVE;
-          #ifdef FEATURE_SD_CARD_SUPPORT
-            sd_card_log("\r\nRX:",0);
-            sd_card_log("",incoming_serial_byte);
-          #endif          
-        }
-      } //if (configuration.cli_mode == CLI_NORMAL_MODE)
+
+      #endif // !defined(OPTION_EXCLUDE_MILL_MODE)
+
       #ifdef FEATURE_MEMORIES
         if ((incoming_serial_byte != 13) && (incoming_serial_byte != 10)) {repeat_memory = 255;}
       #endif
@@ -10734,21 +10769,22 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       }
       config_dirty = 1;      
       break;
-    case '@':
-      switch(configuration.cli_mode){
-        case CLI_NORMAL_MODE:
-          configuration.cli_mode = CLI_MILL_MODE_KEYBOARD_RECEIVE;
-          port_to_use->println(F("\r\nMill Mode On"));
-          break;
-        case CLI_MILL_MODE_PADDLE_SEND:
-        case CLI_MILL_MODE_KEYBOARD_RECEIVE:
-          configuration.cli_mode = CLI_NORMAL_MODE;
-          port_to_use->println(F("\r\nMill Mode Off"));
-          break;  
-      }  
-      config_dirty = 1;
-      break;
-
+    #if !defined(OPTION_EXCLUDE_MILL_MODE)
+      case '@':
+        switch(configuration.cli_mode){
+          case CLI_NORMAL_MODE:
+            configuration.cli_mode = CLI_MILL_MODE_KEYBOARD_RECEIVE;
+            port_to_use->println(F("\r\nMill Mode On"));
+            break;
+          case CLI_MILL_MODE_PADDLE_SEND:
+          case CLI_MILL_MODE_KEYBOARD_RECEIVE:
+            configuration.cli_mode = CLI_NORMAL_MODE;
+            port_to_use->println(F("\r\nMill Mode Off"));
+            break;  
+        }  
+        config_dirty = 1;
+        break;
+    #endif // !defined(OPTION_EXCLUDE_MILL_MODE)
     #if defined(FEATURE_CLI_EXPERT_MENU)
     case '"':
       cli_expert_menu(port_to_use);
@@ -13476,12 +13512,14 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     port_to_use->println(F("Off"));
   }
 
-  port_to_use->print(F("Mill Mode O"));
-  if (configuration.cli_mode == CLI_NORMAL_MODE){
-    port_to_use->println(F("ff"));
-  } else {
-    port_to_use->println(F("n"));
-  }
+  #if !defined(OPTION_EXCLUDE_MILL_MODE)
+    port_to_use->print(F("Mill Mode O"));
+    if (configuration.cli_mode == CLI_NORMAL_MODE){
+      port_to_use->println(F("ff"));
+    } else {
+      port_to_use->println(F("n"));
+    }
+  #endif // !defined(OPTION_EXCLUDE_MILL_MODE)
 
   #ifdef FEATURE_MEMORIES
     serial_status_memories(port_to_use);

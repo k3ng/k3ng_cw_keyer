@@ -127,6 +127,7 @@
 
 // #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
 
+// #define OPTION_EXCLUDE_MILL_MODE
 
 #endif
 
@@ -248,6 +249,8 @@
 
 // #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
 
+// #define OPTION_EXCLUDE_MILL_MODE
+
 #endif
 
 //*********************************************************************************************************************
@@ -354,6 +357,8 @@
 // #define OPTION_WORDSWORTH_NORSK
 
 // #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
+
+// #define OPTION_EXCLUDE_MILL_MODE
 
 #endif //TEST_CONFIG_2
 
