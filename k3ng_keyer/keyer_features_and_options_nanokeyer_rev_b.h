@@ -22,24 +22,25 @@
 //#define FEATURE_LCD_ADAFRUIT_I2C          // Adafruit I2C LCD display using MCP23017 at addr 0x20
 //#define FEATURE_LCD_YDv1                // YourDuino I2C LCD display with old LCM 1602 V1 ic
 //#define FEATURE_CW_DECODER
-// #define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE, may have mixed results with Mega and Mega ADK)
-// #define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
-// #define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-// #define FEATURE_USB_MOUSE               // Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
-// #define FEATURE_CAPACITIVE_PADDLE_PINS  // remove the bypass capacitors on the paddle_left and paddle_right lines when using capactive paddles
-// #define FEATURE_LED_RING                // Mayhew Labs Led Ring support
-// #define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
-// #define FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE // enables command mode U
-// #define FEATURE_PTT_INTERLOCK 
-// #define FEATURE_QLF
-// #define FEATURE_EEPROM_E24C1024
-// #define FEATURE_STRAIGHT_KEY
-// #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
-// #define FEATURE_PADDLE_ECHO
-// #define FEATURE_STRAIGHT_KEY_ECHO
-// #define FEATURE_AMERICAN_MORSE
-// #define FEATURE_4x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
-// #define FEATURE_3x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
+//#define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE, may have mixed results with Mega and Mega ADK)
+//#define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
+//#define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+//#define FEATURE_USB_MOUSE               // Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
+//#define FEATURE_CAPACITIVE_PADDLE_PINS  // remove the bypass capacitors on the paddle_left and paddle_right lines when using capactive paddles
+//#define FEATURE_LED_RING                // Mayhew Labs Led Ring support
+//#define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
+//#define FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE // enables command mode U
+//#define FEATURE_PTT_INTERLOCK 
+//#define FEATURE_QLF
+//#define FEATURE_EEPROM_E24C1024
+//#define FEATURE_STRAIGHT_KEY
+//#define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
+//#define FEATURE_PADDLE_ECHO
+//#define FEATURE_STRAIGHT_KEY_ECHO
+//#define FEATURE_AMERICAN_MORSE
+//#define FEATURE_4x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
+//#define FEATURE_3x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
+//#define FEATURE_SEQUENCER
 
 //#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
 #define OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING

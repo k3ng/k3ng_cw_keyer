@@ -32,7 +32,6 @@
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
-#define memory_area_start 60             // the eeprom location where memory space starts
 #define memory_area_end 1023             // the eeprom location where memory space ends
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
 #define winkey_command_timeout_ms 5000
@@ -231,4 +230,12 @@
 
 #endif
 
+#define sequencer_pins_active_state HIGH
+#define sequencer_pins_inactive_state LOW
 
+#define ptt_line_active_state HIGH
+#define ptt_line_inactive_state LOW
+#define tx_key_line_active_state HIGH
+#define tx_key_line_inactive_state LOW
+#define ptt_input_pin_active_state LOW
+#define ptt_input_pin_inactive_state HIGH

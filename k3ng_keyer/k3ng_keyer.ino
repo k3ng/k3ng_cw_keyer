@@ -830,6 +830,32 @@ Recent Update History
     2018.03.08.02
       Added OPTION_EXCLUDE_MILL_MODE
 
+    2018.03.11.01
+      New feature! FEATURE_SEQUENCER  Wiki: https://github.com/k3ng/k3ng_cw_keyer/wiki/383-Feature:-Sequencer
+      define sequencer_1_pin 0
+      define sequencer_2_pin 0
+      define sequencer_3_pin 0
+      define sequencer_4_pin 0
+      define sequencer_5_pin 0
+      define ptt_input_pin 0
+      define sequencer_pins_active_state HIGH
+      define sequencer_pins_inactive_state LOW
+      define ptt_line_active_state HIGH
+      define ptt_line_inactive_state LOW
+      define tx_key_line_active_state HIGH
+      define tx_key_line_inactive_state LOW   
+      define ptt_input_pin_active_state LOW
+      define ptt_input_pin_inactive_state HIGH  
+      New commands:
+        \:pl <tx_number> <time_in_mS> - set PTT lead time
+        \:pt <tx_number> <time_in_mS> - set PTT tail time
+        \:pa <sequencer_number> <time_in_mS> - PTT active to sequencer active time
+        \:pi <sequencer_number> <time_in_mS> - PTT inactive to sequencer inactive time
+        \:timing - show all current timing settings
+      PTT lead and tail times are now stored in EEPROM and setable at runtime with extended commands \:pl and \:pt
+      Additional documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/225-Sidetone,-PTT,-and-TX-Key-Lines
+
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -845,8 +871,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.08.02"
-#define eeprom_magic_number 29               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2018.03.11.01"
+#define eeprom_magic_number 30               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -988,51 +1014,70 @@ Recent Update History
   #include <SD.h>
 #endif //FEATURE_SD_CARD_SUPPORT
 
+#define memory_area_start 82             // the eeprom location where memory space starts
+
 // Variables and stuff
-struct config_t {  //49 bytes
-  unsigned int wpm;
+struct config_t {  // 80 bytes total
+  
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
   uint8_t sidetone_mode;
-  unsigned int hz_sidetone;
-  unsigned int dah_to_dit_ratio;
   uint8_t pot_activated;
   uint8_t length_wordspace;
   uint8_t autospace_active;
-  unsigned int wpm_farnsworth;
   uint8_t current_ptt_line;
   uint8_t current_tx;
   uint8_t weighting;
-  unsigned int memory_repeat_time;
   uint8_t dit_buffer_off;
   uint8_t dah_buffer_off;
   uint8_t cmos_super_keyer_iambic_b_timing_percent;
   uint8_t cmos_super_keyer_iambic_b_timing_on;
-  uint8_t ip[4];
-  uint8_t gateway[4];  
-  uint8_t subnet[4]; 
-  uint8_t link_send_ip[4][FEATURE_INTERNET_LINK_MAX_LINKS];
-  uint8_t link_send_enabled[FEATURE_INTERNET_LINK_MAX_LINKS];
-  int link_send_udp_port[FEATURE_INTERNET_LINK_MAX_LINKS];
-  int link_receive_udp_port;
   uint8_t link_receive_enabled;
   uint8_t paddle_interruption_quiet_time_element_lengths;
   uint8_t wordsworth_wordspace;
   uint8_t wordsworth_repetition;
   uint8_t cli_mode;
+    // 18 bytes
+
+  unsigned int wpm;
+  unsigned int hz_sidetone;
+  unsigned int dah_to_dit_ratio;
+  unsigned int wpm_farnsworth;
+  unsigned int memory_repeat_time;
   unsigned int command_mode_wpm;
+  unsigned int link_receive_udp_port; 
+    // 14 bytes 
+
+  uint8_t ip[4];
+  uint8_t gateway[4];  
+  uint8_t subnet[4]; 
+    // 12 bytes
+
+  uint8_t link_send_ip[4][FEATURE_INTERNET_LINK_MAX_LINKS];   // FEATURE_INTERNET_LINK_MAX_LINKS = 2
+  uint8_t link_send_enabled[FEATURE_INTERNET_LINK_MAX_LINKS];
+  unsigned int link_send_udp_port[FEATURE_INTERNET_LINK_MAX_LINKS];
+    // 14 bytes
+
+  uint8_t ptt_lead_time[6];
+  uint8_t ptt_tail_time[6];
+  uint8_t ptt_active_to_sequencer_active_time[5];
+  uint8_t ptt_inactive_to_sequencer_inactive_time[5];
+    // 22 bytes
+
 } configuration;
+
+
 
 byte sending_mode = UNDEFINED_SENDING;
 byte command_mode_disable_tx = 0;
 byte current_tx_key_line = tx_key_line_1;
-#ifdef OPTION_SAVE_MEMORY_NANOKEYER
-  unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3};
-  unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3};
-#else //OPTION_SAVE_MEMORY_NANOKEYER
-  unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3,initial_ptt_tail_time_tx4,initial_ptt_tail_time_tx5,initial_ptt_tail_time_tx6};
-  unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3,initial_ptt_lead_time_tx4,initial_ptt_lead_time_tx5,initial_ptt_lead_time_tx6};
-#endif //OPTION_SAVE_MEMORY_NANOKEYER
+// #ifdef OPTION_SAVE_MEMORY_NANOKEYER
+//   unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3};
+//   unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3};
+// #else //OPTION_SAVE_MEMORY_NANOKEYER
+//   unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3,initial_ptt_tail_time_tx4,initial_ptt_tail_time_tx5,initial_ptt_tail_time_tx6};
+//   unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3,initial_ptt_lead_time_tx4,initial_ptt_lead_time_tx5,initial_ptt_lead_time_tx6};
+// #endif //OPTION_SAVE_MEMORY_NANOKEYER
 byte manual_ptt_invoke = 0;
 byte qrss_dit_length = initial_qrss_dit_length;
 byte keyer_machine_mode = KEYER_NORMAL;   // KEYER_NORMAL, BEACON, KEYER_COMMAND_MODE
@@ -1508,6 +1553,16 @@ unsigned long millis_rollover = 0;
   uint8_t sd_card_log_state = SD_CARD_LOG_NOT_OPEN;
 #endif //FEATURE_SD_CARD_SUPPORT  
 
+#ifdef FEATURE_SEQUENCER
+  unsigned long sequencer_ptt_inactive_time = 0;
+  byte sequencer_1_active = 0;
+  byte sequencer_2_active = 0;
+  byte sequencer_3_active = 0;
+  byte sequencer_4_active = 0;
+  byte sequencer_5_active = 0;
+#endif  
+
+
 /*---------------------------------------------------------------------------------------------------------
 
 
@@ -1680,6 +1735,10 @@ void loop()
   #ifdef FEATURE_SD_CARD_SUPPORT
     service_sd_card();    
   #endif
+
+  #ifdef FEATURE_SEQUENCER
+    check_sequencer_tail_time();
+  #endif  
 
   service_millis_rollover();
   
@@ -4785,37 +4844,160 @@ void check_paddles()
 
 //-------------------------------------------------------------------------------------------------------
 
-void ptt_key()
-{
+void ptt_key(){
+
+  unsigned long ptt_activation_time = millis();
+  byte all_delays_satisfied = 0;
+  
+  #ifdef FEATURE_SEQUENCER
+    byte sequencer_1_ok = 0;
+    byte sequencer_2_ok = 0;
+    byte sequencer_3_ok = 0;
+    byte sequencer_4_ok = 0;
+    byte sequencer_5_ok = 0;
+  #endif 
+
   if (ptt_line_activated == 0) {   // if PTT is currently deactivated, bring it up and insert PTT lead time delay
     if (configuration.current_ptt_line) {
-      digitalWrite (configuration.current_ptt_line, HIGH);    
+      digitalWrite (configuration.current_ptt_line, ptt_line_active_state);    
       #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
         if ((wk2_both_tx_activated) && (ptt_tx_2)) {
-          digitalWrite (ptt_tx_2, HIGH);
+          digitalWrite (ptt_tx_2, ptt_line_active_state);
         }
       #endif
-      delay(ptt_lead_time[configuration.current_tx-1]);
+      //delay(configuration.ptt_lead_time[configuration.current_tx-1]);
+      #ifdef FEATURE_SEQUENCER
+        sequencer_ptt_inactive_time = 0;
+      #endif  
     }
+    while (!all_delays_satisfied){
+      #ifdef FEATURE_SEQUENCER
+        if (sequencer_1_pin){
+          if (((millis() - ptt_activation_time) >= configuration.ptt_active_to_sequencer_active_time[0]) || sequencer_1_active){
+            digitalWrite(sequencer_1_pin,sequencer_pins_active_state);
+            sequencer_1_ok = 1;
+            sequencer_1_active = 1;
+          }          
+        } else {
+          sequencer_1_ok = 1;
+        }
+        if (sequencer_2_pin){
+          if (((millis() - ptt_activation_time) >= configuration.ptt_active_to_sequencer_active_time[1]) || sequencer_2_active){
+            digitalWrite(sequencer_2_pin,sequencer_pins_active_state);
+            sequencer_2_ok = 1;
+            sequencer_2_active = 1;
+          } 
+        } else {
+          sequencer_2_ok = 1;
+        }
+        if (sequencer_3_pin){
+          if (((millis() - ptt_activation_time) >= configuration.ptt_active_to_sequencer_active_time[2]) || sequencer_3_active){
+            digitalWrite(sequencer_3_pin,sequencer_pins_active_state);
+            sequencer_3_ok = 1;
+            sequencer_3_active = 1;
+          } 
+        } else {
+          sequencer_3_ok = 1;
+        }
+        if (sequencer_4_pin){
+          if (((millis() - ptt_activation_time) >= configuration.ptt_active_to_sequencer_active_time[3]) || sequencer_4_active){
+            digitalWrite(sequencer_4_pin,sequencer_pins_active_state);
+            sequencer_4_ok = 1;
+            sequencer_4_active = 1;
+          } 
+        } else {
+          sequencer_4_ok = 1;
+        }
+        if (sequencer_5_pin){
+          if (((millis() - ptt_activation_time) >= configuration.ptt_active_to_sequencer_active_time[4]) || sequencer_5_active){
+            digitalWrite(sequencer_5_pin,sequencer_pins_active_state);
+            sequencer_5_ok = 1;
+            sequencer_5_active = 1;
+          } 
+        } else {
+          sequencer_5_ok = 1;
+        }
+
+        if (((millis() - ptt_activation_time) >= configuration.ptt_lead_time[configuration.current_tx-1]) && sequencer_1_ok && sequencer_2_ok && sequencer_3_ok && sequencer_4_ok && sequencer_5_ok){
+          all_delays_satisfied = 1;
+        }
+
+      #else //FEATURE_SEQUENCER
+        if ((millis() - ptt_activation_time) >= configuration.ptt_lead_time[configuration.current_tx-1]){
+          all_delays_satisfied = 1;
+        }
+      #endif //FEATURE_SEQUENCER
+
+    } //while (!all_delays_satisfied)
     ptt_line_activated = 1;
   }
   ptt_time = millis();
 }
+//-------------------------------------------------------------------------------------------------------
+#ifdef FEATURE_SEQUENCER
+void check_sequencer_tail_time(){
+
+  if (sequencer_ptt_inactive_time){
+    if (sequencer_1_pin){
+      if (sequencer_1_active && ((millis() - sequencer_ptt_inactive_time) >= configuration.ptt_inactive_to_sequencer_inactive_time[0])){
+        digitalWrite(sequencer_1_pin,sequencer_pins_inactive_state);
+        sequencer_1_active = 0;
+      }          
+    }
+    if (sequencer_2_pin){
+      if (sequencer_2_active && ((millis() - sequencer_ptt_inactive_time) >= configuration.ptt_inactive_to_sequencer_inactive_time[1])){
+        digitalWrite(sequencer_2_pin,sequencer_pins_inactive_state);
+        sequencer_2_active = 0;
+      } 
+    }
+    if (sequencer_3_pin){
+      if (sequencer_3_active && ((millis() - sequencer_ptt_inactive_time) >= configuration.ptt_inactive_to_sequencer_inactive_time[2])){
+        digitalWrite(sequencer_3_pin,sequencer_pins_inactive_state);
+        sequencer_3_active = 0;
+      } 
+    }
+    if (sequencer_4_pin){
+      if (sequencer_4_active && ((millis() - sequencer_ptt_inactive_time) >= configuration.ptt_inactive_to_sequencer_inactive_time[3])){
+        digitalWrite(sequencer_4_pin,sequencer_pins_inactive_state);
+        sequencer_4_active = 0;
+      } 
+    }
+    if (sequencer_5_pin){
+      if (sequencer_5_active && ((millis() - sequencer_ptt_inactive_time) >= configuration.ptt_inactive_to_sequencer_inactive_time[4])){
+        digitalWrite(sequencer_5_pin,sequencer_pins_inactive_state);
+        sequencer_5_active = 0;
+      } 
+    }
+  }
+
+  if (!sequencer_1_active && !sequencer_2_active && !sequencer_3_active && !sequencer_4_active && !sequencer_5_active){
+    sequencer_ptt_inactive_time = 0;
+  }
+
+
+}
+#endif //FEATURE_SEQUENCER
 
 //-------------------------------------------------------------------------------------------------------
-void ptt_unkey()
-{
+void ptt_unkey(){
+
+
+
   if (ptt_line_activated) {
+
     if (configuration.current_ptt_line) {
-      digitalWrite (configuration.current_ptt_line, LOW);
+      digitalWrite (configuration.current_ptt_line, ptt_line_inactive_state);
       #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
         if ((wk2_both_tx_activated) && (ptt_tx_2)) {
-          digitalWrite (ptt_tx_2, LOW);
+          digitalWrite (ptt_tx_2, ptt_line_inactive_state);
         }
       #endif
 
     }
     ptt_line_activated = 0;
+    #ifdef FEATURE_SEQUENCER
+      sequencer_ptt_inactive_time = millis();
+    #endif
   }
 }
 
@@ -4825,6 +5007,25 @@ void check_ptt_tail()
   #ifdef DEBUG_LOOP
     debug_serial_port->println(F("loop: entering check_ptt_tail"));
   #endif
+
+
+  if (ptt_input_pin){
+    if ((digitalRead(ptt_input_pin) == ptt_input_pin_active_state)){
+      if (!manual_ptt_invoke){
+        manual_ptt_invoke = 1;
+        ptt_key();
+        return; 
+      }
+    } else {
+      if (manual_ptt_invoke){
+        manual_ptt_invoke = 0;
+        if (!key_state){
+          ptt_unkey();
+        }
+      }
+    }  
+  }
+
 
   if (key_state) {
     ptt_time = millis();
@@ -4844,11 +5045,11 @@ void check_ptt_tail()
 
             // PTT Tail Time: Y     PTT Hang Time: Y
 
-            if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ptt_tail_time[configuration.current_tx-1])) {       
+            if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1])) {       
               ptt_unkey();
             }
           #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-          if ((millis() - ptt_time) >= ptt_tail_time[configuration.current_tx-1]) {  
+          if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]) {  
 
 
             // PTT Tail Time: Y    PTT Hang Time: N
@@ -4858,7 +5059,7 @@ void check_ptt_tail()
           #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
         #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
       } else {
-        if ((millis() - ptt_time) > ptt_tail_time[configuration.current_tx-1]) {
+        if ((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) {
           #ifdef OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
             if (!send_buffer_bytes){
               ptt_unkey();
@@ -5341,7 +5542,7 @@ void tx_and_sidetone_key (int state)
       if (key_tx) {
         byte previous_ptt_line_activated = ptt_line_activated;
         ptt_key();
-        if (current_tx_key_line) {digitalWrite (current_tx_key_line, HIGH);}
+        if (current_tx_key_line) {digitalWrite (current_tx_key_line, tx_key_line_active_state);}
         #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
           if ((wk2_both_tx_activated) && (tx_key_line_2)) {
             digitalWrite (tx_key_line_2, HIGH);
@@ -5362,7 +5563,7 @@ void tx_and_sidetone_key (int state)
     } else {
       if ((state == 0) && (key_state)) {
         if (key_tx) {
-          if (current_tx_key_line) {digitalWrite (current_tx_key_line, LOW);}
+          if (current_tx_key_line) {digitalWrite (current_tx_key_line, tx_key_line_inactive_state);}
           #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
             if ((wk2_both_tx_activated) && (tx_key_line_2)) {
               digitalWrite (tx_key_line_2, LOW);
@@ -5387,7 +5588,7 @@ void tx_and_sidetone_key (int state)
         if (!ptt_interlock_active) {
           ptt_key();
         }
-        if (current_tx_key_line) {digitalWrite (current_tx_key_line, HIGH);}
+        if (current_tx_key_line) {digitalWrite (current_tx_key_line, tx_key_line_active_state);}
         #ifdef OPTION_WINKEY_2_SUPPORT
           if ((wk2_both_tx_activated) && (tx_key_line_2)) {
             digitalWrite (tx_key_line_2, HIGH);
@@ -5408,7 +5609,7 @@ void tx_and_sidetone_key (int state)
     } else {
       if ((state == 0) && (key_state)) {
         if (key_tx) {
-          if (current_tx_key_line) {digitalWrite (current_tx_key_line, LOW);}
+          if (current_tx_key_line) {digitalWrite (current_tx_key_line, tx_key_line_inactive_state);}
           #ifdef OPTION_WINKEY_2_SUPPORT
             if ((wk2_both_tx_activated) && (tx_key_line_2)) {
               digitalWrite (tx_key_line_2, LOW);
@@ -8469,9 +8670,9 @@ void winkey_weighting_command(byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
   #if !defined(DEBUG_WINKEY_DISABLE_LEAD_IN_TIME_SETTING)
-    ptt_lead_time[configuration.current_tx-1] = (incoming_serial_byte*10);
+    configuration.ptt_lead_time[configuration.current_tx-1] = (incoming_serial_byte*10);
   #else
-    ptt_lead_time[configuration.current_tx-1] = 0;
+    configuration.ptt_lead_time[configuration.current_tx-1] = 0;
   #endif
   #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
     send_char('P',KEYER_NORMAL);
@@ -8483,7 +8684,7 @@ void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
 
-  ptt_tail_time[configuration.current_tx-1] = (incoming_serial_byte*10);
+  configuration.ptt_tail_time[configuration.current_tx-1] = (incoming_serial_byte*10);
   #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
   send_char('P',KEYER_NORMAL);
   send_char('2',KEYER_NORMAL);
@@ -10848,6 +11049,13 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
   } //while (looping)
 
   if (userinput.startsWith("EEPROMDUMP")){cli_eeprom_dump(port_to_use);return;}
+  if (userinput.startsWith("TIMING")){cli_timing_print(port_to_use);return;}
+  if (userinput.startsWith("PL ")){cli_timing_command(port_to_use,userinput.substring(3),COMMAND_PL);return;}
+  if (userinput.startsWith("PT ")){cli_timing_command(port_to_use,userinput.substring(3),COMMAND_PT);return;}
+  #if defined(FEATURE_SEQUENCER)
+    if (userinput.startsWith("PA ")){cli_timing_command(port_to_use,userinput.substring(3),COMMAND_PA);return;}
+    if (userinput.startsWith("PI ")){cli_timing_command(port_to_use,userinput.substring(3),COMMAND_PI);return;}
+  #endif //FEATURE_SEQUENCER
   #if defined(FEATURE_SD_CARD_SUPPORT)
     if (userinput.startsWith("SAVEEEPROM ")){sd_card_save_eeprom_to_file(port_to_use,userinput.substring(11));return;}
     if (userinput.startsWith("LOADEEPROM ")){sd_card_load_eeprom_from_file(port_to_use,userinput.substring(11));return;}
@@ -10861,6 +11069,91 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
 
 }
 #endif
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+void cli_timing_command(PRIMARY_SERIAL_CLS * port_to_use,String command_arguments,byte command_called){
+
+  byte valid_command = 0;
+  byte parm1 = 0;
+  byte parm2 = 0;
+  String temp_string;
+
+  temp_string = command_arguments.substring(0,1);
+  parm1 = temp_string.toInt();
+  temp_string = command_arguments.substring(2);
+  parm2 = temp_string.toInt();
+  if ((command_called == COMMAND_PL) || (command_called == COMMAND_PT)){
+    if ((parm1 > 0) && (parm1 < 7)){
+      if (command_called == COMMAND_PL){
+        configuration.ptt_lead_time[parm1 - 1] = parm2;
+      } else {
+        configuration.ptt_tail_time[parm1 - 1] = parm2;
+      }
+      valid_command = 1;
+    }    
+  }
+
+  #if defined(FEATURE_SEQUENCER)
+    if ((command_called == COMMAND_PA) || (command_called == COMMAND_PI)){
+      if ((parm1 > 0) && (parm1 < 6)){
+        if (command_called == COMMAND_PA){
+          configuration.ptt_active_to_sequencer_active_time[parm1 - 1] = parm2;
+        } else {
+          configuration.ptt_inactive_to_sequencer_inactive_time[parm1 - 1] = parm2;
+        }
+        valid_command = 1;
+      }    
+    }
+  #endif //FEATURE_SEQUENCER
+
+  if (!valid_command){
+    port_to_use->println(F("\r\nError."));
+  } else {
+    config_dirty = 1;
+  }
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+void cli_timing_print(PRIMARY_SERIAL_CLS * port_to_use){
+
+
+  port_to_use->println(F("\r\nTimings (mS)"));
+  port_to_use->println(F("\r\nPTT"));
+  port_to_use->println(F("TX\tLead\tTail"));
+  port_to_use->println(F("--\t----\t----"));
+  for (int x = 0; x < 6; x++){
+    port_to_use->print(x+1);
+    port_to_use->print("\t");
+    port_to_use->print(configuration.ptt_lead_time[x]);
+    port_to_use->print("\t");
+    port_to_use->println(configuration.ptt_tail_time[x]);
+  }
+  #if defined(FEATURE_SEQUENCER)
+  port_to_use->println(F("\r\nSequencer"));
+  port_to_use->println(F("#\tPTT Active to Sequencer Active\tPTT Inactive to Sequencer Inactive"));
+  port_to_use->println(F("-\t------------------------------\t----------------------------------"));
+  for (int x = 0; x < 5; x++){
+    port_to_use->print(x+1);
+    port_to_use->print("\t\t\t");
+    port_to_use->print(configuration.ptt_active_to_sequencer_active_time[x]);
+    port_to_use->print("\t\t\t\t");
+    port_to_use->println(configuration.ptt_inactive_to_sequencer_inactive_time[x]);
+  }  
+  #endif //FEATURE_SEQUENCER
+  port_to_use->println(F("\r\nCommand Hints\r\n"));
+  port_to_use->println(F("pl <transmitter> <mS>\tSet PTT lead time"));
+  port_to_use->println(F("pt <transmitter> <mS>\tSet PTT tail time"));
+  #if defined(FEATURE_SEQUENCER)
+    port_to_use->println(F("pa <#> <mS>\t\tSet PTT active to Sequencer active time"));
+    port_to_use->println(F("pi <#> <mS>\t\tSet PTT inactive to Sequencer inactive time"));
+  #endif //FEATURE_SEQUENCER
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)  && defined(FEATURE_SD_CARD_SUPPORT)
@@ -10889,63 +11182,7 @@ void cli_sd_ls_command(PRIMARY_SERIAL_CLS * port_to_use,String directory){
   }
 }
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)  && defined(FEATURE_SD_CARD_SUPPORT)
-//---------------------------------------------------------------------
-// #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
-// void cli_expert_menu(PRIMARY_SERIAL_CLS * port_to_use){
 
-//   byte menu_loop = 1;
-//   byte menu_loop2 = 1;
-//   char incoming_char = ' ';
-  
-//   while(menu_loop){
-  
-//     while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
-//       port_to_use->read();
-//     }  
-   
-//     port_to_use->println(F("\r\n\nExpert Menu\n"));
-//     port_to_use->println(F("E - EEPROM Dump"));
-//     #if defined(FEATURE_SD_CARD_SUPPORT)
-//       port_to_use->println(F("S - Save EEPROM to SD card file eeprom.sav"));
-//       port_to_use->println(F("L - Load EEPROM from SD card file eeprom.lod"));
-//       port_to_use->println(F("F - Print keyer.log"));
-//       port_to_use->println(F("C - Clear keyer.log"));
-//     #endif //FEATURE_SD_CARD_SUPPORT
-//     port_to_use->println(F("\nX - Exit\n"));
-    
-//     menu_loop2 = 1;
-    
-//     while (menu_loop2){
-    
-//       if (port_to_use->available()){
-//         incoming_char = port_to_use->read();
-//         if ((incoming_char != 10) && (incoming_char != 13)){
-//           menu_loop2 = 0;
-//         }
-//       }
-//     }
-      
-      
-//     incoming_char = toUpperCase(incoming_char);
-    
-//     switch(incoming_char){
-//       case 'X': menu_loop = 0; break;
-//       case 'E': cli_eeprom_dump(port_to_use); break;
-//       #if defined(FEATURE_SD_CARD_SUPPORT)
-//         case 'S': sd_card_save_eeprom_to_file(port_to_use);break;
-//         case 'L': sd_card_load_eeprom_from_file(port_to_use);break;
-//         case 'F': sd_card_print_file(port_to_use,"/keyer/keyer.log");break;
-//         case 'C': sd_card_clear_log_file(port_to_use);break;
-//       #endif   //FEATURE_SD_CARD_SUPPORT
-//     } //switch(incoming_char)
-    
-//   } //while(menu_loop)
-      
-//   port_to_use->println(F("Exiting expert menu..."));
-
-
-// }
-// #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU)
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_SD_CARD_SUPPORT)
 void sd_card_clear_log_file(PRIMARY_SERIAL_CLS * port_to_use,String filename) {
@@ -14938,53 +15175,53 @@ void initialize_pins() {
   
   if (tx_key_line_1) {
     pinMode (tx_key_line_1, OUTPUT);
-    digitalWrite (tx_key_line_1, LOW);
+    digitalWrite (tx_key_line_1, tx_key_line_inactive_state);
   }
   if (tx_key_line_2) {
     pinMode (tx_key_line_2, OUTPUT);
-    digitalWrite (tx_key_line_2, LOW);
+    digitalWrite (tx_key_line_2, tx_key_line_inactive_state);
   }
   if (tx_key_line_3) {
     pinMode (tx_key_line_3, OUTPUT);
-    digitalWrite (tx_key_line_3, LOW);
+    digitalWrite (tx_key_line_3, tx_key_line_inactive_state);
   }
   if (tx_key_line_4) {
     pinMode (tx_key_line_4, OUTPUT);
-    digitalWrite (tx_key_line_4, LOW);
+    digitalWrite (tx_key_line_4, tx_key_line_inactive_state);
   }
   if (tx_key_line_5) {
     pinMode (tx_key_line_5, OUTPUT);
-    digitalWrite (tx_key_line_5, LOW);
+    digitalWrite (tx_key_line_5, tx_key_line_inactive_state);
   }
   if (tx_key_line_6) {
     pinMode (tx_key_line_6, OUTPUT);
-    digitalWrite (tx_key_line_6, LOW);
+    digitalWrite (tx_key_line_6, tx_key_line_inactive_state);
   }
     
   
   if (ptt_tx_1) {
     pinMode (ptt_tx_1, OUTPUT);
-    digitalWrite (ptt_tx_1, LOW);
+    digitalWrite (ptt_tx_1, ptt_line_inactive_state);
   }
   if (ptt_tx_2) {
     pinMode (ptt_tx_2, OUTPUT);
-    digitalWrite (ptt_tx_2, LOW);
+    digitalWrite (ptt_tx_2, ptt_line_inactive_state);
   }
   if (ptt_tx_3) {
     pinMode (ptt_tx_3, OUTPUT);
-    digitalWrite (ptt_tx_3, LOW);
+    digitalWrite (ptt_tx_3, ptt_line_inactive_state);
   }
   if (ptt_tx_4) {
     pinMode (ptt_tx_4, OUTPUT);
-    digitalWrite (ptt_tx_4, LOW);
+    digitalWrite (ptt_tx_4, ptt_line_inactive_state);
   }
   if (ptt_tx_5) {
     pinMode (ptt_tx_5, OUTPUT);
-    digitalWrite (ptt_tx_5, LOW);
+    digitalWrite (ptt_tx_5, ptt_line_inactive_state);
   }
   if (ptt_tx_6) {
     pinMode (ptt_tx_6, OUTPUT);
-    digitalWrite (ptt_tx_6, LOW);
+    digitalWrite (ptt_tx_6, ptt_line_inactive_state);
   }
   pinMode (sidetone_line, OUTPUT);
   digitalWrite (sidetone_line, LOW);
@@ -15085,6 +15322,34 @@ void initialize_pins() {
   #if defined (FEATURE_4x4_KEYPAD)
     pinMode(Col3,INPUT_PULLUP);        //Col3 not used if 3x4 keypad is defined.
   #endif
+
+  #ifdef FEATURE_SEQUENCER
+    if (sequencer_1_pin){
+      pinMode(sequencer_1_pin,OUTPUT);
+      digitalWrite(sequencer_1_pin,sequencer_pins_inactive_state);
+    }
+    if (sequencer_2_pin){
+      pinMode(sequencer_2_pin,OUTPUT);
+      digitalWrite(sequencer_2_pin,sequencer_pins_inactive_state);
+    }
+    if (sequencer_3_pin){
+      pinMode(sequencer_3_pin,OUTPUT);
+      digitalWrite(sequencer_3_pin,sequencer_pins_inactive_state);
+    }
+    if (sequencer_4_pin){
+      pinMode(sequencer_4_pin,OUTPUT);
+      digitalWrite(sequencer_4_pin,sequencer_pins_inactive_state);
+    }
+    if (sequencer_5_pin){
+      pinMode(sequencer_5_pin,OUTPUT);
+      digitalWrite(sequencer_5_pin,sequencer_pins_inactive_state);
+    }
+  #endif //FEATURE_SEQUENCER
+
+  if (ptt_input_pin){
+    pinMode(ptt_input_pin,INPUT_PULLUP);
+  }
+
   
 } //initialize_pins()
 
@@ -15423,7 +15688,28 @@ void initialize_keyer_state(){
   configuration.wpm_farnsworth = initial_speed_wpm;
   configuration.cli_mode = CLI_NORMAL_MODE;
   configuration.command_mode_wpm = initial_command_mode_speed_wpm;
-  
+
+
+  configuration.ptt_lead_time[0] = initial_ptt_lead_time_tx1;
+  configuration.ptt_tail_time[0] = initial_ptt_tail_time_tx1;
+  configuration.ptt_lead_time[1] = initial_ptt_lead_time_tx2;
+  configuration.ptt_tail_time[1] = initial_ptt_tail_time_tx2;
+  #if !defined(OPTION_SAVE_MEMORY_NANOKEYER)
+    configuration.ptt_lead_time[2] = initial_ptt_lead_time_tx3;
+    configuration.ptt_tail_time[2] = initial_ptt_tail_time_tx3;
+    configuration.ptt_lead_time[3] = initial_ptt_lead_time_tx4;
+    configuration.ptt_tail_time[3] = initial_ptt_tail_time_tx4;
+    configuration.ptt_lead_time[4] = initial_ptt_lead_time_tx5;
+    configuration.ptt_tail_time[4] = initial_ptt_tail_time_tx5;
+    configuration.ptt_lead_time[5] = initial_ptt_lead_time_tx6;
+    configuration.ptt_tail_time[5] = initial_ptt_tail_time_tx6;  
+
+    for (int x = 0; x < 5; x++){
+      configuration.ptt_active_to_sequencer_active_time[x] = 0;
+      configuration.ptt_inactive_to_sequencer_inactive_time[x] = 0;
+    }
+  #endif //OPTION_SAVE_MEMORY_NANOKEYER        
+
   switch_to_tx_silent(1);
 
 }  

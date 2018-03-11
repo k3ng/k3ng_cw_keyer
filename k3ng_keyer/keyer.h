@@ -211,5 +211,10 @@
 #define SD_CARD_LOG_OPEN 1
 #define SD_CARD_LOG_ERROR 254
 
+#define COMMAND_PL 1
+#define COMMAND_PT 2
+#define COMMAND_PA 3
+#define COMMAND_PI 4
+
 
 #endif //keyer_h
