@@ -23,6 +23,7 @@
 #define FEATURE_LCD_4BIT                // classic LCD disidefplay using 4 I/O lines
 //#define FEATURE_LCD_ADAFRUIT_I2C          // Adafruit I2C LCD display using MCP23017 at addr 0x20
 //#define FEATURE_LCD_YDv1                // YourDuino I2C LCD display with old LCM 1602 V1 ic
+//#define FEATURE_LCD_FABO_PCF8574  // https://github.com/FaBoPlatform/FaBoLCD-PCF8574-Library
 //#define FEATURE_CW_DECODER
 //#define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power
 //#define FEATURE_ROTARY_ENCODER          // rotary encoder speed control

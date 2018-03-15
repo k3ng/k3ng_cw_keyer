@@ -855,6 +855,9 @@ Recent Update History
       PTT lead and tail times are now stored in EEPROM and setable at runtime with extended commands \:pl and \:pt
       Additional documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/225-Sidetone,-PTT,-and-TX-Key-Lines
 
+    2018.03.14.01
+      FEATURE_LCD_FABO_PCF8574 - Added support for FaBo LCD https://github.com/FaBoPlatform/FaBoLCD-PCF8574-Library 
+
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -871,7 +874,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.11.01"
+#define CODE_VERSION "2018.03.14.01"
 #define eeprom_magic_number 30               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -955,7 +958,7 @@ Recent Update History
   #include <Wire.h>
 #endif
 
-#if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_ADAFRUIT_BACKPACK) || defined(FEATURE_LCD_YDv1) || defined(FEATURE_LCD_SAINSMART_I2C)
+#if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_ADAFRUIT_BACKPACK) || defined(FEATURE_LCD_YDv1) || defined(FEATURE_LCD_SAINSMART_I2C) || defined(FEATURE_LCD_FABO_PCF8574)
   #include <Wire.h>
 #endif
 
@@ -976,6 +979,10 @@ Recent Update History
   #include <LiquidCrystal_I2C.h>
 #endif //FEATURE_SAINSMART_I2C_LCD  
 
+#if defined(FEATURE_LCD_FABO_PCF8574)
+  #include <FaBoLCD_PCF8574.h>
+#endif  
+
 #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
  // #include <BasicTerm.h>
 #endif
@@ -995,9 +1002,9 @@ Recent Update History
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
-  #include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, so they are commented out
-  #include <usbhub.h>   // Uncomment the three lines if you are using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE
-  #include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
+  // #include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, so they are commented out
+  // #include <usbhub.h>   // Uncomment the three lines if you are using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE
+  // #include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
@@ -1355,6 +1362,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   //LiquidCrystal_I2C lcd(0x38);
   LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
 #endif
+
+#if defined(FEATURE_LCD_FABO_PCF8574)
+  FaBoLCD_PCF8574 lcd;
+#endif  
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
   USB Usb;
