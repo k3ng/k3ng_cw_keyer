@@ -858,6 +858,9 @@ Recent Update History
     2018.03.14.01
       FEATURE_LCD_FABO_PCF8574 - Added support for FaBo LCD https://github.com/FaBoPlatform/FaBoLCD-PCF8574-Library 
 
+    2018.03.16.01
+      Fixed compile error involving lcd_string (Thanks, Jeff, N0MII)  
+
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -874,7 +877,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.14.01"
+#define CODE_VERSION "2018.03.16.01"
 #define eeprom_magic_number 30               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -16088,9 +16091,9 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
 {
   
   #ifdef FEATURE_MEMORIES  
-  enum usb_kbd_states {USB_KEYBOARD_NORMAL, USB_KEYBOARD_WPM_ADJUST, USB_KEYBOARD_FARNS_WPM_ADJUST, USB_KEYBOARD_SN_ENTRY, USB_KEYBOARD_PROGRAM_MEM};
+    enum usb_kbd_states {USB_KEYBOARD_NORMAL, USB_KEYBOARD_WPM_ADJUST, USB_KEYBOARD_FARNS_WPM_ADJUST, USB_KEYBOARD_SN_ENTRY, USB_KEYBOARD_PROGRAM_MEM};
   #else
-  enum usb_kbd_states {USB_KEYBOARD_NORMAL, USB_KEYBOARD_WPM_ADJUST, USB_KEYBOARD_FARNS_WPM_ADJUST, USB_KEYBOARD_SN_ENTRY};
+    enum usb_kbd_states {USB_KEYBOARD_NORMAL, USB_KEYBOARD_WPM_ADJUST, USB_KEYBOARD_FARNS_WPM_ADJUST, USB_KEYBOARD_SN_ENTRY};
   #endif
   
   #define USB_KEYBOARD_SPECIAL_MODE_TIMEOUT 5000
@@ -16105,9 +16108,13 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
   static int user_num_input_number_entered = 0;
   byte user_input_process_it = 0;
   #ifdef FEATURE_MEMORIES
-  static byte usb_keyboard_program_memory = 0;
+    static byte usb_keyboard_program_memory = 0;
   #endif //FEATURE_MEMORIES
   int x = 0;
+
+  #ifdef FEATURE_DISPLAY
+    String lcd_string;
+  #endif    
   
   MODIFIERKEYS modifier;
   *((uint8_t*)&modifier) = mod;  
@@ -16150,9 +16157,9 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
     if ((key == 0x28) || (key == 0x58)) {user_input_process_it = 1;}  // ENTER
     if (key == 0x29) { // ESCAPE
       #ifdef FEATURE_DISPLAY
-      lcd_status = LCD_REVERT;
+        lcd_status = LCD_REVERT;
       #else
-      boop();
+        boop();
       #endif    
       user_input_index = 0;
       usb_keyboard_mode = USB_KEYBOARD_NORMAL;  
@@ -16192,9 +16199,9 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       // write terminating 255
       EEPROM.write((memory_start(usb_keyboard_program_memory)+x),255);
       #ifdef FEATURE_DISPLAY
-      lcd_center_print_timed("Done", 0, default_display_msg_delay);
+        lcd_center_print_timed("Done", 0, default_display_msg_delay);
       #else    
-      beep();
+        beep();
       #endif 
       user_input_process_it = 0; 
       user_input_index = 0; 
@@ -16209,16 +16216,16 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       if (key == 39) {
         user_input_array[user_input_index] = 0;
         #ifdef FEATURE_DISPLAY
-        keyboard_string.concat(String(0));
+          keyboard_string.concat(String(0));
         #endif
       } else {
         user_input_array[user_input_index] = key - 29;
         #ifdef FEATURE_DISPLAY
-        keyboard_string.concat(String(key-29));
+          keyboard_string.concat(String(key-29));
         #endif 
       }
       #ifdef FEATURE_DISPLAY
-      lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
+        lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
       #endif            
       user_input_index++;
       usb_keyboard_special_mode_start_time = millis();
@@ -16226,8 +16233,8 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       if ((key == 0x2a) && (user_input_index)){ //BACKSPACE
         user_input_index--;
         #ifdef FEATURE_DISPLAY
-        keyboard_string = keyboard_string.substring(0,keyboard_string.length()-1);
-        lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
+          keyboard_string = keyboard_string.substring(0,keyboard_string.length()-1);
+          lcd_center_print_timed(keyboard_string, 1, default_display_msg_delay);
         #endif               
       } 
       if ((key == 0x28) || (key == 0x58)) {user_input_process_it = 1;}  // ENTER
@@ -16249,9 +16256,9 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
           case USB_KEYBOARD_WPM_ADJUST:
             speed_set(user_num_input_number_entered);
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #else
-            beep();
+              beep();
             #endif
             config_dirty = 1;         
             break;
@@ -16259,9 +16266,9 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
           case USB_KEYBOARD_FARNS_WPM_ADJUST:
             configuration.wpm_farnsworth = user_num_input_number_entered;
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #else
-            beep();
+              beep();
             #endif
             config_dirty = 1;     
             break;
@@ -16269,9 +16276,9 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
           case USB_KEYBOARD_SN_ENTRY:
             serial_number = user_num_input_number_entered;
             #ifdef FEATURE_DISPLAY
-            lcd_status = LCD_REVERT;
+              lcd_status = LCD_REVERT;
             #else             
-            beep();
+              beep();
             #endif      
             break;
           default: boop(); break;       
@@ -16317,19 +16324,19 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       usb_keyboard_special_mode_start_time = millis();
       usb_keyboard_mode = USB_KEYBOARD_PROGRAM_MEM;     
       #ifdef FEATURE_DISPLAY
-        if (LCD_COLUMNS < 9){
-          String lcd_string = "PgmMem";
-        } else {
-          String lcd_string = "Program Memory";
+          if (LCD_COLUMNS < 9){
+            lcd_string = "PgmMem";
+          } else {
+            lcd_string = "Program Memory";
+          }
+        if (usb_keyboard_program_memory < 9) {
+          lcd_string.concat(' ');
         }
-      if (usb_keyboard_program_memory < 9) {
-        lcd_string.concat(' ');
-      }
-      keyboard_string = "";
-      lcd_string.concat(usb_keyboard_program_memory+1);
-      lcd_center_print_timed(lcd_string, 0, default_display_msg_delay);
+        keyboard_string = "";
+        lcd_string.concat(usb_keyboard_program_memory+1);
+        lcd_center_print_timed(lcd_string, 0, default_display_msg_delay);
       #else
-      boop_beep();
+        boop_beep();
       #endif
       
       repeat_memory = 255;
