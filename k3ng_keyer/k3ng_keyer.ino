@@ -861,6 +861,9 @@ Recent Update History
     2018.03.16.01
       Fixed compile error involving lcd_string (Thanks, Jeff, N0MII)  
 
+    2018.03.23.01
+      Bug with automatic sending interruption fixed (Thanks, Larry, F6FVY)  
+
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -877,7 +880,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.16.01"
+#define CODE_VERSION "2018.03.23.01"
 #define eeprom_magic_number 30               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5789,7 +5792,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
        #ifdef FEATURE_COMMAND_BUTTONS
          if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) || dit_buffer || dah_buffer)) {
            if (keyer_machine_mode == KEYER_NORMAL) {
-             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+             sending_mode = AUTOMATIC_SENDING_INTERRUPTED;
              automatic_sending_interruption_time = millis(); 
              return;
            }
@@ -5797,7 +5800,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
        #else
          if (sending_mode == AUTOMATIC_SENDING && (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || dit_buffer || dah_buffer)) {
            if (keyer_machine_mode == KEYER_NORMAL) {
-             sending_mode == AUTOMATIC_SENDING_INTERRUPTED;
+             sending_mode = AUTOMATIC_SENDING_INTERRUPTED;
              automatic_sending_interruption_time = millis(); 
              return;
            }
