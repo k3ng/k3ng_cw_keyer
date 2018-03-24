@@ -250,3 +250,10 @@
 #define tx_key_line_inactive_state LOW
 #define ptt_input_pin_active_state LOW
 #define ptt_input_pin_inactive_state HIGH
+
+#if defined(ARDUINO_MAPLE_MINI)
+  #define button_value_factor 4095  //sp5iou contributed
+#else
+  #define button_value_factor 1023
+#endif
+

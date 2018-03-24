@@ -275,6 +275,12 @@
 #define ptt_input_pin_active_state LOW
 #define ptt_input_pin_inactive_state HIGH
 
+#if defined(ARDUINO_MAPLE_MINI)
+  #define button_value_factor 4095
+#else
+  #define button_value_factor 1023
+#endif
+
 
 #endif //TEST_SETTINGS_1
 
@@ -533,6 +539,18 @@
 
 #define ptt_line_active_state HIGH
 #define ptt_line_inactive_state LOW
+#define tx_key_line_active_state HIGH
+#define tx_key_line_inactive_state LOW
+#define ptt_input_pin_active_state LOW
+#define ptt_input_pin_inactive_state HIGH
+
+
+#if defined(ARDUINO_MAPLE_MINI)
+  #define button_value_factor 4095  //sp5iou contributed
+#else
+  #define button_value_factor 1023
+#endif
+
 
 #endif //TEST_SETTINGS_2
 

@@ -866,6 +866,10 @@ Recent Update History
 
     2018.03.23.02
       Fixed compilation bug with FEATURE_PTT_INTERLOCK when FEATURE_WINKEY_EMULATION was disabled  
+
+    2018.03.24.01
+      Support for ARDUINO_MAPLE_MINI contributed by Marcin SP5IOU
+      HARDWARE_MAPLE_MINI hardware profile in keyer_hardware.h
   
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -882,7 +886,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.23.02"
+#define CODE_VERSION "2018.03.24.01"
 #define eeprom_magic_number 30               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -914,6 +918,8 @@ Recent Update History
   #include "keyer_features_and_options_tinykeyer.h"
 #elif defined(HARDWARE_FK_10)
   #include "keyer_features_and_options_fk_10.h"  
+#elif defined(HARDWARE_MAPLE_MINI)
+  #include "keyer_features_and_options_maple_mini.h"  
 #elif defined(HARDWARE_TEST)
   #include "keyer_features_and_options_test.h"
 #else
@@ -944,7 +950,10 @@ Recent Update History
   #include "keyer_settings_tinykeyer.h"
 #elif defined(HARDWARE_FK_10)
   #include "keyer_pin_settings_fk_10.h"
-  #include "keyer_settings_fk_10.h"  
+  #include "keyer_settings_fk_10.h"
+#elif defined(HARDWARE_MAPLE_MINI)
+  #include "keyer_pin_settings_maple_mini.h"
+  #include "keyer_settings_maple_mini.h"
 #elif defined(HARDWARE_TEST)
   #include "keyer_pin_settings_test.h"
   #include "keyer_settings_test.h"
@@ -954,14 +963,14 @@ Recent Update History
 #endif
 
 #if defined(FEATURE_SLEEP)
-  #include <avr/sleep.h>
+  #include <avr/sleep.h>  // It should be different library for ARM sp5iou
 #endif 
 
 #if defined(FEATURE_PS2_KEYBOARD)
-  #include <K3NG_PS2Keyboard.h>
+  #include <K3NG_PS2Keyboard.h>  // It should be different library for ARM sp5iou (?)
 #endif
 
-#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH)
+#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH) // works on 3.2V supply and logic, but do not work on every pins (SP5IOU)
   #include <LiquidCrystal.h>
   #include <Wire.h>
 #endif
@@ -7311,9 +7320,15 @@ void initialize_analog_button_array() {
     #endif
 
     for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
-      button_value = int(1023 * (float(x * analog_buttons_r2)/float((x * analog_buttons_r2) + analog_buttons_r1)));
-      lower_button_value = int(1023 * (float((x-1) * analog_buttons_r2)/float(((x-1) * analog_buttons_r2) + analog_buttons_r1)));
-      higher_button_value = int(1023 * (float((x+1) * analog_buttons_r2)/float(((x+1) * analog_buttons_r2) + analog_buttons_r1)));
+      button_value = int(button_value_factor * (float(x * analog_buttons_r2)/float((x * analog_buttons_r2) + analog_buttons_r1)));
+      lower_button_value = int(button_value_factor * (float((x-1) * analog_buttons_r2)/float(((x-1) * analog_buttons_r2) + analog_buttons_r1)));
+      higher_button_value = int(button_value_factor * (float((x+1) * analog_buttons_r2)/float(((x+1) * analog_buttons_r2) + analog_buttons_r1)));
+     
+      // button_value = int(1023 * (float(x * analog_buttons_r2)/float((x * analog_buttons_r2) + analog_buttons_r1)));
+      // lower_button_value = int(1023 * (float((x-1) * analog_buttons_r2)/float(((x-1) * analog_buttons_r2) + analog_buttons_r1)));
+      // higher_button_value = int(1023 * (float((x+1) * analog_buttons_r2)/float(((x+1) * analog_buttons_r2) + analog_buttons_r1)));
+
+
       #ifndef OPTION_REVERSE_BUTTON_ORDER
         button_array_low_limit[x] = (button_value - ((button_value - lower_button_value)/2));
         button_array_high_limit[x] = (button_value + ((higher_button_value - button_value)/2));
@@ -7423,7 +7438,9 @@ byte analogbuttonpressed() {
           if ((analog_line_read_average > button_array_low_limit[x]) && (analog_line_read_average <=  button_array_high_limit[x])) {
             #ifdef DEBUG_BUTTONS
               debug_serial_port->print(F(" analogbuttonpressed: returning: "));
-              debug_serial_port->println(x);
+              debug_serial_port->print(x);
+              debug_serial_port->print(F(" analog_line_read_average: "));//sp5iou
+              debug_serial_port->println(analog_line_read_average);//sp5iou              
             #endif         
             return x;
           }  
