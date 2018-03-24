@@ -864,7 +864,9 @@ Recent Update History
     2018.03.23.01
       Bug with automatic sending interruption fixed (Thanks, Larry, F6FVY)  
 
-
+    2018.03.23.02
+      Fixed compilation bug with FEATURE_PTT_INTERLOCK when FEATURE_WINKEY_EMULATION was disabled  
+  
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -880,7 +882,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.23.01"
+#define CODE_VERSION "2018.03.23.02"
 #define eeprom_magic_number 30               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5075,7 +5077,7 @@ void check_ptt_tail()
           }
           #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
         #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-      } else {
+      } else { // automatic sending
         if ((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) {
           #ifdef OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
             if (!send_buffer_bytes){
@@ -5606,7 +5608,7 @@ void tx_and_sidetone_key (int state)
           ptt_key();
         }
         if (current_tx_key_line) {digitalWrite (current_tx_key_line, tx_key_line_active_state);}
-        #ifdef OPTION_WINKEY_2_SUPPORT
+        #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
           if ((wk2_both_tx_activated) && (tx_key_line_2)) {
             digitalWrite (tx_key_line_2, HIGH);
           }
@@ -5627,7 +5629,7 @@ void tx_and_sidetone_key (int state)
       if ((state == 0) && (key_state)) {
         if (key_tx) {
           if (current_tx_key_line) {digitalWrite (current_tx_key_line, tx_key_line_inactive_state);}
-          #ifdef OPTION_WINKEY_2_SUPPORT
+          #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
             if ((wk2_both_tx_activated) && (tx_key_line_2)) {
               digitalWrite (tx_key_line_2, LOW);
             }
