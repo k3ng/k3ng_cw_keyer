@@ -1,12 +1,5 @@
 /*
-
-#    #      ##      #####     #         ######          #    #    #    #    #    # 
-##  ##     #  #     #    #    #         #               ##  ##    #    ##   #    # 
-# ## #    #    #    #    #    #         #####           # ## #    #    # #  #    # 
-#    #    ######    #####     #         #               #    #    #    #  # #    # 
-#    #    #    #    #         #         #               #    #    #    #   ##    # 
-#    #    #    #    #         ######    ######          #    #    #    #    #    # 
-                                                                                   
+Generic STM32F103C "Blue Pill"                                                                                   
 
                                                                                    */
 
@@ -23,7 +16,7 @@
  #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
  #define FEATURE_BEACON
 // #define FEATURE_TRAINING_COMMAND_LINE_INTERFACE
- #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
+// #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 // #define FEATURE_SIDETONE_SWITCH   // adds switch control for the sidetone output. requires an external toggle switch (assigned to an arduino pin - see keyer_pin_settings.h). 
  #define FEATURE_SERIAL_HELP
  #define FEATURE_HELL
@@ -43,13 +36,13 @@
 // #define FEATURE_LCD_FABO_PCF8574  // https://github.com/FaBoPlatform/FaBoLCD-PCF8574-Library
 // #define FEATURE_CW_DECODER
 // #define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE, may have mixed results with Mega and Mega ADK)
-// #define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
+ #define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
 // #define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 // #define FEATURE_USB_MOUSE               // Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
 // #define FEATURE_CAPACITIVE_PADDLE_PINS  // remove the bypass capacitors on the paddle_left and paddle_right lines when using capactive paddles
 // #define FEATURE_LED_RING                // Mayhew Labs Led Ring support
  #define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
- #define FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE // enables command mode U
+// #define FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE // enables command mode U
 // #define FEATURE_PTT_INTERLOCK 
  #define FEATURE_QLF
 // #define FEATURE_EEPROM_E24C1024
@@ -58,7 +51,7 @@
 // #define FEATURE_PADDLE_ECHO
 // #define FEATURE_STRAIGHT_KEY_ECHO
 // #define FEATURE_AMERICAN_MORSE
-// #define FEATURE_4x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
+ // #define FEATURE_4x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
 // #define FEATURE_3x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
 // #define FEATURE_SEQUENCER
 
@@ -74,10 +67,10 @@
 // #define OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM // with this activated the unit will write non-volatile settings to EEPROM when set by Winkey commands
 // #define OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
 //#define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
-#define OPTION_WINKEY_2_SUPPORT                      // comment out to revert to Winkey version 1 emulation
-#define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
+//#define OPTION_WINKEY_2_SUPPORT                      // comment out to revert to Winkey version 1 emulation
+//#define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
 //#define OPTION_WINKEY_UCXLOG_9600_BAUD              // use this only with UCXLog configured for Winkey 9600 baud mode
- #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET  // activate this when using Winkey 2 emulation and Win-Test
+// #define OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET  // activate this when using Winkey 2 emulation and Win-Test
 // #define OPTION_WINKEY_FREQUENT_STATUS_REPORT         // activate this to make Winkey emulation play better with RUMlog and RUMped
 // #define OPTION_WINKEY_IGNORE_LOWERCASE               // Enable for typical K1EL Winkeyer behavior (use for SkookumLogger version 1.10.14 and prior to workaround "r" bug)
 // #define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
@@ -95,7 +88,7 @@
 // #define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 // #define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 // #define OPTION_SAVE_MEMORY_NANOKEYER
-#define OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
+// #define OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
 // #define OPTION_CW_KEYBOARD_ITALIAN
 // #define OPTION_CW_KEYBOARD_GERMAN
 // #define OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR

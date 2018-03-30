@@ -15,6 +15,7 @@
 // #define HARDWARE_TINYKEYER   // http://www.ok1rr.com/index.php/technical-topics/122-the-tinykeyer   edit these files: keyer_pin_settings_tinykeyer.h, keyer_features_and_options_tinykeyer.h, keyer_settings_tinykeyer.h
 // #define HARDWARE_FK_10  // Funtronics K3NG Keyer FK-10  - See notes below!!!  http://www.elekitsorparts.com/product/funtronics-k3ng-keyer-fk-10-99-winkey-emulation/   files: keyer_pin_settings_fk_10.h, keyer_features_and_options_fk_10.h, keyer_settings_fk_10.h
 // #define HARDWARE_MAPLE_MINI  // edit these files: keyer_pin_settings_maple_mini.h, keyer_settings_maple_mini.h, keyer_features_and_options_maple_mini.h
+// #define HARDWARE_GENERIC_STM32F103C  // edit these files: keyer_pin_settings_generic_STM32F103C.h, keyer_settings_generic_STM32F103C.h, keyer_features_and_options_generic_STM32F103C.h //sp5iou 20180329
 // #define HARDWARE_TEST
 
 
@@ -45,7 +46,7 @@
 // Do not touch anything below this line!
 // Serial port class definitions for various devices
 
-#if defined(ARDUINO_MAPLE_MINI)
+#if defined(ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
   #define PRIMARY_SERIAL_CLS USBSerial
   #define SECONDARY_SERIAL_CLS USBSerial 
 #elif defined(ARDUINO_AVR_PROMICRO) || defined(ARDUINO_AVR_LEONARDO) || defined(ARDUINO_AVR_MICRO) || defined(ARDUINO_AVR_YUN) || defined(ARDUINO_AVR_ESPLORA) || defined(ARDUINO_AVR_LILYPAD_USB) || defined(ARDUINO_AVR_ROBOT_CONTROL) || defined(ARDUINO_AVR_ROBOT_MOTOR) || defined(ARDUINO_AVR_LEONARDO_ETH)
