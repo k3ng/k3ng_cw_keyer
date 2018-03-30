@@ -892,7 +892,7 @@ Recent Update History
 */
 
 #define CODE_VERSION "2018.03.29.01"
-#define eeprom_magic_number 30               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 31               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
