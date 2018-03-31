@@ -80,6 +80,9 @@ FEATURE_SIDETONE_SWITCH
 
 #define ptt_input_pin 0
 
+#define tx_inhibit_pin 0
+#define tx_pause_pin 0   
+
 #else
 
   #error "Multiple pin_settings.h files included somehow..."

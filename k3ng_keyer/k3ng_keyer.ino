@@ -871,10 +871,13 @@ Recent Update History
       Support for ARDUINO_MAPLE_MINI contributed by Marcin SP5IOU
       HARDWARE_MAPLE_MINI hardware profile in keyer_hardware.h
 
-   2018.03.29.01
+    2018.03.29.01
       Support for ARDUINO_GENERIC_STM32F103C (Blue pill boards) contributed by Marcin SP5IOU
       HARDWARE_GENERIC_STM32F103C hardware profile in keyer_hardware.h
       How to deal with those boards with Arduino: https://www.techshopbd.com/uploads/product_document/STM32bluepillarduinoguide(1).pdf
+
+    2018.03.30.01
+      tx_inhibit and tx_pause pins implemented for use with contest station interlock controllers.  Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/225-Sidetone,-PTT,-and-TX-Key-Lines#tx-inhibit-and-pause
   
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -891,7 +894,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.29.01"
+#define CODE_VERSION "2018.03.30.01"
 #define eeprom_magic_number 31               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1676,7 +1679,7 @@ void loop()
 
     #if defined(FEATURE_SERIAL)      
       check_serial();
-      check_paddles();            
+      check_paddles();           
       service_dit_dah_buffers();
     #endif //FEATURE_SERIAL
 
@@ -1711,7 +1714,6 @@ void loop()
 
     #ifdef FEATURE_DISPLAY
       check_paddles();
-      service_dit_dah_buffers();
       service_send_buffer(PRINTCHAR);
       service_display();
     #endif //FEATURE_DISPLAY
@@ -1787,6 +1789,60 @@ void loop()
 
 
 // Are you a radio artisan ?
+
+
+//zzzzzzz
+
+
+byte service_tx_inhibit_and_pause(){
+
+  byte return_code = 0;
+  static byte pause_sending_buffer_active = 0;
+
+  if (tx_inhibit_pin){
+    if ((digitalRead(tx_inhibit_pin) == tx_inhibit_pin_active_state)){
+      dit_buffer = 0;
+      dah_buffer = 0; 
+      return_code = 1;
+      if (send_buffer_bytes > 0){
+        clear_send_buffer();
+        send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
+        #ifdef FEATURE_MEMORIES
+          play_memory_prempt = 1;
+          repeat_memory = 255;
+        #endif
+        #ifdef FEATURE_WINKEY_EMULATION
+          if (winkey_sending && winkey_host_open) {
+            winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+            winkey_interrupted = 1;
+          }
+        #endif
+      }
+    }
+  }
+
+  if (tx_pause_pin){
+    if ((digitalRead(tx_pause_pin) == tx_pause_pin_active_state)){
+      dit_buffer = 0;
+      dah_buffer = 0; 
+      return_code = 1;
+      pause_sending_buffer = 1;
+      pause_sending_buffer_active = 1;
+    } else {
+      if (pause_sending_buffer_active){
+        pause_sending_buffer = 0;
+        pause_sending_buffer_active = 0;
+      } 
+    }
+
+    
+  }  
+
+  return return_code;
+
+}
+
+//-------------------------------------------------------------------------------------------------------
 
 
 #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
@@ -4877,6 +4933,7 @@ void check_paddles()
     }
   } //if (configuration.keyer_mode == SINGLE_PADDLE)
 
+  service_tx_inhibit_and_pause();
 
 }
 
@@ -5686,31 +5743,24 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
 
     
-     if ((lengths == 0) or (lengths < 0)) {
-       return;
-     }
+    if ((lengths == 0) or (lengths < 0)) {
+     return;
+    }
 
 
-     float element_length;
+    float element_length;
 
-     if (speed_mode == SPEED_NORMAL) {
-       element_length = 1200/speed_wpm_in;   
-     } else {
-       element_length = qrss_dit_length * 1000;
-     }
-
-
-
-     //#ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-       //unsigned long starttime = millis();
-       //unsigned long starttime = micros();
-     //#endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+    if (speed_mode == SPEED_NORMAL) {
+      element_length = 1200/speed_wpm_in;   
+    } else {
+      element_length = qrss_dit_length * 1000;
+    }
 
     unsigned long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
     unsigned long start = micros();
     unsigned long endtime = micros() + long(element_length*lengths*1000) + long(additional_time_ms*1000);
 
-    while ((micros() - start) < ticks){
+    while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0)){
 
        check_ptt_tail();
 
@@ -8349,7 +8399,10 @@ void service_send_buffer(byte no_print)
 
   #ifdef DEBUG_LOOP
     debug_serial_port->println(F("loop: entering service_send_buffer"));
-  #endif          
+  #endif       
+
+  if (service_tx_inhibit_and_pause() == 1){return;}
+
 
   #ifdef FEATURE_MEMORIES
     play_memory_prempt = 0;
@@ -14419,8 +14472,6 @@ byte play_memory(byte memory_number)
   
   unsigned int jump_back_to_y = 9999;
   byte jump_back_to_memory_number = 255;
-
-  /*static*/ //String serial_number_string;
   static byte prosign_flag = 0;
   play_memory_prempt = 0;
   byte eeprom_byte_read;  
@@ -14434,8 +14485,6 @@ byte play_memory(byte memory_number)
     boop();
     return 0;
   }
-
-
 
   #ifdef DEBUG_PLAY_MEMORY
     debug_serial_port->print(F("play_memory: called with memory_number:"));
@@ -14451,10 +14500,6 @@ byte play_memory(byte memory_number)
   #endif //FEATURE_MEMORY_MACROS
 
   button0_buffer = 0;
-
-//  #ifdef DEBUG_MEMORYCHECK
-//  memorycheck();
-//  #endif
 
   if (keyer_machine_mode == KEYER_NORMAL) {
     #if defined(FEATURE_SERIAL)
@@ -14473,6 +14518,8 @@ byte play_memory(byte memory_number)
   }
   
   for (int y = (memory_start(memory_number)); (y < (memory_end(memory_number)+1)); y++) {
+
+    service_tx_inhibit_and_pause();
 
     if (keyer_machine_mode == KEYER_NORMAL) {
       #ifdef FEATURE_POTENTIOMETER
@@ -14947,6 +14994,10 @@ byte play_memory(byte memory_number)
         y = (memory_end(memory_number)+1);   // we got a play_memory_prempt flag, exit out
       } else {
         y--;  // we're in a pause mode, so sit and spin awhile
+        check_ptt_tail();
+        #if defined(FEATURE_SEQUENCER)
+          check_sequencer_tail_time();
+        #endif
       }
     }
 
@@ -15209,15 +15260,15 @@ int memory_end(byte memory_number) {
 
 void initialize_pins() {
   
-#if defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
+// #if defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
   pinMode (paddle_left, INPUT_PULLUP);
   pinMode (paddle_right, INPUT_PULLUP);
-#else
-  pinMode (paddle_left, INPUT);
-  digitalWrite (paddle_left, HIGH);
-  pinMode (paddle_right, INPUT);
-  digitalWrite (paddle_right, HIGH);
-#endif defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
+// #else
+//   pinMode (paddle_left, INPUT);
+//   digitalWrite (paddle_left, HIGH);
+//   pinMode (paddle_right, INPUT);
+//   digitalWrite (paddle_right, HIGH);
+// #endif defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
 
   #if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
     if (capactive_paddle_pin_inhibit_pin){
@@ -15289,8 +15340,9 @@ void initialize_pins() {
   }
 
   #ifdef FEATURE_CW_DECODER
-    pinMode (cw_decoder_pin, INPUT);
-    digitalWrite (cw_decoder_pin, HIGH);
+    pinMode (cw_decoder_pin, INPUT_PULLUP);
+    // pinMode (cw_decoder_pin, INPUT);
+    // digitalWrite (cw_decoder_pin, HIGH);
 
     #if defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
       digitalWrite (cw_decoder_audio_input_pin, LOW);
@@ -15329,12 +15381,13 @@ void initialize_pins() {
   #endif //FEATURE_ALPHABET_SEND_PRACTICE
 
   #ifdef FEATURE_PTT_INTERLOCK
-    pinMode(ptt_interlock,INPUT);
-    if (ptt_interlock_active_state == HIGH){
-      digitalWrite(ptt_interlock,LOW);
-    } else {
-      digitalWrite(ptt_interlock,HIGH);
-    }
+    pinMode(ptt_interlock,INPUT_PULLUP);
+    // pinMode(ptt_interlock,INPUT);
+    // if (ptt_interlock_active_state == HIGH){
+    //   digitalWrite(ptt_interlock,LOW);
+    // } else {
+    //   digitalWrite(ptt_interlock,HIGH);
+    // }
   #endif //FEATURE_PTT_INTERLOCK
 
   #ifdef FEATURE_STRAIGHT_KEY
@@ -15403,6 +15456,13 @@ void initialize_pins() {
     pinMode(ptt_input_pin,INPUT_PULLUP);
   }
 
+  if (tx_inhibit_pin){
+    pinMode(tx_inhibit_pin,INPUT_PULLUP);
+  }
+
+  if (tx_pause_pin){
+    pinMode(tx_pause_pin,INPUT_PULLUP);
+  }
   
 } //initialize_pins()
 

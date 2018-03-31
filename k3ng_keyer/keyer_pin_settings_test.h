@@ -154,7 +154,10 @@ FEATURE_SIDETONE_SWITCH
   #define sequencer_5_pin 44
 #endif //FEATURE_SEQUENCER
 
-#define ptt_input_pin 50  
+#define ptt_input_pin 0  
+
+#define tx_inhibit_pin 50
+#define tx_pause_pin 48 
 
 
 #else
