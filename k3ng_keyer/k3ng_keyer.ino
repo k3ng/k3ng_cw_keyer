@@ -878,7 +878,10 @@ Recent Update History
 
     2018.03.30.01
       tx_inhibit and tx_pause pins implemented for use with contest station interlock controllers.  Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/225-Sidetone,-PTT,-and-TX-Key-Lines#tx-inhibit-and-pause
-  
+ 
+    2018.03.31.01
+      Now have OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET activated in feature files by default.
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -894,7 +897,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.03.30.01"
+#define CODE_VERSION "2018.03.31.01"
 #define eeprom_magic_number 31               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
