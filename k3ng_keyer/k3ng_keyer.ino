@@ -882,6 +882,9 @@ Recent Update History
     2018.03.31.01
       Now have OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET activated in feature files by default.
 
+    2018.04.07.01
+      Improved tx_pause when buffer or memory sending is paused mid-character
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -890,14 +893,13 @@ Recent Update History
 
     K3NG_PS2Keyboard.h, K3NG_PS2Keyboard.cpp ----->  \Arduino\Sketchbook\libraries\K3NG_PS2Keyboard\
     Goertz.h, Goertz.cpp ------------------------>  \Arduino\Sketchbook\libraries\Goertz\
-    BasicTerm.h, BasicTerm.cpp ------------------->  \Arduino\Sketchbook\libraries\BasicTerm\
 
   
   "Make good code and share it with friends."
 
 */
 
-#define CODE_VERSION "2018.03.31.01"
+#define CODE_VERSION "2018.04.07.01"
 #define eeprom_magic_number 31               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1829,12 +1831,16 @@ byte service_tx_inhibit_and_pause(){
       dit_buffer = 0;
       dah_buffer = 0; 
       return_code = 1;
-      pause_sending_buffer = 1;
-      pause_sending_buffer_active = 1;
+      if (!pause_sending_buffer_active){
+        pause_sending_buffer = 1;
+        pause_sending_buffer_active = 1;
+        delay(10);
+      }
     } else {
       if (pause_sending_buffer_active){
         pause_sending_buffer = 0;
         pause_sending_buffer_active = 0;
+        delay(10);
       } 
     }
 
@@ -8572,7 +8578,9 @@ void service_send_buffer(byte no_print)
           }
         #endif //FEATURE_DISPLAY
         send_char(send_buffer_array[0],KEYER_NORMAL);
-        remove_from_send_buffer();
+        if (!pause_sending_buffer){
+          remove_from_send_buffer();
+        }
       }
     }
 
@@ -9969,7 +9977,7 @@ void service_winkey(byte action) {
          #endif //DEBUG_WINKEY            
         }
       }
-//zzzzz
+
       #ifdef OPTION_WINKEY_EXTENDED_COMMANDS_WITH_DOLLAR_SIGNS
         if (winkey_status == WINKEY_EXTENDED_COMMAND) {  
           //if (incoming_serial_byte != 36){
@@ -10471,7 +10479,7 @@ void service_command_line_interface(PRIMARY_SERIAL_CLS * port_to_use) {
             #ifdef FEATURE_SD_CARD_SUPPORT
               sd_card_log("",incoming_serial_byte);
             #endif            
-            //zzzzzz
+
           } else { // configuration.cli_mode == CLI_MILL_MODE_PADDLE_SEND
             port_to_use->println();
             port_to_use->println();
@@ -14478,6 +14486,7 @@ byte play_memory(byte memory_number)
   static byte prosign_flag = 0;
   play_memory_prempt = 0;
   byte eeprom_byte_read;  
+  byte pause_sending_buffer_backspace = 0;
 
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte eeprom_temp = 0;
@@ -14549,6 +14558,9 @@ byte play_memory(byte memory_number)
     #endif
 
     if ((play_memory_prempt == 0) && (pause_sending_buffer == 0)) {
+
+      pause_sending_buffer_backspace = 0;
+
       eeprom_byte_read = EEPROM.read(y);
       if (eeprom_byte_read < 255) {
 
@@ -14997,6 +15009,10 @@ byte play_memory(byte memory_number)
         y = (memory_end(memory_number)+1);   // we got a play_memory_prempt flag, exit out
       } else {
         y--;  // we're in a pause mode, so sit and spin awhile
+        if ((y > (memory_start(memory_number)) && (!pause_sending_buffer_backspace))){
+          y--;
+          pause_sending_buffer_backspace = 1;
+        }
         check_ptt_tail();
         #if defined(FEATURE_SEQUENCER)
           check_sequencer_tail_time();
