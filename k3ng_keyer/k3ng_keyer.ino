@@ -885,6 +885,12 @@ Recent Update History
     2018.04.07.01
       Improved tx_pause when buffer or memory sending is paused mid-character
 
+    2018.04.15.01
+      Added HARDWARE_MORTTY  
+
+    2018.04.16.01
+      Added OPTION_WINKEY_BLINK_PTT_ON_HOST_OPEN - visual cue that Winkey HOST OPEN has occurred
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -899,7 +905,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.04.07.01"
+#define CODE_VERSION "2018.04.16.01"
 #define eeprom_magic_number 31               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -935,6 +941,8 @@ Recent Update History
   #include "keyer_features_and_options_maple_mini.h"
 #elif defined(HARDWARE_GENERIC_STM32F103C)//sp5iou 20180329
   #include "keyer_features_and_options_generic_STM32F103C.h"
+#elif defined(HARDWARE_MORTTY)
+  #include "keyer_features_and_options_mortty.h"
 #elif defined(HARDWARE_TEST)
   #include "keyer_features_and_options_test.h"
 #else
@@ -972,6 +980,9 @@ Recent Update History
 #elif defined(HARDWARE_GENERIC_STM32F103C)
   #include "keyer_pin_settings_generic_STM32F103C.h"
   #include "keyer_settings_generic_STM32F103C.h"
+#elif defined(HARDWARE_MORTTY)
+  #include "keyer_pin_settings_mortty.h"
+  #include "keyer_settings_mortty.h"  
 #elif defined(HARDWARE_TEST)
   #include "keyer_pin_settings_test.h"
   #include "keyer_settings_test.h"
@@ -10187,7 +10198,17 @@ void service_winkey(byte action) {
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND host open");
             #endif //DEBUG_WINKEY  
-            boop_beep();             
+            #if defined(OPTION_WINKEY_BLINK_PTT_ON_HOST_OPEN)    
+              ptt_key();
+              delay(200);
+              ptt_unkey();
+              delay(200);
+              ptt_key();
+              delay(200);
+              ptt_unkey();
+            #else
+              boop_beep();
+            #endif         
             break;
           case 0x03: // host close command
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
