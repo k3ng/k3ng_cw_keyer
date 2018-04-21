@@ -891,6 +891,9 @@ Recent Update History
     2018.04.16.01
       Added OPTION_WINKEY_BLINK_PTT_ON_HOST_OPEN - visual cue that Winkey HOST OPEN has occurred
 
+    2018.04.20.01
+      FEATURE_WINKEY_EMULATION - Now clear manual ptt invoke upon host open, host close, and 0A commands  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -905,7 +908,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.04.16.01"
+#define CODE_VERSION "2018.04.20.01"
 #define eeprom_magic_number 31               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -9786,6 +9789,7 @@ void service_winkey(byte action) {
               repeat_memory = 255;
             #endif
             sending_mode = AUTOMATIC_SENDING;
+            manual_ptt_invoke = 0;
             tx_and_sidetone_key(0);  // N1MM program needs this for the CTRL-T tune command to work right since it issues a 0x0a
                                      // rather than 0x0b 0x00 to clear a key down - doesn't follow protocol spec
                                    
@@ -10191,6 +10195,7 @@ void service_winkey(byte action) {
               winkey_port_write(WINKEY_1_REPORT_VERSION_NUMBER);
             #endif //OPTION_WINKEY_2_SUPPORT
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+            manual_ptt_invoke = 0;
             winkey_host_open = 1;
             #ifdef OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND
               winkey_connect_time = millis();
@@ -10212,6 +10217,7 @@ void service_winkey(byte action) {
             break;
           case 0x03: // host close command
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+            manual_ptt_invoke = 0;
             winkey_host_open = 0;
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND host close");
