@@ -103,6 +103,7 @@
 // #define OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // LCD display suport for non-English (NO/DK/DE) characters - Courtesy of OZ1JHM
 // #define OPTION_UNKNOWN_CHARACTER_ERROR_TONE
 // #define OPTION_DO_NOT_SAY_HI
+// #define OPTION_BLINK_HI_ON_PTT
 // #define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 // #define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 // #define OPTION_SAVE_MEMORY_NANOKEYER
@@ -268,21 +269,21 @@
 
 #if defined(TEST_CONFIG_2)
 
- #define FEATURE_COMMAND_BUTTONS
- #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
- #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
+ // #define FEATURE_COMMAND_BUTTONS
+ // #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
+ // #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
 // #define FEATURE_MEMORY_MACROS
 // #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
 // #define FEATURE_BEACON
 // #define FEATURE_TRAINING_COMMAND_LINE_INTERFACE
- #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
+ // #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 // #define FEATURE_SIDETONE_SWITCH   // adds switch control for the sidetone output. requires an external toggle switch (assigned to an arduino pin - see keyer_pin_settings.h). 
 // #define FEATURE_SERIAL_HELP
 // #define FEATURE_HELL
 // #define FEATURE_PS2_KEYBOARD        // Use a PS2 keyboard to send code - Change keyboard layout (non-US) in K3NG_PS2Keyboard.h.  Additional options below.
 // #define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code - Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
 // #define FEATURE_CW_COMPUTER_KEYBOARD  // Have an Arduino Due or Leonardo act as a USB HID (Human Interface Device) keyboard and use the paddle to "type" characters on the computer -- uncomment this line in ino file: #include <Keyboard.h>
- #define FEATURE_DEAD_OP_WATCHDOG
+ // #define FEATURE_DEAD_OP_WATCHDOG
 // #define FEATURE_AUTOSPACE
 // #define FEATURE_FARNSWORTH
 // #define FEATURE_DL2SBA_BANKSWITCH       // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
@@ -325,7 +326,7 @@
 // #define OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP     // if ASR is not disabled, you may need this to discard errant serial port bytes at startup
 // #define OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM // with this activated the unit will write non-volatile settings to EEPROM when set by Winkey commands
 // #define OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
-#define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
+// #define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
 #define OPTION_WINKEY_2_SUPPORT                      // comment out to revert to Winkey version 1 emulation
 #define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
 //#define OPTION_WINKEY_UCXLOG_9600_BAUD              // use this only with UCXLog configured for Winkey 9600 baud mode
@@ -341,14 +342,15 @@
 // #define OPTION_WATCHDOG_TIMER                        // this enables a four second ATmega48/88/168/328 watchdog timer; use for unattended/remote operation only
 // #define OPTION_MOUSE_MOVEMENT_PADDLE               // experimental (just fooling around) - mouse movement will act like a paddle
 // #define OPTION_NON_ENGLISH_EXTENSIONS  // add support for additional CW characters (i.e. À, Å, Þ, etc.)
-// #define OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED    // this option keeps PTT high if there are characters buffered from the keyboard, the serial interface, or Winkey
+#define OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED    // this option keeps PTT high if there are characters buffered from the keyboard, the serial interface, or Winkey
 // #define OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // LCD display suport for non-English (NO/DK/DE) characters - Courtesy of OZ1JHM
 // #define OPTION_UNKNOWN_CHARACTER_ERROR_TONE
 // #define OPTION_DO_NOT_SAY_HI
+// #define OPTION_BLINK_HI_ON_PTT
 // #define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 // #define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 // #define OPTION_SAVE_MEMORY_NANOKEYER
-#define OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
+// #define OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
 // #define OPTION_CW_KEYBOARD_ITALIAN
 // #define OPTION_CW_KEYBOARD_GERMAN
 // #define OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
@@ -356,13 +358,19 @@
 // #define OPTION_ADVANCED_SPEED_DISPLAY //enables "nerd" speed visualization on display: wpm, cpm (char per min), duration of dit and dah in milliseconds and ratio (contributed by Giorgio, IZ2XBZ)
 // #define OPTION_PROSIGN_SUPPORT    // additional prosign support for paddle and straight key echo on display, CLI, and in memory storage
 // #define OPTION_RUSSIAN_LANGUAGE_SEND_CLI // Russian language CLI sending support (contributed by Павел Бирюков, UA1AQC)
-#define OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION
+// #define OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION
 // #define OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT
 // #define OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE
 
 // #define OPTION_WORDSWORTH_CZECH
 // #define OPTION_WORDSWORTH_DEUTSCH
 // #define OPTION_WORDSWORTH_NORSK
+
+// #define FEATURE_COMPETITION_COMPRESSION_DETECTION //(Experimental)
+
+// #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA  // only works with Mega and pins 2 and 5 - minor performance increase... maybe?
+
+// #define OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
 
 // #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
 

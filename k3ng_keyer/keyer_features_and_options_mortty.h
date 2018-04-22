@@ -77,7 +77,8 @@
 #define OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED    // this option keeps PTT high if there are characters buffered from the keyboard, the serial interface, or Winkey
 // #define OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // LCD display suport for non-English (NO/DK/DE) characters - Courtesy of OZ1JHM
 // #define OPTION_UNKNOWN_CHARACTER_ERROR_TONE
-// #define OPTION_DO_NOT_SAY_HI
+#define OPTION_DO_NOT_SAY_HI
+#define OPTION_BLINK_HI_ON_PTT
 // #define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 // #define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 // #define OPTION_SAVE_MEMORY_NANOKEYER
@@ -91,7 +92,7 @@
 // #define OPTION_RUSSIAN_LANGUAGE_SEND_CLI // Russian language CLI sending support (contributed by Павел Бирюков, UA1AQC)
 #define OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION
 // #define OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT
-// #define OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE
+#define OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE
 
 // #define OPTION_WORDSWORTH_CZECH
 // #define OPTION_WORDSWORTH_DEUTSCH

@@ -894,6 +894,11 @@ Recent Update History
     2018.04.20.01
       FEATURE_WINKEY_EMULATION - Now clear manual ptt invoke upon host open, host close, and 0A commands  
 
+    2018.04.22.01
+      Added OPTION_BLINK_HI_ON_PTT - on units that lack a sidetone speaker, this will blink HI on the PTT line on boot up
+      Fixed issue in keyer_pin_settings_mortty.h  
+      Added TX Inhibit and TX Pause status in Command Line Interface Status \S command
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -908,7 +913,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.04.20.01"
+#define CODE_VERSION "2018.04.22.01"
 #define eeprom_magic_number 31               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1128,13 +1133,6 @@ struct config_t {  // 80 bytes total
 byte sending_mode = UNDEFINED_SENDING;
 byte command_mode_disable_tx = 0;
 byte current_tx_key_line = tx_key_line_1;
-// #ifdef OPTION_SAVE_MEMORY_NANOKEYER
-//   unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3};
-//   unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3};
-// #else //OPTION_SAVE_MEMORY_NANOKEYER
-//   unsigned int ptt_tail_time[] = {initial_ptt_tail_time_tx1,initial_ptt_tail_time_tx2,initial_ptt_tail_time_tx3,initial_ptt_tail_time_tx4,initial_ptt_tail_time_tx5,initial_ptt_tail_time_tx6};
-//   unsigned int ptt_lead_time[] = {initial_ptt_lead_time_tx1,initial_ptt_lead_time_tx2,initial_ptt_lead_time_tx3,initial_ptt_lead_time_tx4,initial_ptt_lead_time_tx5,initial_ptt_lead_time_tx6};
-// #endif //OPTION_SAVE_MEMORY_NANOKEYER
 byte manual_ptt_invoke = 0;
 byte qrss_dit_length = initial_qrss_dit_length;
 byte keyer_machine_mode = KEYER_NORMAL;   // KEYER_NORMAL, BEACON, KEYER_COMMAND_MODE
@@ -1689,7 +1687,7 @@ void loop()
     }
   #endif //defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
 
-  if (keyer_machine_mode == KEYER_NORMAL) {
+ if (keyer_machine_mode == KEYER_NORMAL) {
     #ifdef FEATURE_COMMAND_BUTTONS
       check_command_buttons();
     #endif //FEATURE_COMMAND_BUTTONS
@@ -1801,6 +1799,9 @@ void loop()
   #endif  
 
   service_millis_rollover();
+
+
+
   
 }
 
@@ -1808,9 +1809,6 @@ void loop()
 
 
 // Are you a radio artisan ?
-
-
-//zzzzzzz
 
 
 byte service_tx_inhibit_and_pause(){
@@ -10204,13 +10202,7 @@ void service_winkey(byte action) {
               debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND host open");
             #endif //DEBUG_WINKEY  
             #if defined(OPTION_WINKEY_BLINK_PTT_ON_HOST_OPEN)    
-              ptt_key();
-              delay(200);
-              ptt_unkey();
-              delay(200);
-              ptt_key();
-              delay(200);
-              ptt_unkey();
+              blink_ptt_dits_and_dahs("..");
             #else
               boop_beep();
             #endif         
@@ -13897,6 +13889,20 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     }
   #endif // !defined(OPTION_EXCLUDE_MILL_MODE)
 
+  port_to_use->print(F("TX Inhibit O"));
+  if ((digitalRead(tx_inhibit_pin) == tx_inhibit_pin_active_state)){
+    port_to_use->println(F("n"));
+  } else {
+    port_to_use->println(F("ff"));
+  }  
+  port_to_use->print(F("TX Pause O"));
+  if ((digitalRead(tx_pause_pin) == tx_pause_pin_active_state)){
+    port_to_use->println(F("n"));
+  } else {
+    port_to_use->println(F("ff"));
+  }  
+
+
   #ifdef FEATURE_MEMORIES
     serial_status_memories(port_to_use);
   #endif
@@ -15306,15 +15312,15 @@ int memory_end(byte memory_number) {
 
 void initialize_pins() {
   
-// #if defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
+#if defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
   pinMode (paddle_left, INPUT_PULLUP);
   pinMode (paddle_right, INPUT_PULLUP);
-// #else
-//   pinMode (paddle_left, INPUT);
-//   digitalWrite (paddle_left, HIGH);
-//   pinMode (paddle_right, INPUT);
-//   digitalWrite (paddle_right, HIGH);
-// #endif defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
+#else
+  pinMode (paddle_left, INPUT);
+  digitalWrite (paddle_left, HIGH);
+  pinMode (paddle_right, INPUT);
+  digitalWrite (paddle_right, HIGH);
+#endif //defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) sp5iou 20180329
 
   #if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
     if (capactive_paddle_pin_inhibit_pin){
@@ -16220,8 +16226,6 @@ void initialize_display(){
       byte oldSideTone = configuration.sidetone_mode;
       key_tx = 0;
       configuration.sidetone_mode = SIDETONE_ON;     
-      
-      //delay(201);
       #ifdef FEATURE_DISPLAY
         lcd_center_print_timed("h",1,4000);
       #endif
@@ -16229,15 +16233,52 @@ void initialize_display(){
       #ifdef FEATURE_DISPLAY
         lcd_center_print_timed("hi",1,4000);
       #endif
-      send_char('I',KEYER_NORMAL);
-      
+      send_char('I',KEYER_NORMAL); 
       configuration.sidetone_mode = oldSideTone; 
       key_tx = oldKey;     
     #endif //OPTION_DO_NOT_SAY_HI
-    
+    #ifdef OPTION_BLINK_HI_ON_PTT
+      blink_ptt_dits_and_dahs(".... ..");
+    #endif
+
   }
 }
 
+//-------------------------------------------------------------------------------------------------------
+#if defined(OPTION_BLINK_HI_ON_PTT) || (defined(OPTION_WINKEY_BLINK_PTT_ON_HOST_OPEN) && defined(FEATURE_WINKEY_EMULATION))
+void blink_ptt_dits_and_dahs(char const * cw_to_send){
+
+
+  sending_mode = AUTOMATIC_SENDING;
+
+  for (int x = 0;x < 12;x++){
+    switch(cw_to_send[x]){
+      case '.':
+        ptt_key();
+        delay(100);
+        ptt_unkey();
+        delay(100);
+        break;
+      case '-':
+        ptt_key();
+        delay(300);
+        ptt_unkey();
+        delay(100);
+        break;
+      case ' ':
+        delay(400);
+        break;        
+    }
+
+
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
+
+  }
+
+}
+#endif //defined(OPTION_BLINK_HI_ON_PTT) || (defined(OPTION_WINKEY_BLINK_PTT_ON_HOST_OPEN) && defined(FEATURE_WINKEY_EMULATION))
 
 //--------------------------------------------------------------------- 
 #ifdef FEATURE_USB_KEYBOARD
