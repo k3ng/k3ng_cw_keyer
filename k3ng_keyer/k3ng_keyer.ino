@@ -899,6 +899,9 @@ Recent Update History
       Fixed issue in keyer_pin_settings_mortty.h  
       Added TX Inhibit and TX Pause status in Command Line Interface Status \S command
 
+    2018.04.23.01
+      OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED - when Winkeyer Pause command is received, PTT is now de-asserted until Pause is cleared
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -913,7 +916,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.04.22.01"
+#define CODE_VERSION "2018.04.23.01"
 #define eeprom_magic_number 31               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -951,6 +954,8 @@ Recent Update History
   #include "keyer_features_and_options_generic_STM32F103C.h"
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_features_and_options_mortty.h"
+#elif defined(HARDWARE_TEST_EVERYTHING)
+  #include "keyer_features_and_options_test_everything.h"
 #elif defined(HARDWARE_TEST)
   #include "keyer_features_and_options_test.h"
 #else
@@ -991,6 +996,9 @@ Recent Update History
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_pin_settings_mortty.h"
   #include "keyer_settings_mortty.h"  
+#elif defined(HARDWARE_TEST_EVERYTHING)
+  #include "keyer_pin_settings_test_everything.h"
+  #include "keyer_settings_test_everything.h"
 #elif defined(HARDWARE_TEST)
   #include "keyer_pin_settings_test.h"
   #include "keyer_settings_test.h"
@@ -1046,12 +1054,12 @@ Recent Update History
 #endif
 
 //#if defined(FEATURE_ETHERNET)
-#if !defined(ARDUINO_MAPLE_MINI)&& !defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
+#if !defined(ARDUINO_MAPLE_MINI) && !defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
   #include <Ethernet.h>  // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
   #if defined(FEATURE_INTERNET_LINK)
     #include <EthernetUdp.h>
   #endif //FEATURE_INTERNET_LINK
-#endif //!defined(ARDUINO_MAPLE_MINI)&& !defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329  
+#endif //!defined(ARDUINO_MAPLE_MINI) && !defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329  
 //#endif //FEATURE_ETHERNET
 
 
@@ -5177,7 +5185,7 @@ void check_ptt_tail()
       } else { // automatic sending
         if ((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) {
           #ifdef OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
-            if (!send_buffer_bytes){
+            if ((!send_buffer_bytes) || (pause_sending_buffer)){
               ptt_unkey();
             }
           #else
