@@ -82,8 +82,8 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \=     Toggle American Morse mode    (requires FEATURE_AMERICAN_MORSE)
     \@     Mill Mode
     \}#### Set potentiometer range - low ## / high ##
+    \"     Hold PTT active with buffered characters
     \:     Extended CLLI commands
-    \"     FUTURE
     \;     FUTURE
     \]     FUTURE
     \_     FUTURE - Set Clock
@@ -902,6 +902,10 @@ Recent Update History
     2018.04.23.01
       OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED - when Winkeyer Pause command is received, PTT is now de-asserted until Pause is cleared
 
+    2018.04.29.01
+      Deprecated OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED.  Winkey PINCONFIG PTT bit now sets / unsets ptt_buffer_hold_active
+      New CLI command \" to activate/deactivate PTT Hold Active When Characters Buffered functionality
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -916,8 +920,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.04.23.01"
-#define eeprom_magic_number 31               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2018.04.29.01"
+#define eeprom_magic_number 32               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1087,7 +1091,7 @@ Recent Update History
 #define memory_area_start 110             // sp5iou 20180328 the eeprom location where memory space starts  for STM32 it must be at least 110 to avoid overlap mem 1 with wpm settings 
 
 // Variables and stuff
-struct config_t {  // 80 bytes total
+struct config_t {  // 81 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1107,7 +1111,8 @@ struct config_t {  // 80 bytes total
   uint8_t wordsworth_wordspace;
   uint8_t wordsworth_repetition;
   uint8_t cli_mode;
-    // 18 bytes
+  uint8_t ptt_buffer_hold_active;
+    // 19 bytes
 
   unsigned int wpm;
   unsigned int hz_sidetone;
@@ -5183,14 +5188,8 @@ void check_ptt_tail()
           #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
         #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
       } else { // automatic sending
-        if ((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) {
-          #ifdef OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
-            if ((!send_buffer_bytes) || (pause_sending_buffer)){
-              ptt_unkey();
-            }
-          #else
-            ptt_unkey();
-          #endif //OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED
+        if (((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))){
+          ptt_unkey();
         }
       }
     }
@@ -8974,6 +8973,12 @@ void winkey_sidetone_freq_command(byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_set_pinconfig_command(byte incoming_serial_byte) {
   
+  if (incoming_serial_byte & 1) {
+    configuration.ptt_buffer_hold_active = 1;
+  } else {
+    configuration.ptt_buffer_hold_active = 0;
+  }
+
   if (incoming_serial_byte & 2) {
     #ifdef OPTION_WINKEY_2_SUPPORT
     if (wk2_paddle_only_sidetone) {
@@ -9043,6 +9048,8 @@ void winkey_set_pinconfig_command(byte incoming_serial_byte) {
       #endif
       break;
     }
+
+    config_dirty = 1;
 
 }
 #endif
@@ -11125,12 +11132,17 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         config_dirty = 1;
         break;
     #endif // !defined(OPTION_EXCLUDE_MILL_MODE)
-    #if defined(FEATURE_CLI_EXPERT_MENU)
     case '"':
-      cli_expert_menu(port_to_use);
+      port_to_use->print(F("\r\nPTT buffered character hold active O"));
+      if (configuration.ptt_buffer_hold_active){
+        configuration.ptt_buffer_hold_active = 0;
+        port_to_use->println(F("ff"));
+      } else {
+        configuration.ptt_buffer_hold_active = 1;
+        port_to_use->println(F("n"));
+      }
+      config_dirty = 1;
       break;
-    #endif
-
     #if !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) 
     case ':':
       cli_extended_commands(port_to_use);
@@ -11399,7 +11411,7 @@ void sd_card_load_eeprom_from_file(PRIMARY_SERIAL_CLS * port_to_use,String filen
 
 }
 
-#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_CLI_EXPERT_MENU) 
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_SD_CARD_SUPPORT)
 
 //---------------------------------------------------------------------
 
@@ -13889,7 +13901,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   }
 
   #if !defined(OPTION_EXCLUDE_MILL_MODE)
-    port_to_use->print(F("Mill Mode O"));
+    port_to_use->print(F("Mill Mode: O"));
     if (configuration.cli_mode == CLI_NORMAL_MODE){
       port_to_use->println(F("ff"));
     } else {
@@ -13897,13 +13909,20 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     }
   #endif // !defined(OPTION_EXCLUDE_MILL_MODE)
 
-  port_to_use->print(F("TX Inhibit O"));
+  port_to_use->print(F("PTT buffered character hold active: O"));
+  if (configuration.ptt_buffer_hold_active){
+    port_to_use->println(F("n"));
+  } else {
+    port_to_use->println(F("ff"));
+  }  
+
+  port_to_use->print(F("TX Inhibit: O"));
   if ((digitalRead(tx_inhibit_pin) == tx_inhibit_pin_active_state)){
     port_to_use->println(F("n"));
   } else {
     port_to_use->println(F("ff"));
   }  
-  port_to_use->print(F("TX Pause O"));
+  port_to_use->print(F("TX Pause: O"));
   if ((digitalRead(tx_pause_pin) == tx_pause_pin_active_state)){
     port_to_use->println(F("n"));
   } else {
@@ -15861,6 +15880,7 @@ void initialize_keyer_state(){
   configuration.wpm_farnsworth = initial_speed_wpm;
   configuration.cli_mode = CLI_NORMAL_MODE;
   configuration.command_mode_wpm = initial_command_mode_speed_wpm;
+  configuration.ptt_buffer_hold_active = 0;
 
 
   configuration.ptt_lead_time[0] = initial_ptt_lead_time_tx1;
