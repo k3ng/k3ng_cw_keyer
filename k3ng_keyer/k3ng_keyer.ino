@@ -907,7 +907,10 @@ Recent Update History
       New CLI command \" to activate/deactivate PTT Hold Active When Characters Buffered functionality
 
     2018.05.04.01
-      Winkey Emulation - minor addition to filtering of values echoed from send_char()  
+      Winkey Emulation - minor addition to filtering of values echoed from send_char() 
+
+    2018.05.05.01
+      Winkey Emulation - minor bug fix with handling of PTT tail time setting.  Also added support in Admin Get Values command to report PTT lead and tail time  
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -923,7 +926,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.05.04.01"
+#define CODE_VERSION "2018.05.05.01"
 #define eeprom_magic_number 32               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1846,7 +1849,7 @@ byte service_tx_inhibit_and_pause(){
         #endif
         #ifdef FEATURE_WINKEY_EMULATION
           if (winkey_sending && winkey_host_open) {
-            winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+            winkey_port_write(0xc2|winkey_sending|winkey_xoff,0); // 0xc2 - BREAKIN bit set high
             winkey_interrupted = 1;
           }
         #endif
@@ -4510,7 +4513,7 @@ void check_rotary_encoder(){
     // Start of Winkey Speed change mod for Rotary Encoder -- VE2EVN
     #ifdef FEATURE_WINKEY_EMULATION
       if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
-        winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128));
+        winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128),0);
         winkey_last_unbuffered_speed_wpm = configuration.wpm;
       }
     #endif    
@@ -4590,7 +4593,7 @@ void check_potentiometer()
       last_pot_wpm_read = pot_value_wpm_read;
       #ifdef FEATURE_WINKEY_EMULATION
         if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
-          winkey_port_write(((pot_value_wpm_read-pot_wpm_low_value)|128));
+          winkey_port_write(((pot_value_wpm_read-pot_wpm_low_value)|128),0);
           winkey_last_unbuffered_speed_wpm = configuration.wpm;
         }
       #endif
@@ -4747,7 +4750,7 @@ void put_memory_button_in_buffer(byte memory_number_to_put_in_buffer)
     if ((millis() - last_memory_button_buffer_insert) > 400) {    // don't do another buffer insert if we just did one - button debounce
       #ifdef FEATURE_WINKEY_EMULATION
         if (winkey_sending && winkey_host_open) {
-          winkey_port_write(0xc0|winkey_sending|winkey_xoff);
+          winkey_port_write(0xc0|winkey_sending|winkey_xoff,0);
           winkey_interrupted = 1;
         }
       #endif
@@ -7724,8 +7727,8 @@ void check_command_buttons()
             case 3: winkey_byte_to_send = winkey_byte_to_send | 4; break;
             case 4: winkey_byte_to_send = winkey_byte_to_send | 16; break;            
           } 
-          winkey_port_write(winkey_byte_to_send);
-          winkey_port_write(0xc8); // tell it that the button is unpressed
+          winkey_port_write(winkey_byte_to_send,0);
+          winkey_port_write(0xc8,0); // tell it that the button is unpressed
         } else {  // otherwise, have the buttons act as normal
           add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
           add_to_send_buffer(analogbuttontemp - 1);
@@ -7771,7 +7774,7 @@ void check_command_buttons()
 
               #if defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_POTENTIOMETER)
                 if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
-                  winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128));
+                  winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128),0);
                   winkey_last_unbuffered_speed_wpm = configuration.wpm;
                 }
               #endif
@@ -7793,7 +7796,7 @@ void check_command_buttons()
 
               #if defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_POTENTIOMETER)
                 if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
-                  winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128));
+                  winkey_port_write(((configuration.wpm-pot_wpm_low_value)|128),0);
                   winkey_last_unbuffered_speed_wpm = configuration.wpm;
                 }
               #endif
@@ -8465,7 +8468,7 @@ void service_send_buffer(byte no_print)
           #ifdef FEATURE_WINKEY_EMULATION
             if (winkey_sending && winkey_host_open) {
               #if !defined(OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE)
-                winkey_port_write(0xc0|winkey_sending|winkey_xoff);
+                winkey_port_write(0xc0|winkey_sending|winkey_xoff,0);
               #endif
               winkey_interrupted = 1;
              }
@@ -8563,9 +8566,9 @@ void service_send_buffer(byte no_print)
         #ifdef FEATURE_WINKEY_EMULATION
           if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open) && (!no_print) && (!cw_send_echo_inhibit)){
             #if defined(OPTION_WINKEY_ECHO_7C_BYTE)
-              if (send_buffer_array[0] > 30) {winkey_port_write(send_buffer_array[0]);}
+              if (send_buffer_array[0] > 30) {winkey_port_write(send_buffer_array[0],0);}
             #else
-              if ((send_buffer_array[0]!= 0x7C) && (send_buffer_array[0] > 30)) {winkey_port_write(send_buffer_array[0]);}
+              if ((send_buffer_array[0]!= 0x7C) && (send_buffer_array[0] > 30)) {winkey_port_write(send_buffer_array[0],0);}
             #endif
             //zzzz
             // if (send_buffer_array[0] == 13) {
@@ -8652,7 +8655,7 @@ void service_send_buffer(byte no_print)
     #endif
     #ifdef FEATURE_WINKEY_EMULATION
       if (winkey_sending && winkey_host_open) {
-        winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+        winkey_port_write(0xc2|winkey_sending|winkey_xoff,0); // 0xc2 - BREAKIN bit set high
         winkey_interrupted = 1;
       }
     #endif
@@ -8676,7 +8679,7 @@ void remove_from_send_buffer()
   #ifdef FEATURE_WINKEY_EMULATION
     if ((send_buffer_bytes < winkey_xon_threshold) && winkey_xoff && winkey_host_open) {
       winkey_xoff=0;
-      winkey_port_write(0xc0|winkey_sending|winkey_xoff); //send status /XOFF
+      winkey_port_write(0xc0|winkey_sending|winkey_xoff,0); //send status /XOFF
     }
   #endif
   
@@ -8688,7 +8691,7 @@ void remove_from_send_buffer()
       send_buffer_array[x] = send_buffer_array[x+1];
     }
     #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_FREQUENT_STATUS_REPORT)
-      winkey_port_write(0xc0|winkey_sending|winkey_xoff);
+      winkey_port_write(0xc0|winkey_sending|winkey_xoff,0);
    #endif
   }
 }
@@ -8708,7 +8711,7 @@ void add_to_send_buffer(byte incoming_serial_byte)
         #ifdef FEATURE_WINKEY_EMULATION
           if ((send_buffer_bytes>winkey_xoff_threshold) && winkey_host_open) {
             winkey_xoff=1;
-            winkey_port_write(0xc0|winkey_sending|winkey_xoff); //send XOFF status         
+            winkey_port_write(0xc0|winkey_sending|winkey_xoff,0); //send XOFF status         
           }
         #endif
               
@@ -8819,10 +8822,10 @@ void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
 
-  configuration.ptt_tail_time[configuration.current_tx-1] = (incoming_serial_byte*10);
+  configuration.ptt_tail_time[configuration.current_tx-1] = (3*int(1200/configuration.wpm)) + (incoming_serial_byte*10);
   #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
-  send_char('P',KEYER_NORMAL);
-  send_char('2',KEYER_NORMAL);
+    send_char('P',KEYER_NORMAL);
+    send_char('2',KEYER_NORMAL);
   #endif
 }
 #endif //FEATURE_WINKEY_EMULATION
@@ -9193,77 +9196,74 @@ void winkey_admin_get_values_command() {
     byte_to_send = byte_to_send | 128;
   }
   #endif //FEATURE_DEAD_OP_WATCHDOG
-  winkey_port_write(byte_to_send);
+  winkey_port_write(byte_to_send,1);
 
   // 2 - speed
   if (configuration.wpm > 99) {
-    winkey_port_write(99);
+    winkey_port_write(99,1);
   } else {
     byte_to_send = configuration.wpm;
-    winkey_port_write(byte_to_send);
+    winkey_port_write(byte_to_send,1);
   }
 
   // 3 - sidetone
   switch(configuration.hz_sidetone) {
-    case WINKEY_SIDETONE_1 : winkey_port_write(1); break;
-    case WINKEY_SIDETONE_2 : winkey_port_write(2); break;
-    case WINKEY_SIDETONE_3 : winkey_port_write(3); break;
-    case WINKEY_SIDETONE_4 : winkey_port_write(4); break;
-    case WINKEY_SIDETONE_5 : winkey_port_write(5); break;
-    case WINKEY_SIDETONE_6 : winkey_port_write(6); break;
-    case WINKEY_SIDETONE_7 : winkey_port_write(7); break;
-    case WINKEY_SIDETONE_8 : winkey_port_write(8); break;
-    case WINKEY_SIDETONE_9 : winkey_port_write(9); break;
-    case WINKEY_SIDETONE_10 : winkey_port_write(10); break;
-    default: winkey_port_write(5); break;
+    case WINKEY_SIDETONE_1 : winkey_port_write(1,1); break;
+    case WINKEY_SIDETONE_2 : winkey_port_write(2,1); break;
+    case WINKEY_SIDETONE_3 : winkey_port_write(3,1); break;
+    case WINKEY_SIDETONE_4 : winkey_port_write(4,1); break;
+    case WINKEY_SIDETONE_5 : winkey_port_write(5,1); break;
+    case WINKEY_SIDETONE_6 : winkey_port_write(6,1); break;
+    case WINKEY_SIDETONE_7 : winkey_port_write(7,1); break;
+    case WINKEY_SIDETONE_8 : winkey_port_write(8,1); break;
+    case WINKEY_SIDETONE_9 : winkey_port_write(9,1); break;
+    case WINKEY_SIDETONE_10 : winkey_port_write(10,1); break;
+    default: winkey_port_write(5,1); break;
   }
 
   // 4 - weight
-  winkey_port_write(configuration.weighting);
+  winkey_port_write(configuration.weighting,1);
 
   // 5 - ptt lead
-  winkey_port_write(zero);   // TODO - backwards calculate this
+  winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1]/10,1);
+  //winkey_port_write(zero,1);   //zzzzzz
 
   // 6 - ptt tail
-  winkey_port_write(zero);   // TODO - backwards calculate this
+  winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1);
+  //winkey_port_write(zero,1);  
 
   // 7 - pot min wpm
   #ifdef FEATURE_POTENTIOMETER
-  winkey_port_write(pot_wpm_low_value);
-  #endif
-  #ifndef FEATURE_POTENTIOMETER
-  winkey_port_write(15);
+    winkey_port_write(pot_wpm_low_value,1);
+  #else
+    winkey_port_write(15,1);
   #endif
 
   // 8 - pot wpm range
   #ifdef FEATURE_POTENTIOMETER
-  byte_to_send = pot_wpm_high_value - pot_wpm_low_value;
-  winkey_port_write(byte_to_send);
-  #endif
-  #ifndef FEATURE_POTENTIOMETER
-  winkey_port_write(20);
+    winkey_port_write(pot_wpm_high_value - pot_wpm_low_value,1);
+  #else
+    winkey_port_write(20,1);
   #endif
 
   // 9 - 1st extension
-  winkey_port_write(first_extension_time);
+  winkey_port_write(first_extension_time,1);
 
   // 10 - compensation
-  winkey_port_write(keying_compensation);
+  winkey_port_write(keying_compensation,1);
 
   // 11 - farnsworth wpm
   #ifdef FEATURE_FARNSWORTH
-  byte_to_send = configuration.wpm_farnsworth;
-  winkey_port_write(byte_to_send);
-  #endif
-  #ifndef FEATURE_FARNSWORTH
-  winkey_port_write(zero);
+    winkey_port_write(configuration.wpm_farnsworth,1);
+  #else
+    winkey_port_write(zero,1);
   #endif
 
   // 12 - paddle setpoint
-  winkey_port_write(50);  // default value
+  winkey_port_write(50,1);  // default value
 
   // 13 - dah to dit ratio
-  winkey_port_write(50);  // TODO -backwards calculate
+  winkey_port_write(50,1);  // TODO -backwards calculate
 
   // 14 - pin config
   #ifdef OPTION_WINKEY_2_SUPPORT
@@ -9278,16 +9278,16 @@ void winkey_admin_get_values_command() {
     if (ptt_hang_time_wordspace_units == 1.33) {byte_to_send = byte_to_send | 16;}
     if (ptt_hang_time_wordspace_units == 1.66) {byte_to_send = byte_to_send | 32;}
     if (ptt_hang_time_wordspace_units == 2.0) {byte_to_send = byte_to_send | 64;}
-    winkey_port_write(byte_to_send);
+    winkey_port_write(byte_to_send,1);
   #else
-    winkey_port_write(5); // default value
+    winkey_port_write(5,1); // default value
   #endif
 
   // 15 - pot range
   #ifdef OPTION_WINKEY_2_SUPPORT
-  winkey_port_write(zero);
+    winkey_port_write(zero,1);
   #else
-  winkey_port_write(0xFF);
+    winkey_port_write(0xFF,1);
   #endif
 
 }
@@ -9430,10 +9430,10 @@ void winkey_eeprom_download() {
 //  byte total_memory_sizes = 0;
 //  byte previous_memories = 0;
   
-  winkey_port_write(0xa5); // 01 magic byte
+  winkey_port_write(0xa5,1); // 01 magic byte
   winkey_admin_get_values_command(); // 02-16
   
-  winkey_port_write(byte(configuration.wpm)); // 17 cmdwpm
+  winkey_port_write(byte(configuration.wpm),1); // 17 cmdwpm
   bytes_sent = 17;
   
   // This is a real PITA.  The K1EL Winkey 2 doesn't store memories in ASCII, so a lookup table is required
@@ -9486,7 +9486,7 @@ void winkey_eeprom_download() {
   
   //pad the rest with zeros    
   for (x = 0;x < (256-bytes_sent); x++) {
-    winkey_port_write(zero);
+    winkey_port_write(zero,1);
   }  
 }
 #endif
@@ -9496,7 +9496,7 @@ void winkey_eeprom_download() {
 //-------------------------------------------------------------------------------------------------------
 
 #ifdef FEATURE_WINKEY_EMULATION
-void winkey_port_write(byte byte_to_send){
+void winkey_port_write(byte byte_to_send,byte override_filter){
 
   #ifdef DEBUG_WINKEY_PORT_WRITE
   if ((byte_to_send > 4) && (byte_to_send < 31)){
@@ -9508,6 +9508,23 @@ void winkey_port_write(byte byte_to_send){
     //return;
   }
   #endif
+
+  if (((byte_to_send > 4) && (byte_to_send < 31)) && (!override_filter)){
+    #ifdef DEBUG_WINKEY
+      debug_serial_port->print("Winkey Port TX: FILTERED: ");    
+      if ((byte_to_send > 31) && (byte_to_send < 127)){
+        debug_serial_port->write(byte_to_send);
+      } else {
+        debug_serial_port->print(".");
+      }
+      debug_serial_port->print(" [");
+      debug_serial_port->print(byte_to_send);
+      debug_serial_port->print("] [0x");
+      debug_serial_port->print(byte_to_send,HEX);
+      debug_serial_port->println("]");
+    #endif
+    return;
+  }
 
   primary_serial_port->write(byte_to_send);
   #ifdef DEBUG_WINKEY
@@ -9557,7 +9574,7 @@ void service_winkey(byte action) {
   byte i_sent_it = 0;
 
   if ((millis() > 30000) && (!i_sent_it)){
-    winkey_port_write(30);
+    winkey_port_write(30,1);
     i_sent_it = 1;
   }
 
@@ -9591,8 +9608,8 @@ void service_winkey(byte action) {
 
         winkey_interrupted = 0;
         //winkey_port_write(0xc2|winkey_sending|winkey_xoff);  
-        winkey_port_write(0xc6);    //<- this alone makes N1MM logger get borked (0xC2 = paddle interrupt)
-        winkey_port_write(0xc0);    // so let's send a 0xC0 to keep N1MM logger happy 
+        winkey_port_write(0xc6,0);    //<- this alone makes N1MM logger get borked (0xC2 = paddle interrupt)
+        winkey_port_write(0xc0,0);    // so let's send a 0xC0 to keep N1MM logger happy 
         winkey_buffer_counter = 0;
         winkey_buffer_pointer = 0;  
       }
@@ -9607,7 +9624,7 @@ void service_winkey(byte action) {
           debug_serial_port->println("\r\nservice_winkey: sending unsolicited status byte...");
         #endif //DEBUG_WINKEY           
         winkey_sending = 0;
-        winkey_port_write(0xc0|winkey_sending|winkey_xoff);    // tell the host we've sent everything
+        winkey_port_write(0xc0|winkey_sending|winkey_xoff,0);    // tell the host we've sent everything
         winkey_buffer_counter = 0;
         winkey_buffer_pointer = 0;
       }
@@ -9620,13 +9637,13 @@ void service_winkey(byte action) {
       winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       winkey_buffer_counter = 0;
       winkey_buffer_pointer = 0;
-      winkey_port_write(0xc0|winkey_sending|winkey_xoff);    //send a status byte back for giggles
+      winkey_port_write(0xc0|winkey_sending|winkey_xoff,0);    //send a status byte back for giggles
     }  
     if ((winkey_host_open) && (winkey_paddle_echo_buffer) && (winkey_paddle_echo_activated) && (millis() > winkey_paddle_echo_buffer_decode_time)) {
       #ifdef DEBUG_WINKEY
         debug_serial_port->println("\r\nservice_winkey: sending paddle echo char...");
       #endif //DEBUG_WINKEY       
-      winkey_port_write(byte(convert_cw_number_to_ascii(winkey_paddle_echo_buffer)));
+      winkey_port_write(byte(convert_cw_number_to_ascii(winkey_paddle_echo_buffer)),0);
       winkey_paddle_echo_buffer = 0;
       winkey_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
       winkey_paddle_echo_space_sent = 0;
@@ -9635,7 +9652,7 @@ void service_winkey(byte action) {
       #ifdef DEBUG_WINKEY
         debug_serial_port->println("\r\nservice_winkey: sending paddle echo space...");
       #endif //DEBUG_WINKEY        
-      winkey_port_write(' ');
+      winkey_port_write(' ',0);
       winkey_paddle_echo_space_sent = 1;
     }
   }  // if (action == WINKEY_HOUSEKEEPING)
@@ -9712,7 +9729,7 @@ void service_winkey(byte action) {
           #endif //DEBUG_WINKEY          
           winkey_sending=0x04;
           #if !defined(OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE)
-            winkey_port_write(0xc4|winkey_sending|winkey_xoff);  // tell the client we're starting to send
+            winkey_port_write(0xc4|winkey_sending|winkey_xoff,0);  // tell the client we're starting to send
           #endif //OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE
           #ifdef FEATURE_MEMORIES
             repeat_memory = 255;
@@ -9769,10 +9786,10 @@ void service_winkey(byte action) {
             break;
           case 0x07:
             #ifdef FEATURE_POTENTIOMETER
-              winkey_port_write(((pot_value_wpm()-pot_wpm_low_value)|128));
+              winkey_port_write(((pot_value_wpm()-pot_wpm_low_value)|128),0);
             #endif
             #ifndef FEATURE_POTENTIOMETER
-              winkey_port_write((byte(configuration.wpm-pot_wpm_low_value)|128));
+              winkey_port_write((byte(configuration.wpm-pot_wpm_low_value)|128),0);
             #endif
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey: report pot");
@@ -9808,7 +9825,7 @@ void service_winkey(byte action) {
             if (winkey_sending) {
               clear_send_buffer();
               winkey_sending = 0;
-              winkey_port_write(0xc0|winkey_sending|winkey_xoff);
+              winkey_port_write(0xc0|winkey_sending|winkey_xoff,0);
             }
             pause_sending_buffer = 0;
             winkey_buffer_counter = 0;
@@ -9887,7 +9904,7 @@ void service_winkey(byte action) {
               if (send_buffer_status == SERIAL_SEND_BUFFER_TIMED_COMMAND) {
                 status_byte_to_send = status_byte_to_send | 16;
               }
-              winkey_port_write(status_byte_to_send);
+              winkey_port_write(status_byte_to_send,0);
               #ifdef DEBUG_WINKEY
                 debug_serial_port->print("service_winkey: 0x15 rpt status: ");
                 debug_serial_port->println(status_byte_to_send);
@@ -9898,7 +9915,7 @@ void service_winkey(byte action) {
                 if (send_buffer_status == SERIAL_SEND_BUFFER_TIMED_COMMAND) {
                   status_byte_to_send = status_byte_to_send | 16;
                 }
-                winkey_port_write(status_byte_to_send);
+                winkey_port_write(status_byte_to_send,0);
                 #ifdef DEBUG_WINKEY
                 debug_serial_port->print("service_winkey: 0x15 rpt status: ");
                 debug_serial_port->println(status_byte_to_send);
@@ -9998,7 +10015,7 @@ void service_winkey(byte action) {
           debug_serial_port->println(winkey_parmcount);
         #endif //DEBUG_WINKEY          
         if (winkey_parmcount == 0) {
-          winkey_port_write(0xc0|winkey_sending|winkey_xoff);           
+          winkey_port_write(0xc0|winkey_sending|winkey_xoff,0);           
           winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
           #ifdef DEBUG_WINKEY
             debug_serial_port->print("service_winkey: WINKEY_UNSUPPORTED_COMMAND: WINKEY_NO_COMMAND_IN_PROGRESS");
@@ -10217,9 +10234,9 @@ void service_winkey(byte action) {
             break;  // reset command
           case 0x02:  // host open command - send version back to host
             #ifdef OPTION_WINKEY_2_SUPPORT
-              winkey_port_write(WINKEY_2_REPORT_VERSION_NUMBER);
+              winkey_port_write(WINKEY_2_REPORT_VERSION_NUMBER,1);
             #else //OPTION_WINKEY_2_SUPPORT
-              winkey_port_write(WINKEY_1_REPORT_VERSION_NUMBER);
+              winkey_port_write(WINKEY_1_REPORT_VERSION_NUMBER,1);
             #endif //OPTION_WINKEY_2_SUPPORT
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             manual_ptt_invoke = 0;
@@ -10256,14 +10273,14 @@ void service_winkey(byte action) {
             #endif //DEBUG_WINKEY              
             break;
           case 0x05: // paddle A2D
-            winkey_port_write(zero);
+            winkey_port_write(zero,0);
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND paddle A2D");
             #endif //DEBUG_WINKEY              
             break;
           case 0x06: // speed A2D
-            winkey_port_write(zero);
+            winkey_port_write(zero,0);
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND speed A2D");
@@ -10286,7 +10303,7 @@ void service_winkey(byte action) {
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND get cal");
             #endif //DEBUG_WINKEY           
-            winkey_port_write(zero);
+            winkey_port_write(zero,0);
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
           #ifdef OPTION_WINKEY_2_SUPPORT
@@ -10334,7 +10351,7 @@ void service_winkey(byte action) {
             #endif //DEBUG_WINKEY            
             break;            
           case 0x10: // reserved
-            winkey_port_write(zero);
+            winkey_port_write(zero,0);
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
           case 0x11: // set high baud rate
@@ -10366,7 +10383,7 @@ void service_winkey(byte action) {
           #ifdef DEBUG_WINKEY
             debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND echoing a byte...");
           #endif //DEBUG_WINKEY  
-          winkey_port_write(incoming_serial_byte);
+          winkey_port_write(incoming_serial_byte,1);
           winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
         }
       }
@@ -10464,8 +10481,8 @@ void service_winkey(byte action) {
         #endif
         switch (incoming_serial_byte) {
           case 0: winkey_dit_invoke = 0; winkey_dah_invoke = 0; break;
-          case 1: winkey_dit_invoke = 1; winkey_dah_invoke = 0; break;
-          case 2: winkey_dit_invoke = 0; winkey_dah_invoke = 1; break;
+          case 1: winkey_dit_invoke = 0; winkey_dah_invoke = 1; break;
+          case 2: winkey_dit_invoke = 1; winkey_dah_invoke = 0; break;
           case 3: winkey_dah_invoke = 1; winkey_dit_invoke = 1; break;
         }
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
@@ -14687,13 +14704,13 @@ byte play_memory(byte memory_number)
   
                   #if defined(OPTION_PROSIGN_SUPPORT)
                     if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
-                      winkey_port_write(prosign_temp[0]);
-                      winkey_port_write(prosign_temp[1]);                 
+                      winkey_port_write(prosign_temp[0],0);
+                      winkey_port_write(prosign_temp[1],0);                 
                     } else {
-                      winkey_port_write(eeprom_byte_read);
+                      winkey_port_write(eeprom_byte_read,0);
                     }
                   #else
-                    winkey_port_write(eeprom_byte_read);
+                    winkey_port_write(eeprom_byte_read,0);
                   #endif // OPTION_PROSIGN_SUPPORT
 
 
@@ -17548,7 +17565,7 @@ void service_winkey_breakin(){
 
 
   if (send_winkey_breakin_byte_flag){
-    winkey_port_write(0xc2|winkey_sending|winkey_xoff); // 0xc2 - BREAKIN bit set high
+    winkey_port_write(0xc2|winkey_sending|winkey_xoff,0); // 0xc2 - BREAKIN bit set high
     winkey_interrupted = 1;
     send_winkey_breakin_byte_flag = 0;
     #ifdef DEBUG_WINKEY
