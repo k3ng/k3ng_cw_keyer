@@ -906,6 +906,9 @@ Recent Update History
       Deprecated OPTION_KEEP_PTT_KEYED_WHEN_CHARS_BUFFERED.  Winkey PINCONFIG PTT bit now sets / unsets ptt_buffer_hold_active
       New CLI command \" to activate/deactivate PTT Hold Active When Characters Buffered functionality
 
+    2018.05.04.01
+      Winkey Emulation - minor addition to filtering of values echoed from send_char()  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -920,7 +923,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.04.29.01"
+#define CODE_VERSION "2018.05.04.01"
 #define eeprom_magic_number 32               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -8560,13 +8563,14 @@ void service_send_buffer(byte no_print)
         #ifdef FEATURE_WINKEY_EMULATION
           if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open) && (!no_print) && (!cw_send_echo_inhibit)){
             #if defined(OPTION_WINKEY_ECHO_7C_BYTE)
-              winkey_port_write(send_buffer_array[0]);
+              if (send_buffer_array[0] > 30) {winkey_port_write(send_buffer_array[0]);}
             #else
-              if (send_buffer_array[0]!= 0x7C){winkey_port_write(send_buffer_array[0]);}
+              if ((send_buffer_array[0]!= 0x7C) && (send_buffer_array[0] > 30)) {winkey_port_write(send_buffer_array[0]);}
             #endif
-            if (send_buffer_array[0] == 13) {
-              winkey_port_write(10);  // if we got a carriage return, also send a line feed          
-            }
+            //zzzz
+            // if (send_buffer_array[0] == 13) {
+            //   winkey_port_write(10);  // if we got a carriage return, also send a line feed          
+            // }
           }
         #endif //FEATURE_WINKEY_EMULATION
 
@@ -9494,10 +9498,20 @@ void winkey_eeprom_download() {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_port_write(byte byte_to_send){
 
+  #ifdef DEBUG_WINKEY_PORT_WRITE
+  if ((byte_to_send > 4) && (byte_to_send < 31)){
+    boop();
+    delay(500);
+    boop();
+    delay(500);
+    boop();
+    //return;
+  }
+  #endif
+
   primary_serial_port->write(byte_to_send);
   #ifdef DEBUG_WINKEY
     debug_serial_port->print("Winkey Port TX: ");    
-    // if ((byte_to_send != 13) && (byte_to_send != 9) && (byte_to_send != 10)){
     if ((byte_to_send > 31) && (byte_to_send < 127)){
       debug_serial_port->write(byte_to_send);
     } else {
@@ -9517,16 +9531,6 @@ void winkey_port_write(byte byte_to_send){
 
 #ifdef FEATURE_WINKEY_EMULATION
 void service_winkey(byte action) {
-
-  /*
-  
-  One reason I wrote this emulation:
-  
-  "The Winkey chip is $11.  We can't make the logging program a base for home brew projects. It's a contest logger."
-  
-  -N1MM 6/12/2011
-  
-  */
    
   static byte winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
   static int winkey_parmcount = 0;
@@ -9548,6 +9552,17 @@ void service_winkey(byte action) {
       }
     }
   #endif //OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP
+
+  #ifdef DEBUG_WINKEY_SEND_ERRANT_BYTE
+  byte i_sent_it = 0;
+
+  if ((millis() > 30000) && (!i_sent_it)){
+    winkey_port_write(30);
+    i_sent_it = 1;
+  }
+
+  #endif
+
   
   #ifdef OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST
     static byte ignored_first_status_request = 0;
@@ -9577,7 +9592,7 @@ void service_winkey(byte action) {
         winkey_interrupted = 0;
         //winkey_port_write(0xc2|winkey_sending|winkey_xoff);  
         winkey_port_write(0xc6);    //<- this alone makes N1MM logger get borked (0xC2 = paddle interrupt)
-        winkey_port_write(0xc0);    // so let's send a 0xC0 to keep N1MM logger happy weeeeee (wouldn't it be great if it was open source and someone could verify exactly how it's coded?)
+        winkey_port_write(0xc0);    // so let's send a 0xC0 to keep N1MM logger happy 
         winkey_buffer_counter = 0;
         winkey_buffer_pointer = 0;  
       }
@@ -9803,8 +9818,7 @@ void service_winkey(byte action) {
             #endif
             sending_mode = AUTOMATIC_SENDING;
             manual_ptt_invoke = 0;
-            tx_and_sidetone_key(0);  // N1MM program needs this for the CTRL-T tune command to work right since it issues a 0x0a
-                                     // rather than 0x0b 0x00 to clear a key down - doesn't follow protocol spec
+            tx_and_sidetone_key(0); 
                                    
             break;
           case 0x0b:
