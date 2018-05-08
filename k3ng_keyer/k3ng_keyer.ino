@@ -912,6 +912,9 @@ Recent Update History
     2018.05.05.01
       Winkey Emulation - minor bug fix with handling of PTT tail time setting.  Also added support in Admin Get Values command to report PTT lead and tail time  
 
+    2018.05.08.01
+      Fixed bug in CLI with multiple backspaces / backspaces exceeding number of characters in buffer locking up the keyer (Thanks, WF3T)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -926,7 +929,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.05.05.01"
+#define CODE_VERSION "2018.05.08.01"
 #define eeprom_magic_number 32               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -8716,7 +8719,9 @@ void add_to_send_buffer(byte incoming_serial_byte)
         #endif
               
       } else {  // we got a backspace
-        send_buffer_bytes--;
+        if (send_buffer_bytes){
+          send_buffer_bytes--;
+        }
       }
     }
 //  }
