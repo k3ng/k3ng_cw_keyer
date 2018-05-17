@@ -818,7 +818,7 @@ Recent Update History
         FEATURE_SIDETONE_SWITCH switch line is now set for internal pullup so it won't cause a problem if left floating 
 
     2018.03.04.01
-      Changed command_mode_wpm from uint8_t to unsigned int
+      Changed wpm_command_mode from uint8_t to unsigned int
       Fixed minor bug with junk left in paddle echo buffer after exiting command mode
 
     2018.03.04.02
@@ -915,6 +915,12 @@ Recent Update History
     2018.05.08.01
       Fixed bug in CLI with multiple backspaces / backspaces exceeding number of characters in buffer locking up the keyer (Thanks, WF3T)
 
+    2018.05.10.01
+      Removed OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND.  The bug appears to be gone when testing a recent version of N1MM+.
+
+    2018.05.17.01
+      Updated to better handle STM32 board compilation (Thanks, Marcin, SP5IOU)  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -929,8 +935,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.05.08.01"
-#define eeprom_magic_number 32               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2018.05.17.01"
+#define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -940,7 +946,7 @@ Recent Update History
   #include <Wire.h>
   #define tone toneDUE
   #define noTone noToneDUE
-#elif defined(ARDUINO_MAPLE_MINI)|| defined(ARDUINO_GENERIC_STM32F103C)
+#elif defined(ARDUINO_MAPLE_MINI)|| defined(ARDUINO_GENERIC_STM32F103C) || defined(__STM32F1__)
   #include <SPI.h>
   #include <Wire.h>
   #include <EEPROM.h> 
@@ -1100,7 +1106,7 @@ Recent Update History
 #define memory_area_start 110             // sp5iou 20180328 the eeprom location where memory space starts  for STM32 it must be at least 110 to avoid overlap mem 1 with wpm settings 
 
 // Variables and stuff
-struct config_t {  // 81 bytes total
+struct config_t {  // 87 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1128,9 +1134,14 @@ struct config_t {  // 81 bytes total
   unsigned int dah_to_dit_ratio;
   unsigned int wpm_farnsworth;
   unsigned int memory_repeat_time;
-  unsigned int command_mode_wpm;
+  unsigned int wpm_command_mode;
   unsigned int link_receive_udp_port; 
-    // 14 bytes 
+    
+
+  unsigned int wpm_ps2_usb_keyboard;
+  unsigned int wpm_cli;
+  unsigned int wpm_winkey;
+    // 20 bytes 
 
   uint8_t ip[4];
   uint8_t gateway[4];  
@@ -1843,7 +1854,7 @@ byte service_tx_inhibit_and_pause(){
       dit_buffer = 0;
       dah_buffer = 0; 
       return_code = 1;
-      if (send_buffer_bytes > 0){
+      if (send_buffer_bytes){
         clear_send_buffer();
         send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
         #ifdef FEATURE_MEMORIES
@@ -3151,7 +3162,7 @@ void check_ps2_keyboard()
           #endif //OPTION_SAVE_MEMORY_NANOKEYER
         #endif //FEATURE_MEMORIES
 
-        case PS2_DELETE : if (send_buffer_bytes > 0) { send_buffer_bytes--; } break;
+        case PS2_DELETE : if (send_buffer_bytes) { send_buffer_bytes--; } break;
         case PS2_ESC :  // clear the serial send buffer and a bunch of other stuff
           if (manual_ptt_invoke) {
             manual_ptt_invoke = 0;
@@ -3716,7 +3727,7 @@ void check_ps2_keyboard()
         case PS2_F12_ALT : if (number_of_memories > 11) {repeat_memory_msg(11);} break;
         #endif
 
-        case PS2_DELETE : if (send_buffer_bytes > 0) { send_buffer_bytes--; } break;
+        case PS2_DELETE : if (send_buffer_bytes) { send_buffer_bytes--; } break;
         case PS2_ESC :  // clear the serial send buffer and a bunch of other stuff
           if (manual_ptt_invoke) {
             manual_ptt_invoke = 0;
@@ -5422,7 +5433,7 @@ void send_dit(){
   #endif //FEATURE_FARNSWORTH
 
   if (keyer_machine_mode == KEYER_COMMAND_MODE){
-    character_wpm = configuration.command_mode_wpm;
+    character_wpm = configuration.wpm_command_mode;
   } else {
     character_wpm = configuration.wpm;
   }
@@ -5516,7 +5527,7 @@ void send_dah(){
   #endif //FEATURE_FARNSWORTH
 
   if (keyer_machine_mode == KEYER_COMMAND_MODE){
-    character_wpm = configuration.command_mode_wpm;
+    character_wpm = configuration.wpm_command_mode;
   } else {
     character_wpm = configuration.wpm;
   }
@@ -5967,14 +5978,14 @@ void speed_change(int change)
 
 void speed_change_command_mode(int change)
 {
-  if (((configuration.command_mode_wpm + change) > wpm_limit_low) && ((configuration.command_mode_wpm + change) < wpm_limit_high)) {
-    configuration.command_mode_wpm = configuration.command_mode_wpm + change;
+  if (((configuration.wpm_command_mode + change) > wpm_limit_low) && ((configuration.wpm_command_mode + change) < wpm_limit_high)) {
+    configuration.wpm_command_mode = configuration.wpm_command_mode + change;
     config_dirty = 1;
   }
   
 
   #ifdef FEATURE_DISPLAY
-    lcd_center_print_timed(String(configuration.command_mode_wpm) + " wpm", 0, default_display_msg_delay);
+    lcd_center_print_timed(String(configuration.wpm_command_mode) + " wpm", 0, default_display_msg_delay);
   #endif
 }
 
@@ -7293,7 +7304,7 @@ void command_speed_mode(byte mode)
     if (mode == COMMAND_SPEED_MODE_KEYER_WPM){
       sprintf(c, "%d", configuration.wpm);
     } else {
-      sprintf(c, "%d", configuration.command_mode_wpm);
+      sprintf(c, "%d", configuration.wpm_command_mode);
     }  
     send_char(' ',KEYER_NORMAL);
     send_char(c[0],KEYER_NORMAL);
@@ -8449,7 +8460,7 @@ void service_send_buffer(byte no_print)
   static byte timed_command_in_progress = 0;
 
   if (send_buffer_status == SERIAL_SEND_BUFFER_NORMAL) {
-    if ((send_buffer_bytes > 0) && (pause_sending_buffer == 0)) {
+    if ((send_buffer_bytes) && (pause_sending_buffer == 0)) {
       #ifdef FEATURE_SLEEP
         last_activity_time = millis(); 
       #endif //FEATURE_SLEEP
@@ -8477,7 +8488,7 @@ void service_send_buffer(byte no_print)
              }
           #endif
           remove_from_send_buffer();
-          if (send_buffer_bytes > 0) {
+          if (send_buffer_bytes) {
             if (send_buffer_array[0] < number_of_memories) {
               #ifdef FEATURE_MEMORIES
                 play_memory(send_buffer_array[0]);
@@ -8518,11 +8529,11 @@ void service_send_buffer(byte no_print)
 
         if (send_buffer_array[0] == SERIAL_SEND_BUFFER_PROSIGN) {
           remove_from_send_buffer();
-          if (send_buffer_bytes > 0) {
+          if (send_buffer_bytes) {
             send_char(send_buffer_array[0],OMIT_LETTERSPACE);
             remove_from_send_buffer();
           }
-          if (send_buffer_bytes > 0) {
+          if (send_buffer_bytes) {
             send_char(send_buffer_array[0],KEYER_NORMAL);
             remove_from_send_buffer();
           }
@@ -8530,7 +8541,7 @@ void service_send_buffer(byte no_print)
 
         if (send_buffer_array[0] == SERIAL_SEND_BUFFER_TIMED_KEY_DOWN) {
           remove_from_send_buffer();
-          if (send_buffer_bytes > 0) {
+          if (send_buffer_bytes) {
             send_buffer_status = SERIAL_SEND_BUFFER_TIMED_COMMAND;
             sending_mode = AUTOMATIC_SENDING;
             tx_and_sidetone_key(1);
@@ -8542,7 +8553,7 @@ void service_send_buffer(byte no_print)
 
         if (send_buffer_array[0] == SERIAL_SEND_BUFFER_TIMED_WAIT) {
           remove_from_send_buffer();
-          if (send_buffer_bytes > 0) {
+          if (send_buffer_bytes) {
             send_buffer_status = SERIAL_SEND_BUFFER_TIMED_COMMAND;
             timed_command_end_time = millis() + (send_buffer_array[0] * 1000);
             timed_command_in_progress = SERIAL_SEND_BUFFER_TIMED_WAIT;
@@ -8648,7 +8659,7 @@ void service_send_buffer(byte no_print)
 
   //if the paddles are hit, dump the buffer
   check_paddles();
-  if ((dit_buffer || dah_buffer) && (send_buffer_bytes  > 0)) {
+  if ((dit_buffer || dah_buffer) && (send_buffer_bytes)) {
     clear_send_buffer();
     send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
     dit_buffer = 0;
@@ -8686,16 +8697,16 @@ void remove_from_send_buffer()
     }
   #endif
   
-  if (send_buffer_bytes > 0) {
+  if (send_buffer_bytes) {
     send_buffer_bytes--;
   }
-  if (send_buffer_bytes > 0) {
+  if (send_buffer_bytes) {
     for (int x = 0;x < send_buffer_bytes;x++) {
       send_buffer_array[x] = send_buffer_array[x+1];
     }
     #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_FREQUENT_STATUS_REPORT)
       winkey_port_write(0xc0|winkey_sending|winkey_xoff,0);
-   #endif
+    #endif
   }
 }
 
@@ -8703,28 +8714,26 @@ void remove_from_send_buffer()
 
 void add_to_send_buffer(byte incoming_serial_byte)
 {
-//  if ((incoming_serial_byte == SERIAL_SEND_BUFFER_HOLD_SEND_RELEASE) && (send_buffer_status == SERIAL_SEND_BUFFER_HOLD)) {
-//    send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
-//  } else {
-    if (send_buffer_bytes < send_buffer_size) {
-      if (incoming_serial_byte != 127) {
-        send_buffer_bytes++;
-        send_buffer_array[send_buffer_bytes - 1] = incoming_serial_byte;
-        
-        #ifdef FEATURE_WINKEY_EMULATION
-          if ((send_buffer_bytes>winkey_xoff_threshold) && winkey_host_open) {
-            winkey_xoff=1;
-            winkey_port_write(0xc0|winkey_sending|winkey_xoff,0); //send XOFF status         
-          }
-        #endif
-              
-      } else {  // we got a backspace
-        if (send_buffer_bytes){
-          send_buffer_bytes--;
+
+  if (send_buffer_bytes < send_buffer_size) {
+    if (incoming_serial_byte != 127) {
+      send_buffer_bytes++;
+      send_buffer_array[send_buffer_bytes - 1] = incoming_serial_byte;
+  
+      #ifdef FEATURE_WINKEY_EMULATION
+        if ((send_buffer_bytes>winkey_xoff_threshold) && winkey_host_open) {
+          winkey_xoff=1;
+          winkey_port_write(0xc0|winkey_sending|winkey_xoff,0); //send XOFF status         
         }
+      #endif
+            
+    } else {  // we got a backspace
+      if (send_buffer_bytes){
+        send_buffer_bytes--;
       }
     }
-//  }
+  }
+
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -9231,11 +9240,9 @@ void winkey_admin_get_values_command() {
 
   // 5 - ptt lead
   winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1]/10,1);
-  //winkey_port_write(zero,1);   //zzzzzz
 
   // 6 - ptt tail
-  winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1);
-  //winkey_port_write(zero,1);  
+  winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1); 
 
   // 7 - pot min wpm
   #ifdef FEATURE_POTENTIOMETER
@@ -9559,9 +9566,7 @@ void service_winkey(byte action) {
   static unsigned long winkey_last_activity;
   byte status_byte_to_send;
   static byte winkey_paddle_echo_space_sent = 1;
-  #ifdef OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND
-    static unsigned long winkey_connect_time = 0;
-  #endif //OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND
+
   #ifdef OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP
     static byte winkey_discard_bytes_init_done = 0;  
     if (!winkey_discard_bytes_init_done) {
@@ -9708,7 +9713,7 @@ void service_winkey(byte action) {
 
         if (winkey_buffer_pointer > 0) {
           serial_buffer_position_to_overwrite = send_buffer_bytes - (winkey_buffer_counter - winkey_buffer_pointer) - 1;
-          if ((send_buffer_bytes > 0) && (serial_buffer_position_to_overwrite < send_buffer_bytes )) {
+          if ((send_buffer_bytes) && (serial_buffer_position_to_overwrite < send_buffer_bytes )) {
             send_buffer_array[serial_buffer_position_to_overwrite] = incoming_serial_byte;
           }
           winkey_buffer_pointer++;
@@ -9801,7 +9806,7 @@ void service_winkey(byte action) {
             #endif //DEBUG_WINKEY               
             break;
           case 0x08:    // backspace command
-            if (send_buffer_bytes > 0) {
+            if (send_buffer_bytes) {
               send_buffer_bytes--;
             }
             #ifdef DEBUG_WINKEY
@@ -9809,19 +9814,10 @@ void service_winkey(byte action) {
             #endif //DEBUG_WINKEY               
             break;
           case 0x09:
-            #ifdef OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND     // this is a hack; if someone hits TAB in the send CW Window in N1MM, it sends a 0x09
-              if ((millis() - winkey_connect_time) < 10000) {  // which according to the standard should be interpreted as a pinconfig command
-                winkey_status = WINKEY_SET_PINCONFIG_COMMAND;  // if we've been connected for more than 10 seconds, ignore the 0x09 byte
-              }
-              #ifdef DEBUG_WINKEY
-                debug_serial_port->println("service_winkey: WINKEY_SET_PINCONFIG_COMMAND (N1MM bug workaround)");
-              #endif //DEBUG_WINKEY             
-            #else
-              #ifdef DEBUG_WINKEY
-                debug_serial_port->println("service_winkey: WINKEY_SET_PINCONFIG_COMMAND");
-              #endif //DEBUG_WINKEY             
-              winkey_status = WINKEY_SET_PINCONFIG_COMMAND;
-            #endif
+            #ifdef DEBUG_WINKEY
+              debug_serial_port->println("service_winkey: WINKEY_SET_PINCONFIG_COMMAND");
+            #endif //DEBUG_WINKEY             
+            winkey_status = WINKEY_SET_PINCONFIG_COMMAND;
             break;
           case 0x0a:                 // 0A - clear buffer - no parms
             #ifdef DEBUG_WINKEY
@@ -10159,7 +10155,7 @@ void service_winkey(byte action) {
         for (byte x = incoming_serial_byte; x > 0; x--) {
           if (winkey_buffer_pointer > 0) {
             serial_buffer_position_to_overwrite = send_buffer_bytes - (winkey_buffer_counter - winkey_buffer_pointer) - 1;
-            if ((send_buffer_bytes > 0) && (serial_buffer_position_to_overwrite < send_buffer_bytes )) {
+            if ((send_buffer_bytes) && (serial_buffer_position_to_overwrite < send_buffer_bytes )) {
               send_buffer_array[serial_buffer_position_to_overwrite] = SERIAL_SEND_BUFFER_NULL;
             }
             winkey_buffer_pointer++;
@@ -10246,9 +10242,6 @@ void service_winkey(byte action) {
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             manual_ptt_invoke = 0;
             winkey_host_open = 1;
-            #ifdef OPTION_N1MM_WINKEY_TAB_BUG_WORKAROUND
-              winkey_connect_time = millis();
-            #endif
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND host open");
             #endif //DEBUG_WINKEY  
@@ -13860,7 +13853,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     port_to_use->print(F("WPM: "));
     port_to_use->println(configuration.wpm,DEC);
     port_to_use->print(F("Command Mode WPM: "));
-    port_to_use->println(configuration.command_mode_wpm,DEC);
+    port_to_use->println(configuration.wpm_command_mode,DEC);
     #ifdef FEATURE_FARNSWORTH
       port_to_use->print(F("Farnsworth WPM: "));
       if (configuration.wpm_farnsworth < configuration.wpm) {
@@ -15915,7 +15908,7 @@ void initialize_keyer_state(){
   configuration.wordsworth_repetition = default_wordsworth_repetition;
   configuration.wpm_farnsworth = initial_speed_wpm;
   configuration.cli_mode = CLI_NORMAL_MODE;
-  configuration.command_mode_wpm = initial_command_mode_speed_wpm;
+  configuration.wpm_command_mode = initial_command_mode_speed_wpm;
   configuration.ptt_buffer_hold_active = 0;
 
 
@@ -17028,7 +17021,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
       return;       
       break;
       
-    case 0x46: if (send_buffer_bytes > 0) { send_buffer_bytes--; } return; break;  // DEL
+    case 0x46: if (send_buffer_bytes) { send_buffer_bytes--; } return; break;  // DEL
     case 0x29 :  // ESC - clear the serial send buffer and a bunch of other stuff
       if (manual_ptt_invoke) {
         manual_ptt_invoke = 0;
