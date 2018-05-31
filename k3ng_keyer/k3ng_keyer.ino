@@ -924,6 +924,9 @@ Recent Update History
     2018.05.28.01
       Addressed potential issue with random pauses when using Winkey emulation with Writelog and Wintest: Changed check_for_dirty_configuration so it won't write to eeprom when there are characters buffered or PTT is active.  Also, Winkey Pinconfig command no longer sets config_dirty.   
 
+    2018.05.31.01
+      Fixed design flaw with ptt_input_pin and manual PTT invoke commands not working independently (Thanks, Mek, SQ3RX)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -938,7 +941,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.05.28.01"
+#define CODE_VERSION "2018.05.31.01"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5160,17 +5163,21 @@ void check_ptt_tail()
     debug_serial_port->println(F("loop: entering check_ptt_tail"));
   #endif
 
+  static byte manual_ptt_invoke_ptt_input_pin = 0;
+
 
   if (ptt_input_pin){
     if ((digitalRead(ptt_input_pin) == ptt_input_pin_active_state)){
       if (!manual_ptt_invoke){
         manual_ptt_invoke = 1;
+        manual_ptt_invoke_ptt_input_pin = 1;
         ptt_key();
         return; 
       }
     } else {
-      if (manual_ptt_invoke){
+      if ((manual_ptt_invoke) && (manual_ptt_invoke_ptt_input_pin)){
         manual_ptt_invoke = 0;
+        manual_ptt_invoke_ptt_input_pin = 0;
         if (!key_state){
           ptt_unkey();
         }
