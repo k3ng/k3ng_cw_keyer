@@ -2,17 +2,17 @@
 #ifndef keyer_pin_settings_h
 #define keyer_pin_settings_h
 
-#define paddle_left 3
-#define paddle_right 5
-#define tx_key_line_1 11       // (high = key down/tx on)
-#define tx_key_line_2 0
+#define paddle_left 21
+#define paddle_right 22
+#define tx_key_line_1 28        // (high = key down/tx on)
+#define tx_key_line_2 31
 #define tx_key_line_3 0
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-#define sidetone_line 4         // connect a speaker for sidetone
+#define sidetone_line 23        // connect a speaker for sidetone
 #define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
-#define ptt_tx_1 12             // PTT ("push to talk") lines
+#define ptt_tx_1 0              // PTT ("push to talk") lines
 #define ptt_tx_2 0              // Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
 #define ptt_tx_3 0              // These are optional - set to 0 if unused
 #define ptt_tx_4 0
@@ -30,20 +30,11 @@
 #ifdef FEATURE_LCD_4BIT
   #define lcd_rs 26 // A2
   #define lcd_enable 20
-  #define lcd_d4 6
-  #define lcd_d5 7
-  #define lcd_d6 13
-  #define lcd_d7 14
+  #define lcd_d4 12
+  #define lcd_d5 13
+  #define lcd_d6 14
+  #define lcd_d7 15
 #endif //FEATURE_LCD_4BIT
-
-#ifdef FEATURE_LCD1602_N07DH
-  #define lcd_rs 8
-  #define lcd_enable 9
-  #define lcd_d4 4
-  #define lcd_d5 5
-  #define lcd_d6 6
-  #define lcd_d7 7
-#endif //FEATURE_LCD1602_N07DH
 
 //ps2 keyboard pins
 #ifdef FEATURE_PS2_KEYBOARD
