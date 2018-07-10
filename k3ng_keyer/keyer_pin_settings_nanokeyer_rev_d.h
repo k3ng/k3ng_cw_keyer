@@ -48,6 +48,19 @@ FEATURE_SIDETONE_SWITCH
   #define SIDETONE_SWITCH 8
 #endif //FEATURE_SIDETONE_SWITCH
 
+#ifdef FEATURE_SEQUENCER
+  #define sequencer_1_pin 0
+  #define sequencer_2_pin 0
+  #define sequencer_3_pin 0
+  #define sequencer_4_pin 0
+  #define sequencer_5_pin 0
+#endif //FEATURE_SEQUENCER
+
+#define ptt_input_pin 0
+
+#define tx_inhibit_pin 0
+#define tx_pause_pin 0   
+
 #else
 
   #error "Multiple pin_settings.h files included somehow..."
