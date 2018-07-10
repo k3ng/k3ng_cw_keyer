@@ -63,7 +63,7 @@
 
 
 #ifdef FEATURE_COMMAND_BUTTONS
-  #define analog_buttons_number_of_buttons 5
+  #define analog_buttons_number_of_buttons 8
   #define analog_buttons_r1 10
   #define analog_buttons_r2 1
 #endif
