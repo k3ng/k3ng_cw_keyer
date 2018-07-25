@@ -927,6 +927,9 @@ Recent Update History
     2018.05.31.01
       Fixed design flaw with ptt_input_pin and manual PTT invoke commands not working independently (Thanks, Mek, SQ3RX)
 
+    2018.07.15.01
+      Added FEATURE_LCD_8BIT for controlling standard LCD displays with 8 data lines
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -941,7 +944,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.05.31.01"
+#define CODE_VERSION "2018.07.15.01"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1045,7 +1048,7 @@ Recent Update History
   #include <K3NG_PS2Keyboard.h>  // It should be different library for ARM sp5iou (?)
 #endif
 
-#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH) // works on 3.2V supply and logic, but do not work on every pins (SP5IOU)
+#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH) || defined (FEATURE_LCD_8BIT)// works on 3.2V supply and logic, but do not work on every pins (SP5IOU)
   #include <LiquidCrystal.h>
   #include <Wire.h>
 #endif
@@ -1427,6 +1430,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 #if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH)
   LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
 #endif
+
+#if defined(FEATURE_LCD_8BIT)
+  LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d0, lcd_d1, lcd_d2, lcd_d3, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
+#endif  
 
 #if defined(FEATURE_LCD_ADAFRUIT_I2C)
   Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
@@ -15656,6 +15663,9 @@ void initialize_debug_startup(){
   #ifdef FEATURE_LCD_4BIT
   debug_serial_port->println(F("FEATURE_LCD_4BIT"));
   #endif  
+  #ifdef FEATURE_LCD_8BIT
+  debug_serial_port->println(F("FEATURE_LCD_8BIT"));
+  #endif    
   debug_serial_port->println(F("setup: exiting, going into loop"));
 #endif //DEBUG_STARTUP  
 }

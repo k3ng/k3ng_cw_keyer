@@ -62,6 +62,13 @@ FEATURE_SIDETONE_SWITCH
   #define lcd_d7 22
 #endif //FEATURE_LCD_4BIT
 
+#if defined(FEATURE_LCD_8BIT) // addition four data lines for 8 bit LCD control
+  #define lcd_d0 23
+  #define lcd_d1 24
+  #define lcd_d2 25
+  #define lcd_d3 26
+#endif //FEATURE_LCD_4BIT || defined(FEATURE_LCD_8BIT)
+
 #ifdef FEATURE_LCD1602_N07DH
   #define lcd_rs 17
   #define lcd_enable 18

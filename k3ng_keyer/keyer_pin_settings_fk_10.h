@@ -50,14 +50,21 @@
 
 
 //lcd pins
-#ifdef FEATURE_LCD_4BIT
-  #define lcd_rs 49
-  #define lcd_enable 48
-  #define lcd_d4 47
-  #define lcd_d5 46
-  #define lcd_d6 45
-  #define lcd_d7 44
-#endif //FEATURE_LCD_4BIT
+#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD_8BIT)
+  #define lcd_rs A2
+  #define lcd_enable 10  // pin 10 is used by Ethernet shield and will conflict with that
+  #define lcd_d4 6
+  #define lcd_d5 7
+  #define lcd_d6 8
+  #define lcd_d7 9
+#endif //FEATURE_LCD_4BIT || defined(FEATURE_LCD_8BIT)
+
+#if defined(FEATURE_LCD_8BIT) // addition four data lines for 8 bit LCD control
+  #define lcd_d0 20
+  #define lcd_d1 21
+  #define lcd_d2 22
+  #define lcd_d3 23
+#endif //FEATURE_LCD_4BIT || defined(FEATURE_LCD_8BIT)
 
 #ifdef FEATURE_LCD1602_N07DH
   #define lcd_rs 8
