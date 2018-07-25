@@ -1,5 +1,6 @@
 // Initial and hardcoded settings
 #define initial_speed_wpm 26             // "factory default" keyer speed setting
+#define initial_command_mode_speed_wpm 20 // "factory default" command mode speed setting 
 #define initial_sidetone_freq 600        // "factory default" sidetone frequency setting
 #define hz_high_beep 1500                // frequency in hertz of high beep
 #define hz_low_beep 400                  // frequency in hertz of low beep
@@ -30,7 +31,6 @@
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
-#define memory_area_start 30             // the eeprom location where memory space starts
 #define memory_area_end 1023             // the eeprom location where memory space ends
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
 #define winkey_command_timeout_ms 5000
@@ -188,3 +188,75 @@
 #define FEATURE_INTERNET_LINK_MAX_LINKS 2
 #define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
 #define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500
+
+#if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
+  #define KEYPAD_ROWS 4 //KeyPad Rows
+  #if defined(FEATURE_4x4_KEYPAD)
+    #define KEYPAD_COLS 4 //keypad Columns
+  #else
+    #define KEYPAD_COLS 3
+  #endif
+  #define mem1 0 //Memory numbers for Keypad: Actual memory numbers start with "0"
+  #define mem2 1
+  #define mem3 2
+  #define mem4 3
+  #define mem5 4
+  #define mem6 5
+  #define mem7 6
+  #define mem8 7
+  #define mem9 8
+  #define mem10 9
+  #define mem11 10
+  #define mem12 11
+#endif //#if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
+
+#define initial_sidetone_mode 1            // Sidetone mode, 0=OFF, 1=ON, 2=PADDLE_ONLY
+
+#define sd_card_spi_ss_line 4
+
+#if defined(OPTION_DFROBOT_LCD_COMMAND_BUTTONS)
+
+  // For V1.1 board use these values
+  #define dfrobot_btnRIGHT_analog 50
+  #define dfrobot_btnUP_analog 250
+  #define dfrobot_btnDOWN_analog 450
+  #define dfrobot_btnLEFT_analog 650
+  #define dfrobot_btnSELECT_analog 850  
+
+  // For V1.0 board use these values
+  // #define dfrobot_btnRIGHT_analog 50
+  // #define dfrobot_btnUP_analog 195
+  // #define dfrobot_btnDOWN_analog 380
+  // #define dfrobot_btnLEFT_analog 555
+  // #define dfrobot_btnSELECT_analog 790  
+  
+  // button to memory mappings (0 = command button, 1 = memory 1, 2 = memory 2, etc.)
+  #define dfrobot_btnRIGHT  2
+  #define dfrobot_btnUP     1
+  #define dfrobot_btnDOWN   3
+  #define dfrobot_btnLEFT   4
+  #define dfrobot_btnSELECT 0
+  #define dfrobot_btnNONE   255 // do not change
+
+#endif
+
+
+#define sequencer_pins_active_state HIGH
+#define sequencer_pins_inactive_state LOW
+#define ptt_line_active_state HIGH
+#define ptt_line_inactive_state LOW
+#define tx_key_line_active_state HIGH
+#define tx_key_line_inactive_state LOW
+#define ptt_input_pin_active_state LOW
+#define ptt_input_pin_inactive_state HIGH
+#define tx_inhibit_pin_active_state LOW
+#define tx_inhibit_pin_inactive_state HIGH
+#define tx_pause_pin_active_state LOW
+#define tx_pause_pin_inactive_state HIGH
+
+#if defined(ARDUINO_MAPLE_MINI)
+  #define button_value_factor 4095  //sp5iou contributed
+#else
+  #define button_value_factor 1023
+#endif
+
