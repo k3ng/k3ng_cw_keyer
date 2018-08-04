@@ -931,7 +931,11 @@ Recent Update History
       Added FEATURE_LCD_8BIT for controlling standard LCD displays with 8 data lines
 
     2018.08.03.01
-      Fixed bug FEATURE_FARNSWORTH that was inadvertently introduced with command mode speed feature (Thanks, Jim, W5LA)  
+      Fixed bug FEATURE_FARNSWORTH that was inadvertently introduced with command mode speed feature (Thanks, Jim, W5LA) 
+
+    2018.08.04.01
+      Added additional checking of serial port while sending automatic CW in order to better interrupt character sending (Thanks, Max, NG7M)
+      Added OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW to disable this additional checking if desired or for troubleshooting   
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -947,7 +951,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.08.03.01"
+#define CODE_VERSION "2018.08.04.01"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1266,6 +1270,10 @@ byte pot_wpm_low_value;
 #endif //FEATURE_POTENTIOMETER
 
 #if defined(FEATURE_SERIAL)
+  #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+    byte loop_element_lengths_breakout_flag;
+    byte dump_current_character_flag;
+  #endif
   byte incoming_serial_byte;
   long primary_serial_port_baud_rate;
   byte cw_send_echo_inhibit = 0;
@@ -5814,7 +5822,9 @@ void tx_and_sidetone_key (int state)
 
 void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in){
 
-
+    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+      loop_element_lengths_breakout_flag = 1;
+    #endif //FEATURE_SERIAL  
     
     if ((lengths == 0) or (lengths < 0)) {
      return;
@@ -5831,11 +5841,24 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
     unsigned long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
     unsigned long start = micros();
-    unsigned long endtime = micros() + long(element_length*lengths*1000) + long(additional_time_ms*1000);
+    //unsigned long endtime = micros() + long(element_length*lengths*1000) + long(additional_time_ms*1000);
 
+    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+    while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0) && loop_element_lengths_breakout_flag ){
+    #else
     while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0)){
+    #endif
 
-       check_ptt_tail();
+      check_ptt_tail();
+//zzzzzz       
+      #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+        if ((ticks - (micros() - start)) > (10 * 1000)) {
+          check_serial();
+          if (loop_element_lengths_breakout_flag == 0){
+            dump_current_character_flag = 1;
+          }
+        }
+      #endif //FEATURE_SERIAL
 
        #if defined(FEATURE_INTERNET_LINK) /*&& !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)*/
          if ((millis() > 1000)  && ((millis()-start) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
@@ -8061,6 +8084,11 @@ void send_the_dits_and_dahs(char const * cw_to_send){
 
   sending_mode = AUTOMATIC_SENDING;
 
+
+    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+      dump_current_character_flag = 0;
+    #endif  
+
   for (int x = 0;x < 12;x++){
     switch(cw_to_send[x]){
       case '.': send_dit(); break;
@@ -8100,6 +8128,11 @@ void send_the_dits_and_dahs(char const * cw_to_send){
     }
     #if defined(FEATURE_SERIAL)
       check_serial();
+      #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+        if (dump_current_character_flag){
+          x = 12;
+        }
+      #endif
     #endif
 
     #ifdef OPTION_WATCHDOG_TIMER
@@ -9856,6 +9889,9 @@ void service_winkey(byte action) {
             pause_sending_buffer = 0;
             winkey_buffer_counter = 0;
             winkey_buffer_pointer = 0;
+            #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+              loop_element_lengths_breakout_flag = 0;
+            #endif
             #ifdef FEATURE_MEMORIES
               repeat_memory = 255;
             #endif
@@ -11076,6 +11112,9 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     
     case 92:  // \ - double backslash - clear serial send buffer
       clear_send_buffer();
+      #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+        loop_element_lengths_breakout_flag = 0;
+      #endif
       #ifdef FEATURE_MEMORIES
         play_memory_prempt = 1;
         repeat_memory = 255;
