@@ -22,9 +22,9 @@
 
 If you offer a hardware kit using this software, show your appreciation by sending the author a complimentary kit or a bottle of bourbon ;-)
 
-Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer/ .  Please read it before requesting help.
+Full documentation can be found at https://github.com/k3ng/k3ng_cw_keyer/wiki .  Please read it before requesting help.
 
-For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
+For help, please post on the Radio Artisan group: https://groups.io/g/radioartisan .  Please do not email the developer directly for support.  Thanks
 
 Wordsworth CW training method created by George Allison, K1IG
 English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
@@ -930,6 +930,9 @@ Recent Update History
     2018.07.15.01
       Added FEATURE_LCD_8BIT for controlling standard LCD displays with 8 data lines
 
+    2018.08.03.01
+      Fixed bug FEATURE_FARNSWORTH that was inadvertently introduced with command mode speed feature (Thanks, Jim, W5LA)  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -944,7 +947,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.07.15.01"
+#define CODE_VERSION "2018.08.03.01"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5440,19 +5443,26 @@ void send_dit(){
   // notes: key_compensation is a straight x mS lengthening or shortening of the key down time
   //        weighting is
 
-  unsigned int character_wpm;
+  unsigned int character_wpm = configuration.wpm;
 
 
   #ifdef FEATURE_FARNSWORTH
     if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
       character_wpm = configuration.wpm_farnsworth;
+      #if defined(DEBUG_FARNSWORTH)
+        debug_serial_port->println(F("send_dit: farns act"));
+      #endif
+    } 
+      #if defined(DEBUG_FARNSWORTH)
+
+    else {
+      debug_serial_port->println(F("send_dit: farns inact"));
     }
+    #endif
   #endif //FEATURE_FARNSWORTH
 
   if (keyer_machine_mode == KEYER_COMMAND_MODE){
     character_wpm = configuration.wpm_command_mode;
-  } else {
-    character_wpm = configuration.wpm;
   }
 
   being_sent = SENDING_DIT;
@@ -5535,7 +5545,7 @@ void send_dit(){
 
 void send_dah(){
 
-  unsigned int character_wpm;
+  unsigned int character_wpm  = configuration.wpm;
 
   #ifdef FEATURE_FARNSWORTH
     if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
@@ -5545,8 +5555,6 @@ void send_dah(){
 
   if (keyer_machine_mode == KEYER_COMMAND_MODE){
     character_wpm = configuration.wpm_command_mode;
-  } else {
-    character_wpm = configuration.wpm;
   }
 
   being_sent = SENDING_DAH;
