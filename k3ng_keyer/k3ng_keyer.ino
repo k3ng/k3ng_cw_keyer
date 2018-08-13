@@ -935,7 +935,10 @@ Recent Update History
 
     2018.08.04.01
       Added additional checking of serial port while sending automatic CW in order to better interrupt character sending (Thanks, Max, NG7M)
-      Added OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW to disable this additional checking if desired or for troubleshooting   
+      Added OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW to disable this additional checking if desired or for troubleshooting 
+
+    2018.08.13.01
+      More accurate Farnsworth timing; code contributed by Jim, W5LA  
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -951,7 +954,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.08.04.01"
+#define CODE_VERSION "2018.08.13.01"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5830,14 +5833,29 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
      return;
     }
 
-
     float element_length;
 
-    if (speed_mode == SPEED_NORMAL) {
-      element_length = 1200/speed_wpm_in;   
-    } else {
-      element_length = qrss_dit_length * 1000;
-    }
+    #if defined(FEATURE_FARNSWORTH)
+      float factor = 160; // ms to the element length for each WPM slower
+      int reference = 20; // 20 WPM
+
+      if (speed_mode == SPEED_NORMAL) {
+        if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
+          element_length = ((factor*(reference-speed_wpm_in)+(reference*60))/speed_wpm_in);  // code contributed by Jim, W5LA
+        } else {
+          element_length = 1200/speed_wpm_in;
+        }
+      } else {
+        element_length = qrss_dit_length * 1000;
+      }
+    #else //FEATURE_FARNSWORTH
+      if (speed_mode == SPEED_NORMAL) {
+        element_length = 1200/speed_wpm_in;   
+      } else {
+        element_length = qrss_dit_length * 1000;
+      }
+    #endif //FEATURE_FARNSWORTH
+
 
     unsigned long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
     unsigned long start = micros();
