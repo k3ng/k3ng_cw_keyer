@@ -22,9 +22,9 @@
 
 If you offer a hardware kit using this software, show your appreciation by sending the author a complimentary kit or a bottle of bourbon ;-)
 
-Full documentation can be found at http://blog.radioartisan.com/arduino-cw-keyer/ .  Please read it before requesting help.
+Full documentation can be found at https://github.com/k3ng/k3ng_cw_keyer/wiki .  Please read it before requesting help.
 
-For help, please consult http://blog.radioartisan.com/support-for-k3ng-projects/
+For help, please post on the Radio Artisan group: https://groups.io/g/radioartisan .  Please do not email the developer directly for support.  Thanks
 
 Wordsworth CW training method created by George Allison, K1IG
 English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
@@ -930,6 +930,16 @@ Recent Update History
     2018.07.15.01
       Added FEATURE_LCD_8BIT for controlling standard LCD displays with 8 data lines
 
+    2018.08.03.01
+      Fixed bug FEATURE_FARNSWORTH that was inadvertently introduced with command mode speed feature (Thanks, Jim, W5LA) 
+
+    2018.08.04.01
+      Added additional checking of serial port while sending automatic CW in order to better interrupt character sending (Thanks, Max, NG7M)
+      Added OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW to disable this additional checking if desired or for troubleshooting 
+
+    2018.08.13.01
+      More accurate Farnsworth timing; code contributed by Jim, W5LA  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -944,7 +954,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.07.15.01"
+#define CODE_VERSION "2018.08.13.01"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1268,6 +1278,10 @@ byte pot_wpm_low_value;
 #endif //FEATURE_POTENTIOMETER
 
 #if defined(FEATURE_SERIAL)
+  #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+    byte loop_element_lengths_breakout_flag;
+    byte dump_current_character_flag;
+  #endif
   byte incoming_serial_byte;
   long primary_serial_port_baud_rate;
   byte cw_send_echo_inhibit = 0;
@@ -5445,19 +5459,26 @@ void send_dit(){
   // notes: key_compensation is a straight x mS lengthening or shortening of the key down time
   //        weighting is
 
-  unsigned int character_wpm;
+  unsigned int character_wpm = configuration.wpm;
 
 
   #ifdef FEATURE_FARNSWORTH
     if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
       character_wpm = configuration.wpm_farnsworth;
+      #if defined(DEBUG_FARNSWORTH)
+        debug_serial_port->println(F("send_dit: farns act"));
+      #endif
+    } 
+      #if defined(DEBUG_FARNSWORTH)
+
+    else {
+      debug_serial_port->println(F("send_dit: farns inact"));
     }
+    #endif
   #endif //FEATURE_FARNSWORTH
 
   if (keyer_machine_mode == KEYER_COMMAND_MODE){
     character_wpm = configuration.wpm_command_mode;
-  } else {
-    character_wpm = configuration.wpm;
   }
 
   being_sent = SENDING_DIT;
@@ -5540,7 +5561,7 @@ void send_dit(){
 
 void send_dah(){
 
-  unsigned int character_wpm;
+  unsigned int character_wpm  = configuration.wpm;
 
   #ifdef FEATURE_FARNSWORTH
     if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
@@ -5550,8 +5571,6 @@ void send_dah(){
 
   if (keyer_machine_mode == KEYER_COMMAND_MODE){
     character_wpm = configuration.wpm_command_mode;
-  } else {
-    character_wpm = configuration.wpm;
   }
 
   being_sent = SENDING_DAH;
@@ -5811,28 +5830,58 @@ void tx_and_sidetone_key (int state)
 
 void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in){
 
-
+    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+      loop_element_lengths_breakout_flag = 1;
+    #endif //FEATURE_SERIAL  
     
     if ((lengths == 0) or (lengths < 0)) {
      return;
     }
 
-
     float element_length;
 
-    if (speed_mode == SPEED_NORMAL) {
-      element_length = 1200/speed_wpm_in;   
-    } else {
-      element_length = qrss_dit_length * 1000;
-    }
+    #if defined(FEATURE_FARNSWORTH)
+      float factor = 160; // ms to the element length for each WPM slower
+      int reference = 20; // 20 WPM
+
+      if (speed_mode == SPEED_NORMAL) {
+        if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
+          element_length = ((factor*(reference-speed_wpm_in)+(reference*60))/speed_wpm_in);  // code contributed by Jim, W5LA
+        } else {
+          element_length = 1200/speed_wpm_in;
+        }
+      } else {
+        element_length = qrss_dit_length * 1000;
+      }
+    #else //FEATURE_FARNSWORTH
+      if (speed_mode == SPEED_NORMAL) {
+        element_length = 1200/speed_wpm_in;   
+      } else {
+        element_length = qrss_dit_length * 1000;
+      }
+    #endif //FEATURE_FARNSWORTH
+
 
     unsigned long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
     unsigned long start = micros();
-    unsigned long endtime = micros() + long(element_length*lengths*1000) + long(additional_time_ms*1000);
+    //unsigned long endtime = micros() + long(element_length*lengths*1000) + long(additional_time_ms*1000);
 
+    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+    while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0) && loop_element_lengths_breakout_flag ){
+    #else
     while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0)){
+    #endif
 
-       check_ptt_tail();
+      check_ptt_tail();
+//zzzzzz       
+      #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+        if ((ticks - (micros() - start)) > (10 * 1000)) {
+          check_serial();
+          if (loop_element_lengths_breakout_flag == 0){
+            dump_current_character_flag = 1;
+          }
+        }
+      #endif //FEATURE_SERIAL
 
        #if defined(FEATURE_INTERNET_LINK) /*&& !defined(OPTION_INTERNET_LINK_NO_UDP_SVC_DURING_KEY_DOWN)*/
          if ((millis() > 1000)  && ((millis()-start) > FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS)){
@@ -8058,6 +8107,11 @@ void send_the_dits_and_dahs(char const * cw_to_send){
 
   sending_mode = AUTOMATIC_SENDING;
 
+
+    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+      dump_current_character_flag = 0;
+    #endif  
+
   for (int x = 0;x < 12;x++){
     switch(cw_to_send[x]){
       case '.': send_dit(); break;
@@ -8097,6 +8151,11 @@ void send_the_dits_and_dahs(char const * cw_to_send){
     }
     #if defined(FEATURE_SERIAL)
       check_serial();
+      #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+        if (dump_current_character_flag){
+          x = 12;
+        }
+      #endif
     #endif
 
     #ifdef OPTION_WATCHDOG_TIMER
@@ -9853,6 +9912,9 @@ void service_winkey(byte action) {
             pause_sending_buffer = 0;
             winkey_buffer_counter = 0;
             winkey_buffer_pointer = 0;
+            #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+              loop_element_lengths_breakout_flag = 0;
+            #endif
             #ifdef FEATURE_MEMORIES
               repeat_memory = 255;
             #endif
@@ -11073,6 +11135,9 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     
     case 92:  // \ - double backslash - clear serial send buffer
       clear_send_buffer();
+      #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+        loop_element_lengths_breakout_flag = 0;
+      #endif
       #ifdef FEATURE_MEMORIES
         play_memory_prempt = 1;
         repeat_memory = 255;
