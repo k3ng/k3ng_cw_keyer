@@ -938,7 +938,11 @@ Recent Update History
       Added OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW to disable this additional checking if desired or for troubleshooting 
 
     2018.08.13.01
-      More accurate Farnsworth timing; code contributed by Jim, W5LA  
+      More accurate Farnsworth timing; code contributed by Jim, W5LA 
+
+    2018.08.21.01
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/50
+      HARDWARE_YAACWK contributed by Federico Pietro Briata, IZ1GLG <federico@briata.org>
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -954,7 +958,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.08.13.01"
+#define CODE_VERSION "2018.08.21.01"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
