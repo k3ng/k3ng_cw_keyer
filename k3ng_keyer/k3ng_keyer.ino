@@ -944,6 +944,9 @@ Recent Update History
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/50
       HARDWARE_YAACWK contributed by Federico Pietro Briata, IZ1GLG <federico@briata.org>
 
+    2018.08.21.02  
+      Different Farnsworth timing calculation.  Introduced farnsworth_timing_calibration in settings files.
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -958,7 +961,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.08.21.01"
+#define CODE_VERSION "2018.08.21.02"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1694,7 +1697,9 @@ unsigned long millis_rollover = 0;
 /*---------------------------------------------------------------------------------------------------------
 
 
-                                    this code is a work of art.  enjoy.
+ “What we do for ourselves dies with us. What we do for others and the world remains and is immortal.” 
+
+― Albert Pike
 
 
 ---------------------------------------------------------------------------------------------------------*/
@@ -5651,6 +5656,42 @@ void send_dah(){
 
 }
 
+/* 
+
+    The Dash
+    
+    by Linda Ellis
+
+
+    I read of a man who stood to speak at a funeral of a friend.  He referred to the dates on the tombstone from the beginning...to the end.
+
+    He noted that first came the date of birth and spoke of the following date with tears, but said what mattered most of all was the dash
+     between those years.
+
+    For that dash represents all the time they spent alive on earth and now only those who loved them know what that little line is worth.
+
+    For it matters not, how much we own, the cars..the house...the cash.
+
+      What matters is how we lived and loved and how we spend our dash.
+
+    So think about this long and hard; are there things you'd like to change?
+
+      For you never know how much time is left that still can be rearranged.
+
+    To be less quick to anger and show appreciation more and love the people in our lives like we've never loved before.
+
+    If we treat each other with respect and more often wear a smile...remembering that this special dash might only last a little while.
+
+    So when your eulogy is being read, with your life's actions to rehash,
+
+
+     would you be proud of the things they say about how you lived your dash?
+
+
+
+*/
+
+
 //-------------------------------------------------------------------------------------------------------
 
 void tx_and_sidetone_key (int state)
@@ -5845,18 +5886,34 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     float element_length;
 
     #if defined(FEATURE_FARNSWORTH)
-      float factor = 160; // ms to the element length for each WPM slower
-      int reference = 20; // 20 WPM
+    //   float factor = 160; // ms to the element length for each WPM slower
+    //   int reference = 20; // 20 WPM
 
+    //   if (speed_mode == SPEED_NORMAL) {
+    //     if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
+    //       if (speed_wpm_in < 21){
+    //         element_length = ((factor*(reference-speed_wpm_in)+(reference*60))/speed_wpm_in);  // code contributed by Jim, W5LA
+    //       } else {
+    //         element_length = ((factor*(configuration.wpm_farnsworth-speed_wpm_in)+(configuration.wpm_farnsworth*60))/speed_wpm_in);
+    //       }
+    //     } else {
+    //       element_length = 1200/speed_wpm_in;
+    //     }
+    //   } else {
+    //     element_length = qrss_dit_length * 1000;
+    //   }
+
+    if ((lengths == 1) && (speed_wpm_in == 0)){
+      element_length = additional_time_ms;
+    } else {
       if (speed_mode == SPEED_NORMAL) {
-        if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
-          element_length = ((factor*(reference-speed_wpm_in)+(reference*60))/speed_wpm_in);  // code contributed by Jim, W5LA
-        } else {
-          element_length = 1200/speed_wpm_in;
-        }
+        element_length = 1200/speed_wpm_in;   
       } else {
         element_length = qrss_dit_length * 1000;
       }
+    }
+
+
     #else //FEATURE_FARNSWORTH
       if (speed_mode == SPEED_NORMAL) {
         element_length = 1200/speed_wpm_in;   
@@ -8112,9 +8169,9 @@ void send_the_dits_and_dahs(char const * cw_to_send){
   sending_mode = AUTOMATIC_SENDING;
 
 
-    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
-      dump_current_character_flag = 0;
-    #endif  
+  #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+    dump_current_character_flag = 0;
+  #endif  
 
   for (int x = 0;x < 12;x++){
     switch(cw_to_send[x]){
@@ -8148,6 +8205,7 @@ void send_the_dits_and_dahs(char const * cw_to_send){
       #endif //FEATURE_AMERICAN_MORSE
       default: return; break;
     }
+
     if (dit_buffer || dah_buffer || sending_mode == AUTOMATIC_SENDING_INTERRUPTED){
       dit_buffer = 0;
       dah_buffer = 0;
@@ -8166,7 +8224,19 @@ void send_the_dits_and_dahs(char const * cw_to_send){
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
-  }
+  }  // for (int x = 0;x < 12;x++)
+
+
+  #if defined(FEATURE_FARNSWORTH)
+
+  // Farnsworth Timing : http://www.arrl.org/files/file/Technology/x9004008.pdf
+//zzzzzz
+    if (configuration.wpm_farnsworth > configuration.wpm){
+      float additional_intercharacter_time_ms = ((( (3.0*farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) ) - (37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1200.0/ float(configuration.wpm_farnsworth) );
+      loop_element_lengths(1,additional_intercharacter_time_ms,0);
+    }
+
+  #endif  
 
 }
 
@@ -8234,7 +8304,26 @@ void send_char(byte cw_char, byte omit_letterspace)
 
       case '=': send_the_dits_and_dahs("-...-");break;
       case '/': send_the_dits_and_dahs("-..-.");break;
-      case ' ': loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm); break;
+      case ' ': 
+        #if defined(FEATURE_FARNSWORTH)
+
+          // Farnsworth Timing : http://www.arrl.org/files/file/Technology/x9004008.pdf
+
+      //zzzzz
+
+          if (configuration.wpm_farnsworth > configuration.wpm){
+            float interword_time_ms = ((( (7.0*farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) )-(37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1.0 * (1200.0/configuration.wpm_farnsworth));
+            loop_element_lengths(1,interword_time_ms,0);
+          } else {
+            loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm);
+          }
+
+        #else 
+
+          loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm); 
+
+        #endif
+        break;
       case '*': send_the_dits_and_dahs("-...-.-");break;
       //case '&': send_dit(); loop_element_lengths(3); send_dits(3); break;
       case '.': send_the_dits_and_dahs(".-.-.-");break;
@@ -12263,7 +12352,7 @@ void serial_set_farnsworth(PRIMARY_SERIAL_CLS * port_to_use)
   int set_farnsworth_wpm = serial_get_number_input(3,-1,1000, port_to_use, RAISE_ERROR_MSG);
   if (set_farnsworth_wpm > 0) {
     configuration.wpm_farnsworth = set_farnsworth_wpm;
-    port_to_use->write("\r\nSetting Farnworth WPM to ");
+    port_to_use->write("\r\nSetting Farnsworth WPM to ");
     port_to_use->println(set_farnsworth_wpm,DEC);
     config_dirty = 1;
   }

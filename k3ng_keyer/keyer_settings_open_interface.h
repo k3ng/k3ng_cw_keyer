@@ -254,3 +254,4 @@
   #define button_value_factor 1023
 #endif
 
+#define farnsworth_timing_calibration 1.2
