@@ -947,6 +947,9 @@ Recent Update History
     2018.08.21.02  
       Different Farnsworth timing calculation.  Introduced farnsworth_timing_calibration in settings files.
 
+    2018.08.23.01
+      Fixed bug with Farnsworth timing not occurring during intercharacter time, however now overall WPM timing not right...  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -961,7 +964,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.08.21.02"
+#define CODE_VERSION "2018.08.23.01"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -8166,12 +8169,18 @@ void send_the_dits_and_dahs(char const * cw_to_send){
 
   */ 
 
+  //debug_serial_port->println(F("send_the_dits_and_dahs()"));
+
   sending_mode = AUTOMATIC_SENDING;
 
 
   #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
     dump_current_character_flag = 0;
   #endif  
+
+  #if defined(FEATURE_FARNSWORTH)
+    float additional_intercharacter_time_ms;
+  #endif
 
   for (int x = 0;x < 12;x++){
     switch(cw_to_send[x]){
@@ -8203,13 +8212,18 @@ void send_the_dits_and_dahs(char const * cw_to_send){
         loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),configuration.wpm);
         break;            
       #endif //FEATURE_AMERICAN_MORSE
-      default: return; break;
+      default: 
+        //return; 
+        x = 12;
+        break;
     }
 
     if (dit_buffer || dah_buffer || sending_mode == AUTOMATIC_SENDING_INTERRUPTED){
       dit_buffer = 0;
       dah_buffer = 0;
-      return;
+      //debug_serial_port->println(F("send_the_dits_and_dahs: AUTOMATIC_SENDING_INTERRUPTED"));
+      //return;
+      x = 12;
     }
     #if defined(FEATURE_SERIAL)
       check_serial();
@@ -8231,8 +8245,16 @@ void send_the_dits_and_dahs(char const * cw_to_send){
 
   // Farnsworth Timing : http://www.arrl.org/files/file/Technology/x9004008.pdf
 //zzzzzz
+
+
     if (configuration.wpm_farnsworth > configuration.wpm){
-      float additional_intercharacter_time_ms = ((( (3.0*farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) ) - (37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1200.0/ float(configuration.wpm_farnsworth) );
+      additional_intercharacter_time_ms = ((( (3.0 * farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) ) - (37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1200.0/ float(configuration.wpm_farnsworth) );
+
+      #if defined(DEBUG_FARNSWORTH_TIMING)
+        debug_serial_port->print(F("send_the_dits_and_dahs: Farnsworth intercharacter time mS:"));
+        debug_serial_port->println(additional_intercharacter_time_ms);   
+      #endif      
+
       loop_element_lengths(1,additional_intercharacter_time_ms,0);
     }
 
@@ -8311,8 +8333,15 @@ void send_char(byte cw_char, byte omit_letterspace)
 
       //zzzzz
 
+
           if (configuration.wpm_farnsworth > configuration.wpm){
-            float interword_time_ms = ((( (7.0*farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) )-(37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1.0 * (1200.0/configuration.wpm_farnsworth));
+            float interword_time_ms = ((( (7.0 * farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) )-(37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1.0 * (1200.0/configuration.wpm_farnsworth));
+            
+            #if defined(DEBUG_FARNSWORTH_TIMING)
+              debug_serial_port->print(F("send_char: Farnsworth interword time mS:"));
+              debug_serial_port->println(interword_time_ms);
+            #endif     
+
             loop_element_lengths(1,interword_time_ms,0);
           } else {
             loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm);
