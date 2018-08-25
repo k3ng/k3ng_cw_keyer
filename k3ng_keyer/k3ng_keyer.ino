@@ -950,6 +950,10 @@ Recent Update History
     2018.08.23.01
       Fixed bug with Farnsworth timing not occurring during intercharacter time, however now overall WPM timing not right...  
 
+    2018.08.25.01
+      More work on Farnsworth timing.  The timing appears correct now with PARIS testing, however using farnsworth_timing_calibration = 0.35  
+      Now allow /M0 command to disable Farnsworth
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -964,7 +968,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.08.23.01"
+#define CODE_VERSION "2018.08.25.01"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -8246,6 +8250,15 @@ void send_the_dits_and_dahs(char const * cw_to_send){
   // Farnsworth Timing : http://www.arrl.org/files/file/Technology/x9004008.pdf
 //zzzzzz
 
+/*
+10/20
+
+send_the_dits_and_dahs: Farnsworth intercharacter time mS:724.42
+ send_char: Farnsworth interword time mS:1770.32
+
+*/
+
+
 
     if (configuration.wpm_farnsworth > configuration.wpm){
       additional_intercharacter_time_ms = ((( (3.0 * farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) ) - (37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1200.0/ float(configuration.wpm_farnsworth) );
@@ -12379,7 +12392,7 @@ void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use)
 void serial_set_farnsworth(PRIMARY_SERIAL_CLS * port_to_use)
 {
   int set_farnsworth_wpm = serial_get_number_input(3,-1,1000, port_to_use, RAISE_ERROR_MSG);
-  if (set_farnsworth_wpm > 0) {
+  if ((set_farnsworth_wpm > 0) || (set_farnsworth_wpm == 0)) {
     configuration.wpm_farnsworth = set_farnsworth_wpm;
     port_to_use->write("\r\nSetting Farnsworth WPM to ");
     port_to_use->println(set_farnsworth_wpm,DEC);
