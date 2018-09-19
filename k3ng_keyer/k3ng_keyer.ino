@@ -954,6 +954,9 @@ Recent Update History
       More work on Farnsworth timing.  The timing appears correct now with PARIS testing, however using farnsworth_timing_calibration = 0.35  
       Now allow /M0 command to disable Farnsworth
 
+    2018.08.30.01
+      Think we got Farnsworth timing right now.  Thanks, Jim, W5LA !  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -968,7 +971,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.08.25.01"
+#define CODE_VERSION "2018.08.30.01"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5941,7 +5944,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #endif
 
       check_ptt_tail();
-//zzzzzz       
+      
       #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
         if ((ticks - (micros() - start)) > (10 * 1000)) {
           check_serial();
@@ -8245,34 +8248,6 @@ void send_the_dits_and_dahs(char const * cw_to_send){
   }  // for (int x = 0;x < 12;x++)
 
 
-  #if defined(FEATURE_FARNSWORTH)
-
-  // Farnsworth Timing : http://www.arrl.org/files/file/Technology/x9004008.pdf
-//zzzzzz
-
-/*
-10/20
-
-send_the_dits_and_dahs: Farnsworth intercharacter time mS:724.42
- send_char: Farnsworth interword time mS:1770.32
-
-*/
-
-
-
-    if (configuration.wpm_farnsworth > configuration.wpm){
-      additional_intercharacter_time_ms = ((( (3.0 * farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) ) - (37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1200.0/ float(configuration.wpm_farnsworth) );
-
-      #if defined(DEBUG_FARNSWORTH_TIMING)
-        debug_serial_port->print(F("send_the_dits_and_dahs: Farnsworth intercharacter time mS:"));
-        debug_serial_port->println(additional_intercharacter_time_ms);   
-      #endif      
-
-      loop_element_lengths(1,additional_intercharacter_time_ms,0);
-    }
-
-  #endif  
-
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -8340,31 +8315,7 @@ void send_char(byte cw_char, byte omit_letterspace)
       case '=': send_the_dits_and_dahs("-...-");break;
       case '/': send_the_dits_and_dahs("-..-.");break;
       case ' ': 
-        #if defined(FEATURE_FARNSWORTH)
-
-          // Farnsworth Timing : http://www.arrl.org/files/file/Technology/x9004008.pdf
-
-      //zzzzz
-
-
-          if (configuration.wpm_farnsworth > configuration.wpm){
-            float interword_time_ms = ((( (7.0 * farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) )-(37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1.0 * (1200.0/configuration.wpm_farnsworth));
-            
-            #if defined(DEBUG_FARNSWORTH_TIMING)
-              debug_serial_port->print(F("send_char: Farnsworth interword time mS:"));
-              debug_serial_port->println(interword_time_ms);
-            #endif     
-
-            loop_element_lengths(1,interword_time_ms,0);
-          } else {
-            loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm);
-          }
-
-        #else 
-
-          loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm); 
-
-        #endif
+        loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm); 
         break;
       case '*': send_the_dits_and_dahs("-...-.-");break;
       //case '&': send_dit(); loop_element_lengths(3); send_dits(3); break;
@@ -8494,6 +8445,15 @@ void send_char(byte cw_char, byte omit_letterspace)
       loop_element_lengths((length_letterspace-1),0,configuration.wpm); //this is minus one because send_dit and send_dah have a trailing element space
 
     }
+
+    #ifdef FEATURE_FARNSWORTH  
+    // Farnsworth Timing : http://www.arrl.org/files/file/Technology/x9004008.pdf
+//zzzzzz 
+     if (configuration.wpm_farnsworth > configuration.wpm){
+       float additional_intercharacter_time_ms = ((( (1.0 * farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) ) - (37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1200.0/ float(configuration.wpm_farnsworth) );
+       loop_element_lengths(1,additional_intercharacter_time_ms,0);}
+    #endif  
+
   } else {
     if (char_send_mode == HELL){
       #ifdef FEATURE_HELL
