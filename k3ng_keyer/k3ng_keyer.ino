@@ -83,11 +83,20 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \@     Mill Mode
     \}#### Set potentiometer range - low ## / high ##
     \"     Hold PTT active with buffered characters
-    \:     Extended CLLI commands
     \;     FUTURE
     \]     FUTURE
     \_     FUTURE - Set Clock
     \\     Immediately clear the buffer, stop memory sending, etc.
+    \:     Extended CLLI commands
+            eepromdump              - do a byte dump of EEPROM for troubleshooting
+            saveeeprom <filename>   - store EEPROM in a file
+            loadeeprom <filename>   - load into EEPROM from a file
+            printlog                - print the SD card log
+            clearlog                - clear the SD card log
+            ls <directory>          - list files in SD card directory
+            cat <filename>          - print filename on SD card
+            pl <transmitter> <mS>   - Set PTT lead time
+            pt <transmitter> <mS>   - Set PTT tail time
 
 
  Buttons
@@ -957,6 +966,10 @@ Recent Update History
     2018.08.30.01
       Think we got Farnsworth timing right now.  Thanks, Jim, W5LA !  
 
+    2018.10.17.01
+      PTT lead and tail times, and sequencer times can now be set up to 65,535 mS  
+      Updated help text with extended commands
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -971,8 +984,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.08.30.01"
-#define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2018.10.17.01"
+#define eeprom_magic_number 34               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1144,10 +1157,10 @@ Recent Update History
 #endif //FEATURE_SD_CARD_SUPPORT
 
 //#define memory_area_start 82             // the eeprom location where memory space starts sp5iou 20180328 put it to keyer_settings since it must be different for STM boards
-#define memory_area_start 110             // sp5iou 20180328 the eeprom location where memory space starts  for STM32 it must be at least 110 to avoid overlap mem 1 with wpm settings 
+#define memory_area_start 111             // sp5iou 20180328 the eeprom location where memory space starts  for STM32 it must be at least 110 to avoid overlap mem 1 with wpm settings 
 
 // Variables and stuff
-struct config_t {  // 87 bytes total
+struct config_t {  // 109 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1194,11 +1207,11 @@ struct config_t {  // 87 bytes total
   unsigned int link_send_udp_port[FEATURE_INTERNET_LINK_MAX_LINKS];
     // 14 bytes
 
-  uint8_t ptt_lead_time[6];
-  uint8_t ptt_tail_time[6];
-  uint8_t ptt_active_to_sequencer_active_time[5];
-  uint8_t ptt_inactive_to_sequencer_inactive_time[5];
-    // 22 bytes
+  unsigned int ptt_lead_time[6];
+  unsigned int ptt_tail_time[6];
+  unsigned int ptt_active_to_sequencer_active_time[5];
+  unsigned int ptt_inactive_to_sequencer_inactive_time[5];
+    // 44 bytes
 
 } configuration;
 
@@ -9415,10 +9428,18 @@ void winkey_admin_get_values_command() {
   winkey_port_write(configuration.weighting,1);
 
   // 5 - ptt lead
-  winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1]/10,1);
+  if (configuration.ptt_lead_time[configuration.current_tx-1] < 256){
+    winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1]/10,1);
+  } else {
+    winkey_port_write(255,1);
+  }
 
   // 6 - ptt tail
-  winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1); 
+  if (configuration.ptt_tail_time[configuration.current_tx-1] < 256){
+    winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1); 
+  } else {
+    winkey_port_write(255,1);
+  }
 
   // 7 - pot min wpm
   #ifdef FEATURE_POTENTIOMETER
@@ -10978,11 +10999,15 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\(\t\t: Send current serial number in cut numbers")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\)\t\t: Send serial number with cut numbers, then increment")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\[\t\t: Set quiet paddle interruption - 0 to 20 element lengths; 0 = off")); //Added missing command(WD9DMP)
-  port_to_use->println(F("\\=\t\t: Toggle American Morse mode    (requires FEATURE_AMERICAN_MORSE)")); //Added missing command(WD9DMP)
+  #ifdef FEATURE_AMERICAN_MORSE
+    port_to_use->println(F("\\=\t\t: Toggle American Morse mode")); //Added missing command(WD9DMP)
+  #endif
   #ifdef FEATURE_POTENTIOMETER
     port_to_use->println(F("\\}####\t\t: Set Potentiometer range"));
   #endif //FEATURE_POTENTIOMETER  
-  port_to_use->println(F("\\@\t\t: Mill Mode"));
+  #if !defined(OPTION_EXCLUDE_MILL_MODE)
+    port_to_use->println(F("\\@\t\t: Mill Mode"));
+  #endif
   port_to_use->println(F("\\\\\t\t: Empty keyboard send buffer")); //Moved to end of command list (WD9DMP)
   if (paged_help) {serial_page_pause(port_to_use,10);}
   //Memory Macros below (WD9DMP)
@@ -11013,6 +11038,23 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\Z#\t\t: Decrease speed # WPM"));
   port_to_use->println(F("\\+\t\t: Prosign the next two characters"));//Added "the next two characters" (WD9DMP)
   #endif //FEATURE_MEMORY_MACROS
+  
+  #if !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+    if (paged_help) {serial_page_pause(port_to_use,10);}
+    port_to_use->println(F("\r\n\\:\tExtended CLLI commands"));
+    port_to_use->println(F("\t\teepromdump\t\t- do a byte dump of EEPROM for troubleshooting"));
+    port_to_use->println(F("\t\tsaveeeprom <filename>\t- store EEPROM in a file"));
+    port_to_use->println(F("\t\tloadeeprom <filename> \t- load into EEPROM from a file"));
+    port_to_use->println(F("\t\tprintlog\t\t- print the SD card log"));
+    port_to_use->println(F("\t\tclearlog\t\t- clear the SD card log"));
+    port_to_use->println(F("\t\tls <directory>\t\t- list files in SD card directory"));
+    port_to_use->println(F("\t\tcat <filename>\t\t- print filename on SD card"));
+    port_to_use->println(F("\t\tpl <transmitter> <mS>\t- Set PTT lead time"));
+    port_to_use->println(F("\t\tpt <transmitter> <mS> \t- Set PTT tail time"));
+  #endif //OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
+
+
+  port_to_use->println(F("\r\n\\/\t\t: Paginated help"));
 
 }
 #endif
@@ -11438,8 +11480,8 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
 void cli_timing_command(PRIMARY_SERIAL_CLS * port_to_use,String command_arguments,byte command_called){
 
   byte valid_command = 0;
-  byte parm1 = 0;
-  byte parm2 = 0;
+  unsigned int parm1 = 0;
+  unsigned int parm2 = 0;
   String temp_string;
 
   temp_string = command_arguments.substring(0,1);
