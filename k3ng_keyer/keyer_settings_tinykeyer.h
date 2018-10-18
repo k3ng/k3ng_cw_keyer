@@ -58,6 +58,7 @@
 #define tx_key_dit_and_dah_pins_active_state HIGH
 #define tx_key_dit_and_dah_pins_inactive_state LOW
 #define potentiometer_check_interval_ms 150
+#define potentiometer_reading_threshold 1 
 #define default_paddle_interruption_quiet_time_element_lengths 7
 #define default_wordsworth_wordspace 6
 #define default_wordsworth_repetition 1

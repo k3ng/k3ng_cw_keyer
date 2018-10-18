@@ -70,6 +70,7 @@
 #define tx_key_dit_and_dah_pins_active_state LOW
 #define tx_key_dit_and_dah_pins_inactive_state HIGH
 #define potentiometer_check_interval_ms 150
+#define potentiometer_reading_threshold 1 
 #define default_paddle_interruption_quiet_time_element_lengths 0
 #define default_wordsworth_wordspace 6
 #define default_wordsworth_repetition 1
@@ -322,6 +323,7 @@
 #define wpm_limit_low 5
 #define wpm_limit_high 60
 #define potentiometer_change_threshold 0.9 // don't change the keyer speed until pot wpm has changed more than this
+#define potentiometer_reading_threshold 1 
 #define send_buffer_size 150
 #define default_length_letterspace 3
 #define default_length_wordspace 7

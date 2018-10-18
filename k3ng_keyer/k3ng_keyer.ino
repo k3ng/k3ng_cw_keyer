@@ -117,7 +117,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     H  Set weighting and dah to dit ratio to defaults
     I  TX enable / disable
     J  Dah to dit ratio adjust
-    K  Toggle Dit and Dah Buffers on and off
+    K  Toggle Dit and Dah Buffers on and off (Ultimatic Mode)
     L  Adjust weighting
     M  Change command mode speed
     N  Toggle paddle reverse
@@ -971,7 +971,11 @@ Recent Update History
       Updated help text with extended commands
 
     2018.10.17.02
-      Fixed bug in K1EL Winkeyer Emulation paddle echo  
+      Fixed bug in K1EL Winkeyer Emulation paddle echo 
+
+    2018.10.17.03
+      Improved potentiometer noise immunity, added potentiometer_reading_threshold in settings (Thanks, Wolf, DK7OB)
+      Fixed non-optimal potentiometer speed change comparison (Thanks, Wolf, DK7OB)
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -987,7 +991,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.10.17.02"
+#define CODE_VERSION "2018.10.17.03"
 #define eeprom_magic_number 34               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -4663,7 +4667,7 @@ void check_potentiometer()
     
   if ((configuration.pot_activated || potentiometer_always_on) && ((millis() - last_pot_check_time) > potentiometer_check_interval_ms)) {
     byte pot_value_wpm_read = pot_value_wpm();
-    if ((abs(pot_value_wpm_read - last_pot_wpm_read) > potentiometer_change_threshold)) {
+    if (((abs(pot_value_wpm_read - last_pot_wpm_read) * 10) > (potentiometer_change_threshold * 10))) {
       #ifdef DEBUG_POTENTIOMETER
         debug_serial_port->print(F("check_potentiometer: speed change: "));
         debug_serial_port->print(pot_value_wpm_read);
@@ -4691,8 +4695,18 @@ void check_potentiometer()
 #ifdef FEATURE_POTENTIOMETER
 byte pot_value_wpm()
 {
+  // int pot_read = analogRead(potentiometer);
+  // byte return_value = map(pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+  // return return_value;
+
+
+  static int last_pot_read = 0;
+  static byte return_value = 0;
   int pot_read = analogRead(potentiometer);
-  byte return_value = map(pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+  if (abs(pot_read - last_pot_read) > potentiometer_reading_threshold ) {
+    return_value = map(pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+    last_pot_read = pot_read;
+  }
   return return_value;
 
 }
@@ -6494,7 +6508,7 @@ void command_mode()
           send_dit();
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
-        case 212:                                                                   // K - turn dit and dah buffers on and off in Ultimatic mode
+        case 212:                                                                   // K - turn dit and dah buffers on and off
           if (configuration.keyer_mode == ULTIMATIC){
             send_char('O',KEYER_NORMAL);
             if (configuration.dit_buffer_off){
