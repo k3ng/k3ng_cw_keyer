@@ -970,6 +970,9 @@ Recent Update History
       PTT lead and tail times, and sequencer times can now be set up to 65,535 mS  
       Updated help text with extended commands
 
+    2018.10.17.02
+      Fixed bug in K1EL Winkeyer Emulation paddle echo  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -984,7 +987,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.10.17.01"
+#define CODE_VERSION "2018.10.17.02"
 #define eeprom_magic_number 34               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5558,8 +5561,7 @@ void send_dit(){
   #ifdef FEATURE_WINKEY_EMULATION
     if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_mode == MANUAL_SENDING)) {
       winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 1;
-      winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
-
+      winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_time_factor/float(configuration.wpm))*length_letterspace);
       #ifdef FEATURE_AUTOSPACE
         if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
       #endif //FEATURE_AUTOSPACE    
@@ -5648,12 +5650,10 @@ void send_dah(){
   #ifdef FEATURE_WINKEY_EMULATION
     if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_mode == MANUAL_SENDING)) {
       winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 2;
-      winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
-
+      winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_time_factor/float(configuration.wpm))*length_letterspace);
       #ifdef FEATURE_AUTOSPACE
         if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
       #endif //FEATURE_AUTOSPACE
-
     }
   #endif
  
