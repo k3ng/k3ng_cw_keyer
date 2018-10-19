@@ -977,6 +977,10 @@ Recent Update History
       Improved potentiometer noise immunity, added potentiometer_reading_threshold in settings (Thanks, Wolf, DK7OB)
       Fixed non-optimal potentiometer speed change comparison (Thanks, Wolf, DK7OB)
 
+    2018.10.19.01
+      Enabling OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW by default.  There appear to be lock ups caused by the serial port checking while sending functionality.  Investigating.  
+
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -991,7 +995,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.10.17.03"
+#define CODE_VERSION "2018.10.19.01"
 #define eeprom_magic_number 34               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5923,33 +5927,16 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     float element_length;
 
     #if defined(FEATURE_FARNSWORTH)
-    //   float factor = 160; // ms to the element length for each WPM slower
-    //   int reference = 20; // 20 WPM
 
-    //   if (speed_mode == SPEED_NORMAL) {
-    //     if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
-    //       if (speed_wpm_in < 21){
-    //         element_length = ((factor*(reference-speed_wpm_in)+(reference*60))/speed_wpm_in);  // code contributed by Jim, W5LA
-    //       } else {
-    //         element_length = ((factor*(configuration.wpm_farnsworth-speed_wpm_in)+(configuration.wpm_farnsworth*60))/speed_wpm_in);
-    //       }
-    //     } else {
-    //       element_length = 1200/speed_wpm_in;
-    //     }
-    //   } else {
-    //     element_length = qrss_dit_length * 1000;
-    //   }
-
-    if ((lengths == 1) && (speed_wpm_in == 0)){
-      element_length = additional_time_ms;
-    } else {
-      if (speed_mode == SPEED_NORMAL) {
-        element_length = 1200/speed_wpm_in;   
+      if ((lengths == 1) && (speed_wpm_in == 0)){
+        element_length = additional_time_ms;
       } else {
-        element_length = qrss_dit_length * 1000;
+        if (speed_mode == SPEED_NORMAL) {
+          element_length = 1200/speed_wpm_in;   
+        } else {
+          element_length = qrss_dit_length * 1000;
+        }
       }
-    }
-
 
     #else //FEATURE_FARNSWORTH
       if (speed_mode == SPEED_NORMAL) {
@@ -14420,9 +14407,11 @@ void memorycheck()
 //  port_to_use->print("Free Memory = ");
 //  port_to_use->print((unsigned long)free,HEX);
 //  port_to_use->print("  ");
-  if (free > 2048) {
-    free = 0;
-  }
+
+  // if (free > 2048) {
+  //   free = 0;
+  // }
+  
   if (primary_serial_port_mode == SERIAL_CLI) {
     port_to_use->print((unsigned long)free,DEC);
     port_to_use->println(F(" bytes free"));
