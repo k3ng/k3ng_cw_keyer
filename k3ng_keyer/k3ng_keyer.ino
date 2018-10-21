@@ -980,6 +980,8 @@ Recent Update History
     2018.10.19.01
       Enabling OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW by default.  There appear to be lock ups caused by the serial port checking while sending functionality.  Investigating.  
 
+    2018.10.21.01
+      Fixed Funtronics FK-10 LCD pin definitions that were broken in 2018.07.15.01 (Thanks, Jeff, N0MII )
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -995,7 +997,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.10.19.01"
+#define CODE_VERSION "2018.10.21.01"
 #define eeprom_magic_number 34               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>

@@ -50,30 +50,15 @@
 
 
 //lcd pins
-#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD_8BIT)
-  #define lcd_rs A2
-  #define lcd_enable 10  // pin 10 is used by Ethernet shield and will conflict with that
-  #define lcd_d4 6
-  #define lcd_d5 7
-  #define lcd_d6 8
-  #define lcd_d7 9
-#endif //FEATURE_LCD_4BIT || defined(FEATURE_LCD_8BIT)
+#ifdef FEATURE_LCD_4BIT
+  #define lcd_rs 49
+  #define lcd_enable 48
+  #define lcd_d4 47
+  #define lcd_d5 46
+  #define lcd_d6 45
+  #define lcd_d7 44
+#endif //FEATURE_LCD_4BIT
 
-#if defined(FEATURE_LCD_8BIT) // addition four data lines for 8 bit LCD control
-  #define lcd_d0 20
-  #define lcd_d1 21
-  #define lcd_d2 22
-  #define lcd_d3 23
-#endif //FEATURE_LCD_4BIT || defined(FEATURE_LCD_8BIT)
-
-#ifdef FEATURE_LCD1602_N07DH
-  #define lcd_rs 8
-  #define lcd_enable 9
-  #define lcd_d4 4
-  #define lcd_d5 5
-  #define lcd_d6 6
-  #define lcd_d7 7
-#endif //FEATURE_LCD1602_N07DH
 
 //ps2 keyboard pins
 #ifdef FEATURE_PS2_KEYBOARD
@@ -89,11 +74,6 @@
   #define OPTION_ENCODER_ENABLE_PULLUPS     // define to enable weak pullups.
 #endif //FEATURE_ROTARY_ENCODER
 
-#ifdef FEATURE_LED_RING
-  #define led_ring_sdi    A10 //2    //Data
-  #define led_ring_clk    A9 //3    //Clock
-  #define led_ring_le     A8 //4    //Latch
-#endif //FEATURE_LED_RING
 
 #ifdef FEATURE_ALPHABET_SEND_PRACTICE
   #define correct_answer_led 0
@@ -140,26 +120,6 @@ FEATURE_SIDETONE_SWITCH
   #define SIDETONE_SWITCH 8
 #endif //FEATURE_SIDETONE_SWITCH
 
-#ifdef FEATURE_4x4_KEYPAD
-  #define Row3 33
-  #define Row2 32
-  #define Row1 31
-  #define Row0 30
-  #define Col3 37
-  #define Col2 36
-  #define Col1 35
-  #define Col0 34
-#endif
-
-#ifdef FEATURE_3x4_KEYPAD
-  #define Row3 33
-  #define Row2 32
-  #define Row1 31
-  #define Row0 30
-  #define Col2 36
-  #define Col1 35
-  #define Col0 34
-#endif
 
 #ifdef FEATURE_SEQUENCER
   #define sequencer_1_pin 0
