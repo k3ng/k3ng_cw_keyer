@@ -983,6 +983,13 @@ Recent Update History
     2018.10.21.01
       Fixed Funtronics FK-10 LCD pin definitions that were broken in 2018.07.15.01 (Thanks, Jeff, N0MII )
 
+    2018.11.09.01
+      Fixed bug with K1EL Winkey emulation with Admin Get Values PTT Hang Time value returned (Thanks, Dariusz, SP2MKI)  
+      Improved reporting of K1EL Winkey emulation PTT tail time and also now have tail time change dynamically with WPM changes to better follow specification
+      Fixed bug in Beacon Mode where dit and dah paddle would interrupt beacon code
+      Fixed bug with K1EL Winkey emulation with dead op watchdog enabling / disabling, and reporting (Thanks, Dariusz, SP2MKI)  
+      K1EL Winkey emulation PINCONFIG and Winkeyer Mode commands now write to eeprom
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -997,7 +1004,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.10.21.01"
+#define CODE_VERSION "2018.11.09.01"
 #define eeprom_magic_number 34               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1368,6 +1375,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   byte winkey_sending = 0;
   byte winkey_interrupted = 0;
   byte winkey_xoff = 0;
+  byte winkey_session_ptt_tail = 0;
   #ifdef OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
     byte winkey_breakin_status_byte_inhibit = 0;
   #endif //OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
@@ -1784,7 +1792,8 @@ void loop()
       delay(201);
       while (keyer_machine_mode == BEACON) {  // if we're in beacon mode, just keep playing memory 1
         if (!send_buffer_bytes) {
-          play_memory(0);
+          add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+          add_to_send_buffer(0);
         }
         service_send_buffer(PRINTCHAR);
         #ifdef FEATURE_SERIAL
@@ -1889,24 +1898,24 @@ void loop()
       #endif;
     #endif  
 
+    #ifdef FEATURE_SIDETONE_SWITCH
+      check_sidetone_switch();
+    #endif //FEATURE_SIDETONE_SWITCH
+
+    #if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
+      service_keypad();
+    #endif
+
+
+    #ifdef FEATURE_SD_CARD_SUPPORT
+      service_sd_card();    
+    #endif
+
+    #ifdef FEATURE_SEQUENCER
+      check_sequencer_tail_time();
+    #endif  
+
   }
-
-  #ifdef FEATURE_SIDETONE_SWITCH
-    check_sidetone_switch();
-  #endif //FEATURE_SIDETONE_SWITCH
-
-  #if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
-    service_keypad();
-  #endif
-
-
-  #ifdef FEATURE_SD_CARD_SUPPORT
-    service_sd_card();    
-  #endif
-
-  #ifdef FEATURE_SEQUENCER
-    check_sequencer_tail_time();
-  #endif  
 
   service_millis_rollover();
 
@@ -4883,7 +4892,10 @@ void check_paddles()
   #define DIT_CLOSURE_DAH_ON 3
   #define DAH_CLOSURE_DIT_ON 4
 
+  if (keyer_machine_mode == BEACON){return;}
+
   static byte last_closure = NO_CLOSURE;
+
 
   check_dit_paddle();
   check_dah_paddle();  
@@ -5267,44 +5279,125 @@ void check_ptt_tail()
   }
 
 
-  if (key_state) {
-    ptt_time = millis();
-  } else {
-    if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
-      //if ((millis() - ptt_time) > ptt_tail_time) {
-      if (last_sending_mode == MANUAL_SENDING) {
-        #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+  #if !defined(FEATURE_WINKEY_EMULATION)
+    if (key_state) {
+      ptt_time = millis();
+    } else {
+      if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
+        //if ((millis() - ptt_time) > ptt_tail_time) {
+        if (last_sending_mode == MANUAL_SENDING) {
+          #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
 
-          // PTT Tail Time: N     PTT Hang Time: Y
+            // PTT Tail Time: N     PTT Hang Time: Y
 
-          if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
-            ptt_unkey();
-          }          
-        #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-          #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+            if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
+              ptt_unkey();
+            }          
+          #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+            #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
 
-            // PTT Tail Time: Y     PTT Hang Time: Y
+              // PTT Tail Time: Y     PTT Hang Time: Y
 
-            if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1])) {       
+              if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1])) {       
+                ptt_unkey();
+              }
+            #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+            if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]) {  
+
+
+              // PTT Tail Time: Y    PTT Hang Time: N
+
               ptt_unkey();
             }
-          #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-          if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]) {  
-
-
-            // PTT Tail Time: Y    PTT Hang Time: N
-
+            #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+          #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+        } else { // automatic sending
+          if (((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))){
             ptt_unkey();
           }
-          #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-        #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-      } else { // automatic sending
-        if (((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))){
-          ptt_unkey();
         }
       }
     }
-  }
+  #else //FEATURE_WINKEY_EMULATION
+
+    if (key_state) {
+      ptt_time = millis();
+    } else {
+      if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
+        //if ((millis() - ptt_time) > ptt_tail_time) {
+        if (last_sending_mode == MANUAL_SENDING) {
+          #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+
+            // PTT Tail Time: N     PTT Hang Time: Y
+
+            if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
+              ptt_unkey();
+            }          
+          #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+            #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+
+              // PTT Tail Time: Y     PTT Hang Time: Y
+              
+            if (winkey_host_open){
+              if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ (int(winkey_session_ptt_tail) * 10) + (3 * (1200/configuration.wpm)) )) {       
+                ptt_unkey();
+              }
+            } else { 
+              if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1])) {       
+                ptt_unkey();
+              }
+            }
+
+
+
+            #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+            if (winkey_host_open){
+              if ((millis() - ptt_time) >= ((int(winkey_session_ptt_tail) * 10) + (3 * (1200/configuration.wpm)))) {  
+
+                // PTT Tail Time: Y    PTT Hang Time: N
+
+                ptt_unkey();
+              }
+            } else {
+              if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]) {  
+
+
+                // PTT Tail Time: Y    PTT Hang Time: N
+
+                ptt_unkey();
+              }
+            }
+
+
+
+
+
+            #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+          #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+        } else { // automatic sending
+          if (winkey_host_open){
+            if (((millis() - ptt_time) > ((int(winkey_session_ptt_tail) * 10) + (3 * (1200/configuration.wpm)))) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))) {
+              ptt_unkey();
+            }
+          } else {
+            if (((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))){
+              ptt_unkey();
+            }            
+          }  
+        }
+      }
+    }
+
+
+
+
+
+  #endif //FEATURE_WINKEY_EMULATION  
+
+
+
+
+
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -8017,6 +8110,8 @@ void service_dit_dah_buffers()
     debug_serial_port->println(F("loop: entering service_dit_dah_buffers"));
   #endif      
 
+  if (keyer_machine_mode == BEACON){return;} //zzzzzz
+
   if (automatic_sending_interruption_time != 0){
     if ((millis() - automatic_sending_interruption_time) > (configuration.paddle_interruption_quiet_time_element_lengths*(1200/configuration.wpm))){
       automatic_sending_interruption_time = 0;
@@ -8241,7 +8336,7 @@ void send_the_dits_and_dahs(char const * cw_to_send){
         break;
     }
 
-    if (dit_buffer || dah_buffer || sending_mode == AUTOMATIC_SENDING_INTERRUPTED){
+    if ((dit_buffer || dah_buffer || sending_mode == AUTOMATIC_SENDING_INTERRUPTED) && (keyer_machine_mode != BEACON)){
       dit_buffer = 0;
       dah_buffer = 0;
       //debug_serial_port->println(F("send_the_dits_and_dahs: AUTOMATIC_SENDING_INTERRUPTED"));
@@ -8776,10 +8871,6 @@ void service_send_buffer(byte no_print)
             #else
               if ((send_buffer_array[0]!= 0x7C) && (send_buffer_array[0] > 30)) {winkey_port_write(send_buffer_array[0],0);}
             #endif
-            //zzzz
-            // if (send_buffer_array[0] == 13) {
-            //   winkey_port_write(10);  // if we got a carriage return, also send a line feed          
-            // }
           }
         #endif //FEATURE_WINKEY_EMULATION
 
@@ -8851,7 +8942,7 @@ void service_send_buffer(byte no_print)
 
   //if the paddles are hit, dump the buffer
   check_paddles();
-  if ((dit_buffer || dah_buffer) && (send_buffer_bytes)) {
+  if (((dit_buffer || dah_buffer) && (send_buffer_bytes)) && (keyer_machine_mode != BEACON)) {
     clear_send_buffer();
     send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
     dit_buffer = 0;
@@ -9029,6 +9120,7 @@ void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
 void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
 
   configuration.ptt_tail_time[configuration.current_tx-1] = (3*int(1200/configuration.wpm)) + (incoming_serial_byte*10);
+  winkey_session_ptt_tail = incoming_serial_byte;
   #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
     send_char('P',KEYER_NORMAL);
     send_char('2',KEYER_NORMAL);
@@ -9077,9 +9169,9 @@ void winkey_set_pot_parm3_command (byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_setmode_command(byte incoming_serial_byte) {
 
-  #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
+
   config_dirty = 1;
-  #endif
+
   if (incoming_serial_byte & 4) {  //serial echo enable
     #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
     send_char('S',KEYER_NORMAL);
@@ -9116,10 +9208,10 @@ void winkey_setmode_command(byte incoming_serial_byte) {
       break;
   }
   #ifdef FEATURE_DEAD_OP_WATCHDOG
-  if ((incoming_serial_byte & 128) == 128) {  //1xxxxxxx = paddle watchdog
-     dead_op_watchdog_active = 1;
-  } else {
+  if ((incoming_serial_byte & 128) == 128) {  //1xxxxxxx = paddle watchdog (1 = disable)
      dead_op_watchdog_active = 0;
+  } else {
+     dead_op_watchdog_active = 1;
   }
   #endif
   #ifdef FEATURE_AUTOSPACE
@@ -9262,7 +9354,7 @@ void winkey_set_pinconfig_command(byte incoming_serial_byte) {
       break;
     }
 
-    //config_dirty = 1;
+    config_dirty = 1;
 
 }
 #endif
@@ -9398,7 +9490,7 @@ void winkey_admin_get_values_command() {
     byte_to_send = byte_to_send | 64;
   }
   #ifdef FEATURE_DEAD_OP_WATCHDOG
-  if (dead_op_watchdog_active) {
+  if (!dead_op_watchdog_active) {
     byte_to_send = byte_to_send | 128;
   }
   #endif //FEATURE_DEAD_OP_WATCHDOG
@@ -9438,11 +9530,12 @@ void winkey_admin_get_values_command() {
   }
 
   // 6 - ptt tail
-  if (configuration.ptt_tail_time[configuration.current_tx-1] < 256){
-    winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1); 
-  } else {
-    winkey_port_write(255,1);
-  }
+  //if (configuration.ptt_tail_time[configuration.current_tx-1] < 256){
+    //winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1);
+    winkey_port_write(winkey_session_ptt_tail,1);
+  // } else {
+  //   winkey_port_write(winkey_port_write(255,1);
+  // }
 
   // 7 - pot min wpm
   #ifdef FEATURE_POTENTIOMETER
@@ -9489,7 +9582,7 @@ void winkey_admin_get_values_command() {
     if (ultimatic_mode == ULTIMATIC_DAH_PRIORITY) {byte_to_send = byte_to_send | 64;}  
     if (ptt_hang_time_wordspace_units == 1.33) {byte_to_send = byte_to_send | 16;}
     if (ptt_hang_time_wordspace_units == 1.66) {byte_to_send = byte_to_send | 32;}
-    if (ptt_hang_time_wordspace_units == 2.0) {byte_to_send = byte_to_send | 64;}
+    if (ptt_hang_time_wordspace_units == 2.0) {byte_to_send = byte_to_send | 48;}
     winkey_port_write(byte_to_send,1);
   #else
     winkey_port_write(5,1); // default value
