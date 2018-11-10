@@ -990,6 +990,9 @@ Recent Update History
       Fixed bug with K1EL Winkey emulation with dead op watchdog enabling / disabling, and reporting (Thanks, Dariusz, SP2MKI)  
       K1EL Winkey emulation PINCONFIG and Winkeyer Mode commands now write to eeprom
 
+    2018.11.09.02
+      CLI Status now shows paddle and straight key echo state  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1004,7 +1007,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.11.09.01"
+#define CODE_VERSION "2018.11.09.02"
 #define eeprom_magic_number 34               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -14279,6 +14282,23 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     port_to_use->println(F("ff"));
   }  
 
+  #if defined(FEATURE_PADDLE_ECHO) //qqqqqq
+    port_to_use->print(F("Paddle Echo: O"));
+    if (cli_paddle_echo){
+      port_to_use->println(F("n"));
+    } else {
+      port_to_use->println(F("ff"));
+    }  
+  #endif
+
+  #if defined(FEATURE_STRAIGHT_KEY_ECHO)
+    port_to_use->print(F("Straight Key Echo: O"));
+    if (cli_straight_key_echo){
+      port_to_use->println(F("n"));
+    } else {
+      port_to_use->println(F("ff"));
+    }  
+  #endif
 
   #ifdef FEATURE_MEMORIES
     serial_status_memories(port_to_use);
