@@ -1007,8 +1007,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.11.09.02"
-#define eeprom_magic_number 34               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2018.11.09.02-mki.02"
+#define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1105,6 +1105,7 @@ Recent Update History
 
 #if defined(FEATURE_SLEEP)
   #include <avr/sleep.h>  // It should be different library for ARM sp5iou
+  #include <avr/power.h>	//sp2mki mod sleep
 #endif 
 
 #if defined(FEATURE_PS2_KEYBOARD)
@@ -1183,7 +1184,7 @@ Recent Update History
 #define memory_area_start 111             // sp5iou 20180328 the eeprom location where memory space starts  for STM32 it must be at least 110 to avoid overlap mem 1 with wpm settings 
 
 // Variables and stuff
-struct config_t {  // 109 bytes total
+struct config_t {  // 87 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1230,11 +1231,11 @@ struct config_t {  // 109 bytes total
   unsigned int link_send_udp_port[FEATURE_INTERNET_LINK_MAX_LINKS];
     // 14 bytes
 
-  unsigned int ptt_lead_time[6];
-  unsigned int ptt_tail_time[6];
-  unsigned int ptt_active_to_sequencer_active_time[5];
-  unsigned int ptt_inactive_to_sequencer_inactive_time[5];
-    // 44 bytes
+  uint8_t ptt_lead_time[6];
+  uint8_t ptt_tail_time[6];
+  uint8_t ptt_active_to_sequencer_active_time[5];
+  uint8_t ptt_inactive_to_sequencer_inactive_time[5];
+    // 22 bytes
 
 } configuration;
 
@@ -1378,7 +1379,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   byte winkey_sending = 0;
   byte winkey_interrupted = 0;
   byte winkey_xoff = 0;
-  byte winkey_session_ptt_tail = 0;
+//  byte winkey_session_ptt_tail = 0;  //sp2mki
   #ifdef OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
     byte winkey_breakin_status_byte_inhibit = 0;
   #endif //OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
@@ -2809,7 +2810,9 @@ void check_sleep(){
 void check_sleep(){
 
   if ((millis() - last_activity_time) > (go_to_sleep_inactivity_time*60000)){
-
+    
+    lcd.setBacklight(LOW); // sp2mki mod sleep
+    
     if (config_dirty) {  // force a configuration write to EEPROM if the config is dirty
       last_config_write = 0;
       check_for_dirty_configuration();
@@ -2819,19 +2822,27 @@ void check_sleep(){
     // disable ADC to save power
     ADCSRA = 0;
 
-    set_sleep_mode (SLEEP_MODE_PWR_DOWN);
+//    set_sleep_mode (SLEEP_MODE_PWR_DOWN);   //sp2mki mod sleep
+    set_sleep_mode (SLEEP_MODE_IDLE);   //sp2mki mod sleep
+    power_adc_disable();   //sp2mki mod sleep
+    power_spi_disable();   //sp2mki mod sleep
+    power_timer0_disable();   //sp2mki mod sleep
+    power_timer1_disable();   //sp2mki mod sleep
+    power_timer2_disable();   //sp2mki mod sleep
+    power_twi_disable();   //sp2mki mod sleep
     sleep_enable();
 
     // Do not interrupt before we go to sleep, or the ISR will detach interrupts and we won't wake.
     noInterrupts ();
 
     // will be called when pin D2, D5 or A1 goes low
-    attachInterrupt(0, wakeup, FALLING);
-    EIFR = bit(INTF0);  // clear flag for interrupt 0
-    PCIFR = 0; // Clear all pin change flags
-    PCICR  = 0b00000110;    //Turn on ports C and D only
-    PCMSK2 = bit(PCINT21);  //Turn on pin D5
-    PCMSK1 = bit(PCINT9);   //Turn on pin A1
+//    attachInterrupt(0, wakeup, FALLING);   //sp2mki mod sleep
+    attachInterrupt(0, wakeup, LOW);   //sp2mki mod sleep
+//    EIFR = bit(INTF0);  // clear flag for interrupt 0   //sp2mki mod sleep
+//    PCIFR = 0; // Clear all pin change flags   //sp2mki mod sleep
+//    PCICR  = 0b00000110;    //Turn on ports C and D only   //sp2mki mod sleep
+//    PCMSK2 = bit(PCINT21);  //Turn on pin D5   //sp2mki mod sleep
+//    PCMSK1 = bit(PCINT9);   //Turn on pin A1   //sp2mki mod sleep
 
     // turn off brown-out enable in software
     // BODS must be set to one and BODSE must be set to zero within four clock cycles
@@ -2851,7 +2862,10 @@ void check_sleep(){
     }
 
     interrupts();
-    sleep_cpu();
+//    sleep_cpu();   //sp2mki mod sleep
+    sleep_mode();   //sp2mki mod sleep
+    power_all_enable();   //sp2mki mod sleep
+
 
     // shhhhh! we are asleep here !!
 
@@ -2860,9 +2874,9 @@ void check_sleep(){
     // interrupt handler and also return to here.
 
     detachInterrupt (0);
-    PCICR  = 0;    //Turn off all ports
-    PCMSK2 = 0;    //Turn off pin D5
-    PCMSK1 = 0;    //Turn off pin A1
+//    PCICR  = 0;    //Turn off all ports    //sp2mki mod sleep
+//    PCMSK2 = 0;    //Turn off pin D5   //sp2mki mod sleep
+//    PCMSK1 = 0;    //Turn off pin A1   //sp2mki mod sleep
 
     ADCSRA = old_ADCSRA;   // re-enable ADC conversion
 
@@ -2870,7 +2884,9 @@ void check_sleep(){
       digitalWrite(keyer_awake,KEYER_AWAKE_PIN_AWAKE_STATE);
     }
 
-    last_activity_time = millis();    
+    last_activity_time = millis();   //sp2mki mod sleep 
+    
+    lcd.setBacklight(HIGH);   //sp2mki mod sleep
 
     #ifdef DEBUG_SLEEP
       debug_serial_port->println(F("check_sleep: I'm awake!"));
@@ -5169,12 +5185,12 @@ void ptt_key(){
           sequencer_5_ok = 1;
         }
 
-        if (((millis() - ptt_activation_time) >= configuration.ptt_lead_time[configuration.current_tx-1]) && sequencer_1_ok && sequencer_2_ok && sequencer_3_ok && sequencer_4_ok && sequencer_5_ok){
+        if (((millis() - ptt_activation_time) >= configuration.ptt_lead_time[configuration.current_tx-1]*10) && sequencer_1_ok && sequencer_2_ok && sequencer_3_ok && sequencer_4_ok && sequencer_5_ok){
           all_delays_satisfied = 1;
         }
 
       #else //FEATURE_SEQUENCER
-        if ((millis() - ptt_activation_time) >= configuration.ptt_lead_time[configuration.current_tx-1]){
+        if ((millis() - ptt_activation_time) >= configuration.ptt_lead_time[configuration.current_tx-1]*10){
           all_delays_satisfied = 1;
         }
       #endif //FEATURE_SEQUENCER
@@ -5282,125 +5298,44 @@ void check_ptt_tail()
   }
 
 
-  #if !defined(FEATURE_WINKEY_EMULATION)
-    if (key_state) {
-      ptt_time = millis();
-    } else {
-      if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
-        //if ((millis() - ptt_time) > ptt_tail_time) {
-        if (last_sending_mode == MANUAL_SENDING) {
-          #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+  if (key_state) {
+    ptt_time = millis();
+  } else {
+    if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
+      //if ((millis() - ptt_time) > ptt_tail_time) {
+      if (last_sending_mode == MANUAL_SENDING) {
+        #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
 
-            // PTT Tail Time: N     PTT Hang Time: Y
+          // PTT Tail Time: N     PTT Hang Time: Y
 
-            if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
-              ptt_unkey();
-            }          
-          #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-            #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+          if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
+            ptt_unkey();
+          }          
+        #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+          #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
 
-              // PTT Tail Time: Y     PTT Hang Time: Y
+            // PTT Tail Time: Y     PTT Hang Time: Y     mod sp2mki
 
-              if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1])) {       
-                ptt_unkey();
-              }
-            #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-            if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]) {  
-
-
-              // PTT Tail Time: Y    PTT Hang Time: N
-
+            if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1]*10)) {       
               ptt_unkey();
             }
-            #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-          #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        } else { // automatic sending
-          if (((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))){
+          #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+          if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]*10) {  
+
+
+            // PTT Tail Time: Y    PTT Hang Time: N
+
             ptt_unkey();
           }
+          #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+        #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+      } else { // automatic sending
+        if (((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]*10) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))){
+          ptt_unkey();
         }
       }
     }
-  #else //FEATURE_WINKEY_EMULATION
-
-    if (key_state) {
-      ptt_time = millis();
-    } else {
-      if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
-        //if ((millis() - ptt_time) > ptt_tail_time) {
-        if (last_sending_mode == MANUAL_SENDING) {
-          #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-
-            // PTT Tail Time: N     PTT Hang Time: Y
-
-            if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
-              ptt_unkey();
-            }          
-          #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-            #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-
-              // PTT Tail Time: Y     PTT Hang Time: Y
-              
-            if (winkey_host_open){
-              if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ (int(winkey_session_ptt_tail) * 10) + (3 * (1200/configuration.wpm)) )) {       
-                ptt_unkey();
-              }
-            } else { 
-              if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1])) {       
-                ptt_unkey();
-              }
-            }
-
-
-
-            #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-            if (winkey_host_open){
-              if ((millis() - ptt_time) >= ((int(winkey_session_ptt_tail) * 10) + (3 * (1200/configuration.wpm)))) {  
-
-                // PTT Tail Time: Y    PTT Hang Time: N
-
-                ptt_unkey();
-              }
-            } else {
-              if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]) {  
-
-
-                // PTT Tail Time: Y    PTT Hang Time: N
-
-                ptt_unkey();
-              }
-            }
-
-
-
-
-
-            #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-          #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-        } else { // automatic sending
-          if (winkey_host_open){
-            if (((millis() - ptt_time) > ((int(winkey_session_ptt_tail) * 10) + (3 * (1200/configuration.wpm)))) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))) {
-              ptt_unkey();
-            }
-          } else {
-            if (((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))){
-              ptt_unkey();
-            }            
-          }  
-        }
-      }
-    }
-
-
-
-
-
-  #endif //FEATURE_WINKEY_EMULATION  
-
-
-
-
-
+  }
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -5942,6 +5877,7 @@ void tx_and_sidetone_key (int state)
         if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_mode == MANUAL_SENDING))) {
           #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
             noTone(sidetone_line);
+            digitalWrite(sidetone_line, HIGH);   //sp2mki mod buzzer
           #else
             digitalWrite(sidetone_line, LOW);
           #endif
@@ -5990,6 +5926,7 @@ void tx_and_sidetone_key (int state)
         if ((configuration.sidetone_mode == SIDETONE_ON) || (keyer_machine_mode == KEYER_COMMAND_MODE) || ((configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) && (sending_mode == MANUAL_SENDING))) {
           #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
             noTone(sidetone_line);
+            digitalWrite(sidetone_line, HIGH);   //sp2mki mod buzzer
           #else
             digitalWrite(sidetone_line, LOW);
           #endif
@@ -7487,6 +7424,7 @@ void command_sidetone_freq_adj() {
   }
   while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   noTone(sidetone_line);
+  digitalWrite(sidetone_line, HIGH);   //sp2mki mod buzzer
 
 }
 #endif //FEATURE_COMMAND_BUTTONS
@@ -8233,6 +8171,7 @@ void boop()
     tone(sidetone_line, hz_low_beep);
     delay(100);
     noTone(sidetone_line);
+    digitalWrite(sidetone_line, HIGH);   //sp2mki mod buzzer
   #else
     digitalWrite(sidetone_line, HIGH);
     delay(100);
@@ -8250,6 +8189,7 @@ void beep_boop()
     tone(sidetone_line, hz_low_beep);
     delay(100);
     noTone(sidetone_line);
+    digitalWrite(sidetone_line, HIGH);   //sp2mki mod buzzer
   #else
     digitalWrite(sidetone_line, HIGH);
     delay(200);
@@ -8267,6 +8207,7 @@ void boop_beep()
     tone(sidetone_line, hz_high_beep);
     delay(100);
     noTone(sidetone_line);
+    digitalWrite(sidetone_line, HIGH);   //sp2mki mod buzzer
   #else
     digitalWrite(sidetone_line, HIGH);
     delay(200);
@@ -9108,7 +9049,8 @@ void winkey_weighting_command(byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
   #if !defined(DEBUG_WINKEY_DISABLE_LEAD_IN_TIME_SETTING)
-    configuration.ptt_lead_time[configuration.current_tx-1] = (incoming_serial_byte*10);
+//    configuration.ptt_lead_time[configuration.current_tx-1] = (incoming_serial_byte*10);
+    configuration.ptt_lead_time[configuration.current_tx-1] = (incoming_serial_byte);  //mod sp2mki
   #else
     configuration.ptt_lead_time[configuration.current_tx-1] = 0;
   #endif
@@ -9121,9 +9063,8 @@ void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
-
-  configuration.ptt_tail_time[configuration.current_tx-1] = (3*int(1200/configuration.wpm)) + (incoming_serial_byte*10);
-  winkey_session_ptt_tail = incoming_serial_byte;
+//  configuration.ptt_tail_time[configuration.current_tx-1] = (3*int(1200/configuration.wpm)) + (incoming_serial_byte*10);
+  configuration.ptt_tail_time[configuration.current_tx-1] = (incoming_serial_byte);  //mod sp2mki
   #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
     send_char('P',KEYER_NORMAL);
     send_char('2',KEYER_NORMAL);
@@ -9526,19 +9467,12 @@ void winkey_admin_get_values_command() {
   winkey_port_write(configuration.weighting,1);
 
   // 5 - ptt lead
-  if (configuration.ptt_lead_time[configuration.current_tx-1] < 256){
-    winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1]/10,1);
-  } else {
-    winkey_port_write(255,1);
-  }
+  //winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1]/10,1);
+   winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1],1); //mod sp2mki
 
   // 6 - ptt tail
-  //if (configuration.ptt_tail_time[configuration.current_tx-1] < 256){
-    //winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1);
-    winkey_port_write(winkey_session_ptt_tail,1);
-  // } else {
-  //   winkey_port_write(winkey_port_write(255,1);
-  // }
+  //winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1); 
+  winkey_port_write(configuration.ptt_tail_time[configuration.current_tx-1],1); //mod sp2mki
 
   // 7 - pot min wpm
   #ifdef FEATURE_POTENTIOMETER
@@ -11037,8 +10971,10 @@ void serial_page_pause(PRIMARY_SERIAL_CLS * port_to_use,byte seconds_timeout){
 
 #if defined(FEATURE_SERIAL_HELP) && defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
-
-  port_to_use->println(F("\n\rK3NG Keyer Help\n\r"));
+  port_to_use->print(F("\n\rK3NG Keyer Version "));   //mod sp2mki cli help
+  port_to_use->write(CODE_VERSION);   //mod sp2mki cli help
+  port_to_use->println();   //mod sp2mki cli help
+  port_to_use->println(F("\n\rHelp\n\r"));   //mod sp2mki cli help
   port_to_use->println(F("CLI commands:"));
   port_to_use->println(F("\\#\t\t: Play memory # x")); //Upper case to first letter only(WD9DMP)
   port_to_use->println(F("\\A\t\t: Iambic A"));
@@ -11103,7 +11039,8 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   #endif
   #ifdef FEATURE_POTENTIOMETER
     port_to_use->println(F("\\}####\t\t: Set Potentiometer range"));
-  #endif //FEATURE_POTENTIOMETER  
+  #endif //FEATURE_POTENTIOMETER
+  port_to_use->println(F("\\\"\t\t: Hold PTT active with buffered characters"));   //mod sp2mki cli help
   #if !defined(OPTION_EXCLUDE_MILL_MODE)
     port_to_use->println(F("\\@\t\t: Mill Mode"));
   #endif
@@ -11579,8 +11516,8 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
 void cli_timing_command(PRIMARY_SERIAL_CLS * port_to_use,String command_arguments,byte command_called){
 
   byte valid_command = 0;
-  unsigned int parm1 = 0;
-  unsigned int parm2 = 0;
+  byte parm1 = 0;
+  byte parm2 = 0;
   String temp_string;
 
   temp_string = command_arguments.substring(0,1);
@@ -11625,7 +11562,7 @@ void cli_timing_command(PRIMARY_SERIAL_CLS * port_to_use,String command_argument
 void cli_timing_print(PRIMARY_SERIAL_CLS * port_to_use){
 
 
-  port_to_use->println(F("\r\nTimings (mS)"));
+  port_to_use->println(F("\r\nTimings (*10mS)"));   //mod sp2mki cli help
   port_to_use->println(F("\r\nPTT"));
   port_to_use->println(F("TX\tLead\tTail"));
   port_to_use->println(F("--\t----\t----"));
@@ -16038,6 +15975,7 @@ void service_cw_decoder() {
       #endif //defined(GOERTZ_TARGET_FREQ)
     } else {
      noTone(sidetone_line);
+     digitalWrite(sidetone_line, HIGH);  //sp2mki mod buzzer
     }
   #endif  //DEBUG_CW_DECODER 
  

@@ -30,7 +30,7 @@
 #define default_first_extension_time 0   // number of milliseconds to extend first sent dit or dah
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
-#define default_ptt_hang_time_wordspace_units 0.0
+#define default_ptt_hang_time_wordspace_units 1.0  //sp2mki
 #define memory_area_end 1023             // the eeprom location where memory space ends
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
 #define winkey_command_timeout_ms 5000
@@ -44,7 +44,7 @@
 #define program_memory_limit_consec_spaces 1
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
 #define serial_cut_numbers 0              // set to 1 to activate cut numbers in serial numbers (i.e. #10 = 1T, #19 = 1N)
-#define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
+#define go_to_sleep_inactivity_time 2     // minutes - FEATURE_SLEEP  //sp2mki mod sleep
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
 #define cw_echo_timing_factor 0.25
 #define winkey_paddle_echo_buffer_decode_time_factor 1600.0
@@ -64,7 +64,7 @@
 #define serial_program_memory_buffer_size 500
 
 #ifdef FEATURE_COMMAND_BUTTONS
-  #define analog_buttons_number_of_buttons 4  // includes the command button (command button + 3 memory buttons = 4)
+  #define analog_buttons_number_of_buttons 6  // includes the command button (command button + 3 memory buttons = 4) //sp2mki hardware
   #define analog_buttons_r1 10
   #define analog_buttons_r2 1
 #endif
