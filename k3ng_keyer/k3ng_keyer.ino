@@ -992,7 +992,19 @@ Recent Update History
 
     2018.11.09.02
       CLI Status now shows paddle and straight key echo state  
-
+      
+    2018.11.09.02-mki.02
+      Based on K3NG code sp2mki mods:
+      mod sleep - change power down to idle mode in which serial port is still watching. The keyer not lost communication with host.
+                  The main save of consumed current is done by set off lcd backlight
+      mod buzzer - some buzzers ( with trazistors )  conduct current  ( even 100 mA ) when their input is low ( after noTone ).
+                  It vaste the current and may even damage the buser as it become hot. Solution - after each noTone set the side_tone line high
+      mod timing - rolbek to version prior 2018.11.09.01 to keep lead and tail time as bytes in configuration and eeprom. 
+                  The neccesary callcuations are made in check_ppt_tail() function. It make possible accurate repoort configured 
+                  timing values to host ( winkeyer admin command  07  Get Values )
+      mod cli help - add code version to cli help to easy check. 
+   
+      
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1379,7 +1391,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   byte winkey_sending = 0;
   byte winkey_interrupted = 0;
   byte winkey_xoff = 0;
-//  byte winkey_session_ptt_tail = 0;  //sp2mki
+//  byte winkey_session_ptt_tail = 0;  //mod sp2mki timing
   #ifdef OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
     byte winkey_breakin_status_byte_inhibit = 0;
   #endif //OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
@@ -5314,7 +5326,7 @@ void check_ptt_tail()
         #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
           #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
 
-            // PTT Tail Time: Y     PTT Hang Time: Y     mod sp2mki
+            // PTT Tail Time: Y     PTT Hang Time: Y     //mod sp2mki timing
 
             if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1]*10)) {       
               ptt_unkey();
@@ -5323,7 +5335,7 @@ void check_ptt_tail()
           if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]*10) {  
 
 
-            // PTT Tail Time: Y    PTT Hang Time: N
+            // PTT Tail Time: Y    PTT Hang Time: N      //mod sp2mki timing
 
             ptt_unkey();
           }
@@ -9050,7 +9062,7 @@ void winkey_weighting_command(byte incoming_serial_byte) {
 void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
   #if !defined(DEBUG_WINKEY_DISABLE_LEAD_IN_TIME_SETTING)
 //    configuration.ptt_lead_time[configuration.current_tx-1] = (incoming_serial_byte*10);
-    configuration.ptt_lead_time[configuration.current_tx-1] = (incoming_serial_byte);  //mod sp2mki
+    configuration.ptt_lead_time[configuration.current_tx-1] = (incoming_serial_byte);  //mod sp2mki timing
   #else
     configuration.ptt_lead_time[configuration.current_tx-1] = 0;
   #endif
@@ -9064,7 +9076,7 @@ void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
 //  configuration.ptt_tail_time[configuration.current_tx-1] = (3*int(1200/configuration.wpm)) + (incoming_serial_byte*10);
-  configuration.ptt_tail_time[configuration.current_tx-1] = (incoming_serial_byte);  //mod sp2mki
+  configuration.ptt_tail_time[configuration.current_tx-1] = (incoming_serial_byte);  //mod sp2mki timing
   #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
     send_char('P',KEYER_NORMAL);
     send_char('2',KEYER_NORMAL);
@@ -9468,11 +9480,11 @@ void winkey_admin_get_values_command() {
 
   // 5 - ptt lead
   //winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1]/10,1);
-   winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1],1); //mod sp2mki
+   winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1],1); //mod sp2mki timing
 
   // 6 - ptt tail
   //winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1); 
-  winkey_port_write(configuration.ptt_tail_time[configuration.current_tx-1],1); //mod sp2mki
+  winkey_port_write(configuration.ptt_tail_time[configuration.current_tx-1],1); //mod sp2mki timing
 
   // 7 - pot min wpm
   #ifdef FEATURE_POTENTIOMETER
