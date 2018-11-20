@@ -1004,6 +1004,10 @@ Recent Update History
                   timing values to host ( winkeyer admin command  07  Get Values )
       mod cli help - add code version to cli help to easy check. 
    
+   2018.11.09.02-mki.03
+      mod sleep for mega2560 - use pin change iterrupts for wake up keyer by both paddles and cmd + memory buttons.
+                               requres connect ports D5 and A13 together and redefine analog_buttons_pin to port A12   
+                               ( or connect default A1 to A12 )
       
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -1019,7 +1023,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.11.09.02-mki.02"
+#define CODE_VERSION "2018.11.09.02-mki.03"
 #define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -2850,15 +2854,19 @@ void check_sleep(){
     // will be called when pin D2, D5 or A1 goes low
 //    attachInterrupt(0, wakeup, FALLING);   //sp2mki mod sleep
     attachInterrupt(0, wakeup, LOW);   //sp2mki mod sleep
-//    EIFR = bit(INTF0);  // clear flag for interrupt 0   //sp2mki mod sleep
-//    PCIFR = 0; // Clear all pin change flags   //sp2mki mod sleep
-//    PCICR  = 0b00000110;    //Turn on ports C and D only   //sp2mki mod sleep
-//    PCMSK2 = bit(PCINT21);  //Turn on pin D5   //sp2mki mod sleep
-//    PCMSK1 = bit(PCINT9);   //Turn on pin A1   //sp2mki mod sleep
-
-    // turn off brown-out enable in software
-    // BODS must be set to one and BODSE must be set to zero within four clock cycles
-    #if !defined(__AVR_ATmega2560__)
+    EIFR = bit(INTF0);  // clear flag for interrupt 0   //sp2mki mod sleep
+    PCIFR = 0; // Clear all pin change flags   //sp2mki mod sleep
+   #if defined(__AVR_ATmega2560__)
+     PCICR  = 0b00000100;    //Turn on ports D only  //sp2mki mod sleep for mega2560
+     PCMSK2 |= bit(PCINT21);  //Turn on pin A13->D5   //sp2mki mod sleep for mega2560 connect ports D5 and A13 ( for interupt )
+     PCMSK2 |= bit(PCINT20);   //Turn on pin A12->A1  //sp2mki mod sleep for mega2560 connect ports A1 and A12 or define analog_buttons_pin 12  
+   #else 
+     PCICR  = 0b00000110;    //Turn on ports C and D only   
+     PCMSK2 = bit(PCINT21);  //Turn on pin D5   
+     PCMSK1 = bit(PCINT9);   //Turn on pin A1   
+     // turn off brown-out enable in software
+     // BODS must be set to one and BODSE must be set to zero within four clock cycles
+     //#if !defined(__AVR_ATmega2560__)
       MCUCR = bit (BODS) | bit (BODSE);
       // The BODS bit is automatically cleared after three clock cycles
       MCUCR = bit (BODS);
@@ -2886,9 +2894,9 @@ void check_sleep(){
     // interrupt handler and also return to here.
 
     detachInterrupt (0);
-//    PCICR  = 0;    //Turn off all ports    //sp2mki mod sleep
-//    PCMSK2 = 0;    //Turn off pin D5   //sp2mki mod sleep
-//    PCMSK1 = 0;    //Turn off pin A1   //sp2mki mod sleep
+    PCICR  = 0;    //Turn off all ports    
+    PCMSK2 = 0;    //Turn off pin D5   
+    PCMSK1 = 0;    //Turn off pin A1   
 
     ADCSRA = old_ADCSRA;   // re-enable ADC conversion
 
