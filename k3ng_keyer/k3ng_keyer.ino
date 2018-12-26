@@ -993,6 +993,9 @@ Recent Update History
     2018.11.09.02
       CLI Status now shows paddle and straight key echo state  
 
+    2018.12.25.01
+      Fixed potential bug in sleep functionality timing  
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1007,7 +1010,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.11.09.02"
+#define CODE_VERSION "2018.12.25.01"
 #define eeprom_magic_number 34               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -2808,7 +2811,7 @@ void check_sleep(){
 #ifdef FEATURE_SLEEP   // Code contributed by Graeme, ZL2APV  2016-01-18
 void check_sleep(){
 
-  if ((millis() - last_activity_time) > (go_to_sleep_inactivity_time*60000)){
+  if ((millis() - last_activity_time) > ((unsigned long)go_to_sleep_inactivity_time*60000)){
 
     if (config_dirty) {  // force a configuration write to EEPROM if the config is dirty
       last_config_write = 0;
