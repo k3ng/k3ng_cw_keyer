@@ -254,3 +254,7 @@
 #endif
 
 #define farnsworth_timing_calibration 1.15
+
+#define sidetone_volume_low_limit 10
+#define sidetone_volume_high_limit 500
+

@@ -123,6 +123,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     N  Toggle paddle reverse
     O  Toggle sidetone on / off
     P#(#) Program a memory
+    Q  Adjust sidetone volume (FEATURE_SINEWAVE_SIDETONE only)
     R####  Set serial number to ####
     S  Alphabet code practice (FEATURE_ALPHABET_SEND_PRACTICE)
     T  Tune mode
@@ -994,7 +995,11 @@ Recent Update History
       CLI Status now shows paddle and straight key echo state  
 
     2018.12.25.01
-      Fixed potential bug in sleep functionality timing  
+      Fixed potential bug in sleep functionality timing 
+
+    2019.02.05.01
+      Fixed bug in command mode K command when in ultimatic mode (Thanks, Rich)
+      Under Development: FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1 and FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3 in keyer_features_and_options_test.h  
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -1010,8 +1015,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2018.12.25.01"
-#define eeprom_magic_number 34               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2019.02.05.01"
+#define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1111,10 +1116,10 @@ Recent Update History
 #endif 
 
 #if defined(FEATURE_PS2_KEYBOARD)
-  #include <K3NG_PS2Keyboard.h>  // It should be different library for ARM sp5iou (?)
+  #include <K3NG_PS2Keyboard.h>
 #endif
 
-#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH) || defined (FEATURE_LCD_8BIT)// works on 3.2V supply and logic, but do not work on every pins (SP5IOU)
+#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH) || defined (FEATURE_LCD_8BIT) // works on 3.2V supply and logic, but do not work on every pins (SP5IOU)
   #include <LiquidCrystal.h>
   #include <Wire.h>
 #endif
@@ -1182,11 +1187,23 @@ Recent Update History
   #include <SD.h>
 #endif //FEATURE_SD_CARD_SUPPORT
 
+
+#if defined(FEATURE_SINEWAVE_SIDETONE) //zzzzzz
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    #include <TimerOne.h> 
+  #endif
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    #include <TimerThree.h> 
+  #endif
+  #define tone sinetone
+  #define noTone nosineTone
+#endif //FEATURE_SINEWAVE_SIDETONE  
+
 //#define memory_area_start 82             // the eeprom location where memory space starts sp5iou 20180328 put it to keyer_settings since it must be different for STM boards
-#define memory_area_start 111             // sp5iou 20180328 the eeprom location where memory space starts  for STM32 it must be at least 110 to avoid overlap mem 1 with wpm settings 
+#define memory_area_start 113             // sp5iou 20180328 the eeprom location where memory space starts  for STM32 it must be at least 110 to avoid overlap mem 1 with wpm settings 
 
 // Variables and stuff
-struct config_t {  // 109 bytes total
+struct config_t {  // 111 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1238,6 +1255,9 @@ struct config_t {  // 109 bytes total
   unsigned int ptt_active_to_sequencer_active_time[5];
   unsigned int ptt_inactive_to_sequencer_inactive_time[5];
     // 44 bytes
+
+  int sidetone_volume;
+    // 2 bytes
 
 } configuration;
 
@@ -1744,6 +1764,19 @@ unsigned long millis_rollover = 0;
 #endif  
 
 
+#if defined(FEATURE_SINEWAVE_SIDETONE)  //DL2DBG contributed
+  const float pi = 3.14159 ;
+  const float T = 100 ;    // sample time in microseconds
+        float freq = 800 ;  // frequency of tone in hertz
+        float omega = 2*pi*freq ;
+        float A = 490 ;  // amplitude
+        
+  // next line initializes oscillation with amplitude A
+  float  a[]={0.0, A*sin(omega*T/1000000.0),0.0};
+  // c1 is the difference equation coefficient
+  float c1 = (8.0 - 2.0*pow(omega*T/1000000.0,2))/(4.0+pow(omega*T/1000000.0,2));
+#endif //FEATURE_SINEWAVE_SIDETONE
+
 /*---------------------------------------------------------------------------------------------------------
 
 
@@ -1757,27 +1790,97 @@ unsigned long millis_rollover = 0;
 void setup()
 {
 
-  initialize_pins();
-  initialize_keyer_state();
-  initialize_potentiometer();
-  initialize_rotary_encoder();
-  initialize_default_modes();
-  initialize_watchdog();
-  initialize_ethernet_variables();
-  check_eeprom_for_initialization();
-  check_for_beacon_mode();
-  check_for_debug_modes();
-  initialize_analog_button_array();
+
   initialize_serial_ports();
-  initialize_ps2_keyboard();
-  initialize_usb();
-  initialize_cw_keyboard();
-  initialize_display();
-  initialize_ethernet();
-  initialize_udp();
-  initialize_web_server();
-  initialize_sd_card();  
+
+  debug_blink();
+
   initialize_debug_startup();
+
+  debug_blink();
+
+  initialize_pins();
+
+  debug_blink();
+
+  // #if defined(FEATURE_SINEWAVE_SIDETONE)
+  //   initialize_tonsin();
+  // #endif  
+
+  debug_blink();
+
+  initialize_keyer_state();
+
+  debug_blink();
+
+  initialize_potentiometer();
+
+  debug_blink();
+
+  initialize_rotary_encoder();
+
+  debug_blink();
+
+  initialize_default_modes();
+
+  debug_blink();
+
+  initialize_watchdog();
+
+  debug_blink();
+
+  initialize_ethernet_variables();
+
+  debug_blink();
+
+  check_eeprom_for_initialization();
+
+  debug_blink();
+
+  check_for_beacon_mode();
+
+  debug_blink();
+
+  check_for_debug_modes();
+
+  debug_blink();
+
+  initialize_analog_button_array();
+
+  debug_blink();
+
+  initialize_ps2_keyboard();
+
+  debug_blink();
+
+  initialize_usb();
+
+  debug_blink();
+
+  initialize_cw_keyboard();
+
+  debug_blink();
+
+  initialize_display();
+
+  debug_blink();
+
+  initialize_ethernet();
+
+  debug_blink();
+
+  initialize_udp();
+
+  debug_blink();
+
+  initialize_web_server();
+
+  debug_blink();
+
+  initialize_sd_card();  
+
+  debug_blink();
+
 
 }
 
@@ -5457,6 +5560,10 @@ int read_settings_from_eeprom() {
       switch_to_tx_silent(configuration.current_tx);
       config_dirty = 0;
 
+      #if defined(FEATURE_SINEWAVE_SIDETONE)
+        initialize_tonsin();
+      #endif 
+
       return 0;
     } else {
       return 1;
@@ -6399,7 +6506,8 @@ void command_mode()
   speed_mode = SPEED_NORMAL;                 // put us in normal speed mode (life is too short to do command mode in QRSS)
   byte keyer_mode_before = configuration.keyer_mode;
   char c[4];
-  if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B)) {
+  if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B) && (configuration.keyer_mode != ULTIMATIC)) {
+  //if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B)) {
     configuration.keyer_mode = IAMBIC_B;                   // we got to be in iambic mode (life is too short to make this work in bug mode)
   }
 
@@ -6558,6 +6666,9 @@ void command_mode()
           break; 
         #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
           case 1121: command_sidetone_freq_adj(); break;                    // F - adjust sidetone frequency
+          #if defined(FEATURE_SINEWAVE_SIDETONE)
+            case 2212: command_sidetone_volume_adj(); break;                    // Q - adjust sinewave sidetone volume
+          #endif
         #endif
         case 221: // G - switch to buG mode
           configuration.keyer_mode = BUG;
@@ -7421,21 +7532,86 @@ void command_tuning_mode() {
 #endif //FEATURE_COMMAND_BUTTONS
 //-------------------------------------------------------------------------------------------------------
 
-void sidetone_adj(int hz) {
 
-  if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
-    configuration.hz_sidetone = configuration.hz_sidetone + hz;
+
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+  void sidetone_adj(int hz) {
+
+    if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
+      configuration.hz_sidetone = configuration.hz_sidetone + hz;
+      compute_sinetone(configuration.hz_sidetone,configuration.sidetone_volume);
+      config_dirty = 1;
+      #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        } else {
+          lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        }
+      #endif   
+    }
+
+  }
+
+#else //FEATURE_SINEWAVE_SIDETONE
+
+  void sidetone_adj(int hz) {
+
+    if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
+      configuration.hz_sidetone = configuration.hz_sidetone + hz;
+      config_dirty = 1;
+      #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        } else {
+          lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        }
+      #endif   
+    }
+
+  }
+
+#endif //FEATURE_SINEWAVE_SIDETONE
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+
+void sidetone_adj_volume(int vo) { //dl2dbg
+
+  if ((vo > 0) && ((configuration.sidetone_volume + vo) > sidetone_volume_high_limit)){
+    configuration.sidetone_volume = sidetone_volume_high_limit;
     config_dirty = 1;
+  } else {
+    if ((vo < 0) && ((configuration.sidetone_volume + vo) < sidetone_volume_low_limit)){
+      configuration.sidetone_volume = sidetone_volume_low_limit;
+      config_dirty = 1;
+    } else {
+        if (((configuration.sidetone_volume + vo) >= sidetone_volume_low_limit) && ((configuration.sidetone_volume + vo) <= sidetone_volume_high_limit)){
+          configuration.sidetone_volume = configuration.sidetone_volume + vo;
+          config_dirty = 1;
+        }
+    }
+  }
+
+
+
+
+
+  if (config_dirty) {
+    compute_sinetone(configuration.hz_sidetone,configuration.sidetone_volume);
     #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
       if (LCD_COLUMNS < 9){
-        lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        lcd_center_print_timed(String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
       } else {
-        lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        lcd_center_print_timed("Sidetone " + String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
       }
     #endif   
   }
 
 }
+
+#endif //FEATURE_SINEWAVE_SIDETONE
 
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
@@ -7493,6 +7669,70 @@ void command_sidetone_freq_adj() {
 
 }
 #endif //FEATURE_COMMAND_BUTTONS
+
+
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE) && defined(FEATURE_SINEWAVE_SIDETONE)
+void command_sidetone_volume_adj() {
+
+  byte looping = 1;
+
+  #ifdef FEATURE_DISPLAY
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed(String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Volume " + String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);  
+    } 
+  #endif
+
+  tone(sidetone_line, configuration.hz_sidetone);
+  while (looping) {
+    //tone(sidetone_line, configuration.hz_sidetone);
+    if (paddle_pin_read(paddle_left) == LOW) {
+      #ifdef FEATURE_DISPLAY
+        sidetone_adj_volume(5);   
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed(String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
+        } else {   
+          lcd_center_print_timed("Volume " + String(configuration.sidetone_volume) + "%", 0, default_display_msg_delay);  
+        }      
+      #else
+        sidetone_adj_volume(1);
+      #endif
+      tone(sidetone_line, configuration.hz_sidetone);
+      delay(10);
+    }
+    if (paddle_pin_read(paddle_right) == LOW) {
+      #ifdef FEATURE_DISPLAY
+        sidetone_adj_volume(-5);
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed(String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
+        } else {   
+          lcd_center_print_timed("Volume " + String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);  
+        }        
+      #else
+        sidetone_adj_volume(-1);
+      #endif
+      tone(sidetone_line, configuration.hz_sidetone);
+      delay(10);
+    }
+    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+      looping = 0;
+    }
+
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
+
+  }
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  noTone(sidetone_line);
+
+}
+#endif //defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE) && defined(FEATURE_SINEWAVE_SIDETONE)
+
+
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_COMMAND_BUTTONS
 void command_speed_mode(byte mode)
@@ -8220,7 +8460,13 @@ void service_dit_dah_buffers()
 void beep()
 {
   #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
-    tone(sidetone_line, hz_high_beep, 200);
+    #if defined(FEATURE_SINEWAVE_SIDETONE)
+      tone(sidetone_line, hz_high_beep);
+      delay(200);
+      noTone(sidetone_line);
+    #else
+      tone(sidetone_line, hz_high_beep, 200);
+    #endif
   #else
     digitalWrite(sidetone_line, HIGH);
     delay(200);
@@ -14203,6 +14449,14 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   port_to_use->print(" ");
   port_to_use->print(configuration.hz_sidetone,DEC);
   port_to_use->println(" hz");
+
+  #if defined(FEATURE_SINEWAVE_SIDETONE)
+    port_to_use->print(F("Sidetone Volume: "));
+    port_to_use->print(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100));
+    port_to_use->println(F("%"));
+    port_to_use->println(configuration.sidetone_volume);
+  #endif //FEATURE_SINEWAVE_SIDETONE   
+
   #ifdef FEATURE_SIDETONE_SWITCH
     port_to_use->print(F("Sidetone Switch: "));
     port_to_use->println(sidetone_switch_value() ? F("On") : F("Off")); //(WD9DMP)
@@ -14302,6 +14556,8 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
       port_to_use->println(F("ff"));
     }  
   #endif
+
+
 
   #ifdef FEATURE_MEMORIES
     serial_status_memories(port_to_use);
@@ -16259,7 +16515,7 @@ void initialize_keyer_state(){
   configuration.cli_mode = CLI_NORMAL_MODE;
   configuration.wpm_command_mode = initial_command_mode_speed_wpm;
   configuration.ptt_buffer_hold_active = 0;
-
+  configuration.sidetone_volume = sidetone_volume_low_limit + ((sidetone_volume_high_limit - sidetone_volume_low_limit) / 2);
 
   configuration.ptt_lead_time[0] = initial_ptt_lead_time_tx1;
   configuration.ptt_tail_time[0] = initial_ptt_tail_time_tx1;
@@ -16358,10 +16614,7 @@ void check_eeprom_for_initialization(){
   // do an eeprom reset to defaults if paddles are squeezed
   if (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {
     while (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {}
-    write_settings_to_eeprom(1);
-    beep_boop();
-    beep_boop();
-    beep_boop();
+    initialize_eeprom();
   }
 
   // read settings from eeprom and initialize eeprom if it has never been written to
@@ -16370,11 +16623,22 @@ void check_eeprom_for_initialization(){
       EEPROM.init(); //sp5iou 20180328 to reinitialize / initialize EEPROM
       EEPROM.format();//sp5iou 20180328 to reinitialize / format EEPROM
     #endif
-    write_settings_to_eeprom(1);
-    beep_boop();
-    beep_boop();
-    beep_boop();
+    initialize_eeprom();
   }
+}
+
+//--------------------------------------------------------------------- 
+
+void initialize_eeprom(){
+  
+  write_settings_to_eeprom(1);
+  #if defined(FEATURE_SINEWAVE_SIDETONE)
+    initialize_tonsin();
+  #endif 
+  beep_boop();
+  beep_boop();
+  beep_boop();    
+
 }
 
 //--------------------------------------------------------------------- 
@@ -20139,6 +20403,153 @@ void sd_card_log(String string_to_log,byte byte_to_log){
 
 }
 #endif //FEATURE_SD_CARD_SUPPORT
+
+//-------------------------------------------------------------------------------------------------------
+
+// DL2DBG contributed code (adapted into code by Goody K3NG)
+// Based on https://forum.arduino.cc/index.php?topic=446209.15
+
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+
+void compute_sinetone(int hz, int volume){ //dl2dbg 
+
+
+  omega = 2*pi*hz ;
+  c1 = (8.0 - 2.0*pow(omega*T/1000000.0,2))/(4.0+pow(omega*T/1000000.0,2));
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.detachInterrupt();
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.detachInterrupt();
+  #endif
+  a[0]= 0.0;
+  a[1]= volume*sin(omega*T/1000000.0);
+  a[2]= 0.0;
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.attachInterrupt(sinewave_interrupt_compute);
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.attachInterrupt(sinewave_interrupt_compute);
+  #endif
+
+
+}
+#endif //FEATURE_SINEWAVE_SIDETONE
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+
+void sinewave_interrupt_compute(){ //dl2dbg
+
+  a[2] = c1 * a[1] - a[0];
+  a[0] = a[1] ;
+  a[1] = a[2] ;  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.setPwmDuty(sidetone_line, map( a[2],-512, 512, 0, 1000));
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.setPwmDuty(sidetone_line, map( a[2],-512, 512, 0, 1000));
+  #endif
+
+  
+
+}
+#endif //FEATURE_SINEWAVE_SIDETONE
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+
+void initialize_tonsin(){ //dl2dbg
+
+  //configuration.sidetone_volume = sidetone_volume_low_limit + ((sidetone_volume_high_limit - sidetone_volume_low_limit) / 2);
+  compute_sinetone(configuration.hz_sidetone,configuration.sidetone_volume);
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.initialize(T);  // set sample time for discrete tone signal
+    Timer1.pwm(sidetone_line, 0, T);
+    Timer1.attachInterrupt(sinewave_interrupt_compute);
+    Timer1.stop();
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.initialize(T);  // set sample time for discrete tone signal
+    Timer3.pwm(sidetone_line, 0, T);
+    Timer3.attachInterrupt(sinewave_interrupt_compute);
+    Timer3.stop();
+  #endif
+
+
+
+
+
+}
+#endif //FEATURE_SINEWAVE_SIDETONE
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+void sinetone(uint8_t pin_dummy_variable, unsigned short freq){  //dl2dbg
+
+  static int last_freq;
+  static int last_volume;
+
+  if ((freq != last_freq) || (configuration.sidetone_volume != last_volume)){ 
+    compute_sinetone(freq,configuration.sidetone_volume);
+    last_freq = freq;
+    last_volume = configuration.sidetone_volume;
+  }
+
+  //delay (2); compute_sinetone(freq,sidetone_volume/4);
+  //delay (2); compute_sinetone(freq,sidetone_volume/2);
+  //compute_sinetone(freq,configuration.sidetone_volume); 
+
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.restart();
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.restart();
+  #endif
+
+  
+
+
+}
+#endif //FEATURE_SINEWAVE_SIDETONE
+
+//------------------------------------------------------------------------------------------------------- 
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+void nosineTone(uint8_t pin_dummy_variable){    // disable tone on specified pin, if any    dl2dbg
+
+  //delay (2); compute_sinetone(freq,sidetone_volume/2);
+  //delay (2); compute_sinetone(freq,sidetone_volume/4);
+  // compute_sinetone(configuration.hz_sidetone,0);
+
+
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.stop();
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.stop();
+  #endif
+  
+
+  //digitalWrite(sidetone_line,LOW);
+
+}
+
+#endif //FEATURE_SINEWAVE_SIDETONE
+
+//-------------------------------------------------------------------------------------------------------
+
+void debug_blink(){
+  #if defined(DEBUG_STARTUP_BLINKS)
+    digitalWrite(13,HIGH);
+    delay(250);
+    digitalWrite(13,LOW);
+    delay(1000);
+  #endif //DEBUG_STARTUP
+}    
+
 //-------------------------------------------------------------------------------------------------------
 
 //

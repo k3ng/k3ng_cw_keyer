@@ -18,11 +18,11 @@
 #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
 #define FEATURE_MEMORY_MACROS
 // #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
-#define FEATURE_BEACON
-#define FEATURE_TRAINING_COMMAND_LINE_INTERFACE
+// #define FEATURE_BEACON
+// #define FEATURE_TRAINING_COMMAND_LINE_INTERFACE
 // #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 // #define FEATURE_SIDETONE_SWITCH   // adds switch control for the sidetone output. requires an external toggle switch (assigned to an arduino pin - see keyer_pin_settings.h). 
-#define FEATURE_SERIAL_HELP
+// #define FEATURE_SERIAL_HELP
 // #define FEATURE_HELL
 // #define FEATURE_PS2_KEYBOARD        // Use a PS2 keyboard to send code - Change keyboard layout (non-US) in K3NG_PS2Keyboard.h.  Additional options below.
 // #define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code - Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
@@ -50,7 +50,7 @@
 // #define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
 // #define FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE // enables command mode U
 // #define FEATURE_PTT_INTERLOCK 
-#define FEATURE_QLF
+// #define FEATURE_QLF
 // #define FEATURE_EEPROM_E24C1024
 // #define FEATURE_STRAIGHT_KEY
 // #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
@@ -58,13 +58,17 @@
 #define FEATURE_STRAIGHT_KEY_ECHO
 // #define FEATURE_WEB_SERVER
 // #define FEATURE_INTERNET_LINK
-#define FEATURE_AMERICAN_MORSE
+// #define FEATURE_AMERICAN_MORSE
 // #define FEATURE_4x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
 // #define FEATURE_3x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
 // #define FEATURE_EXPERIMENTAL_DDS_SINEWAVE_SIDETONE_MEGA // DDS output Mega Digital Pin 46
 // #define FEATURE_CLOCK  // NOT FINISHED YET
 // #define FEATURE_SD_CARD_SUPPORT
 // #define FEATURE_SEQUENCER
+
+// UNDER DEVELOPMENT
+// #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1  // Arduino Uno: sidetone_line = 9 or 10 ; Mega: sidetone_line = 11, 12, or 13 (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html )
+// #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3  // Arduino Mega: sidetone_line = 2, 3, or 5  (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html)
 
 
 // #define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port

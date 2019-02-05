@@ -14,15 +14,20 @@
 #define paddle_left 2
 #define paddle_right 5
 #define tx_key_line_1 11       // (high = key down/tx on)
-#define tx_key_line_2 12
+#define tx_key_line_2 0
 #define tx_key_line_3 0
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-#if !defined(FEATURE_ETHERNET)
-  #define sidetone_line 4         // connect a speaker for sidetone 
+#if !defined(FEATURE_ETHERNET) && !defined(FEATURE_SINEWAVE_SIDETONE)
+  #define sidetone_line 4      // connect a speaker for sidetone (pin 4 is used by the Ethernet shield!)
 #else
-  #define sidetone_line 31        // pin 4 is used by Ethernet shield so we'll use pin 31 on the test jig...
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    #define sidetone_line 12   // Arduino Uno: sidetone_line = 9 or 10 ; Mega: sidetone_line = 11, 12, or 13 (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html )
+  #endif
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    #define sidetone_line 3    // Arduino Mega: sidetone_line = 2, 3, or 5  (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html)
+  #endif
 #endif
 #define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
 #define ptt_tx_1 13              // PTT ("push to talk") lines
