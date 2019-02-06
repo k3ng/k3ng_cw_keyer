@@ -1001,6 +1001,9 @@ Recent Update History
       Fixed bug in command mode K command when in ultimatic mode (Thanks, Rich)
       Under Development: FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1 and FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3 in keyer_features_and_options_test.h  
 
+    2019.02.05.02
+      Improvement in how K1EL Winkey emulation buffered speed command speed changing and clearing is handled
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1015,7 +1018,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.02.05.01"
+#define CODE_VERSION "2019.02.05.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1391,6 +1394,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   byte winkey_serial_echo = 1;
   byte winkey_host_open = 0;
   unsigned int winkey_last_unbuffered_speed_wpm = 0;
+  byte winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
   byte winkey_buffer_counter = 0;
   byte winkey_buffer_pointer = 0;
   byte winkey_dit_invoke = 0;
@@ -9040,6 +9044,12 @@ void service_send_buffer(byte no_print)
         if (send_buffer_array[0] == SERIAL_SEND_BUFFER_WPM_CHANGE) {  // two bytes for wpm
           remove_from_send_buffer();
           if (send_buffer_bytes > 1) {
+            #ifdef FEATURE_WINKEY_EMULATION
+              if ((winkey_host_open) && (winkey_speed_state == WINKEY_UNBUFFERED_SPEED)){
+                winkey_speed_state == WINKEY_BUFFERED_SPEED;
+                winkey_last_unbuffered_speed_wpm = configuration.wpm;
+              }
+            #endif
             configuration.wpm = send_buffer_array[0] * 256;
             remove_from_send_buffer();
             configuration.wpm = configuration.wpm + send_buffer_array[0];
@@ -9282,6 +9292,7 @@ void winkey_unbuffered_speed_command(byte incoming_serial_byte) {
     #endif
   } else {
     configuration.wpm = incoming_serial_byte;
+    winkey_speed_state == WINKEY_UNBUFFERED_SPEED;
     winkey_last_unbuffered_speed_wpm = configuration.wpm;
     //calculate_element_length();
     #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
@@ -10385,7 +10396,8 @@ void service_winkey(byte action) {
             sending_mode = AUTOMATIC_SENDING;
             manual_ptt_invoke = 0;
             tx_and_sidetone_key(0); 
-                                   
+            winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
+            configuration.wpm = winkey_last_unbuffered_speed_wpm;                      
             break;
           case 0x0b:
             winkey_status = WINKEY_KEY_COMMAND;
@@ -10685,6 +10697,7 @@ void service_winkey(byte action) {
       if (winkey_status == WINKEY_CANCEL_BUFFERED_SPEED_COMMAND) {
         add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
         add_to_send_buffer(winkey_last_unbuffered_speed_wpm);
+        winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
 
