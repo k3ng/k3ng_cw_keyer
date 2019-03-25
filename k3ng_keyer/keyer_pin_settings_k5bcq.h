@@ -10,7 +10,7 @@
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-#define sidetone_line 1         // connect a speaker for sidetone
+#define sidetone_line 12         // connect a speaker for sidetone
 #define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
 #define ptt_tx_1 10              // PTT ("push to talk") lines
 #define ptt_tx_2 11              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
@@ -157,4 +157,3 @@ FEATURE_SIDETONE_SWITCH
   #error "Multiple pin_settings.h files included somehow..."
 
 #endif //keyer_pin_settings_h
-
