@@ -2,7 +2,7 @@
 
  K3NG Arduino CW Keyer
 
- Copyright 2010 - 2018 Anthony Good, K3NG
+ Copyright 2010 - 2019 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
 
     
@@ -1004,6 +1004,10 @@ Recent Update History
     2019.02.05.02
       Improvement in how K1EL Winkey emulation buffered speed command speed changing and clearing is handled
 
+    2019.04.06.01
+      OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW has been flipped and changed to OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS
+      Fixed some compiler warnings
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1018,7 +1022,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.02.05.02"
+#define CODE_VERSION "2019.04.06.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1202,8 +1206,7 @@ Recent Update History
   #define noTone nosineTone
 #endif //FEATURE_SINEWAVE_SIDETONE  
 
-//#define memory_area_start 82             // the eeprom location where memory space starts sp5iou 20180328 put it to keyer_settings since it must be different for STM boards
-#define memory_area_start 113             // sp5iou 20180328 the eeprom location where memory space starts  for STM32 it must be at least 110 to avoid overlap mem 1 with wpm settings 
+#define memory_area_start 113
 
 // Variables and stuff
 struct config_t {  // 111 bytes total
@@ -1357,7 +1360,7 @@ byte pot_wpm_low_value;
 #endif //FEATURE_POTENTIOMETER
 
 #if defined(FEATURE_SERIAL)
-  #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+  #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
     byte loop_element_lengths_breakout_flag;
     byte dump_current_character_flag;
   #endif
@@ -2008,7 +2011,7 @@ void loop()
         service_udp_send_buffer();
         service_udp_receive();
         service_internet_link_udp_receive_buffer();
-      #endif;
+      #endif
     #endif  
 
     #ifdef FEATURE_SIDETONE_SWITCH
@@ -6128,7 +6131,7 @@ void tx_and_sidetone_key (int state)
 
 void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in){
 
-    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+    #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
       loop_element_lengths_breakout_flag = 1;
     #endif //FEATURE_SERIAL  
     
@@ -6163,7 +6166,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     unsigned long start = micros();
     //unsigned long endtime = micros() + long(element_length*lengths*1000) + long(additional_time_ms*1000);
 
-    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+    #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
     while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0) && loop_element_lengths_breakout_flag ){
     #else
     while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0)){
@@ -6171,7 +6174,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
       check_ptt_tail();
       
-      #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+      #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
         if ((ticks - (micros() - start)) > (10 * 1000)) {
           check_serial();
           if (loop_element_lengths_breakout_flag == 0){
@@ -8548,7 +8551,7 @@ void send_the_dits_and_dahs(char const * cw_to_send){
   sending_mode = AUTOMATIC_SENDING;
 
 
-  #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+  #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
     dump_current_character_flag = 0;
   #endif  
 
@@ -8601,7 +8604,7 @@ void send_the_dits_and_dahs(char const * cw_to_send){
     }
     #if defined(FEATURE_SERIAL)
       check_serial();
-      #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+      #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
         if (dump_current_character_flag){
           x = 12;
         }
@@ -9046,7 +9049,7 @@ void service_send_buffer(byte no_print)
           if (send_buffer_bytes > 1) {
             #ifdef FEATURE_WINKEY_EMULATION
               if ((winkey_host_open) && (winkey_speed_state == WINKEY_UNBUFFERED_SPEED)){
-                winkey_speed_state == WINKEY_BUFFERED_SPEED;
+                winkey_speed_state = WINKEY_BUFFERED_SPEED;
                 winkey_last_unbuffered_speed_wpm = configuration.wpm;
               }
             #endif
@@ -10387,7 +10390,7 @@ void service_winkey(byte action) {
             pause_sending_buffer = 0;
             winkey_buffer_counter = 0;
             winkey_buffer_pointer = 0;
-            #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+            #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
               loop_element_lengths_breakout_flag = 0;
             #endif
             #ifdef FEATURE_MEMORIES
@@ -11633,7 +11636,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     
     case 92:  // \ - double backslash - clear serial send buffer
       clear_send_buffer();
-      #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+      #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
         loop_element_lengths_breakout_flag = 0;
       #endif
       #ifdef FEATURE_MEMORIES
@@ -13738,7 +13741,7 @@ void random_practice(PRIMARY_SERIAL_CLS * port_to_use,byte random_mode,byte grou
   byte x = 0;
   byte y = 0;
   char incoming_char = ' ';
-  char random_character;
+  char random_character = 0;
 
   randomSeed(millis());
   port_to_use->println(F("Random group practice\r\n"));
@@ -14891,8 +14894,8 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
 
   */
 
-  uint8_t incoming_serial_byte;
-  uint8_t memory_number;
+  uint8_t incoming_serial_byte = 0;
+  uint8_t memory_number = 0;
   uint8_t looping = 1;
   int memory_index = 0;
   uint8_t memory_number_entered = 0;
