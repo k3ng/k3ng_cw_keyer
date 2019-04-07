@@ -1008,6 +1008,9 @@ Recent Update History
       OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW has been flipped and changed to OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS
       Fixed some compiler warnings
 
+    2019.04.07.01
+      Fixed additional compiler warnings
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1015,14 +1018,14 @@ Recent Update History
   FOR EXAMPLE:
 
     K3NG_PS2Keyboard.h, K3NG_PS2Keyboard.cpp ----->  \Arduino\Sketchbook\libraries\K3NG_PS2Keyboard\
-    Goertz.h, Goertz.cpp ------------------------>  \Arduino\Sketchbook\libraries\Goertz\
+    Goertz.h, Goertz.cpp ------------------------>   \Arduino\Sketchbook\libraries\Goertz\
 
   
   "Make good code and share it with friends."
 
 */
 
-#define CODE_VERSION "2019.04.06.01"
+#define CODE_VERSION "2019.04.07.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -3067,7 +3070,7 @@ void display_scroll_print_char(char charin){
   #endif //DEBUG_DISPLAY_SCROLL_PRINT_CHAR
 
   #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
-  switch (charin){
+  switch (byte(charin)){
     case 220: charin = 0;break; // U_umlaut  (D, ...)
     case 214: charin = 1;break; // O_umlaut  (D, SM, OH, ...)
     case 196: charin = 2;break; // A_umlaut  (D, SM, OH, ...)
@@ -14829,7 +14832,7 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
 
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte eeprom_temp = 0;
-    static char * prosign_temp = "";
+    static char * prosign_temp = 0;
   #endif
 
   for (int x = 0; x < number_of_memories; x++) {
@@ -15197,7 +15200,7 @@ byte play_memory(byte memory_number)
 
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte eeprom_temp = 0;
-    static char * prosign_temp = "";
+    static char * prosign_temp = 0;
   #endif  
 
   if (memory_number > (number_of_memories - 1)) {
@@ -19152,7 +19155,7 @@ void web_print_page_memories(EthernetClient client){
 
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte eeprom_temp = 0;
-    static char * prosign_temp = "";
+    static char * prosign_temp = 0;
   #endif
 
 
