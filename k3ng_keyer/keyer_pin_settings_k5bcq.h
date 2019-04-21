@@ -85,8 +85,8 @@ FEATURE_SIDETONE_SWITCH
 #endif //FEATURE_LED_RING
 
 #ifdef FEATURE_ALPHABET_SEND_PRACTICE
-  #define correct_answer_led 0
-  #define wrong_answer_led 0
+  #define correct_answer_led 27
+  #define wrong_answer_led 25
 #endif //FEATURE_ALPHABET_SEND_PRACTICE
 
 #ifdef FEATURE_PTT_INTERLOCK
