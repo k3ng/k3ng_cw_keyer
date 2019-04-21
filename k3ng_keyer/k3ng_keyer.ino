@@ -2,7 +2,7 @@
 
  K3NG Arduino CW Keyer
 
- Copyright 2010 - 2018 Anthony Good, K3NG
+ Copyright 2010 - 2019 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
 
     
@@ -83,11 +83,20 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \@     Mill Mode
     \}#### Set potentiometer range - low ## / high ##
     \"     Hold PTT active with buffered characters
-    \:     Extended CLLI commands
     \;     FUTURE
     \]     FUTURE
     \_     FUTURE - Set Clock
     \\     Immediately clear the buffer, stop memory sending, etc.
+    \:     Extended CLLI commands
+            eepromdump              - do a byte dump of EEPROM for troubleshooting
+            saveeeprom <filename>   - store EEPROM in a file
+            loadeeprom <filename>   - load into EEPROM from a file
+            printlog                - print the SD card log
+            clearlog                - clear the SD card log
+            ls <directory>          - list files in SD card directory
+            cat <filename>          - print filename on SD card
+            pl <transmitter> <mS>   - Set PTT lead time
+            pt <transmitter> <mS>   - Set PTT tail time
 
 
  Buttons
@@ -108,12 +117,13 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     H  Set weighting and dah to dit ratio to defaults
     I  TX enable / disable
     J  Dah to dit ratio adjust
-    K  Toggle Dit and Dah Buffers on and off
+    K  Toggle Dit and Dah Buffers on and off (Ultimatic Mode)
     L  Adjust weighting
     M  Change command mode speed
     N  Toggle paddle reverse
     O  Toggle sidetone on / off
     P#(#) Program a memory
+    Q  Adjust sidetone volume (FEATURE_SINEWAVE_SIDETONE only)
     R####  Set serial number to ####
     S  Alphabet code practice (FEATURE_ALPHABET_SEND_PRACTICE)
     T  Tune mode
@@ -938,7 +948,68 @@ Recent Update History
       Added OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW to disable this additional checking if desired or for troubleshooting 
 
     2018.08.13.01
-      More accurate Farnsworth timing; code contributed by Jim, W5LA  
+      More accurate Farnsworth timing; code contributed by Jim, W5LA 
+
+    2018.08.21.01
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/50
+      HARDWARE_YAACWK contributed by Federico Pietro Briata, IZ1GLG <federico@briata.org>
+
+    2018.08.21.02  
+      Different Farnsworth timing calculation.  Introduced farnsworth_timing_calibration in settings files.
+
+    2018.08.23.01
+      Fixed bug with Farnsworth timing not occurring during intercharacter time, however now overall WPM timing not right...  
+
+    2018.08.25.01
+      More work on Farnsworth timing.  The timing appears correct now with PARIS testing, however using farnsworth_timing_calibration = 0.35  
+      Now allow /M0 command to disable Farnsworth
+
+    2018.08.30.01
+      Think we got Farnsworth timing right now.  Thanks, Jim, W5LA !  
+
+    2018.10.17.01
+      PTT lead and tail times, and sequencer times can now be set up to 65,535 mS  
+      Updated help text with extended commands
+
+    2018.10.17.02
+      Fixed bug in K1EL Winkeyer Emulation paddle echo 
+
+    2018.10.17.03
+      Improved potentiometer noise immunity, added potentiometer_reading_threshold in settings (Thanks, Wolf, DK7OB)
+      Fixed non-optimal potentiometer speed change comparison (Thanks, Wolf, DK7OB)
+
+    2018.10.19.01
+      Enabling OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW by default.  There appear to be lock ups caused by the serial port checking while sending functionality.  Investigating.  
+
+    2018.10.21.01
+      Fixed Funtronics FK-10 LCD pin definitions that were broken in 2018.07.15.01 (Thanks, Jeff, N0MII )
+
+    2018.11.09.01
+      Fixed bug with K1EL Winkey emulation with Admin Get Values PTT Hang Time value returned (Thanks, Dariusz, SP2MKI)  
+      Improved reporting of K1EL Winkey emulation PTT tail time and also now have tail time change dynamically with WPM changes to better follow specification
+      Fixed bug in Beacon Mode where dit and dah paddle would interrupt beacon code
+      Fixed bug with K1EL Winkey emulation with dead op watchdog enabling / disabling, and reporting (Thanks, Dariusz, SP2MKI)  
+      K1EL Winkey emulation PINCONFIG and Winkeyer Mode commands now write to eeprom
+
+    2018.11.09.02
+      CLI Status now shows paddle and straight key echo state  
+
+    2018.12.25.01
+      Fixed potential bug in sleep functionality timing 
+
+    2019.02.05.01
+      Fixed bug in command mode K command when in ultimatic mode (Thanks, Rich)
+      Under Development: FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1 and FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3 in keyer_features_and_options_test.h  
+
+    2019.02.05.02
+      Improvement in how K1EL Winkey emulation buffered speed command speed changing and clearing is handled
+
+    2019.04.06.01
+      OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW has been flipped and changed to OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS
+      Fixed some compiler warnings
+
+    2019.04.07.01
+      Fixed additional compiler warnings
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -947,15 +1018,15 @@ Recent Update History
   FOR EXAMPLE:
 
     K3NG_PS2Keyboard.h, K3NG_PS2Keyboard.cpp ----->  \Arduino\Sketchbook\libraries\K3NG_PS2Keyboard\
-    Goertz.h, Goertz.cpp ------------------------>  \Arduino\Sketchbook\libraries\Goertz\
+    Goertz.h, Goertz.cpp ------------------------>   \Arduino\Sketchbook\libraries\Goertz\
 
   
   "Make good code and share it with friends."
 
 */
 
-#define CODE_VERSION "2018.08.13.01"
-#define eeprom_magic_number 33               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2019.04.07.01"
+#define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -996,6 +1067,8 @@ Recent Update History
   #include "keyer_features_and_options_k5bcq.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
   #include "keyer_features_and_options_test_everything.h"
+#elif defined(HARDWARE_YAACWK)
+  #include "keyer_features_and_options_yaacwk.h"
 #elif defined(HARDWARE_TEST)
   #include "keyer_features_and_options_test.h"
 #else
@@ -1042,6 +1115,9 @@ Recent Update History
 #elif defined(HARDWARE_TEST_EVERYTHING)
   #include "keyer_pin_settings_test_everything.h"
   #include "keyer_settings_test_everything.h"
+#elif defined(HARDWARE_YAACWK)
+  #include "keyer_pin_settings_yaacwk.h"
+  #include "keyer_settings_yaacwk.h"
 #elif defined(HARDWARE_TEST)
   #include "keyer_pin_settings_test.h"
   #include "keyer_settings_test.h"
@@ -1055,10 +1131,10 @@ Recent Update History
 #endif 
 
 #if defined(FEATURE_PS2_KEYBOARD)
-  #include <K3NG_PS2Keyboard.h>  // It should be different library for ARM sp5iou (?)
+  #include <K3NG_PS2Keyboard.h>
 #endif
 
-#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH) || defined (FEATURE_LCD_8BIT)// works on 3.2V supply and logic, but do not work on every pins (SP5IOU)
+#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD1602_N07DH) || defined (FEATURE_LCD_8BIT) // works on 3.2V supply and logic, but do not work on every pins (SP5IOU)
   #include <LiquidCrystal.h>
   #include <Wire.h>
 #endif
@@ -1126,11 +1202,22 @@ Recent Update History
   #include <SD.h>
 #endif //FEATURE_SD_CARD_SUPPORT
 
-//#define memory_area_start 82             // the eeprom location where memory space starts sp5iou 20180328 put it to keyer_settings since it must be different for STM boards
-#define memory_area_start 110             // sp5iou 20180328 the eeprom location where memory space starts  for STM32 it must be at least 110 to avoid overlap mem 1 with wpm settings 
+
+#if defined(FEATURE_SINEWAVE_SIDETONE) //zzzzzz
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    #include <TimerOne.h> 
+  #endif
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    #include <TimerThree.h> 
+  #endif
+  #define tone sinetone
+  #define noTone nosineTone
+#endif //FEATURE_SINEWAVE_SIDETONE  
+
+#define memory_area_start 113
 
 // Variables and stuff
-struct config_t {  // 87 bytes total
+struct config_t {  // 111 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1177,11 +1264,14 @@ struct config_t {  // 87 bytes total
   unsigned int link_send_udp_port[FEATURE_INTERNET_LINK_MAX_LINKS];
     // 14 bytes
 
-  uint8_t ptt_lead_time[6];
-  uint8_t ptt_tail_time[6];
-  uint8_t ptt_active_to_sequencer_active_time[5];
-  uint8_t ptt_inactive_to_sequencer_inactive_time[5];
-    // 22 bytes
+  unsigned int ptt_lead_time[6];
+  unsigned int ptt_tail_time[6];
+  unsigned int ptt_active_to_sequencer_active_time[5];
+  unsigned int ptt_inactive_to_sequencer_inactive_time[5];
+    // 44 bytes
+
+  int sidetone_volume;
+    // 2 bytes
 
 } configuration;
 
@@ -1278,7 +1368,7 @@ byte pot_wpm_low_value;
 #endif //FEATURE_POTENTIOMETER
 
 #if defined(FEATURE_SERIAL)
-  #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+  #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
     byte loop_element_lengths_breakout_flag;
     byte dump_current_character_flag;
   #endif
@@ -1315,6 +1405,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   byte winkey_serial_echo = 1;
   byte winkey_host_open = 0;
   unsigned int winkey_last_unbuffered_speed_wpm = 0;
+  byte winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
   byte winkey_buffer_counter = 0;
   byte winkey_buffer_pointer = 0;
   byte winkey_dit_invoke = 0;
@@ -1325,6 +1416,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   byte winkey_sending = 0;
   byte winkey_interrupted = 0;
   byte winkey_xoff = 0;
+  byte winkey_session_ptt_tail = 0;
   #ifdef OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
     byte winkey_breakin_status_byte_inhibit = 0;
   #endif //OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
@@ -1687,10 +1779,25 @@ unsigned long millis_rollover = 0;
 #endif  
 
 
+#if defined(FEATURE_SINEWAVE_SIDETONE)  //DL2DBG contributed
+  const float pi = 3.14159 ;
+  const float T = 100 ;    // sample time in microseconds
+        float freq = 800 ;  // frequency of tone in hertz
+        float omega = 2*pi*freq ;
+        float A = 490 ;  // amplitude
+        
+  // next line initializes oscillation with amplitude A
+  float  a[]={0.0, A*sin(omega*T/1000000.0),0.0};
+  // c1 is the difference equation coefficient
+  float c1 = (8.0 - 2.0*pow(omega*T/1000000.0,2))/(4.0+pow(omega*T/1000000.0,2));
+#endif //FEATURE_SINEWAVE_SIDETONE
+
 /*---------------------------------------------------------------------------------------------------------
 
 
-                                    this code is a work of art.  enjoy.
+ “What we do for ourselves dies with us. What we do for others and the world remains and is immortal.” 
+
+― Albert Pike
 
 
 ---------------------------------------------------------------------------------------------------------*/
@@ -1698,27 +1805,97 @@ unsigned long millis_rollover = 0;
 void setup()
 {
 
-  initialize_pins();
-  initialize_keyer_state();
-  initialize_potentiometer();
-  initialize_rotary_encoder();
-  initialize_default_modes();
-  initialize_watchdog();
-  initialize_ethernet_variables();
-  check_eeprom_for_initialization();
-  check_for_beacon_mode();
-  check_for_debug_modes();
-  initialize_analog_button_array();
+
   initialize_serial_ports();
-  initialize_ps2_keyboard();
-  initialize_usb();
-  initialize_cw_keyboard();
-  initialize_display();
-  initialize_ethernet();
-  initialize_udp();
-  initialize_web_server();
-  initialize_sd_card();  
+
+  debug_blink();
+
   initialize_debug_startup();
+
+  debug_blink();
+
+  initialize_pins();
+
+  debug_blink();
+
+  // #if defined(FEATURE_SINEWAVE_SIDETONE)
+  //   initialize_tonsin();
+  // #endif  
+
+  debug_blink();
+
+  initialize_keyer_state();
+
+  debug_blink();
+
+  initialize_potentiometer();
+
+  debug_blink();
+
+  initialize_rotary_encoder();
+
+  debug_blink();
+
+  initialize_default_modes();
+
+  debug_blink();
+
+  initialize_watchdog();
+
+  debug_blink();
+
+  initialize_ethernet_variables();
+
+  debug_blink();
+
+  check_eeprom_for_initialization();
+
+  debug_blink();
+
+  check_for_beacon_mode();
+
+  debug_blink();
+
+  check_for_debug_modes();
+
+  debug_blink();
+
+  initialize_analog_button_array();
+
+  debug_blink();
+
+  initialize_ps2_keyboard();
+
+  debug_blink();
+
+  initialize_usb();
+
+  debug_blink();
+
+  initialize_cw_keyboard();
+
+  debug_blink();
+
+  initialize_display();
+
+  debug_blink();
+
+  initialize_ethernet();
+
+  debug_blink();
+
+  initialize_udp();
+
+  debug_blink();
+
+  initialize_web_server();
+
+  debug_blink();
+
+  initialize_sd_card();  
+
+  debug_blink();
+
 
 }
 
@@ -1739,7 +1916,8 @@ void loop()
       delay(201);
       while (keyer_machine_mode == BEACON) {  // if we're in beacon mode, just keep playing memory 1
         if (!send_buffer_bytes) {
-          play_memory(0);
+          add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+          add_to_send_buffer(0);
         }
         service_send_buffer(PRINTCHAR);
         #ifdef FEATURE_SERIAL
@@ -1841,27 +2019,27 @@ void loop()
         service_udp_send_buffer();
         service_udp_receive();
         service_internet_link_udp_receive_buffer();
-      #endif;
+      #endif
+    #endif  
+
+    #ifdef FEATURE_SIDETONE_SWITCH
+      check_sidetone_switch();
+    #endif //FEATURE_SIDETONE_SWITCH
+
+    #if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
+      service_keypad();
+    #endif
+
+
+    #ifdef FEATURE_SD_CARD_SUPPORT
+      service_sd_card();    
+    #endif
+
+    #ifdef FEATURE_SEQUENCER
+      check_sequencer_tail_time();
     #endif  
 
   }
-
-  #ifdef FEATURE_SIDETONE_SWITCH
-    check_sidetone_switch();
-  #endif //FEATURE_SIDETONE_SWITCH
-
-  #if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
-    service_keypad();
-  #endif
-
-
-  #ifdef FEATURE_SD_CARD_SUPPORT
-    service_sd_card();    
-  #endif
-
-  #ifdef FEATURE_SEQUENCER
-    check_sequencer_tail_time();
-  #endif  
 
   service_millis_rollover();
 
@@ -2751,7 +2929,7 @@ void check_sleep(){
 #ifdef FEATURE_SLEEP   // Code contributed by Graeme, ZL2APV  2016-01-18
 void check_sleep(){
 
-  if ((millis() - last_activity_time) > (go_to_sleep_inactivity_time*60000)){
+  if ((millis() - last_activity_time) > ((unsigned long)go_to_sleep_inactivity_time*60000)){
 
     if (config_dirty) {  // force a configuration write to EEPROM if the config is dirty
       last_config_write = 0;
@@ -2897,7 +3075,7 @@ void display_scroll_print_char(char charin){
   #endif //DEBUG_DISPLAY_SCROLL_PRINT_CHAR
 
   #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
-  switch (charin){
+  switch (byte(charin)){
     case 220: charin = 0;break; // U_umlaut  (D, ...)
     case 214: charin = 1;break; // O_umlaut  (D, SM, OH, ...)
     case 196: charin = 2;break; // A_umlaut  (D, SM, OH, ...)
@@ -4628,7 +4806,7 @@ void check_potentiometer()
     
   if ((configuration.pot_activated || potentiometer_always_on) && ((millis() - last_pot_check_time) > potentiometer_check_interval_ms)) {
     byte pot_value_wpm_read = pot_value_wpm();
-    if ((abs(pot_value_wpm_read - last_pot_wpm_read) > potentiometer_change_threshold)) {
+    if (((abs(pot_value_wpm_read - last_pot_wpm_read) * 10) > (potentiometer_change_threshold * 10))) {
       #ifdef DEBUG_POTENTIOMETER
         debug_serial_port->print(F("check_potentiometer: speed change: "));
         debug_serial_port->print(pot_value_wpm_read);
@@ -4656,8 +4834,18 @@ void check_potentiometer()
 #ifdef FEATURE_POTENTIOMETER
 byte pot_value_wpm()
 {
+  // int pot_read = analogRead(potentiometer);
+  // byte return_value = map(pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+  // return return_value;
+
+
+  static int last_pot_read = 0;
+  static byte return_value = 0;
   int pot_read = analogRead(potentiometer);
-  byte return_value = map(pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+  if (abs(pot_read - last_pot_read) > potentiometer_reading_threshold ) {
+    return_value = map(pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+    last_pot_read = pot_read;
+  }
   return return_value;
 
 }
@@ -4828,7 +5016,10 @@ void check_paddles()
   #define DIT_CLOSURE_DAH_ON 3
   #define DAH_CLOSURE_DIT_ON 4
 
+  if (keyer_machine_mode == BEACON){return;}
+
   static byte last_closure = NO_CLOSURE;
+
 
   check_dit_paddle();
   check_dah_paddle();  
@@ -5212,44 +5403,125 @@ void check_ptt_tail()
   }
 
 
-  if (key_state) {
-    ptt_time = millis();
-  } else {
-    if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
-      //if ((millis() - ptt_time) > ptt_tail_time) {
-      if (last_sending_mode == MANUAL_SENDING) {
-        #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+  #if !defined(FEATURE_WINKEY_EMULATION)
+    if (key_state) {
+      ptt_time = millis();
+    } else {
+      if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
+        //if ((millis() - ptt_time) > ptt_tail_time) {
+        if (last_sending_mode == MANUAL_SENDING) {
+          #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
 
-          // PTT Tail Time: N     PTT Hang Time: Y
+            // PTT Tail Time: N     PTT Hang Time: Y
 
-          if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
-            ptt_unkey();
-          }          
-        #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-          #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+            if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
+              ptt_unkey();
+            }          
+          #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+            #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
 
-            // PTT Tail Time: Y     PTT Hang Time: Y
+              // PTT Tail Time: Y     PTT Hang Time: Y
 
-            if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1])) {       
+              if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1])) {       
+                ptt_unkey();
+              }
+            #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+            if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]) {  
+
+
+              // PTT Tail Time: Y    PTT Hang Time: N
+
               ptt_unkey();
             }
-          #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-          if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]) {  
-
-
-            // PTT Tail Time: Y    PTT Hang Time: N
-
+            #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+          #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+        } else { // automatic sending
+          if (((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))){
             ptt_unkey();
           }
-          #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
-        #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
-      } else { // automatic sending
-        if (((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))){
-          ptt_unkey();
         }
       }
     }
-  }
+  #else //FEATURE_WINKEY_EMULATION
+
+    if (key_state) {
+      ptt_time = millis();
+    } else {
+      if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
+        //if ((millis() - ptt_time) > ptt_tail_time) {
+        if (last_sending_mode == MANUAL_SENDING) {
+          #ifndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+
+            // PTT Tail Time: N     PTT Hang Time: Y
+
+            if ((millis() - ptt_time) >= ((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm)) ) {
+              ptt_unkey();
+            }          
+          #else //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+            #ifndef OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+
+              // PTT Tail Time: Y     PTT Hang Time: Y
+              
+            if (winkey_host_open){
+              if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+ (int(winkey_session_ptt_tail) * 10) + (3 * (1200/configuration.wpm)) )) {       
+                ptt_unkey();
+              }
+            } else { 
+              if ((millis() - ptt_time) >= (((configuration.length_wordspace*ptt_hang_time_wordspace_units)*float(1200/configuration.wpm))+configuration.ptt_tail_time[configuration.current_tx-1])) {       
+                ptt_unkey();
+              }
+            }
+
+
+
+            #else //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+            if (winkey_host_open){
+              if ((millis() - ptt_time) >= ((int(winkey_session_ptt_tail) * 10) + (3 * (1200/configuration.wpm)))) {  
+
+                // PTT Tail Time: Y    PTT Hang Time: N
+
+                ptt_unkey();
+              }
+            } else {
+              if ((millis() - ptt_time) >= configuration.ptt_tail_time[configuration.current_tx-1]) {  
+
+
+                // PTT Tail Time: Y    PTT Hang Time: N
+
+                ptt_unkey();
+              }
+            }
+
+
+
+
+
+            #endif //OPTION_EXCLUDE_PTT_HANG_TIME_FOR_MANUAL_SENDING
+          #endif //ndef OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING
+        } else { // automatic sending
+          if (winkey_host_open){
+            if (((millis() - ptt_time) > ((int(winkey_session_ptt_tail) * 10) + (3 * (1200/configuration.wpm)))) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))) {
+              ptt_unkey();
+            }
+          } else {
+            if (((millis() - ptt_time) > configuration.ptt_tail_time[configuration.current_tx-1]) && ( !configuration.ptt_buffer_hold_active || ((!send_buffer_bytes) && configuration.ptt_buffer_hold_active) || (pause_sending_buffer))){
+              ptt_unkey();
+            }            
+          }  
+        }
+      }
+    }
+
+
+
+
+
+  #endif //FEATURE_WINKEY_EMULATION  
+
+
+
+
+
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -5302,6 +5574,10 @@ int read_settings_from_eeprom() {
     
       switch_to_tx_silent(configuration.current_tx);
       config_dirty = 0;
+
+      #if defined(FEATURE_SINEWAVE_SIDETONE)
+        initialize_tonsin();
+      #endif 
 
       return 0;
     } else {
@@ -5526,8 +5802,7 @@ void send_dit(){
   #ifdef FEATURE_WINKEY_EMULATION
     if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_mode == MANUAL_SENDING)) {
       winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 1;
-      winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
-
+      winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_time_factor/float(configuration.wpm))*length_letterspace);
       #ifdef FEATURE_AUTOSPACE
         if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
       #endif //FEATURE_AUTOSPACE    
@@ -5616,12 +5891,10 @@ void send_dah(){
   #ifdef FEATURE_WINKEY_EMULATION
     if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_mode == MANUAL_SENDING)) {
       winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 2;
-      winkey_paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
-
+      winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_time_factor/float(configuration.wpm))*length_letterspace);
       #ifdef FEATURE_AUTOSPACE
         if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
       #endif //FEATURE_AUTOSPACE
-
     }
   #endif
  
@@ -5646,6 +5919,42 @@ void send_dah(){
   last_sending_mode = sending_mode;
 
 }
+
+/* 
+
+    The Dash
+    
+    by Linda Ellis
+
+
+    I read of a man who stood to speak at a funeral of a friend.  He referred to the dates on the tombstone from the beginning...to the end.
+
+    He noted that first came the date of birth and spoke of the following date with tears, but said what mattered most of all was the dash
+     between those years.
+
+    For that dash represents all the time they spent alive on earth and now only those who loved them know what that little line is worth.
+
+    For it matters not, how much we own, the cars..the house...the cash.
+
+      What matters is how we lived and loved and how we spend our dash.
+
+    So think about this long and hard; are there things you'd like to change?
+
+      For you never know how much time is left that still can be rearranged.
+
+    To be less quick to anger and show appreciation more and love the people in our lives like we've never loved before.
+
+    If we treat each other with respect and more often wear a smile...remembering that this special dash might only last a little while.
+
+    So when your eulogy is being read, with your life's actions to rehash,
+
+
+     would you be proud of the things they say about how you lived your dash?
+
+
+
+*/
+
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -5830,7 +6139,7 @@ void tx_and_sidetone_key (int state)
 
 void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in){
 
-    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+    #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
       loop_element_lengths_breakout_flag = 1;
     #endif //FEATURE_SERIAL  
     
@@ -5841,18 +6150,17 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     float element_length;
 
     #if defined(FEATURE_FARNSWORTH)
-      float factor = 160; // ms to the element length for each WPM slower
-      int reference = 20; // 20 WPM
 
-      if (speed_mode == SPEED_NORMAL) {
-        if ((sending_mode == AUTOMATIC_SENDING) && (configuration.wpm_farnsworth > configuration.wpm)) {
-          element_length = ((factor*(reference-speed_wpm_in)+(reference*60))/speed_wpm_in);  // code contributed by Jim, W5LA
-        } else {
-          element_length = 1200/speed_wpm_in;
-        }
+      if ((lengths == 1) && (speed_wpm_in == 0)){
+        element_length = additional_time_ms;
       } else {
-        element_length = qrss_dit_length * 1000;
+        if (speed_mode == SPEED_NORMAL) {
+          element_length = 1200/speed_wpm_in;   
+        } else {
+          element_length = qrss_dit_length * 1000;
+        }
       }
+
     #else //FEATURE_FARNSWORTH
       if (speed_mode == SPEED_NORMAL) {
         element_length = 1200/speed_wpm_in;   
@@ -5866,15 +6174,15 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     unsigned long start = micros();
     //unsigned long endtime = micros() + long(element_length*lengths*1000) + long(additional_time_ms*1000);
 
-    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+    #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
     while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0) && loop_element_lengths_breakout_flag ){
     #else
     while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0)){
     #endif
 
       check_ptt_tail();
-//zzzzzz       
-      #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+      
+      #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
         if ((ticks - (micros() - start)) > (10 * 1000)) {
           check_serial();
           if (loop_element_lengths_breakout_flag == 0){
@@ -6213,7 +6521,8 @@ void command_mode()
   speed_mode = SPEED_NORMAL;                 // put us in normal speed mode (life is too short to do command mode in QRSS)
   byte keyer_mode_before = configuration.keyer_mode;
   char c[4];
-  if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B)) {
+  if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B) && (configuration.keyer_mode != ULTIMATIC)) {
+  //if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B)) {
     configuration.keyer_mode = IAMBIC_B;                   // we got to be in iambic mode (life is too short to make this work in bug mode)
   }
 
@@ -6372,6 +6681,9 @@ void command_mode()
           break; 
         #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
           case 1121: command_sidetone_freq_adj(); break;                    // F - adjust sidetone frequency
+          #if defined(FEATURE_SINEWAVE_SIDETONE)
+            case 2212: command_sidetone_volume_adj(); break;                    // Q - adjust sinewave sidetone volume
+          #endif
         #endif
         case 221: // G - switch to buG mode
           configuration.keyer_mode = BUG;
@@ -6410,7 +6722,7 @@ void command_mode()
           send_dit();
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
-        case 212:                                                                   // K - turn dit and dah buffers on and off in Ultimatic mode
+        case 212:                                                                   // K - turn dit and dah buffers on and off
           if (configuration.keyer_mode == ULTIMATIC){
             send_char('O',KEYER_NORMAL);
             if (configuration.dit_buffer_off){
@@ -7235,21 +7547,86 @@ void command_tuning_mode() {
 #endif //FEATURE_COMMAND_BUTTONS
 //-------------------------------------------------------------------------------------------------------
 
-void sidetone_adj(int hz) {
 
-  if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
-    configuration.hz_sidetone = configuration.hz_sidetone + hz;
+
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+  void sidetone_adj(int hz) {
+
+    if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
+      configuration.hz_sidetone = configuration.hz_sidetone + hz;
+      compute_sinetone(configuration.hz_sidetone,configuration.sidetone_volume);
+      config_dirty = 1;
+      #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        } else {
+          lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        }
+      #endif   
+    }
+
+  }
+
+#else //FEATURE_SINEWAVE_SIDETONE
+
+  void sidetone_adj(int hz) {
+
+    if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
+      configuration.hz_sidetone = configuration.hz_sidetone + hz;
+      config_dirty = 1;
+      #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        } else {
+          lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        }
+      #endif   
+    }
+
+  }
+
+#endif //FEATURE_SINEWAVE_SIDETONE
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+
+void sidetone_adj_volume(int vo) { //dl2dbg
+
+  if ((vo > 0) && ((configuration.sidetone_volume + vo) > sidetone_volume_high_limit)){
+    configuration.sidetone_volume = sidetone_volume_high_limit;
     config_dirty = 1;
+  } else {
+    if ((vo < 0) && ((configuration.sidetone_volume + vo) < sidetone_volume_low_limit)){
+      configuration.sidetone_volume = sidetone_volume_low_limit;
+      config_dirty = 1;
+    } else {
+        if (((configuration.sidetone_volume + vo) >= sidetone_volume_low_limit) && ((configuration.sidetone_volume + vo) <= sidetone_volume_high_limit)){
+          configuration.sidetone_volume = configuration.sidetone_volume + vo;
+          config_dirty = 1;
+        }
+    }
+  }
+
+
+
+
+
+  if (config_dirty) {
+    compute_sinetone(configuration.hz_sidetone,configuration.sidetone_volume);
     #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
       if (LCD_COLUMNS < 9){
-        lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        lcd_center_print_timed(String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
       } else {
-        lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+        lcd_center_print_timed("Sidetone " + String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
       }
     #endif   
   }
 
 }
+
+#endif //FEATURE_SINEWAVE_SIDETONE
 
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
@@ -7307,6 +7684,70 @@ void command_sidetone_freq_adj() {
 
 }
 #endif //FEATURE_COMMAND_BUTTONS
+
+
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE) && defined(FEATURE_SINEWAVE_SIDETONE)
+void command_sidetone_volume_adj() {
+
+  byte looping = 1;
+
+  #ifdef FEATURE_DISPLAY
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed(String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Volume " + String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);  
+    } 
+  #endif
+
+  tone(sidetone_line, configuration.hz_sidetone);
+  while (looping) {
+    //tone(sidetone_line, configuration.hz_sidetone);
+    if (paddle_pin_read(paddle_left) == LOW) {
+      #ifdef FEATURE_DISPLAY
+        sidetone_adj_volume(5);   
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed(String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
+        } else {   
+          lcd_center_print_timed("Volume " + String(configuration.sidetone_volume) + "%", 0, default_display_msg_delay);  
+        }      
+      #else
+        sidetone_adj_volume(1);
+      #endif
+      tone(sidetone_line, configuration.hz_sidetone);
+      delay(10);
+    }
+    if (paddle_pin_read(paddle_right) == LOW) {
+      #ifdef FEATURE_DISPLAY
+        sidetone_adj_volume(-5);
+        if (LCD_COLUMNS < 9){
+          lcd_center_print_timed(String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
+        } else {   
+          lcd_center_print_timed("Volume " + String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);  
+        }        
+      #else
+        sidetone_adj_volume(-1);
+      #endif
+      tone(sidetone_line, configuration.hz_sidetone);
+      delay(10);
+    }
+    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+      looping = 0;
+    }
+
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
+
+  }
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  noTone(sidetone_line);
+
+}
+#endif //defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE) && defined(FEATURE_SINEWAVE_SIDETONE)
+
+
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_COMMAND_BUTTONS
 void command_speed_mode(byte mode)
@@ -7930,6 +8371,8 @@ void service_dit_dah_buffers()
     debug_serial_port->println(F("loop: entering service_dit_dah_buffers"));
   #endif      
 
+  if (keyer_machine_mode == BEACON){return;} //zzzzzz
+
   if (automatic_sending_interruption_time != 0){
     if ((millis() - automatic_sending_interruption_time) > (configuration.paddle_interruption_quiet_time_element_lengths*(1200/configuration.wpm))){
       automatic_sending_interruption_time = 0;
@@ -8032,7 +8475,13 @@ void service_dit_dah_buffers()
 void beep()
 {
   #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
-    tone(sidetone_line, hz_high_beep, 200);
+    #if defined(FEATURE_SINEWAVE_SIDETONE)
+      tone(sidetone_line, hz_high_beep);
+      delay(200);
+      noTone(sidetone_line);
+    #else
+      tone(sidetone_line, hz_high_beep, 200);
+    #endif
   #else
     digitalWrite(sidetone_line, HIGH);
     delay(200);
@@ -8105,12 +8554,18 @@ void send_the_dits_and_dahs(char const * cw_to_send){
 
   */ 
 
+  //debug_serial_port->println(F("send_the_dits_and_dahs()"));
+
   sending_mode = AUTOMATIC_SENDING;
 
 
-    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
-      dump_current_character_flag = 0;
-    #endif  
+  #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
+    dump_current_character_flag = 0;
+  #endif  
+
+  #if defined(FEATURE_FARNSWORTH)
+    float additional_intercharacter_time_ms;
+  #endif
 
   for (int x = 0;x < 12;x++){
     switch(cw_to_send[x]){
@@ -8142,16 +8597,22 @@ void send_the_dits_and_dahs(char const * cw_to_send){
         loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),configuration.wpm);
         break;            
       #endif //FEATURE_AMERICAN_MORSE
-      default: return; break;
+      default: 
+        //return; 
+        x = 12;
+        break;
     }
-    if (dit_buffer || dah_buffer || sending_mode == AUTOMATIC_SENDING_INTERRUPTED){
+
+    if ((dit_buffer || dah_buffer || sending_mode == AUTOMATIC_SENDING_INTERRUPTED) && (keyer_machine_mode != BEACON)){
       dit_buffer = 0;
       dah_buffer = 0;
-      return;
+      //debug_serial_port->println(F("send_the_dits_and_dahs: AUTOMATIC_SENDING_INTERRUPTED"));
+      //return;
+      x = 12;
     }
     #if defined(FEATURE_SERIAL)
       check_serial();
-      #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+      #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
         if (dump_current_character_flag){
           x = 12;
         }
@@ -8162,7 +8623,8 @@ void send_the_dits_and_dahs(char const * cw_to_send){
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
-  }
+  }  // for (int x = 0;x < 12;x++)
+
 
 }
 
@@ -8230,7 +8692,9 @@ void send_char(byte cw_char, byte omit_letterspace)
 
       case '=': send_the_dits_and_dahs("-...-");break;
       case '/': send_the_dits_and_dahs("-..-.");break;
-      case ' ': loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm); break;
+      case ' ': 
+        loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm); 
+        break;
       case '*': send_the_dits_and_dahs("-...-.-");break;
       //case '&': send_dit(); loop_element_lengths(3); send_dits(3); break;
       case '.': send_the_dits_and_dahs(".-.-.-");break;
@@ -8359,6 +8823,15 @@ void send_char(byte cw_char, byte omit_letterspace)
       loop_element_lengths((length_letterspace-1),0,configuration.wpm); //this is minus one because send_dit and send_dah have a trailing element space
 
     }
+
+    #ifdef FEATURE_FARNSWORTH  
+    // Farnsworth Timing : http://www.arrl.org/files/file/Technology/x9004008.pdf
+//zzzzzz 
+     if (configuration.wpm_farnsworth > configuration.wpm){
+       float additional_intercharacter_time_ms = ((( (1.0 * farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) ) - (37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1200.0/ float(configuration.wpm_farnsworth) );
+       loop_element_lengths(1,additional_intercharacter_time_ms,0);}
+    #endif  
+
   } else {
     if (char_send_mode == HELL){
       #ifdef FEATURE_HELL
@@ -8582,6 +9055,12 @@ void service_send_buffer(byte no_print)
         if (send_buffer_array[0] == SERIAL_SEND_BUFFER_WPM_CHANGE) {  // two bytes for wpm
           remove_from_send_buffer();
           if (send_buffer_bytes > 1) {
+            #ifdef FEATURE_WINKEY_EMULATION
+              if ((winkey_host_open) && (winkey_speed_state == WINKEY_UNBUFFERED_SPEED)){
+                winkey_speed_state = WINKEY_BUFFERED_SPEED;
+                winkey_last_unbuffered_speed_wpm = configuration.wpm;
+              }
+            #endif
             configuration.wpm = send_buffer_array[0] * 256;
             remove_from_send_buffer();
             configuration.wpm = configuration.wpm + send_buffer_array[0];
@@ -8665,10 +9144,6 @@ void service_send_buffer(byte no_print)
             #else
               if ((send_buffer_array[0]!= 0x7C) && (send_buffer_array[0] > 30)) {winkey_port_write(send_buffer_array[0],0);}
             #endif
-            //zzzz
-            // if (send_buffer_array[0] == 13) {
-            //   winkey_port_write(10);  // if we got a carriage return, also send a line feed          
-            // }
           }
         #endif //FEATURE_WINKEY_EMULATION
 
@@ -8740,7 +9215,7 @@ void service_send_buffer(byte no_print)
 
   //if the paddles are hit, dump the buffer
   check_paddles();
-  if ((dit_buffer || dah_buffer) && (send_buffer_bytes)) {
+  if (((dit_buffer || dah_buffer) && (send_buffer_bytes)) && (keyer_machine_mode != BEACON)) {
     clear_send_buffer();
     send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
     dit_buffer = 0;
@@ -8828,6 +9303,7 @@ void winkey_unbuffered_speed_command(byte incoming_serial_byte) {
     #endif
   } else {
     configuration.wpm = incoming_serial_byte;
+    winkey_speed_state == WINKEY_UNBUFFERED_SPEED;
     winkey_last_unbuffered_speed_wpm = configuration.wpm;
     //calculate_element_length();
     #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
@@ -8918,6 +9394,7 @@ void winkey_ptt_times_parm1_command(byte incoming_serial_byte) {
 void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
 
   configuration.ptt_tail_time[configuration.current_tx-1] = (3*int(1200/configuration.wpm)) + (incoming_serial_byte*10);
+  winkey_session_ptt_tail = incoming_serial_byte;
   #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
     send_char('P',KEYER_NORMAL);
     send_char('2',KEYER_NORMAL);
@@ -8966,9 +9443,9 @@ void winkey_set_pot_parm3_command (byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_setmode_command(byte incoming_serial_byte) {
 
-  #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
+
   config_dirty = 1;
-  #endif
+
   if (incoming_serial_byte & 4) {  //serial echo enable
     #ifdef DEBUG_WINKEY_PROTOCOL_USING_CW
     send_char('S',KEYER_NORMAL);
@@ -9005,10 +9482,10 @@ void winkey_setmode_command(byte incoming_serial_byte) {
       break;
   }
   #ifdef FEATURE_DEAD_OP_WATCHDOG
-  if ((incoming_serial_byte & 128) == 128) {  //1xxxxxxx = paddle watchdog
-     dead_op_watchdog_active = 1;
-  } else {
+  if ((incoming_serial_byte & 128) == 128) {  //1xxxxxxx = paddle watchdog (1 = disable)
      dead_op_watchdog_active = 0;
+  } else {
+     dead_op_watchdog_active = 1;
   }
   #endif
   #ifdef FEATURE_AUTOSPACE
@@ -9151,7 +9628,7 @@ void winkey_set_pinconfig_command(byte incoming_serial_byte) {
       break;
     }
 
-    //config_dirty = 1;
+    config_dirty = 1;
 
 }
 #endif
@@ -9287,7 +9764,7 @@ void winkey_admin_get_values_command() {
     byte_to_send = byte_to_send | 64;
   }
   #ifdef FEATURE_DEAD_OP_WATCHDOG
-  if (dead_op_watchdog_active) {
+  if (!dead_op_watchdog_active) {
     byte_to_send = byte_to_send | 128;
   }
   #endif //FEATURE_DEAD_OP_WATCHDOG
@@ -9320,10 +9797,19 @@ void winkey_admin_get_values_command() {
   winkey_port_write(configuration.weighting,1);
 
   // 5 - ptt lead
-  winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1]/10,1);
+  if (configuration.ptt_lead_time[configuration.current_tx-1] < 256){
+    winkey_port_write(configuration.ptt_lead_time[configuration.current_tx-1]/10,1);
+  } else {
+    winkey_port_write(255,1);
+  }
 
   // 6 - ptt tail
-  winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1); 
+  //if (configuration.ptt_tail_time[configuration.current_tx-1] < 256){
+    //winkey_port_write((configuration.ptt_tail_time[configuration.current_tx-1] - (3*int(1200/configuration.wpm)))/10,1);
+    winkey_port_write(winkey_session_ptt_tail,1);
+  // } else {
+  //   winkey_port_write(winkey_port_write(255,1);
+  // }
 
   // 7 - pot min wpm
   #ifdef FEATURE_POTENTIOMETER
@@ -9370,7 +9856,7 @@ void winkey_admin_get_values_command() {
     if (ultimatic_mode == ULTIMATIC_DAH_PRIORITY) {byte_to_send = byte_to_send | 64;}  
     if (ptt_hang_time_wordspace_units == 1.33) {byte_to_send = byte_to_send | 16;}
     if (ptt_hang_time_wordspace_units == 1.66) {byte_to_send = byte_to_send | 32;}
-    if (ptt_hang_time_wordspace_units == 2.0) {byte_to_send = byte_to_send | 64;}
+    if (ptt_hang_time_wordspace_units == 2.0) {byte_to_send = byte_to_send | 48;}
     winkey_port_write(byte_to_send,1);
   #else
     winkey_port_write(5,1); // default value
@@ -9912,7 +10398,7 @@ void service_winkey(byte action) {
             pause_sending_buffer = 0;
             winkey_buffer_counter = 0;
             winkey_buffer_pointer = 0;
-            #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+            #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
               loop_element_lengths_breakout_flag = 0;
             #endif
             #ifdef FEATURE_MEMORIES
@@ -9921,7 +10407,8 @@ void service_winkey(byte action) {
             sending_mode = AUTOMATIC_SENDING;
             manual_ptt_invoke = 0;
             tx_and_sidetone_key(0); 
-                                   
+            winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
+            configuration.wpm = winkey_last_unbuffered_speed_wpm;                      
             break;
           case 0x0b:
             winkey_status = WINKEY_KEY_COMMAND;
@@ -10221,6 +10708,7 @@ void service_winkey(byte action) {
       if (winkey_status == WINKEY_CANCEL_BUFFERED_SPEED_COMMAND) {
         add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
         add_to_send_buffer(winkey_last_unbuffered_speed_wpm);
+        winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
 
@@ -10883,11 +11371,15 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\(\t\t: Send current serial number in cut numbers")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\)\t\t: Send serial number with cut numbers, then increment")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\[\t\t: Set quiet paddle interruption - 0 to 20 element lengths; 0 = off")); //Added missing command(WD9DMP)
-  port_to_use->println(F("\\=\t\t: Toggle American Morse mode    (requires FEATURE_AMERICAN_MORSE)")); //Added missing command(WD9DMP)
+  #ifdef FEATURE_AMERICAN_MORSE
+    port_to_use->println(F("\\=\t\t: Toggle American Morse mode")); //Added missing command(WD9DMP)
+  #endif
   #ifdef FEATURE_POTENTIOMETER
     port_to_use->println(F("\\}####\t\t: Set Potentiometer range"));
   #endif //FEATURE_POTENTIOMETER  
-  port_to_use->println(F("\\@\t\t: Mill Mode"));
+  #if !defined(OPTION_EXCLUDE_MILL_MODE)
+    port_to_use->println(F("\\@\t\t: Mill Mode"));
+  #endif
   port_to_use->println(F("\\\\\t\t: Empty keyboard send buffer")); //Moved to end of command list (WD9DMP)
   if (paged_help) {serial_page_pause(port_to_use,10);}
   //Memory Macros below (WD9DMP)
@@ -10918,6 +11410,23 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\Z#\t\t: Decrease speed # WPM"));
   port_to_use->println(F("\\+\t\t: Prosign the next two characters"));//Added "the next two characters" (WD9DMP)
   #endif //FEATURE_MEMORY_MACROS
+  
+  #if !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+    if (paged_help) {serial_page_pause(port_to_use,10);}
+    port_to_use->println(F("\r\n\\:\tExtended CLLI commands"));
+    port_to_use->println(F("\t\teepromdump\t\t- do a byte dump of EEPROM for troubleshooting"));
+    port_to_use->println(F("\t\tsaveeeprom <filename>\t- store EEPROM in a file"));
+    port_to_use->println(F("\t\tloadeeprom <filename> \t- load into EEPROM from a file"));
+    port_to_use->println(F("\t\tprintlog\t\t- print the SD card log"));
+    port_to_use->println(F("\t\tclearlog\t\t- clear the SD card log"));
+    port_to_use->println(F("\t\tls <directory>\t\t- list files in SD card directory"));
+    port_to_use->println(F("\t\tcat <filename>\t\t- print filename on SD card"));
+    port_to_use->println(F("\t\tpl <transmitter> <mS>\t- Set PTT lead time"));
+    port_to_use->println(F("\t\tpt <transmitter> <mS> \t- Set PTT tail time"));
+  #endif //OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
+
+
+  port_to_use->println(F("\r\n\\/\t\t: Paginated help"));
 
 }
 #endif
@@ -11135,7 +11644,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     
     case 92:  // \ - double backslash - clear serial send buffer
       clear_send_buffer();
-      #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+      #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
         loop_element_lengths_breakout_flag = 0;
       #endif
       #ifdef FEATURE_MEMORIES
@@ -11343,8 +11852,8 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
 void cli_timing_command(PRIMARY_SERIAL_CLS * port_to_use,String command_arguments,byte command_called){
 
   byte valid_command = 0;
-  byte parm1 = 0;
-  byte parm2 = 0;
+  unsigned int parm1 = 0;
+  unsigned int parm2 = 0;
   String temp_string;
 
   temp_string = command_arguments.substring(0,1);
@@ -12257,9 +12766,9 @@ void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use)
 void serial_set_farnsworth(PRIMARY_SERIAL_CLS * port_to_use)
 {
   int set_farnsworth_wpm = serial_get_number_input(3,-1,1000, port_to_use, RAISE_ERROR_MSG);
-  if (set_farnsworth_wpm > 0) {
+  if ((set_farnsworth_wpm > 0) || (set_farnsworth_wpm == 0)) {
     configuration.wpm_farnsworth = set_farnsworth_wpm;
-    port_to_use->write("\r\nSetting Farnworth WPM to ");
+    port_to_use->write("\r\nSetting Farnsworth WPM to ");
     port_to_use->println(set_farnsworth_wpm,DEC);
     config_dirty = 1;
   }
@@ -13240,7 +13749,7 @@ void random_practice(PRIMARY_SERIAL_CLS * port_to_use,byte random_mode,byte grou
   byte x = 0;
   byte y = 0;
   char incoming_char = ' ';
-  char random_character;
+  char random_character = 0;
 
   randomSeed(millis());
   port_to_use->println(F("Random group practice\r\n"));
@@ -13964,6 +14473,14 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   port_to_use->print(" ");
   port_to_use->print(configuration.hz_sidetone,DEC);
   port_to_use->println(" hz");
+
+  #if defined(FEATURE_SINEWAVE_SIDETONE)
+    port_to_use->print(F("Sidetone Volume: "));
+    port_to_use->print(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100));
+    port_to_use->println(F("%"));
+    port_to_use->println(configuration.sidetone_volume);
+  #endif //FEATURE_SINEWAVE_SIDETONE   
+
   #ifdef FEATURE_SIDETONE_SWITCH
     port_to_use->print(F("Sidetone Switch: "));
     port_to_use->println(sidetone_switch_value() ? F("On") : F("Off")); //(WD9DMP)
@@ -14045,6 +14562,25 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   } else {
     port_to_use->println(F("ff"));
   }  
+
+  #if defined(FEATURE_PADDLE_ECHO) //qqqqqq
+    port_to_use->print(F("Paddle Echo: O"));
+    if (cli_paddle_echo){
+      port_to_use->println(F("n"));
+    } else {
+      port_to_use->println(F("ff"));
+    }  
+  #endif
+
+  #if defined(FEATURE_STRAIGHT_KEY_ECHO)
+    port_to_use->print(F("Straight Key Echo: O"));
+    if (cli_straight_key_echo){
+      port_to_use->println(F("n"));
+    } else {
+      port_to_use->println(F("ff"));
+    }  
+  #endif
+
 
 
   #ifdef FEATURE_MEMORIES
@@ -14269,9 +14805,11 @@ void memorycheck()
 //  port_to_use->print("Free Memory = ");
 //  port_to_use->print((unsigned long)free,HEX);
 //  port_to_use->print("  ");
-  if (free > 2048) {
-    free = 0;
-  }
+
+  // if (free > 2048) {
+  //   free = 0;
+  // }
+  
   if (primary_serial_port_mode == SERIAL_CLI) {
     port_to_use->print((unsigned long)free,DEC);
     port_to_use->println(F(" bytes free"));
@@ -14299,7 +14837,7 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
 
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte eeprom_temp = 0;
-    static char * prosign_temp = "";
+    static char * prosign_temp = 0;
   #endif
 
   for (int x = 0; x < number_of_memories; x++) {
@@ -14364,8 +14902,8 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
 
   */
 
-  uint8_t incoming_serial_byte;
-  uint8_t memory_number;
+  uint8_t incoming_serial_byte = 0;
+  uint8_t memory_number = 0;
   uint8_t looping = 1;
   int memory_index = 0;
   uint8_t memory_number_entered = 0;
@@ -14667,7 +15205,7 @@ byte play_memory(byte memory_number)
 
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte eeprom_temp = 0;
-    static char * prosign_temp = "";
+    static char * prosign_temp = 0;
   #endif  
 
   if (memory_number > (number_of_memories - 1)) {
@@ -16001,7 +16539,7 @@ void initialize_keyer_state(){
   configuration.cli_mode = CLI_NORMAL_MODE;
   configuration.wpm_command_mode = initial_command_mode_speed_wpm;
   configuration.ptt_buffer_hold_active = 0;
-
+  configuration.sidetone_volume = sidetone_volume_low_limit + ((sidetone_volume_high_limit - sidetone_volume_low_limit) / 2);
 
   configuration.ptt_lead_time[0] = initial_ptt_lead_time_tx1;
   configuration.ptt_tail_time[0] = initial_ptt_tail_time_tx1;
@@ -16100,10 +16638,7 @@ void check_eeprom_for_initialization(){
   // do an eeprom reset to defaults if paddles are squeezed
   if (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {
     while (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {}
-    write_settings_to_eeprom(1);
-    beep_boop();
-    beep_boop();
-    beep_boop();
+    initialize_eeprom();
   }
 
   // read settings from eeprom and initialize eeprom if it has never been written to
@@ -16112,11 +16647,22 @@ void check_eeprom_for_initialization(){
       EEPROM.init(); //sp5iou 20180328 to reinitialize / initialize EEPROM
       EEPROM.format();//sp5iou 20180328 to reinitialize / format EEPROM
     #endif
-    write_settings_to_eeprom(1);
-    beep_boop();
-    beep_boop();
-    beep_boop();
+    initialize_eeprom();
   }
+}
+
+//--------------------------------------------------------------------- 
+
+void initialize_eeprom(){
+  
+  write_settings_to_eeprom(1);
+  #if defined(FEATURE_SINEWAVE_SIDETONE)
+    initialize_tonsin();
+  #endif 
+  beep_boop();
+  beep_boop();
+  beep_boop();    
+
 }
 
 //--------------------------------------------------------------------- 
@@ -18614,7 +19160,7 @@ void web_print_page_memories(EthernetClient client){
 
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte eeprom_temp = 0;
-    static char * prosign_temp = "";
+    static char * prosign_temp = 0;
   #endif
 
 
@@ -19881,6 +20427,153 @@ void sd_card_log(String string_to_log,byte byte_to_log){
 
 }
 #endif //FEATURE_SD_CARD_SUPPORT
+
+//-------------------------------------------------------------------------------------------------------
+
+// DL2DBG contributed code (adapted into code by Goody K3NG)
+// Based on https://forum.arduino.cc/index.php?topic=446209.15
+
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+
+void compute_sinetone(int hz, int volume){ //dl2dbg 
+
+
+  omega = 2*pi*hz ;
+  c1 = (8.0 - 2.0*pow(omega*T/1000000.0,2))/(4.0+pow(omega*T/1000000.0,2));
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.detachInterrupt();
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.detachInterrupt();
+  #endif
+  a[0]= 0.0;
+  a[1]= volume*sin(omega*T/1000000.0);
+  a[2]= 0.0;
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.attachInterrupt(sinewave_interrupt_compute);
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.attachInterrupt(sinewave_interrupt_compute);
+  #endif
+
+
+}
+#endif //FEATURE_SINEWAVE_SIDETONE
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+
+void sinewave_interrupt_compute(){ //dl2dbg
+
+  a[2] = c1 * a[1] - a[0];
+  a[0] = a[1] ;
+  a[1] = a[2] ;  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.setPwmDuty(sidetone_line, map( a[2],-512, 512, 0, 1000));
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.setPwmDuty(sidetone_line, map( a[2],-512, 512, 0, 1000));
+  #endif
+
+  
+
+}
+#endif //FEATURE_SINEWAVE_SIDETONE
+
+//-------------------------------------------------------------------------------------------------------
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+
+void initialize_tonsin(){ //dl2dbg
+
+  //configuration.sidetone_volume = sidetone_volume_low_limit + ((sidetone_volume_high_limit - sidetone_volume_low_limit) / 2);
+  compute_sinetone(configuration.hz_sidetone,configuration.sidetone_volume);
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.initialize(T);  // set sample time for discrete tone signal
+    Timer1.pwm(sidetone_line, 0, T);
+    Timer1.attachInterrupt(sinewave_interrupt_compute);
+    Timer1.stop();
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.initialize(T);  // set sample time for discrete tone signal
+    Timer3.pwm(sidetone_line, 0, T);
+    Timer3.attachInterrupt(sinewave_interrupt_compute);
+    Timer3.stop();
+  #endif
+
+
+
+
+
+}
+#endif //FEATURE_SINEWAVE_SIDETONE
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+void sinetone(uint8_t pin_dummy_variable, unsigned short freq){  //dl2dbg
+
+  static int last_freq;
+  static int last_volume;
+
+  if ((freq != last_freq) || (configuration.sidetone_volume != last_volume)){ 
+    compute_sinetone(freq,configuration.sidetone_volume);
+    last_freq = freq;
+    last_volume = configuration.sidetone_volume;
+  }
+
+  //delay (2); compute_sinetone(freq,sidetone_volume/4);
+  //delay (2); compute_sinetone(freq,sidetone_volume/2);
+  //compute_sinetone(freq,configuration.sidetone_volume); 
+
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.restart();
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.restart();
+  #endif
+
+  
+
+
+}
+#endif //FEATURE_SINEWAVE_SIDETONE
+
+//------------------------------------------------------------------------------------------------------- 
+
+#if defined(FEATURE_SINEWAVE_SIDETONE)
+void nosineTone(uint8_t pin_dummy_variable){    // disable tone on specified pin, if any    dl2dbg
+
+  //delay (2); compute_sinetone(freq,sidetone_volume/2);
+  //delay (2); compute_sinetone(freq,sidetone_volume/4);
+  // compute_sinetone(configuration.hz_sidetone,0);
+
+
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
+    Timer1.stop();
+  #endif  
+  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
+    Timer3.stop();
+  #endif
+  
+
+  //digitalWrite(sidetone_line,LOW);
+
+}
+
+#endif //FEATURE_SINEWAVE_SIDETONE
+
+//-------------------------------------------------------------------------------------------------------
+
+void debug_blink(){
+  #if defined(DEBUG_STARTUP_BLINKS)
+    digitalWrite(13,HIGH);
+    delay(250);
+    digitalWrite(13,LOW);
+    delay(1000);
+  #endif //DEBUG_STARTUP
+}    
+
 //-------------------------------------------------------------------------------------------------------
 
 //

@@ -14,8 +14,9 @@
 
 	Notes from the original code author, OZ1JHM (with edits from Goody K3NG)
 
-	GOERTZ_SAMPLING_FREQ will be 8928 on a 16 mhz without any prescaler etc., because we need the tone in the center of the bins    
-	you can set GOERTZ_TARGET_FREQ to 496, 558, 744 or 992          
+	GOERTZ_SAMPLING_FREQ will be 8928 on a 16 mhz without any prescaler etc.
+	because we need the tone in the center of the bins
+	you can set GOERTZ_TARGET_FREQ (the tone) to 496, 558, 744 or 992
 	then GOERTZ_SAMPLES_INT the number of samples which give the bandwidth
 	which can be (8928 / GOERTZ_TARGET_FREQ) * 1 or 2 or 3 or 4 etc           
 	init is 8928/558 = 16 * 4 = 64 samples                 
@@ -38,7 +39,7 @@
 #else
   // Arduino Uno, Mega (16 Mhz clock)
   #define GOERTZ_SAMPLING_FREQ 8928.0
-  #define GOERTZ_SAMPLES 64
+  #define GOERTZ_SAMPLES 48 //48 //64
 #endif
 
 #define GOERTZ_NOISE_BLANKER_INITIAL_MS 6

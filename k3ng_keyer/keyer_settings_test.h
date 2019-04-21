@@ -44,7 +44,6 @@
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
-#define memory_area_start 60             // the eeprom location where memory space starts
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
 #define winkey_command_timeout_ms 5000
 #define winkey_discard_bytes_startup 3   // this is used if OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP is enabled above
@@ -60,6 +59,7 @@
 #define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
 #define cw_echo_timing_factor 0.25
+#define winkey_paddle_echo_buffer_decode_time_factor 1600.0
 #define potentiometer_always_on 0
 #define ptt_interlock_check_every_ms 100
 #define ptt_interlock_active_state HIGH
@@ -69,6 +69,7 @@
 #define tx_key_dit_and_dah_pins_active_state LOW
 #define tx_key_dit_and_dah_pins_inactive_state HIGH
 #define potentiometer_check_interval_ms 150
+#define potentiometer_reading_threshold 1 
 #define default_paddle_interruption_quiet_time_element_lengths 0
 #define default_wordsworth_wordspace 6
 #define default_wordsworth_repetition 1
@@ -284,6 +285,11 @@
   #define button_value_factor 1023
 #endif
 
+#define farnsworth_timing_calibration 1.15
+
+#define sidetone_volume_low_limit 10
+#define sidetone_volume_high_limit 500
+
 
 #endif //TEST_SETTINGS_1
 
@@ -319,6 +325,7 @@
 #define wpm_limit_low 5
 #define wpm_limit_high 60
 #define potentiometer_change_threshold 0.9 // don't change the keyer speed until pot wpm has changed more than this
+#define potentiometer_reading_threshold 1 
 #define send_buffer_size 150
 #define default_length_letterspace 3
 #define default_length_wordspace 7
@@ -343,6 +350,7 @@
 #define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
 #define cw_echo_timing_factor 0.25
+#define winkey_paddle_echo_buffer_decode_time_factor 1600.0
 #define potentiometer_always_on 0
 #define ptt_interlock_check_every_ms 100
 #define ptt_interlock_active_state HIGH
@@ -557,6 +565,10 @@
   #define button_value_factor 1023
 #endif
 
+#define farnsworth_timing_calibration 1.15
+
+#define sidetone_volume_low_limit 10
+#define sidetone_volume_high_limit 500
 
 #endif //TEST_SETTINGS_2
 
