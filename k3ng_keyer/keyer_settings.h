@@ -40,6 +40,7 @@
 #define default_memory_repeat_time 3000  // time in milliseconds
 #define LCD_COLUMNS 16
 #define LCD_ROWS 2
+#define lcd_i2c_address 0x27             // I2C address of display
 #define hell_pixel_microseconds 4025
 #define program_memory_limit_consec_spaces 1
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
