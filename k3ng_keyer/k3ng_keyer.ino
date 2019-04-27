@@ -1018,6 +1018,9 @@ Recent Update History
     2019.04.27.02
       Merge of pull request 59 https://github.com/k3ng/k3ng_cw_keyer/pull/59 - HARDWARE_K5BCQ added.  (Thanks, woodjrx)
 
+    2019.04.27.03
+      Merge of pull request 51 https://github.com/k3ng/k3ng_cw_keyer/pull/51 - Yaacwk dev (Thanks, federicobriata)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1190,9 +1193,9 @@ Recent Update History
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
-  // #include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, so they are commented out
+  // #include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, moreover we noted that Arduino 1.8.6 it's not afected by an issue during USB Shield SPI init see https://github.com/felis/USB_Host_Shield_2.0/issues/390
   // #include <usbhub.h>   // Uncomment the three lines if you are using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE
-  // #include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
+  // #include <Usb.h>      // Note: the most updated USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
