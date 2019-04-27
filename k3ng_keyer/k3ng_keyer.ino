@@ -1015,6 +1015,9 @@ Recent Update History
       FEATURE_DISPLAY - fixed issue with cpm label and FunKeyer.  (Thanks, Fred, VK2EFL)
       Fixed bug introduced in version 2019.02.05.01 with not being able to switch between CLI and Winkey at startup using command button when FEATURE_COMMAND_LINE_INTERFACE and FEATURE_WINKEY_EMULATION both compiled in (Thanks, Dave, G8PGO)
 
+    2019.04.27.02
+      Merge of pull request 59 https://github.com/k3ng/k3ng_cw_keyer/pull/59 - HARDWARE_K5BCQ added.  (Thanks, woodjrx)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1029,7 +1032,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.04.27.01"
+#define CODE_VERSION "2019.04.27.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1067,6 +1070,8 @@ Recent Update History
   #include "keyer_features_and_options_generic_STM32F103C.h"
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_features_and_options_mortty.h"
+#elif defined(HARDWARE_K5BCQ)
+  #include "keyer_features_and_options_k5bcq.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
   #include "keyer_features_and_options_test_everything.h"
 #elif defined(HARDWARE_YAACWK)
@@ -1111,6 +1116,9 @@ Recent Update History
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_pin_settings_mortty.h"
   #include "keyer_settings_mortty.h"  
+#elif defined(HARDWARE_K5BCQ)
+  #include "keyer_pin_settings_k5bcq.h"
+  #include "keyer_settings_k5bcq.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
   #include "keyer_pin_settings_test_everything.h"
   #include "keyer_settings_test_everything.h"
