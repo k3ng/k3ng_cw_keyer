@@ -1022,7 +1022,10 @@ Recent Update History
       Merge of pull request 51 https://github.com/k3ng/k3ng_cw_keyer/pull/51 - Yaacwk dev (Thanks, federicobriata)
 
     2019.04.27.04
-      Merge of pull request 60 https://github.com/k3ng/k3ng_cw_keyer/pull/60 - Add support for generic PCF8574 based I2C display (Thanks, W6IPA)  
+      Merge of pull request 60 https://github.com/k3ng/k3ng_cw_keyer/pull/60 - Add support for generic PCF8574 based I2C display (Thanks, W6IPA) 
+
+    2019.04.27.05
+      Fixed bug with I2C displays and \+ memory macros with pauses in between prosigned characters (Thanks, Fred, VK2EFL)
 
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
@@ -1038,7 +1041,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.04.27.04"
+#define CODE_VERSION "2019.04.27.05"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1590,7 +1593,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 #endif  
 
 #if defined(FEATURE_LCD_MATHERTEL_PCF8574)
-  LiquidCrystal_PCF8574 lcd(lcd_i2c_address);
+  LiquidCrystal_PCF8574 lcd(lcd_i2c_address_mathertel_PCF8574);
 #endif
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
@@ -15158,9 +15161,11 @@ byte play_memory(byte memory_number)
   unsigned int jump_back_to_y = 9999;
   byte jump_back_to_memory_number = 255;
   static byte prosign_flag = 0;
-  play_memory_prempt = 0;
-  byte eeprom_byte_read;  
+  static byte prosign_before_flag = 0;
+  byte eeprom_byte_read = 0;  
   byte pause_sending_buffer_backspace = 0;
+
+  play_memory_prempt = 0;
 
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte eeprom_temp = 0;
@@ -15322,10 +15327,30 @@ byte play_memory(byte memory_number)
                       display_scroll_print_char(prosign_temp[0]);
                       display_scroll_print_char(prosign_temp[1]);                    
                     } else {
-                      display_scroll_print_char(eeprom_byte_read); 
+                      if (prosign_flag){
+                        display_scroll_print_char(eeprom_byte_read); 
+                        display_scroll_print_char(eeprom_byte_read+1);
+                        prosign_before_flag = 1;
+                      } else {
+                        if (prosign_before_flag){  
+                          prosign_before_flag = 0; 
+                        } else {
+                          display_scroll_print_char(eeprom_byte_read);
+                        }
+                      }
                     }
                 #else 
-                  display_scroll_print_char(eeprom_byte_read); 
+                  if (prosign_flag){
+                    display_scroll_print_char(eeprom_byte_read); 
+                    display_scroll_print_char(eeprom_byte_read+1);
+                    prosign_before_flag = 1;
+                  } else {
+                    if (prosign_before_flag){  
+                      prosign_before_flag = 0; 
+                    } else {
+                      display_scroll_print_char(eeprom_byte_read);
+                    }
+                  }
                 #endif
                 service_display();
               }
@@ -15334,7 +15359,7 @@ byte play_memory(byte memory_number)
           }
 
           if (prosign_flag) {
-            send_char(eeprom_byte_read,OMIT_LETTERSPACE);
+            send_char(eeprom_byte_read,OMIT_LETTERSPACE); 
             prosign_flag = 0;
           } else {
             send_char(eeprom_byte_read,KEYER_NORMAL);         // no - play the character
