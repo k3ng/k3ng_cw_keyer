@@ -1067,6 +1067,8 @@ Recent Update History
   #include "keyer_features_and_options_generic_STM32F103C.h"
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_features_and_options_mortty.h"
+#elif defined(HARDWARE_K5BCQ)
+  #include "keyer_features_and_options_k5bcq.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
   #include "keyer_features_and_options_test_everything.h"
 #elif defined(HARDWARE_YAACWK)
@@ -1111,6 +1113,9 @@ Recent Update History
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_pin_settings_mortty.h"
   #include "keyer_settings_mortty.h"  
+#elif defined(HARDWARE_K5BCQ)
+  #include "keyer_pin_settings_k5bcq.h"
+  #include "keyer_settings_k5bcq.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
   #include "keyer_pin_settings_test_everything.h"
   #include "keyer_settings_test_everything.h"
