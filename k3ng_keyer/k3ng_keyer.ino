@@ -1011,6 +1011,10 @@ Recent Update History
     2019.04.07.01
       Fixed additional compiler warnings
 
+    2019.04.27.01
+      FEATURE_DISPLAY - fixed issue with cpm label and FunKeyer.  (Thanks, Fred, VK2EFL)
+      Fixed bug introduced in version 2019.02.05.01 with not being able to switch between CLI and Winkey at startup using command button when FEATURE_COMMAND_LINE_INTERFACE and FEATURE_WINKEY_EMULATION both compiled in (Thanks, Dave, G8PGO)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1025,7 +1029,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.04.07.01"
+#define CODE_VERSION "2019.04.27.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1805,97 +1809,35 @@ unsigned long millis_rollover = 0;
 void setup()
 {
 
-
+  initialize_pins();
+  // initialize_serial_ports();        // Goody - this is available for testing startup issues
+  // initialize_debug_startup();       // Goody - this is available for testing startup issues
+  // debug_blink();                    // Goody - this is available for testing startup issues
+  initialize_keyer_state();
+  initialize_potentiometer();
+  initialize_rotary_encoder();
+  initialize_default_modes();
+  initialize_watchdog();
+  initialize_ethernet_variables();
+  check_eeprom_for_initialization();
+  check_for_beacon_mode();
+  check_for_debug_modes();
+  initialize_analog_button_array();
   initialize_serial_ports();
 
-  debug_blink();
-
-  initialize_debug_startup();
-
-  debug_blink();
-
-  initialize_pins();
-
-  debug_blink();
-
-  // #if defined(FEATURE_SINEWAVE_SIDETONE)
+  // #if defined(FEATURE_SINEWAVE_SIDETONE)  // UNDER DEVELOPMENT
   //   initialize_tonsin();
   // #endif  
-
-  debug_blink();
-
-  initialize_keyer_state();
-
-  debug_blink();
-
-  initialize_potentiometer();
-
-  debug_blink();
-
-  initialize_rotary_encoder();
-
-  debug_blink();
-
-  initialize_default_modes();
-
-  debug_blink();
-
-  initialize_watchdog();
-
-  debug_blink();
-
-  initialize_ethernet_variables();
-
-  debug_blink();
-
-  check_eeprom_for_initialization();
-
-  debug_blink();
-
-  check_for_beacon_mode();
-
-  debug_blink();
-
-  check_for_debug_modes();
-
-  debug_blink();
-
-  initialize_analog_button_array();
-
-  debug_blink();
-
+  
   initialize_ps2_keyboard();
-
-  debug_blink();
-
   initialize_usb();
-
-  debug_blink();
-
   initialize_cw_keyboard();
-
-  debug_blink();
-
   initialize_display();
-
-  debug_blink();
-
   initialize_ethernet();
-
-  debug_blink();
-
   initialize_udp();
-
-  debug_blink();
-
   initialize_web_server();
-
-  debug_blink();
-
   initialize_sd_card();  
-
-  debug_blink();
-
+  initialize_debug_startup();
 
 }
 
@@ -6400,7 +6342,7 @@ void speed_set(int wpm_set){
 
 
     #if defined(OPTION_ADVANCED_SPEED_DISPLAY)
-      lcd_center_print_timed(String(configuration.wpm) + " wpm - " + (configuration.wpm*5) + " cpm ", 0, default_display_msg_delay);
+      lcd_center_print_timed(String(configuration.wpm) + " wpm - " + (configuration.wpm*5) + " cpm", 0, default_display_msg_delay);
       lcd_center_print_timed(String(1200/configuration.wpm) + ":" + (((1200/configuration.wpm)*configuration.dah_to_dit_ratio)/100) + "ms 1:" + (float(configuration.dah_to_dit_ratio)/100.00), 1, default_display_msg_delay);
     #else
       lcd_center_print_timed(String(configuration.wpm) + " wpm", 0, default_display_msg_delay);
