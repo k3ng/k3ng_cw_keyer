@@ -1035,7 +1035,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.04.27.02"
+#define CODE_VERSION "2019.04.27.03"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
