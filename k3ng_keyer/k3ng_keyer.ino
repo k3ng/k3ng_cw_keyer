@@ -1027,6 +1027,9 @@ Recent Update History
     2019.04.27.05
       Fixed bug with I2C displays and \+ memory macros with pauses in between prosigned characters (Thanks, Fred, VK2EFL)
 
+    2019.04.28.01
+      Implemented asynchronous EEPROM writes   
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1041,7 +1044,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.04.27.05"
+#define CODE_VERSION "2019.04.28.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1816,6 +1819,8 @@ unsigned long millis_rollover = 0;
   float c1 = (8.0 - 2.0*pow(omega*T/1000000.0,2))/(4.0+pow(omega*T/1000000.0,2));
 #endif //FEATURE_SINEWAVE_SIDETONE
 
+byte async_eeprom_write = 0;
+
 /*---------------------------------------------------------------------------------------------------------
 
 
@@ -2002,6 +2007,8 @@ void loop()
     #endif  
 
   }
+
+  service_async_eeprom_write();
 
   service_millis_rollover();
 
@@ -3150,7 +3157,8 @@ void check_for_dirty_configuration()
     debug_serial_port->println(F("loop: entering check_for_dirty_configuration"));
   #endif
 
-  if ((config_dirty) && ((millis()-last_config_write)>30000) && (!send_buffer_bytes) && (!ptt_line_activated)) {
+  //if ((config_dirty) && ((millis()-last_config_write)>30000) && (!send_buffer_bytes) && (!ptt_line_activated)) {
+  if ((config_dirty) && ((millis()-last_config_write)>eeprom_write_time_ms) && (!send_buffer_bytes) && (!ptt_line_activated) && (!dit_buffer) && (!dah_buffer) && (!async_eeprom_write) && (paddle_pin_read(paddle_left) == HIGH)  && (paddle_pin_read(paddle_right) == HIGH) ) {
     write_settings_to_eeprom(0);
     last_config_write = millis();
     #ifdef DEBUG_EEPROM
@@ -5487,30 +5495,95 @@ void check_ptt_tail()
 }
 
 //-------------------------------------------------------------------------------------------------------
+//void write_settings_to_eeprom(int initialize_eeprom) {  //zzzzzz
+// 
+//  #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+//  
+//  if (initialize_eeprom) {
+//    //configuration.magic_number = eeprom_magic_number;
+//    EEPROM.write(0,eeprom_magic_number);
+//    #ifdef FEATURE_MEMORIES
+//      initialize_eeprom_memories();
+//    #endif  //FEATURE_MEMORIES    
+//  }
+//
+//  const byte* p = (const byte*)(const void*)&configuration;
+//  unsigned int i;
+//  int ee = 1;  // starting point of configuration struct
+//  for (i = 0; i < sizeof(configuration); i++){
+//    EEPROM.write(ee++, *p++);  
+//  }
+//  
+//  #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+//  
+//  config_dirty = 0;
+//  
+//  
+//}
+
+
 void write_settings_to_eeprom(int initialize_eeprom) {  
  
   #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
   
-  if (initialize_eeprom) {
-    //configuration.magic_number = eeprom_magic_number;
-    EEPROM.write(0,eeprom_magic_number);
-    #ifdef FEATURE_MEMORIES
-      initialize_eeprom_memories();
-    #endif  //FEATURE_MEMORIES    
-  }
+    if (initialize_eeprom) {
+      //configuration.magic_number = eeprom_magic_number;
+      EEPROM.write(0,eeprom_magic_number);
+      #ifdef FEATURE_MEMORIES
+        initialize_eeprom_memories();
+      #endif  //FEATURE_MEMORIES    
+    }
 
-  const byte* p = (const byte*)(const void*)&configuration;
-  unsigned int i;
-  int ee = 1;  // starting point of configuration struct
-  for (i = 0; i < sizeof(configuration); i++){
-    EEPROM.write(ee++, *p++);  
-  }
+    async_eeprom_write = 1;  // initiate an asyncrhonous eeprom write
   
   #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
-  
+
   config_dirty = 0;
   
-  
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void service_async_eeprom_write(){
+
+  static byte last_async_eeprom_write_status = 0;
+  static int ee = 0;
+  static unsigned int i = 0;
+  static const byte* p;
+
+//zzzzzz
+
+  if ((async_eeprom_write) && (!send_buffer_bytes) && (!ptt_line_activated) && (!dit_buffer) && (!dah_buffer) && (paddle_pin_read(paddle_left) == HIGH)  && (paddle_pin_read(paddle_right) == HIGH)) {  
+    if (last_async_eeprom_write_status){ // we have an ansynchronous write to eeprom in progress
+
+      EEPROM.write(ee++, *p++);  
+
+      if (i < sizeof(configuration)){
+        #if defined(DEBUG_ASYNC_EEPROM_WRITE)
+          debug_serial_port->print(F("service_async_eeprom_write: write: "));
+          debug_serial_port->println(i);
+        #endif        
+        i++;
+      } else { // we're done
+        async_eeprom_write = 0;
+        last_async_eeprom_write_status = 0;
+        #if defined(DEBUG_ASYNC_EEPROM_WRITE)
+          debug_serial_port->println(F("service_async_eeprom_write: complete"));
+        #endif        
+      }
+
+    } else { // we don't have one in progress - initialize things
+
+      p = (const byte*)(const void*)&configuration;
+      ee = 1;  // starting point of configuration struct
+      i = 0;
+      last_async_eeprom_write_status = 1;
+      #if defined(DEBUG_ASYNC_EEPROM_WRITE)
+        debug_serial_port->println(F("service_async_eeprom_write: init"));
+      #endif
+    }
+  }
+
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -8333,7 +8406,7 @@ void service_dit_dah_buffers()
     debug_serial_port->println(F("loop: entering service_dit_dah_buffers"));
   #endif      
 
-  if (keyer_machine_mode == BEACON){return;} //zzzzzz
+  if (keyer_machine_mode == BEACON){return;}
 
   if (automatic_sending_interruption_time != 0){
     if ((millis() - automatic_sending_interruption_time) > (configuration.paddle_interruption_quiet_time_element_lengths*(1200/configuration.wpm))){
@@ -8788,7 +8861,6 @@ void send_char(byte cw_char, byte omit_letterspace)
 
     #ifdef FEATURE_FARNSWORTH  
     // Farnsworth Timing : http://www.arrl.org/files/file/Technology/x9004008.pdf
-//zzzzzz 
      if (configuration.wpm_farnsworth > configuration.wpm){
        float additional_intercharacter_time_ms = ((( (1.0 * farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) ) - (37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1200.0/ float(configuration.wpm_farnsworth) );
        loop_element_lengths(1,additional_intercharacter_time_ms,0);}

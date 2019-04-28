@@ -62,6 +62,7 @@
 #define default_wordsworth_wordspace 6
 #define default_wordsworth_repetition 1
 #define serial_program_memory_buffer_size 500
+#define eeprom_write_time_ms 30000
 
 
 #ifdef FEATURE_COMMAND_BUTTONS

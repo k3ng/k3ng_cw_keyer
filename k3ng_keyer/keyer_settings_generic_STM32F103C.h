@@ -69,6 +69,7 @@ GENERIC STM32F103C
 #define default_wordsworth_wordspace 6
 #define default_wordsworth_repetition 1
 #define serial_program_memory_buffer_size 500
+#define eeprom_write_time_ms 30000
 
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_number_of_buttons 1 // For Keypad only command butrton is neaded 6 //4  // includes the command button (command button + 3 memory buttons = 4) //sp5iou 20180319
