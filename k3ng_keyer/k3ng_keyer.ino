@@ -1015,6 +1015,18 @@ Recent Update History
       FEATURE_DISPLAY - fixed issue with cpm label and FunKeyer.  (Thanks, Fred, VK2EFL)
       Fixed bug introduced in version 2019.02.05.01 with not being able to switch between CLI and Winkey at startup using command button when FEATURE_COMMAND_LINE_INTERFACE and FEATURE_WINKEY_EMULATION both compiled in (Thanks, Dave, G8PGO)
 
+    2019.04.27.02
+      Merge of pull request 59 https://github.com/k3ng/k3ng_cw_keyer/pull/59 - HARDWARE_K5BCQ added.  (Thanks, woodjrx)
+
+    2019.04.27.03
+      Merge of pull request 51 https://github.com/k3ng/k3ng_cw_keyer/pull/51 - Yaacwk dev (Thanks, federicobriata)
+
+    2019.04.27.04
+      Merge of pull request 60 https://github.com/k3ng/k3ng_cw_keyer/pull/60 - Add support for generic PCF8574 based I2C display (Thanks, W6IPA) 
+
+    2019.04.27.05
+      Fixed bug with I2C displays and \+ memory macros with pauses in between prosigned characters (Thanks, Fred, VK2EFL)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1029,7 +1041,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.04.27.01"
+#define CODE_VERSION "2019.04.27.05"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1143,7 +1155,7 @@ Recent Update History
   #include <Wire.h>
 #endif
 
-#if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_ADAFRUIT_BACKPACK) || defined(FEATURE_LCD_YDv1) || defined(FEATURE_LCD_SAINSMART_I2C) || defined(FEATURE_LCD_FABO_PCF8574)
+#if defined(FEATURE_LCD_ADAFRUIT_I2C) || defined(FEATURE_LCD_ADAFRUIT_BACKPACK) || defined(FEATURE_LCD_YDv1) || defined(FEATURE_LCD_SAINSMART_I2C) || defined(FEATURE_LCD_FABO_PCF8574) || defined(FEATURE_LCD_MATHERTEL_PCF8574)
   #include <Wire.h>
 #endif
 
@@ -1168,6 +1180,10 @@ Recent Update History
   #include <FaBoLCD_PCF8574.h>
 #endif  
 
+#if defined(FEATURE_LCD_MATHERTEL_PCF8574)
+  #include <LiquidCrystal_PCF8574.h>
+#endif
+
 #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
  // #include <BasicTerm.h>
 #endif
@@ -1187,9 +1203,9 @@ Recent Update History
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
-  // #include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, so they are commented out
+  // #include <hidboot.h>  // Arduino 1.6.x (and maybe 1.5.x) has issues with these three lines, moreover we noted that Arduino 1.8.6 it's not afected by an issue during USB Shield SPI init see https://github.com/felis/USB_Host_Shield_2.0/issues/390
   // #include <usbhub.h>   // Uncomment the three lines if you are using FEATURE_USB_KEYBOARD or FEATURE_USB_MOUSE
-  // #include <Usb.h>      // the USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
+  // #include <Usb.h>      // Note: the most updated USB Library can be downloaded at https://github.com/felis/USB_Host_Shield_2.0
 #endif
 
 #if defined(FEATURE_CW_COMPUTER_KEYBOARD) 
@@ -1575,6 +1591,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 #if defined(FEATURE_LCD_FABO_PCF8574)
   FaBoLCD_PCF8574 lcd;
 #endif  
+
+#if defined(FEATURE_LCD_MATHERTEL_PCF8574)
+  LiquidCrystal_PCF8574 lcd(lcd_i2c_address_mathertel_PCF8574);
+#endif
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
   USB Usb;
@@ -15141,9 +15161,11 @@ byte play_memory(byte memory_number)
   unsigned int jump_back_to_y = 9999;
   byte jump_back_to_memory_number = 255;
   static byte prosign_flag = 0;
-  play_memory_prempt = 0;
-  byte eeprom_byte_read;  
+  static byte prosign_before_flag = 0;
+  byte eeprom_byte_read = 0;  
   byte pause_sending_buffer_backspace = 0;
+
+  play_memory_prempt = 0;
 
   #if defined(OPTION_PROSIGN_SUPPORT)
     byte eeprom_temp = 0;
@@ -15305,10 +15327,30 @@ byte play_memory(byte memory_number)
                       display_scroll_print_char(prosign_temp[0]);
                       display_scroll_print_char(prosign_temp[1]);                    
                     } else {
-                      display_scroll_print_char(eeprom_byte_read); 
+                      if (prosign_flag){
+                        display_scroll_print_char(eeprom_byte_read); 
+                        display_scroll_print_char(eeprom_byte_read+1);
+                        prosign_before_flag = 1;
+                      } else {
+                        if (prosign_before_flag){  
+                          prosign_before_flag = 0; 
+                        } else {
+                          display_scroll_print_char(eeprom_byte_read);
+                        }
+                      }
                     }
                 #else 
-                  display_scroll_print_char(eeprom_byte_read); 
+                  if (prosign_flag){
+                    display_scroll_print_char(eeprom_byte_read); 
+                    display_scroll_print_char(eeprom_byte_read+1);
+                    prosign_before_flag = 1;
+                  } else {
+                    if (prosign_before_flag){  
+                      prosign_before_flag = 0; 
+                    } else {
+                      display_scroll_print_char(eeprom_byte_read);
+                    }
+                  }
                 #endif
                 service_display();
               }
@@ -15317,7 +15359,7 @@ byte play_memory(byte memory_number)
           }
 
           if (prosign_flag) {
-            send_char(eeprom_byte_read,OMIT_LETTERSPACE);
+            send_char(eeprom_byte_read,OMIT_LETTERSPACE); 
             prosign_flag = 0;
           } else {
             send_char(eeprom_byte_read,KEYER_NORMAL);         // no - play the character
@@ -16815,10 +16857,12 @@ void initialize_display(){
       lcd.setBacklight(lcdcolor);
     #endif //FEATURE_LCD_ADAFRUIT_I2C
 
-    #ifdef FEATURE_LCD_ADAFRUIT_BACKPACK
+    #ifdef FEATURE_LCD_ADAFRUIT_BACKPACK 
       lcd.setBacklight(HIGH);
     #endif
-
+    #ifdef FEATURE_LCD_MATHERTEL_PCF8574 
+      lcd.setBacklight(HIGH);
+    #endif
 
     #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
       // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/

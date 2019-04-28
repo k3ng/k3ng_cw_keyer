@@ -17,8 +17,13 @@
 // #define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code - Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
 // #define FEATURE_CW_COMPUTER_KEYBOARD  // Have an Arduino Due or Leonardo act as a USB HID (Human Interface Device) keyboard and use the paddle to "type" characters on the computer -- uncomment this line in ino file: #include <Keyboard.h>
  #define FEATURE_DEAD_OP_WATCHDOG
+<<<<<<< HEAD
  #define FEATURE_AUTOSPACE
  #define FEATURE_FARNSWORTH
+=======
+// #define FEATURE_AUTOSPACE
+// #define FEATURE_FARNSWORTH
+>>>>>>> upstream/master
 // #define FEATURE_DL2SBA_BANKSWITCH       // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
  #define FEATURE_LCD_4BIT                // classic LCD disidefplay using 4 I/O lines
 // #define FEATURE_LCD_8BIT                // classic LCD display using 8 I/O lines
@@ -37,10 +42,17 @@
 // #define FEATURE_LED_RING                // Mayhew Labs Led Ring support
  #define FEATURE_ALPHABET_SEND_PRACTICE  // enables command mode S command - created by Ryan, KC2ZWM
  #define FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE // enables command mode U
+<<<<<<< HEAD
 // #define FEATURE_PTT_INTERLOCK
 // #define FEATURE_QLF
 // #define FEATURE_EEPROM_E24C1024
 // #define FEATURE_STRAIGHT_KEY          //Highly recommended to leave disabled.  Booting with straight key plugged in works better (timing issues w/ this feature w/paddles)
+=======
+// #define FEATURE_PTT_INTERLOCK 
+// #define FEATURE_QLF
+// #define FEATURE_EEPROM_E24C1024
+// #define FEATURE_STRAIGHT_KEY
+>>>>>>> upstream/master
 // #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
 // #define FEATURE_PADDLE_ECHO
 // #define FEATURE_STRAIGHT_KEY_ECHO
@@ -50,8 +62,13 @@
 // #define FEATURE_SEQUENCER
 
 // #define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
+<<<<<<< HEAD
  #define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE
                                                              //    simultaneously.  This will make Winkey emulation be the default at boot up;
+=======
+ #define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 
+                                                             //    simultaneously.  This will make Winkey emulation be the default at boot up; 
+>>>>>>> upstream/master
                                                              //    hold command button down at boot up to activate CLI mode
 
 // #define OPTION_SUPPRESS_SERIAL_BOOT_MSG
@@ -84,14 +101,22 @@
  #define OPTION_CW_KEYBOARD_CAPSLOCK_BEEP
 // #define OPTION_CW_KEYBOARD_ITALIAN
 // #define OPTION_CW_KEYBOARD_GERMAN
+<<<<<<< HEAD
  #define OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR   //Goertzel default is 558Hz, with 186Hz bandwidth.  Edit goertzel.h in libraries as desired.
+=======
+ #define OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+>>>>>>> upstream/master
 // #define OPTION_INVERT_PADDLE_PIN_LOGIC
  #define OPTION_ADVANCED_SPEED_DISPLAY //enables "nerd" speed visualization on display: wpm, cpm (char per min), duration of dit and dah in milliseconds and ratio (contributed by Giorgio, IZ2XBZ)
  #define OPTION_PROSIGN_SUPPORT    // additional prosign support for paddle and straight key echo on display, CLI, and in memory storage
 // #define OPTION_RUSSIAN_LANGUAGE_SEND_CLI // Russian language CLI sending support (contributed by Павел Бирюков, UA1AQC)
  #define OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION
 // #define OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT
+<<<<<<< HEAD
  #define OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE //comment out if not using the twin T oscillator.  Remember to change audio out pin
+=======
+ #define OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE
+>>>>>>> upstream/master
 
 // #define OPTION_WORDSWORTH_CZECH
 // #define OPTION_WORDSWORTH_DEUTSCH

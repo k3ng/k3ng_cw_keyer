@@ -1,23 +1,32 @@
-/* Pins - you must review these and configure ! */
+
+// ######## ########  ######  ######## 
+//    ##    ##       ##    ##    ##    
+//    ##    ##       ##          ##    
+//    ##    ######    ######     ##    
+//    ##    ##             ##    ##    
+//    ##    ##       ##    ##    ##    
+//    ##    ########  ######     ##    
+
+
 #ifndef keyer_pin_settings_h
 #define keyer_pin_settings_h
 
-#define paddle_left 5
-#define paddle_right 4
-#define tx_key_line_1 8       // (high = key down/tx on)
-#define tx_key_line_2 9
+#define paddle_left 2
+#define paddle_right 5
+#define tx_key_line_1 11       // (high = key down/tx on)
+#define tx_key_line_2 12
 #define tx_key_line_3 0
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-<<<<<<< HEAD
-#define sidetone_line 31         // connect a speaker for sidetone   Set to "12" if not using Twin T oscillator
-=======
-#define sidetone_line 12         // connect a speaker for sidetone
->>>>>>> upstream/master
+#if !defined(FEATURE_ETHERNET)
+  #define sidetone_line 4         // connect a speaker for sidetone 
+#else
+  #define sidetone_line 31        // pin 4 is used by Ethernet shield so we'll use pin 31 on the test jig...
+#endif
 #define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
-#define ptt_tx_1 10              // PTT ("push to talk") lines
-#define ptt_tx_2 11              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
+#define ptt_tx_1 13              // PTT ("push to talk") lines
+#define ptt_tx_2 0              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
 #define ptt_tx_3 0              //   These are optional - set to 0 if unused
 #define ptt_tx_4 0
 #define ptt_tx_5 0
@@ -25,35 +34,21 @@
 #define tx_key_dit 0            // if defined, goes active for dit (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 #define tx_key_dah 0            // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 
+
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_pin A1
-  #define command_mode_active_led 29
+  #define command_mode_active_led 0
 #endif //FEATURE_COMMAND_BUTTONS
-
-/*
-FEATURE_SIDETONE_SWITCH
-  Enabling this feature and an external toggle switch  adds switch control for playing cw sidetone.
-  ST Switch status is displayed in the status command.  This feature will override the software control of the sidetone (\o).
-  Arduino pin is assigned by SIDETONE_SWITCH 
-*/
-
-#ifdef FEATURE_SIDETONE_SWITCH
-  #define SIDETONE_SWITCH 8
-#endif //FEATURE_SIDETONE_SWITCH
 
 
 //lcd pins
 #if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD_8BIT)
-<<<<<<< HEAD
-  #define lcd_rs 38
-=======
-  #define lcd_rs 38 
->>>>>>> upstream/master
-  #define lcd_enable 32 // pin 10 is used by Ethernet shield and will conflict with that
-  #define lcd_d4 33
-  #define lcd_d5 35
-  #define lcd_d6 37
-  #define lcd_d7 39
+  #define lcd_rs A2
+  #define lcd_enable 10  // pin 10 is used by Ethernet shield and will conflict with that
+  #define lcd_d4 6
+  #define lcd_d5 7
+  #define lcd_d6 8
+  #define lcd_d7 9
 #endif //FEATURE_LCD_4BIT || defined(FEATURE_LCD_8BIT)
 
 #if defined(FEATURE_LCD_8BIT) // addition four data lines for 8 bit LCD control
@@ -66,7 +61,7 @@ FEATURE_SIDETONE_SWITCH
 #ifdef FEATURE_LCD1602_N07DH
   #define lcd_rs 8
   #define lcd_enable 9
-  #define lcd_d4 4
+  #define lcd_d4 4       // pin 4 is used by Ethernet shield and will conflict with that
   #define lcd_d5 5
   #define lcd_d6 6
   #define lcd_d7 7
@@ -81,8 +76,8 @@ FEATURE_SIDETONE_SWITCH
 // rotary encoder pins and options - rotary encoder code from Jim Balls M0CKE
 #ifdef FEATURE_ROTARY_ENCODER
   #define OPTION_ENCODER_HALF_STEP_MODE     // Half-step mode?
-  #define rotary_pin1 6                      // CW Encoder Pin
-  #define rotary_pin2 7                    // CCW Encoder Pin
+  #define rotary_pin1 0                      // CW Encoder Pin
+  #define rotary_pin2 0                    // CCW Encoder Pin
   #define OPTION_ENCODER_ENABLE_PULLUPS     // define to enable weak pullups.
 #endif //FEATURE_ROTARY_ENCODER
 
@@ -93,8 +88,8 @@ FEATURE_SIDETONE_SWITCH
 #endif //FEATURE_LED_RING
 
 #ifdef FEATURE_ALPHABET_SEND_PRACTICE
-  #define correct_answer_led 27
-  #define wrong_answer_led 25
+  #define correct_answer_led 0
+  #define wrong_answer_led 0
 #endif //FEATURE_ALPHABET_SEND_PRACTICE
 
 #ifdef FEATURE_PTT_INTERLOCK
@@ -102,19 +97,15 @@ FEATURE_SIDETONE_SWITCH
 #endif //FEATURE_PTT_INTERLOCK
 
 #ifdef FEATURE_STRAIGHT_KEY
-  #define pin_straight_key 52
+  #define pin_straight_key A5 //52   // pin 52 doesn't work right when FEATURE_WEB_SERVER is active.  don't know why 2016-04-26
 #endif //FEATURE_STRAIGHT_KEY
 
 #ifdef FEATURE_CW_DECODER
-<<<<<<< HEAD
-  #define cw_decoder_pin A3//A11 //A5 //A3
-=======
   #define cw_decoder_pin A3//A11 //A5 //A3  
->>>>>>> upstream/master
   #ifdef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-    #define cw_decoder_audio_input_pin A0 // this must be an analog pin!
+    #define cw_decoder_audio_input_pin 0 // this must be an analog pin!
   #endif //OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-  #define cw_decoder_indicator 23
+  #define cw_decoder_indicator 24
 #endif //FEATURE_CW_DECODER
 
 
@@ -123,53 +114,71 @@ FEATURE_SIDETONE_SWITCH
 #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
 
 #if defined(FEATURE_SLEEP)
-  #define keyer_awake 0
+  #define keyer_awake 13       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
 #endif
 
 #if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
   #define capactive_paddle_pin_inhibit_pin 0     // if this pin is defined and is set high, the capacitive paddle pins will switch to normal (non-capacitive) sensing mode
 #endif
 
+/*
+FEATURE_SIDETONE_SWITCH
+  Enabling this feature and an external toggle switch  adds switch control for playing cw sidetone.
+  ST Switch status is displayed in the status command.  This feature will override the software control of the sidetone (\o).
+  Arduino pin is assigned by SIDETONE_SWITCH 
+*/
+
+#ifdef FEATURE_SIDETONE_SWITCH
+  #define SIDETONE_SWITCH 8
+#endif //FEATURE_SIDETONE_SWITCH
+
 #ifdef FEATURE_4x4_KEYPAD
-  #define Row3 43
-  #define Row2 42
-  #define Row1 41
-  #define Row0 40
-  #define Col3 51
-  #define Col2 50
-  #define Col1 49
-  #define Col0 48
+  #define Row3 33
+  #define Row2 32
+  #define Row1 31
+  #define Row0 30
+  #define Col3 37
+  #define Col2 36
+  #define Col1 35
+  #define Col0 34
 #endif
 
 #ifdef FEATURE_3x4_KEYPAD
-  #define Row3 43
-  #define Row2 42
-  #define Row1 41
-  #define Row0 40
-  #define Col2 50
-  #define Col1 49
-  #define Col0 48
+  #define Row3 33
+  #define Row2 32
+  #define Row1 31
+  #define Row0 30
+  #define Col2 36
+  #define Col1 35
+  #define Col0 34
 #endif
 
 #ifdef FEATURE_SEQUENCER
-  #define sequencer_1_pin 0
-  #define sequencer_2_pin 0
-  #define sequencer_3_pin 0
-  #define sequencer_4_pin 0
-  #define sequencer_5_pin 0
+  #define sequencer_1_pin 40
+  #define sequencer_2_pin 41
+  #define sequencer_3_pin 42
+  #define sequencer_4_pin 43
+  #define sequencer_5_pin 44
 #endif //FEATURE_SEQUENCER
 
-#define ptt_input_pin 0
+#define ptt_input_pin 0  
 
-#define tx_inhibit_pin 0
-<<<<<<< HEAD
-#define tx_pause_pin 0
-=======
-#define tx_pause_pin 0   
->>>>>>> upstream/master
+#define tx_inhibit_pin 50
+#define tx_pause_pin 48 
+
 
 #else
 
   #error "Multiple pin_settings.h files included somehow..."
 
 #endif //keyer_pin_settings_h
+
+
+// ######## ########  ######  ######## 
+//    ##    ##       ##    ##    ##    
+//    ##    ##       ##          ##    
+//    ##    ######    ######     ##    
+//    ##    ##             ##    ##    
+//    ##    ##       ##    ##    ##    
+//    ##    ########  ######     ##    
+

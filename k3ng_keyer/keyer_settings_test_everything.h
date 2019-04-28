@@ -1,4 +1,14 @@
-// Initial and hardcoded settings
+
+// ######## ########  ######  ######## 
+//    ##    ##       ##    ##    ##    
+//    ##    ##       ##          ##        EVERYTHING
+//    ##    ######    ######     ##    
+//    ##    ##             ##    ##    
+//    ##    ##       ##    ##    ##    
+//    ##    ########  ######     ##    
+
+
+
 #define initial_speed_wpm 26             // "factory default" keyer speed setting
 #define initial_command_mode_speed_wpm 20 // "factory default" command mode speed setting 
 #define initial_sidetone_freq 600        // "factory default" sidetone frequency setting
@@ -31,7 +41,6 @@
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
-#define memory_area_end 1023             // the eeprom location where memory space ends
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
 #define winkey_command_timeout_ms 5000
 #define winkey_discard_bytes_startup 3   // this is used if OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP is enabled above
@@ -55,8 +64,8 @@
 #define unknown_cw_character '*'
 #define cli_paddle_echo_on_at_boot 1
 #define cli_straight_key_echo_on_at_boot 1
-#define tx_key_dit_and_dah_pins_active_state HIGH
-#define tx_key_dit_and_dah_pins_inactive_state LOW
+#define tx_key_dit_and_dah_pins_active_state LOW
+#define tx_key_dit_and_dah_pins_inactive_state HIGH
 #define potentiometer_check_interval_ms 150
 #define potentiometer_reading_threshold 1 
 #define default_paddle_interruption_quiet_time_element_lengths 0
@@ -65,7 +74,7 @@
 #define serial_program_memory_buffer_size 500
 
 #ifdef FEATURE_COMMAND_BUTTONS
-  #define analog_buttons_number_of_buttons 4  // includes the command button (command button + 3 memory buttons = 4)
+  #define analog_buttons_number_of_buttons 4
   #define analog_buttons_r1 10
   #define analog_buttons_r2 1
 #endif
@@ -138,7 +147,6 @@
 #endif //FEATURE_WINKEY_EMULATION
 
 
-
 #define PRIMARY_SERIAL_PORT &Serial
 #define PRIMARY_SERIAL_PORT_BAUD 115200     // This applies only when the port is in Command Line Interface mode.  In Winkey mode it will default to 1200.
 
@@ -172,13 +180,13 @@
 #if defined(FEATURE_SLEEP)
   #define KEYER_AWAKE_PIN_AWAKE_STATE HIGH
   #define KEYER_AWAKE_PIN_ASLEEP_STATE LOW
-#endif 
+#endif
 
 #if defined(FEATURE_ETHERNET)
-  // #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
-  // #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
-  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.179")
-  #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
+  #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
+  #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
+//  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.179")
+//  #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
 
   #define FEATURE_ETHERNET_GATEWAY {192,168,1,1}                   // default gateway
   #define FEATURE_ETHERNET_SUBNET_MASK {255,255,255,0}                  // default subnet mask
@@ -187,11 +195,21 @@
   #define FEATURE_UDP_RECEIVE_BUFFER_SIZE 128
 #endif //FEATURE_ETHERNET
 
-#define WEB_SERVER_CONTROL_TX_KEY_TIME_LIMIT_SECS 10
-
 #define FEATURE_INTERNET_LINK_MAX_LINKS 2
 #define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
-#define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500 
+#define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500            // increase this time if you have greater than 500 ms latency on your link
+#define FEATURE_INTERNET_LINK_SVC_DURING_LOOP_TIME_MS 20
+#define FEATURE_INTERNET_LINK_KEY_DOWN_TIMEOUT_SECS 8
+
+#define WEB_SERVER_CONTROL_TX_KEY_TIME_LIMIT_SECS 10
+
+#if defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
+  #define memory_area_end 4095             // the eeprom location where memory space ends
+#elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega168__)
+  #define memory_area_end 511             // the eeprom location where memory space ends
+#else
+  #define memory_area_end 1023             // the eeprom location where memory space ends
+#endif
 
 #if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
   #define KEYPAD_ROWS 4 //KeyPad Rows
@@ -217,6 +235,7 @@
 #define initial_sidetone_mode 1            // Sidetone mode, 0=OFF, 1=ON, 2=PADDLE_ONLY
 
 #define sd_card_spi_ss_line 4
+
 
 #if defined(OPTION_DFROBOT_LCD_COMMAND_BUTTONS)
 
@@ -244,6 +263,7 @@
 
 #endif
 
+
 #define sequencer_pins_active_state HIGH
 #define sequencer_pins_inactive_state LOW
 #define ptt_line_active_state HIGH
@@ -258,7 +278,7 @@
 #define tx_pause_pin_inactive_state HIGH
 
 #if defined(ARDUINO_MAPLE_MINI)
-  #define button_value_factor 4095  //sp5iou contributed
+  #define button_value_factor 4095
 #else
   #define button_value_factor 1023
 #endif
@@ -267,4 +287,5 @@
 
 #define sidetone_volume_low_limit 10
 #define sidetone_volume_high_limit 500
+
 
