@@ -1030,6 +1030,9 @@ Recent Update History
     2019.04.28.01
       Implemented asynchronous EEPROM writes   
 
+    2019.04.29.01
+      Fixed bug introduced in 2019.04.27.05 with display of second prosign character (Thanks, Fred, VK2EFL)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1044,7 +1047,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.04.28.01"
+#define CODE_VERSION "2019.04.29.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -2006,13 +2009,11 @@ void loop()
       check_sequencer_tail_time();
     #endif  
 
+    service_async_eeprom_write();
+    
   }
 
-  service_async_eeprom_write();
-
   service_millis_rollover();
-
-
 
   
 }
@@ -15401,7 +15402,7 @@ byte play_memory(byte memory_number)
                     } else {
                       if (prosign_flag){
                         display_scroll_print_char(eeprom_byte_read); 
-                        display_scroll_print_char(eeprom_byte_read+1);
+                        display_scroll_print_char(EEPROM.read(y+1));
                         prosign_before_flag = 1;
                       } else {
                         if (prosign_before_flag){  
@@ -15414,7 +15415,7 @@ byte play_memory(byte memory_number)
                 #else 
                   if (prosign_flag){
                     display_scroll_print_char(eeprom_byte_read); 
-                    display_scroll_print_char(eeprom_byte_read+1);
+                    display_scroll_print_char(EEPROM.read(y+1));
                     prosign_before_flag = 1;
                   } else {
                     if (prosign_before_flag){  
@@ -15820,7 +15821,7 @@ byte play_memory(byte memory_number)
     */
       
 
-  }
+  } //for (int y = (memory_start(memory_number)); (y < (memory_end(memory_number)+1)); y++)
 
 }
 #endif
