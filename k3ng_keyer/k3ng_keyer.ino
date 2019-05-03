@@ -4681,15 +4681,14 @@ void debug_capture_dump()
 
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_ROTARY_ENCODER
-void check_rotary_encoder(){
+int chk_rotary_encoder(){
 
   static unsigned long timestamp[5];
 
   unsigned char pinstate = (digitalRead(rotary_pin2) << 1) | digitalRead(rotary_pin1);
   state = ttable[state & 0xf][pinstate];
   unsigned char result = (state & 0x30);
-      
-  if (result) {                                    // If rotary encoder modified  
+  if (result) {
     timestamp[0] = timestamp[1];                    // Encoder step timer
     timestamp[1] = timestamp[2]; 
     timestamp[2] = timestamp[3]; 
@@ -4698,13 +4697,23 @@ void check_rotary_encoder(){
     
     unsigned long elapsed_time = (timestamp[4] - timestamp[0]); // Encoder step time difference for 10's step
  
-    if (result == DIR_CW) {                      
-      if (elapsed_time < 250) {speed_change(2);} else {speed_change(1);};
+    if (result == DIR_CW) {
+      if (elapsed_time < 250) {return 2;} else {return 1;};
     }
-    if (result == DIR_CCW) {                      
-      if (elapsed_time < 250) {speed_change(-2);} else {speed_change(-1);};
+    if (result == DIR_CCW) {
+      if (elapsed_time < 250) {return -2;} else {return -1;};
     }
-    
+  }
+  return 0;
+}
+
+void check_rotary_encoder(){
+
+  int step = chk_rotary_encoder();
+
+  if (step != 0) {
+    speed_change(step);
+     
     // Start of Winkey Speed change mod for Rotary Encoder -- VE2EVN
     #ifdef FEATURE_WINKEY_EMULATION
       if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
@@ -4714,9 +4723,7 @@ void check_rotary_encoder(){
     #endif    
     // End of Winkey Speed change mod for Rotary Encoder -- VE2EVN
 
-  } // if (result)
-
-  
+  } // if (step != 0)
   
 }
 #endif //FEATURE_ROTARY_ENCODER
