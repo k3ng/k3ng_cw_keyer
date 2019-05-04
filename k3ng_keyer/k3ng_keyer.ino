@@ -1195,6 +1195,13 @@ Recent Update History
   #include <LiquidCrystal_PCF8574.h>
 #endif
 
+#if defined(FEATURE_LCD_HD44780)
+  #include <Wire.h>
+  #include <hd44780.h>
+  #include <hd44780ioClass/hd44780_I2Cexp.h>
+  #define WIRECLOCK 400000L
+#endif
+
 #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
  // #include <BasicTerm.h>
 #endif
@@ -1605,6 +1612,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
 #if defined(FEATURE_LCD_MATHERTEL_PCF8574)
   LiquidCrystal_PCF8574 lcd(lcd_i2c_address_mathertel_PCF8574);
+#endif
+
+#if defined(FEATURE_LCD_HD44780)
+  hd44780_I2Cexp lcd;
 #endif
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)

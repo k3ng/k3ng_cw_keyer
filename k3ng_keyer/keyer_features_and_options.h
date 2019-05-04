@@ -29,6 +29,7 @@
 // #define FEATURE_LCD_SAINSMART_I2C
 // #define FEATURE_LCD_FABO_PCF8574  // https://github.com/FaBoPlatform/FaBoLCD-PCF8574-Library
 // #define FEATURE_LCD_MATHERTEL_PCF8574 // https://github.com/mathertel/LiquidCrystal_PCF8574
+// #define FEATURE_LCD_HD44780
 // #define FEATURE_CW_DECODER
 // #define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE, may have mixed results with Mega and Mega ADK)
 // #define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
