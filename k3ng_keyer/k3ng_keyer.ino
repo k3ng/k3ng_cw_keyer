@@ -1087,6 +1087,8 @@ Recent Update History
   #include "keyer_features_and_options_mortty.h"
 #elif defined(HARDWARE_K5BCQ)
   #include "keyer_features_and_options_k5bcq.h"
+#elif defined(HARDWARE_MEGAKEYER)
+  #include "keyer_features_and_options_megakeyer.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
   #include "keyer_features_and_options_test_everything.h"
 #elif defined(HARDWARE_YAACWK)
@@ -1134,6 +1136,9 @@ Recent Update History
 #elif defined(HARDWARE_K5BCQ)
   #include "keyer_pin_settings_k5bcq.h"
   #include "keyer_settings_k5bcq.h"
+#elif defined(HARDWARE_MEGAKEYER)
+  #include "keyer_pin_settings_megakeyer.h"
+  #include "keyer_settings_megakeyer.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
   #include "keyer_pin_settings_test_everything.h"
   #include "keyer_settings_test_everything.h"
