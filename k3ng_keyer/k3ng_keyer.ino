@@ -1039,6 +1039,10 @@ Recent Update History
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/63  (Thanks, W6IPA) 
       New hardware profile: HARDWARE_MEGAKEYER  https://github.com/w6ipa/megakeyer    (Thanks, W6IPA)
 
+    2019.05.03.02
+      Added potentiometer_enable_pin
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/64  (Thanks, W6IPA)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1053,7 +1057,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.05.03.01"
+#define CODE_VERSION "2019.05.03.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -4803,8 +4807,12 @@ void check_potentiometer()
   #endif
 
   static unsigned long last_pot_check_time = 0;
-    
+  
   if ((configuration.pot_activated || potentiometer_always_on) && ((millis() - last_pot_check_time) > potentiometer_check_interval_ms)) {
+    last_pot_check_time = millis();
+    if ((potentiometer_enable_pin) && (digitalRead(potentiometer_enable_pin) == HIGH)){
+      return; 
+    }
     byte pot_value_wpm_read = pot_value_wpm();
     if (((abs(pot_value_wpm_read - last_pot_wpm_read) * 10) > (potentiometer_change_threshold * 10))) {
       #ifdef DEBUG_POTENTIOMETER
@@ -4825,7 +4833,6 @@ void check_potentiometer()
         last_activity_time = millis(); 
       #endif //FEATURE_SLEEP
     }
-    last_pot_check_time = millis();
   }
 }
 
@@ -16282,6 +16289,10 @@ void initialize_pins() {
 
   if (tx_pause_pin){
     pinMode(tx_pause_pin,INPUT_PULLUP);
+  }
+
+  if (potentiometer_enable_pin){
+    pinMode(potentiometer_enable_pin,INPUT_PULLUP);
   }
   
 } //initialize_pins()
