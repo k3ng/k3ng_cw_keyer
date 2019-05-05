@@ -1079,7 +1079,9 @@ Recent Update History
   #include <EEPROM.h>  
 #endif //ARDUINO_SAM_DUE
 
-#if defined(HARDWARE_NANOKEYER_REV_B)
+#if defined(HARDWARE_OPENCWKEYER_MK2)
+  #include "keyer_features_and_options_opencwkeyer_mk2.h"
+#elif defined(HARDWARE_NANOKEYER_REV_B)
   #include "keyer_features_and_options_nanokeyer_rev_b.h"
 #elif defined(HARDWARE_NANOKEYER_REV_D)
   #include "keyer_features_and_options_nanokeyer_rev_d.h"
@@ -1119,7 +1121,10 @@ Recent Update History
 #include "keyer_dependencies.h"
 #include "keyer_debug.h"
 
-#if defined(HARDWARE_NANOKEYER_REV_B)
+#if defined(HARDWARE_OPENCWKEYER_MK2)
+  #include "keyer_pin_settings_opencwkeyer_mk2.h"
+  #include "keyer_settings_opencwkeyer_mk2.h"
+#elif defined(HARDWARE_NANOKEYER_REV_B)
   #include "keyer_pin_settings_nanokeyer_rev_b.h"
   #include "keyer_settings_nanokeyer_rev_b.h"
 #elif defined(HARDWARE_NANOKEYER_REV_D)
@@ -1220,14 +1225,14 @@ Recent Update History
   #include <goertzel.h>
 #endif
 
-//#if defined(FEATURE_ETHERNET)
+#if defined(FEATURE_ETHERNET)
 #if !defined(ARDUINO_MAPLE_MINI) && !defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
   #include <Ethernet.h>  // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
   #if defined(FEATURE_INTERNET_LINK)
     #include <EthernetUdp.h>
   #endif //FEATURE_INTERNET_LINK
 #endif //!defined(ARDUINO_MAPLE_MINI) && !defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329  
-//#endif //FEATURE_ETHERNET
+#endif //FEATURE_ETHERNET
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
