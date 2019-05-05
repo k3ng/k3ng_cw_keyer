@@ -1,26 +1,8 @@
-// Initial and hardcoded settings
-
-
-// ######## ##     ## ##    ## ##    ## ######## ##    ## ######## ########  
-// ##       ##     ## ###   ## ##   ##  ##        ##  ##  ##       ##     ## 
-// ##       ##     ## ####  ## ##  ##   ##         ####   ##       ##     ## 
-// ######   ##     ## ## ## ## #####    ######      ##    ######   ########  
-// ##       ##     ## ##  #### ##  ##   ##          ##    ##       ##   ##   
-// ##       ##     ## ##   ### ##   ##  ##          ##    ##       ##    ##  
-// ##        #######  ##    ## ##    ## ########    ##    ######## ##     ## 
-
-
-// ######## ##    ##    ##     #####   
-// ##       ##   ##   ####    ##   ##  
-// ##       ##  ##      ##   ##     ## 
-// ######   #####       ##   ##     ## 
-// ##       ##  ##      ##   ##     ## 
-// ##       ##   ##     ##    ##   ##  
-// ##       ##    ##  ######   #####  
-
-
-
-#define initial_speed_wpm 26             // "factory default" keyer speed setting
+//
+//       Initial setting for W6IPA megakeyer v1.1 (CC) BY-NC-SA
+//       Project files are available here https://github.com/w6ipa/megakeyer
+//
+#define initial_speed_wpm 20             // "factory default" keyer speed setting
 #define initial_command_mode_speed_wpm 20 // "factory default" command mode speed setting 
 #define initial_sidetone_freq 600        // "factory default" sidetone frequency setting
 #define hz_high_beep 1500                // frequency in hertz of high beep
@@ -61,6 +43,7 @@
 #define default_memory_repeat_time 3000  // time in milliseconds
 #define LCD_COLUMNS 16
 #define LCD_ROWS 2
+#define lcd_i2c_address_mathertel_PCF8574 0x27
 #define hell_pixel_microseconds 4025
 #define program_memory_limit_consec_spaces 1
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
@@ -86,7 +69,7 @@
 #define eeprom_write_time_ms 30000
 
 #ifdef FEATURE_COMMAND_BUTTONS
-  #define analog_buttons_number_of_buttons 4
+  #define analog_buttons_number_of_buttons 4  // includes the command button (command button + 3 memory buttons = 4)
   #define analog_buttons_r1 10
   #define analog_buttons_r2 1
 #endif
@@ -198,7 +181,7 @@
 #if defined(FEATURE_ETHERNET)
   // #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
   // #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
-  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.178")
+  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.179")
   #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
 
   #define FEATURE_ETHERNET_GATEWAY {192,168,1,1}                   // default gateway

@@ -1027,6 +1027,22 @@ Recent Update History
     2019.04.27.05
       Fixed bug with I2C displays and \+ memory macros with pauses in between prosigned characters (Thanks, Fred, VK2EFL)
 
+    2019.04.28.01
+      Implemented asynchronous EEPROM writes   
+
+    2019.04.29.01
+      Fixed bug introduced in 2019.04.27.05 with display of second prosign character (Thanks, Fred, VK2EFL)
+
+    2019.05.03.01
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/61  (Thanks, W6IPA) 
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/62  (Thanks, W6IPA) 
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/63  (Thanks, W6IPA) 
+      New hardware profile: HARDWARE_MEGAKEYER  https://github.com/w6ipa/megakeyer    (Thanks, W6IPA)
+
+    2019.05.03.02
+      Added potentiometer_enable_pin
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/64  (Thanks, W6IPA)
+
   This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1041,7 +1057,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.04.27.05"
+#define CODE_VERSION "2019.05.03.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1081,6 +1097,8 @@ Recent Update History
   #include "keyer_features_and_options_mortty.h"
 #elif defined(HARDWARE_K5BCQ)
   #include "keyer_features_and_options_k5bcq.h"
+#elif defined(HARDWARE_MEGAKEYER)
+  #include "keyer_features_and_options_megakeyer.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
   #include "keyer_features_and_options_test_everything.h"
 #elif defined(HARDWARE_YAACWK)
@@ -1128,6 +1146,9 @@ Recent Update History
 #elif defined(HARDWARE_K5BCQ)
   #include "keyer_pin_settings_k5bcq.h"
   #include "keyer_settings_k5bcq.h"
+#elif defined(HARDWARE_MEGAKEYER)
+  #include "keyer_pin_settings_megakeyer.h"
+  #include "keyer_settings_megakeyer.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
   #include "keyer_pin_settings_test_everything.h"
   #include "keyer_settings_test_everything.h"
@@ -1182,6 +1203,13 @@ Recent Update History
 
 #if defined(FEATURE_LCD_MATHERTEL_PCF8574)
   #include <LiquidCrystal_PCF8574.h>
+#endif
+
+#if defined(FEATURE_LCD_HD44780)
+  #include <Wire.h>
+  #include <hd44780.h>
+  #include <hd44780ioClass/hd44780_I2Cexp.h>
+  #define WIRECLOCK 400000L
 #endif
 
 #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
@@ -1596,6 +1624,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   LiquidCrystal_PCF8574 lcd(lcd_i2c_address_mathertel_PCF8574);
 #endif
 
+#if defined(FEATURE_LCD_HD44780)
+  hd44780_I2Cexp lcd;
+#endif
+
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
   USB Usb;
   uint32_t next_time;
@@ -1816,6 +1848,8 @@ unsigned long millis_rollover = 0;
   float c1 = (8.0 - 2.0*pow(omega*T/1000000.0,2))/(4.0+pow(omega*T/1000000.0,2));
 #endif //FEATURE_SINEWAVE_SIDETONE
 
+byte async_eeprom_write = 0;
+
 /*---------------------------------------------------------------------------------------------------------
 
 
@@ -2001,11 +2035,11 @@ void loop()
       check_sequencer_tail_time();
     #endif  
 
+    service_async_eeprom_write();
+    
   }
 
   service_millis_rollover();
-
-
 
   
 }
@@ -3150,7 +3184,8 @@ void check_for_dirty_configuration()
     debug_serial_port->println(F("loop: entering check_for_dirty_configuration"));
   #endif
 
-  if ((config_dirty) && ((millis()-last_config_write)>30000) && (!send_buffer_bytes) && (!ptt_line_activated)) {
+  //if ((config_dirty) && ((millis()-last_config_write)>30000) && (!send_buffer_bytes) && (!ptt_line_activated)) {
+  if ((config_dirty) && ((millis()-last_config_write)>eeprom_write_time_ms) && (!send_buffer_bytes) && (!ptt_line_activated) && (!dit_buffer) && (!dah_buffer) && (!async_eeprom_write) && (paddle_pin_read(paddle_left) == HIGH)  && (paddle_pin_read(paddle_right) == HIGH) ) {
     write_settings_to_eeprom(0);
     last_config_write = millis();
     #ifdef DEBUG_EEPROM
@@ -4672,15 +4707,14 @@ void debug_capture_dump()
 
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_ROTARY_ENCODER
-void check_rotary_encoder(){
+int chk_rotary_encoder(){
 
   static unsigned long timestamp[5];
 
   unsigned char pinstate = (digitalRead(rotary_pin2) << 1) | digitalRead(rotary_pin1);
   state = ttable[state & 0xf][pinstate];
   unsigned char result = (state & 0x30);
-      
-  if (result) {                                    // If rotary encoder modified  
+  if (result) {
     timestamp[0] = timestamp[1];                    // Encoder step timer
     timestamp[1] = timestamp[2]; 
     timestamp[2] = timestamp[3]; 
@@ -4689,13 +4723,23 @@ void check_rotary_encoder(){
     
     unsigned long elapsed_time = (timestamp[4] - timestamp[0]); // Encoder step time difference for 10's step
  
-    if (result == DIR_CW) {                      
-      if (elapsed_time < 250) {speed_change(2);} else {speed_change(1);};
+    if (result == DIR_CW) {
+      if (elapsed_time < 250) {return 2;} else {return 1;};
     }
-    if (result == DIR_CCW) {                      
-      if (elapsed_time < 250) {speed_change(-2);} else {speed_change(-1);};
+    if (result == DIR_CCW) {
+      if (elapsed_time < 250) {return -2;} else {return -1;};
     }
-    
+  }
+  return 0;
+}
+
+void check_rotary_encoder(){
+
+  int step = chk_rotary_encoder();
+
+  if (step != 0) {
+    speed_change(step);
+     
     // Start of Winkey Speed change mod for Rotary Encoder -- VE2EVN
     #ifdef FEATURE_WINKEY_EMULATION
       if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
@@ -4705,9 +4749,7 @@ void check_rotary_encoder(){
     #endif    
     // End of Winkey Speed change mod for Rotary Encoder -- VE2EVN
 
-  } // if (result)
-
-  
+  } // if (step != 0)
   
 }
 #endif //FEATURE_ROTARY_ENCODER
@@ -4765,8 +4807,12 @@ void check_potentiometer()
   #endif
 
   static unsigned long last_pot_check_time = 0;
-    
+  
   if ((configuration.pot_activated || potentiometer_always_on) && ((millis() - last_pot_check_time) > potentiometer_check_interval_ms)) {
+    last_pot_check_time = millis();
+    if ((potentiometer_enable_pin) && (digitalRead(potentiometer_enable_pin) == HIGH)){
+      return; 
+    }
     byte pot_value_wpm_read = pot_value_wpm();
     if (((abs(pot_value_wpm_read - last_pot_wpm_read) * 10) > (potentiometer_change_threshold * 10))) {
       #ifdef DEBUG_POTENTIOMETER
@@ -4787,7 +4833,6 @@ void check_potentiometer()
         last_activity_time = millis(); 
       #endif //FEATURE_SLEEP
     }
-    last_pot_check_time = millis();
   }
 }
 
@@ -5487,30 +5532,95 @@ void check_ptt_tail()
 }
 
 //-------------------------------------------------------------------------------------------------------
+//void write_settings_to_eeprom(int initialize_eeprom) {  //zzzzzz
+// 
+//  #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+//  
+//  if (initialize_eeprom) {
+//    //configuration.magic_number = eeprom_magic_number;
+//    EEPROM.write(0,eeprom_magic_number);
+//    #ifdef FEATURE_MEMORIES
+//      initialize_eeprom_memories();
+//    #endif  //FEATURE_MEMORIES    
+//  }
+//
+//  const byte* p = (const byte*)(const void*)&configuration;
+//  unsigned int i;
+//  int ee = 1;  // starting point of configuration struct
+//  for (i = 0; i < sizeof(configuration); i++){
+//    EEPROM.write(ee++, *p++);  
+//  }
+//  
+//  #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+//  
+//  config_dirty = 0;
+//  
+//  
+//}
+
+
 void write_settings_to_eeprom(int initialize_eeprom) {  
  
   #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
   
-  if (initialize_eeprom) {
-    //configuration.magic_number = eeprom_magic_number;
-    EEPROM.write(0,eeprom_magic_number);
-    #ifdef FEATURE_MEMORIES
-      initialize_eeprom_memories();
-    #endif  //FEATURE_MEMORIES    
-  }
+    if (initialize_eeprom) {
+      //configuration.magic_number = eeprom_magic_number;
+      EEPROM.write(0,eeprom_magic_number);
+      #ifdef FEATURE_MEMORIES
+        initialize_eeprom_memories();
+      #endif  //FEATURE_MEMORIES    
+    }
 
-  const byte* p = (const byte*)(const void*)&configuration;
-  unsigned int i;
-  int ee = 1;  // starting point of configuration struct
-  for (i = 0; i < sizeof(configuration); i++){
-    EEPROM.write(ee++, *p++);  
-  }
+    async_eeprom_write = 1;  // initiate an asyncrhonous eeprom write
   
   #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
-  
+
   config_dirty = 0;
   
-  
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void service_async_eeprom_write(){
+
+  static byte last_async_eeprom_write_status = 0;
+  static int ee = 0;
+  static unsigned int i = 0;
+  static const byte* p;
+
+//zzzzzz
+
+  if ((async_eeprom_write) && (!send_buffer_bytes) && (!ptt_line_activated) && (!dit_buffer) && (!dah_buffer) && (paddle_pin_read(paddle_left) == HIGH)  && (paddle_pin_read(paddle_right) == HIGH)) {  
+    if (last_async_eeprom_write_status){ // we have an ansynchronous write to eeprom in progress
+
+      EEPROM.write(ee++, *p++);  
+
+      if (i < sizeof(configuration)){
+        #if defined(DEBUG_ASYNC_EEPROM_WRITE)
+          debug_serial_port->print(F("service_async_eeprom_write: write: "));
+          debug_serial_port->println(i);
+        #endif        
+        i++;
+      } else { // we're done
+        async_eeprom_write = 0;
+        last_async_eeprom_write_status = 0;
+        #if defined(DEBUG_ASYNC_EEPROM_WRITE)
+          debug_serial_port->println(F("service_async_eeprom_write: complete"));
+        #endif        
+      }
+
+    } else { // we don't have one in progress - initialize things
+
+      p = (const byte*)(const void*)&configuration;
+      ee = 1;  // starting point of configuration struct
+      i = 0;
+      last_async_eeprom_write_status = 1;
+      #if defined(DEBUG_ASYNC_EEPROM_WRITE)
+        debug_serial_port->println(F("service_async_eeprom_write: init"));
+      #endif
+    }
+  }
+
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -8333,7 +8443,7 @@ void service_dit_dah_buffers()
     debug_serial_port->println(F("loop: entering service_dit_dah_buffers"));
   #endif      
 
-  if (keyer_machine_mode == BEACON){return;} //zzzzzz
+  if (keyer_machine_mode == BEACON){return;}
 
   if (automatic_sending_interruption_time != 0){
     if ((millis() - automatic_sending_interruption_time) > (configuration.paddle_interruption_quiet_time_element_lengths*(1200/configuration.wpm))){
@@ -8788,7 +8898,6 @@ void send_char(byte cw_char, byte omit_letterspace)
 
     #ifdef FEATURE_FARNSWORTH  
     // Farnsworth Timing : http://www.arrl.org/files/file/Technology/x9004008.pdf
-//zzzzzz 
      if (configuration.wpm_farnsworth > configuration.wpm){
        float additional_intercharacter_time_ms = ((( (1.0 * farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) ) - (37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1200.0/ float(configuration.wpm_farnsworth) );
        loop_element_lengths(1,additional_intercharacter_time_ms,0);}
@@ -15329,7 +15438,7 @@ byte play_memory(byte memory_number)
                     } else {
                       if (prosign_flag){
                         display_scroll_print_char(eeprom_byte_read); 
-                        display_scroll_print_char(eeprom_byte_read+1);
+                        display_scroll_print_char(EEPROM.read(y+1));
                         prosign_before_flag = 1;
                       } else {
                         if (prosign_before_flag){  
@@ -15342,7 +15451,7 @@ byte play_memory(byte memory_number)
                 #else 
                   if (prosign_flag){
                     display_scroll_print_char(eeprom_byte_read); 
-                    display_scroll_print_char(eeprom_byte_read+1);
+                    display_scroll_print_char(EEPROM.read(y+1));
                     prosign_before_flag = 1;
                   } else {
                     if (prosign_before_flag){  
@@ -15748,7 +15857,7 @@ byte play_memory(byte memory_number)
     */
       
 
-  }
+  } //for (int y = (memory_start(memory_number)); (y < (memory_end(memory_number)+1)); y++)
 
 }
 #endif
@@ -16180,6 +16289,10 @@ void initialize_pins() {
 
   if (tx_pause_pin){
     pinMode(tx_pause_pin,INPUT_PULLUP);
+  }
+
+  if (potentiometer_enable_pin){
+    pinMode(potentiometer_enable_pin,INPUT_PULLUP);
   }
   
 } //initialize_pins()

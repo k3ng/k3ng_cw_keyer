@@ -35,6 +35,8 @@ uint8_t sidetone_line = 8;        // sp5iou must be variable declaration instead
 #define tx_key_dit 0            // if defined, goes active for dit (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 #define tx_key_dah 0            // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 
+#define potentiometer_enable_pin 0  // if defined, the potentiometer will be enabled only when this pin is held low; set to 0 to ignore this pin
+
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_pin 3
   #define command_mode_active_led PB1
