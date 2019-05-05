@@ -1,13 +1,7 @@
 // Initial and hardcoded settings
-<<<<<<< HEAD
-#define initial_speed_wpm 20             // "factory default" keyer speed setting
-#define initial_command_mode_speed_wpm 20 // "factory default" command mode speed setting 
-#define initial_sidetone_freq 600        // "factory default" sidetone frequency setting
-=======
 #define initial_speed_wpm 26             // "factory default" keyer speed setting
 #define initial_command_mode_speed_wpm 20 // "factory default" command mode speed setting 
 #define initial_sidetone_freq 700        // "factory default" sidetone frequency setting
->>>>>>> upstream/master
 #define hz_high_beep 1500                // frequency in hertz of high beep
 #define hz_low_beep 400                  // frequency in hertz of low beep
 #define initial_dah_to_dit_ratio 300     // 300 = 3 / normal 3:1 ratio
@@ -44,13 +38,8 @@
 #define winkey_xoff_threshold 20         // the number of chars in the buffer when we begin sending XOFFs
 #define winkey_xon_threshold 10          // the number of chars in the buffer below which we deactivate XOFF
 #define default_memory_repeat_time 3000  // time in milliseconds
-<<<<<<< HEAD
 #define LCD_COLUMNS 16          //edit for 1602 or 1604 LCD
 #define LCD_ROWS 2           //edit for 1602 or 1604 LCD
-=======
-#define LCD_COLUMNS 16
-#define LCD_ROWS 2
->>>>>>> upstream/master
 #define hell_pixel_microseconds 4025
 #define program_memory_limit_consec_spaces 1
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
@@ -68,11 +57,7 @@
 #define tx_key_dit_and_dah_pins_active_state HIGH
 #define tx_key_dit_and_dah_pins_inactive_state LOW
 #define potentiometer_check_interval_ms 150
-<<<<<<< HEAD
 #define potentiometer_reading_threshold 1
-=======
-#define potentiometer_reading_threshold 1 
->>>>>>> upstream/master
 #define default_paddle_interruption_quiet_time_element_lengths 0
 #define default_wordsworth_wordspace 6
 #define default_wordsworth_repetition 1

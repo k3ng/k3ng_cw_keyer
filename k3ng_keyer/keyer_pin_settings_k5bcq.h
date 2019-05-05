@@ -10,11 +10,7 @@
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-<<<<<<< HEAD
 #define sidetone_line 31         // connect a speaker for sidetone   Set to "12" if not using Twin T oscillator
-=======
-#define sidetone_line 12         // connect a speaker for sidetone
->>>>>>> upstream/master
 #define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
 #define ptt_tx_1 10              // PTT ("push to talk") lines
 #define ptt_tx_2 11              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
@@ -44,11 +40,7 @@ FEATURE_SIDETONE_SWITCH
 
 //lcd pins
 #if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD_8BIT)
-<<<<<<< HEAD
   #define lcd_rs 38
-=======
-  #define lcd_rs 38 
->>>>>>> upstream/master
   #define lcd_enable 32 // pin 10 is used by Ethernet shield and will conflict with that
   #define lcd_d4 33
   #define lcd_d5 35
@@ -106,11 +98,7 @@ FEATURE_SIDETONE_SWITCH
 #endif //FEATURE_STRAIGHT_KEY
 
 #ifdef FEATURE_CW_DECODER
-<<<<<<< HEAD
   #define cw_decoder_pin A3//A11 //A5 //A3
-=======
-  #define cw_decoder_pin A3//A11 //A5 //A3  
->>>>>>> upstream/master
   #ifdef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
     #define cw_decoder_audio_input_pin A0 // this must be an analog pin!
   #endif //OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
@@ -162,11 +150,7 @@ FEATURE_SIDETONE_SWITCH
 #define ptt_input_pin 0
 
 #define tx_inhibit_pin 0
-<<<<<<< HEAD
 #define tx_pause_pin 0
-=======
-#define tx_pause_pin 0   
->>>>>>> upstream/master
 
 #else
 
