@@ -48,6 +48,7 @@
 #define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
 #define cw_echo_timing_factor 0.25
+#define winkey_paddle_echo_buffer_decode_time_factor 1600.0
 #define potentiometer_always_on 0
 #define ptt_interlock_check_every_ms 100
 #define ptt_interlock_active_state HIGH
@@ -57,10 +58,12 @@
 #define tx_key_dit_and_dah_pins_active_state HIGH
 #define tx_key_dit_and_dah_pins_inactive_state LOW
 #define potentiometer_check_interval_ms 0	//=====150
+#define potentiometer_reading_threshold 1 
 #define default_paddle_interruption_quiet_time_element_lengths 0
 #define default_wordsworth_wordspace 6
 #define default_wordsworth_repetition 1
 #define serial_program_memory_buffer_size 500
+#define eeprom_write_time_ms 30000
 
 #ifdef FEATURE_COMMAND_BUTTONS
   #define analog_buttons_number_of_buttons 4
@@ -262,3 +265,10 @@
 #else
   #define button_value_factor 1023
 #endif
+
+#define farnsworth_timing_calibration 1.15
+
+#define sidetone_volume_low_limit 10
+#define sidetone_volume_high_limit 500
+
+

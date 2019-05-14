@@ -17,8 +17,11 @@
 // #define HARDWARE_MAPLE_MINI  // edit these files: keyer_pin_settings_maple_mini.h, keyer_settings_maple_mini.h, keyer_features_and_options_maple_mini.h
 // #define HARDWARE_GENERIC_STM32F103C  // edit these files: keyer_pin_settings_generic_STM32F103C.h, keyer_settings_generic_STM32F103C.h, keyer_features_and_options_generic_STM32F103C.h //sp5iou 20180329
 #define HARDWARE_MORTTY  // edit these files: keyer_pin_settings_mortty.h, keyer_settings_mortty.h, keyer_features_and_options_mortty.h
-// #define HARDWARE_TEST_EVERYTHING
-// #define HARDWARE_TEST
+// #define HARDWARE_YAACWK   // http://i1cra.briata.org/yaacwk/  files: keyer_pin_settings_yaacwk.h, keyer_features_and_options_yaacwk.h, keyer_settings_yaacwk.h
+// #define HARDWARE_K5BCQ   // edit these files: keyer_pin_settings_k5bcq.h, keyer_features_and_options_k5bcq.h, keyer_settings_k5bcq.h - Kees Talen K5BCQ - Documentation: https://groups.io/g/radioartisan/files/K5BCQ
+// #define HARDWARE_MEGAKEYER // https://github.com/w6ipa/megakeyer   files: keyer_pin_settings_megakeyer.h, keyer_features_and_options_megakeyer.h, keyer_settings_megakeyer.h - https://projects.w6ipa.com/megakeyer/Mega%20Keyer%20Build%20Instructions.html
+// #define HARDWARE_TEST_EVERYTHING  // Goody K3NG uses this to test
+// #define HARDWARE_TEST               // Goody K3NG uses this to test
 
 
 /* 

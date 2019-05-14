@@ -1,5 +1,6 @@
 // don't touch these unless you know what the hell you are doing or you're asked to uncomment these for debug dumps
 // #define DEBUG_STARTUP
+// #define DEBUG_STARTUP_BLINKS
 // #define DEBUG_LOOP
 // #define DEBUG_EEPROM
 // #define DEBUG_MEMORIES
@@ -28,6 +29,8 @@
 // #define DEBUG_CAPACITIVE_PADDLE
 // #define DEBUG_DISPLAY_SCROLL_PRINT_CHAR
 // #define DEBUG_WINKEY   // <- to use this you must have a multi-serial port Arduino and use FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+// #define DEBUG_WINKEY_SEND_ERRANT_BYTE
+// #define DEBUG_WINKEY_PORT_WRITE
 // #define DEBUG_CW_COMPUTER_KEYBOARD
 // #define DEBUG_CW_DECODER_WITH_TONE
 // #define DEBUG_OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
@@ -49,5 +52,8 @@
 // #define DEBUG_PRACTICE_SERIAL
 // #define DEBUG_PRACTICE_CMD_MODE
 // #define DEBUG_SD_CARD
+// #define DEBUG_FARNSWORTH
+// #define DEBUG_FARNSWORTH_TIMING
+// #define DEBUG_ASYNC_EEPROM_WRITE
 
 // #define OPTION_WINKEY_IGNORE_FIRST_STATUS_REQUEST
