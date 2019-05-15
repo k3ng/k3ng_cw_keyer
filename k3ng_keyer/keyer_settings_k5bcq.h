@@ -38,8 +38,8 @@
 #define winkey_xoff_threshold 20         // the number of chars in the buffer when we begin sending XOFFs
 #define winkey_xon_threshold 10          // the number of chars in the buffer below which we deactivate XOFF
 #define default_memory_repeat_time 3000  // time in milliseconds
-#define LCD_COLUMNS 16
-#define LCD_ROWS 2
+#define LCD_COLUMNS 16          //edit for 1602 or 1604 LCD
+#define LCD_ROWS 2           //edit for 1602 or 1604 LCD
 #define hell_pixel_microseconds 4025
 #define program_memory_limit_consec_spaces 1
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
@@ -57,7 +57,7 @@
 #define tx_key_dit_and_dah_pins_active_state HIGH
 #define tx_key_dit_and_dah_pins_inactive_state LOW
 #define potentiometer_check_interval_ms 150
-#define potentiometer_reading_threshold 1 
+#define potentiometer_reading_threshold 1
 #define default_paddle_interruption_quiet_time_element_lengths 0
 #define default_wordsworth_wordspace 6
 #define default_wordsworth_repetition 1

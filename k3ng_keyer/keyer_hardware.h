@@ -18,10 +18,17 @@
 // #define HARDWARE_GENERIC_STM32F103C  // edit these files: keyer_pin_settings_generic_STM32F103C.h, keyer_settings_generic_STM32F103C.h, keyer_features_and_options_generic_STM32F103C.h //sp5iou 20180329
 // #define HARDWARE_MORTTY  // edit these files: keyer_pin_settings_mortty.h, keyer_settings_mortty.h, keyer_features_and_options_mortty.h
 // #define HARDWARE_YAACWK   // http://i1cra.briata.org/yaacwk/  files: keyer_pin_settings_yaacwk.h, keyer_features_and_options_yaacwk.h, keyer_settings_yaacwk.h
+<<<<<<< HEAD
+// #define HARDWARE_K5BCQ   // edit these files: keyer_pin_settings_k5bcq.h, keyer_features_and_options_k5bcq.h, keyer_settings_k5bcq.h  
+// #define HARDWARE_TEST_EVERYTHING
+// #define HARDWARE_TEST
+
+=======
 // #define HARDWARE_K5BCQ   // edit these files: keyer_pin_settings_k5bcq.h, keyer_features_and_options_k5bcq.h, keyer_settings_k5bcq.h 
 // #define HARDWARE_MEGAKEYER // https://github.com/w6ipa/megakeyer
 // #define HARDWARE_TEST_EVERYTHING
 // #define HARDWARE_TEST
+>>>>>>> upstream/master
 
 
 /* 
@@ -71,4 +78,3 @@
   #define SECONDARY_SERIAL_CLS HardwareSerial 
 #endif
   
-
