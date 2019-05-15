@@ -1043,7 +1043,13 @@ Recent Update History
       Added potentiometer_enable_pin
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/64  (Thanks, W6IPA)
 
-  This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
+    2019.05.15.01
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/65 (Thanks, federicobriata); yaacwk FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/67 (Thanks, OK1CDJ); New hardware profile: HARDWARE_OPENCWKEYER_MK2 https://github.com/ok1cdj/OpenCWKeyerMK2
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/66 (Thanks, woodjrx); Last update for K5BCQ
+      
+
+  This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -1057,7 +1063,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.05.03.02"
+#define CODE_VERSION "2019.05.15.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
