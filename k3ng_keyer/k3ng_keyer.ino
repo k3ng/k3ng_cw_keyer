@@ -1048,6 +1048,9 @@ Recent Update History
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/67 (Thanks, OK1CDJ); New hardware profile: HARDWARE_OPENCWKEYER_MK2 https://github.com/ok1cdj/OpenCWKeyerMK2
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/66 (Thanks, woodjrx); Last update for K5BCQ
       
+    2019.05.16.01
+      Fixed issue with factory reset functionality and asynchronous EEPROM write feature
+      Relocated sidetone_hz_limit_low and sidetone_hz_limit_high setting from ino file to settings.h files  
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1063,7 +1066,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.05.15.01"
+#define CODE_VERSION "2019.05.16.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1542,9 +1545,6 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
 
 #endif //FEATURE_HELL
-
-#define SIDETONE_HZ_LOW_LIMIT 299
-#define SIDETONE_HZ_HIGH_LIMIT 2001
 
 #ifdef FEATURE_DEAD_OP_WATCHDOG
   byte dead_op_watchdog_active = 1;
@@ -5579,10 +5579,18 @@ void write_settings_to_eeprom(int initialize_eeprom) {
       EEPROM.write(0,eeprom_magic_number);
       #ifdef FEATURE_MEMORIES
         initialize_eeprom_memories();
-      #endif  //FEATURE_MEMORIES    
-    }
+      #endif  //FEATURE_MEMORIES  
+      const byte* p = (const byte*)(const void*)&configuration;
+      unsigned int i;
+      int ee = 1;  // starting point of configuration struct
+      for (i = 0; i < sizeof(configuration); i++){
+        EEPROM.write(ee++, *p++);  
+      }        
+    } else {
 
-    async_eeprom_write = 1;  // initiate an asyncrhonous eeprom write
+      async_eeprom_write = 1;  // initiate an asyncrhonous eeprom write
+
+    }
   
   #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
@@ -7636,7 +7644,7 @@ void command_tuning_mode() {
 #if defined(FEATURE_SINEWAVE_SIDETONE)
   void sidetone_adj(int hz) {
 
-    if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
+    if ((configuration.hz_sidetone + hz) > sidetone_hz_limit_low && (configuration.hz_sidetone + hz) < sidetone_hz_limit_high) {
       configuration.hz_sidetone = configuration.hz_sidetone + hz;
       compute_sinetone(configuration.hz_sidetone,configuration.sidetone_volume);
       config_dirty = 1;
@@ -7655,7 +7663,7 @@ void command_tuning_mode() {
 
   void sidetone_adj(int hz) {
 
-    if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
+    if ((configuration.hz_sidetone + hz) > sidetone_hz_limit_low && (configuration.hz_sidetone + hz) < sidetone_hz_limit_high) {
       configuration.hz_sidetone = configuration.hz_sidetone + hz;
       config_dirty = 1;
       #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
@@ -12818,8 +12826,8 @@ void serial_set_pot_low_high(PRIMARY_SERIAL_CLS * port_to_use)
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use)
 {
-  int set_sidetone_hz = serial_get_number_input(4,(SIDETONE_HZ_LOW_LIMIT-1),(SIDETONE_HZ_HIGH_LIMIT+1), port_to_use, RAISE_ERROR_MSG);
-  if ((set_sidetone_hz > SIDETONE_HZ_LOW_LIMIT) && (set_sidetone_hz < SIDETONE_HZ_HIGH_LIMIT)) {
+  int set_sidetone_hz = serial_get_number_input(4,(sidetone_hz_limit_low-1),(sidetone_hz_limit_high+1), port_to_use, RAISE_ERROR_MSG);
+  if ((set_sidetone_hz > sidetone_hz_limit_low) && (set_sidetone_hz < sidetone_hz_limit_high)) {
     port_to_use->write("\r\nSetting sidetone to ");
     port_to_use->print(set_sidetone_hz,DEC);
     port_to_use->println(F(" hz"));
@@ -15611,7 +15619,7 @@ byte play_memory(byte memory_number)
                     input_error = 1;
                   }
                 }
-                if ((input_error != 1) && (int_from_macro > SIDETONE_HZ_LOW_LIMIT) && (int_from_macro < SIDETONE_HZ_HIGH_LIMIT)) {
+                if ((input_error != 1) && (int_from_macro > sidetone_hz_limit_low) && (int_from_macro < sidetone_hz_limit_high)) {
                   configuration.hz_sidetone = int_from_macro;
                 }
                 break;
