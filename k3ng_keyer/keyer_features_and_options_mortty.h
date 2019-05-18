@@ -92,6 +92,9 @@
 // #define OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT
 #define OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE
 
+// #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA   // only works with Mega and pins 2 and 5 - minor performance increase
+// #define OPTION_DIRECT_PADDLE_PIN_READS_UNO    // Unos or Nanos
+
 // #define OPTION_WORDSWORTH_CZECH
 // #define OPTION_WORDSWORTH_DEUTSCH
 // #define OPTION_WORDSWORTH_NORSK

@@ -64,8 +64,8 @@
 // #define FEATURE_3x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
 // #define FEATURE_EXPERIMENTAL_DDS_SINEWAVE_SIDETONE_MEGA // DDS output Mega Digital Pin 46
 // #define FEATURE_CLOCK  // NOT FINISHED YET
-// #define FEATURE_SD_CARD_SUPPORT
 // #define FEATURE_SEQUENCER
+// #define FEATURE_SD_CARD_SUPPORT
 
 // UNDER DEVELOPMENT
 // #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1  // Arduino Uno: sidetone_line = 9 or 10 ; Mega: sidetone_line = 11, 12, or 13 (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html )
@@ -129,7 +129,8 @@
 
 // #define FEATURE_COMPETITION_COMPRESSION_DETECTION //(Experimental)
 
-// #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA  // only works with Mega and pins 2 and 5 - minor performance increase... maybe?
+// #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA   // only works with Mega and pins 2 and 5 - minor performance increase
+// #define OPTION_DIRECT_PADDLE_PIN_READS_UNO // Unos or Nanos
 
 #define OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
 

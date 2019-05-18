@@ -1037,10 +1037,10 @@ Recent Update History
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/61  (Thanks, W6IPA) 
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/62  (Thanks, W6IPA) 
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/63  (Thanks, W6IPA) 
-      New hardware profile: HARDWARE_MEGAKEYER  https://github.com/w6ipa/megakeyer    (Thanks, W6IPA)
+      New hardware profile: HARDWARE_MEGAKEYER  https://github.com/w6ipa/megakeyer    (Thanks, W6IPA) {needs documented}
 
     2019.05.03.02
-      Added potentiometer_enable_pin
+      Added potentiometer_enable_pin {needs documented}
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/64  (Thanks, W6IPA)
 
     2019.05.15.01
@@ -1050,10 +1050,15 @@ Recent Update History
       
     2019.05.16.01
       Fixed issue with factory reset functionality and asynchronous EEPROM write feature (Thanks, Fred, VK2EFL)
-      Relocated sidetone_hz_limit_low and sidetone_hz_limit_high setting from ino file to settings.h files (Thanks, Fred, VK2EFL) 
+      Relocated sidetone_hz_limit_low and sidetone_hz_limit_high setting from ino file to settings.h files (Thanks, Fred, VK2EFL) {needs documented}
 
     2019.05.17.01
       service_async_eeprom_write(): Changed EEPROM.write to EEPROM.update to lessen wear and tear on EEPROM and also reduce writing time.  (Each EEPROM.write = 3.3 mS)  
+      
+    2019.05.17.02
+      OPTION_DIRECT_PADDLE_PIN_READS_UNO (Thanks, Fred, VK2EFL) {needs documented}
+      OPTION_SAVE_MEMORY_NANOKEYER now does direct pin reads rather than digitalRead (Thanks, Fred, VK2EFL) 
+      FEATURE_SD_CARD_SUPPORT - Rolled out SD card support to main keyer_features_and_options.h files {needs documented}
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1069,7 +1074,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.05.17.01"
+#define CODE_VERSION "2019.05.17.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -18200,35 +18205,76 @@ void update_led_ring(){
 //---------------------------------------------------------------------
 int paddle_pin_read(int pin_to_read){
 
+  // Updated code provided by Fred, VK2EFL
+  // 
+  // Note on OPTION_DIRECT_PADDLE_PIN_READS_MEGA, OPTION_DIRECT_PADDLE_PIN_READS_UNO, OPTION_SAVE_MEMORY_NANOKEYER
+  // For Mega2560 and Uno/Nano speed up paddle pin reads by direct read of the register
+  // it saves about 340 bytes of code too
+
 
   #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
     #ifndef OPTION_INVERT_PADDLE_PIN_LOGIC
-      #if defined(OPTION_DIRECT_PADDLE_PIN_READS_MEGA)
-        switch(pin_to_read){
-          case 2: return(bitRead(PINE,4));break;
-          case 5: return(bitRead(PINE,3));break;
-        }
-      #else //OPTION_DIRECT_PADDLE_READS_MEGA
+      #ifdef OPTION_DIRECT_PADDLE_PIN_READS_MEGA              // after April 2019, if this option is not defined then a direct read of the pins can never occur
+        switch(pin_to_read) {
+          case 2: return(bitRead(PINE, 4)); break;
+          case 5: return(bitRead(PINE, 3)); break;
+        }                                                     // end switch
+      #endif                                                  // OPTION_DIRECT_PADDLE_READS_MEGA
+      #ifdef OPTION_DIRECT_PADDLE_PIN_READS_UNO               // since with this verion, April 2019, this option is not defined then a direct read of the pins can never occur
+        return (bitRead(PIND, pin_to_read));                  // use this line on Unos and Nanos
+      #endif                                                  // OPTION_DIRECT_PADDLE_PIN_READS_UNO
+      #ifdef OPTION_SAVE_MEMORY_NANOKEYER                     // 
+        switch(pin_to_read) {
+          case 5: return(bitRead(PIND, 5)); break;
+          case 8: return(bitRead(PINB, 0)); break;
+        }                                                     // end switch
+      #endif                                                  // OPTION_SAVE_MEMORY_NANOKEYER
+      #if !defined(OPTION_DIRECT_PADDLE_PIN_READS_UNO) && !defined(OPTION_DIRECT_PADDLE_PIN_READS_MEGA) && !defined(OPTION_SAVE_MEMORY_NANOKEYER)
+        return digitalRead(pin_to_read);                      // code using digitalRead
+      #endif                                                  // !defined(OPTION_DIRECT_PADDLE_PIN_READS_UNO) && !defined(OPTION_DIRECT_PADDLE_PIN_READS_MEGA)
+    #else                                                     // !OPTION_INVERT_PADDLE_PIN_LOGIC
+      return !digitalRead(pin_to_read);                       // we do the regular digitalRead() if none of the direct register read options are valid
+    #endif                                                    // !OPTION_INVERT_PADDLE_PIN_LOGIC
+  #else                                                       // !FEATURE_CAPACITIVE_PADDLE_PINS
+    if (capactive_paddle_pin_inhibit_pin) {
+      if (digitalRead(capactive_paddle_pin_inhibit_pin) == HIGH) {
         return digitalRead(pin_to_read);
-      #endif //OPTION_DIRECT_PADDLE_READS_MEGA
-    #else 
-      return !digitalRead(pin_to_read);
-    #endif
-  #else
-      if (capactive_paddle_pin_inhibit_pin){ 
-        if (digitalRead(capactive_paddle_pin_inhibit_pin) == HIGH){
-          return digitalRead(pin_to_read);
-        }
+      }                                                       // end if
+    }                                                         // end if (capactive_paddle_pin_inhibit_pin)
+    if (read_capacitive_pin(pin_to_read) > capacitance_threshold) return LOW;
+    else return HIGH;
+  #endif                                                      // !FEATURE_CAPACITIVE_PADDLE_PINS
 
-      }
 
-      if (read_capacitive_pin(pin_to_read) > capacitance_threshold) {
-        return LOW;
-      } else {
-        return HIGH;
-      }
+
+  // #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
+  //   #ifndef OPTION_INVERT_PADDLE_PIN_LOGIC
+  //     #if defined(OPTION_DIRECT_PADDLE_PIN_READS_MEGA)
+  //       switch(pin_to_read){
+  //         case 2: return(bitRead(PINE,4));break;
+  //         case 5: return(bitRead(PINE,3));break;
+  //       }
+  //     #else //OPTION_DIRECT_PADDLE_READS_MEGA
+  //       return digitalRead(pin_to_read);
+  //     #endif //OPTION_DIRECT_PADDLE_READS_MEGA
+  //   #else 
+  //     return !digitalRead(pin_to_read);
+  //   #endif
+  // #else
+  //     if (capactive_paddle_pin_inhibit_pin){ 
+  //       if (digitalRead(capactive_paddle_pin_inhibit_pin) == HIGH){
+  //         return digitalRead(pin_to_read);
+  //       }
+
+  //     }
+
+  //     if (read_capacitive_pin(pin_to_read) > capacitance_threshold) {
+  //       return LOW;
+  //     } else {
+  //       return HIGH;
+  //     }
       
-  #endif //FEATURE_CAPACITIVE_PADDLE_PINS  
+  // #endif //FEATURE_CAPACITIVE_PADDLE_PINS  
 
 }
 //---------------------------------------------------------------------
