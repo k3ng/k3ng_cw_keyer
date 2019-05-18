@@ -1049,8 +1049,11 @@ Recent Update History
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/66 (Thanks, woodjrx); Last update for K5BCQ
       
     2019.05.16.01
-      Fixed issue with factory reset functionality and asynchronous EEPROM write feature
-      Relocated sidetone_hz_limit_low and sidetone_hz_limit_high setting from ino file to settings.h files  
+      Fixed issue with factory reset functionality and asynchronous EEPROM write feature (Thanks, Fred, VK2EFL)
+      Relocated sidetone_hz_limit_low and sidetone_hz_limit_high setting from ino file to settings.h files (Thanks, Fred, VK2EFL) 
+
+    2019.05.17.01
+      service_async_eeprom_write(): Changed EEPROM.write to EEPROM.update to lessen wear and tear on EEPROM and also reduce writing time.  (Each EEPROM.write = 3.3 mS)  
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1066,7 +1069,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.05.16.01"
+#define CODE_VERSION "2019.05.17.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5602,17 +5605,18 @@ void write_settings_to_eeprom(int initialize_eeprom) {
 
 void service_async_eeprom_write(){
 
+  // This writes one byte out to EEPROM each time it is called
+
   static byte last_async_eeprom_write_status = 0;
   static int ee = 0;
   static unsigned int i = 0;
   static const byte* p;
 
-//zzzzzz
-
   if ((async_eeprom_write) && (!send_buffer_bytes) && (!ptt_line_activated) && (!dit_buffer) && (!dah_buffer) && (paddle_pin_read(paddle_left) == HIGH)  && (paddle_pin_read(paddle_right) == HIGH)) {  
     if (last_async_eeprom_write_status){ // we have an ansynchronous write to eeprom in progress
 
-      EEPROM.write(ee++, *p++);  
+      //EEPROM.write(ee++, *p++);  
+      EEPROM.update(ee++, *p++);
 
       if (i < sizeof(configuration)){
         #if defined(DEBUG_ASYNC_EEPROM_WRITE)
