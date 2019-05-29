@@ -1063,6 +1063,13 @@ Recent Update History
     2019.05.28.01
       FEATURE_WINKEY_EMULATION - fixed prosign lock up issue with Win-Test (Thanks, Bob, N6TV)  
 
+    2019.05.29.01
+      FEATURE_WINKEY_EMULATION - fixed issues with paddle echo (Thanks, Bob, N6TV) 
+      Settings - winkey_paddle_echo_buffer_decode_time_factor changed to winkey_paddle_echo_buffer_decode_timing_factor
+      Fixed keyer_pin_settings_nanokeyer_rev_*.h to include potentiometer_enable_pin (https://github.com/k3ng/k3ng_cw_keyer/issues/68) (Thanks, rificity)
+      convert_cw_number_to_ascii() was returning exclamation and not comma (Thanks, W6IPA)
+      FEATURE_AMERICAN_MORSE - fixed errant submitted change in send_char() (Thanks, Sverre, LA3ZA)
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1077,7 +1084,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.05.28.01"
+#define CODE_VERSION "2019.05.29.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5905,7 +5912,9 @@ void send_dit(){
   #ifdef FEATURE_WINKEY_EMULATION
     if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_mode == MANUAL_SENDING)) {
       winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 1;
-      winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_time_factor/float(configuration.wpm))*length_letterspace);
+      //winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_time_factor/float(configuration.wpm))*length_letterspace);
+      winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_timing_factor*1200.0/float(configuration.wpm))*length_letterspace);
+      
       #ifdef FEATURE_AUTOSPACE
         if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
       #endif //FEATURE_AUTOSPACE    
@@ -5994,7 +6003,8 @@ void send_dah(){
   #ifdef FEATURE_WINKEY_EMULATION
     if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_mode == MANUAL_SENDING)) {
       winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + 2;
-      winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_time_factor/float(configuration.wpm))*length_letterspace);
+      //winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_time_factor/float(configuration.wpm))*length_letterspace);
+      winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_timing_factor*1200.0/float(configuration.wpm))*length_letterspace);      
       #ifdef FEATURE_AUTOSPACE
         if (autospace_end_of_character_flag){winkey_paddle_echo_buffer_decode_time = 0;}
       #endif //FEATURE_AUTOSPACE
@@ -8531,7 +8541,10 @@ void service_dit_dah_buffers()
         }   
 
         #ifdef FEATURE_PADDLE_ECHO
-          paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*3000.0)/configuration.wpm)*length_letterspace);
+
+//zzzzzz
+
+          //paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*3000.0)/configuration.wpm)*length_letterspace);
         #endif //FEATURE_PADDLE_ECHO 
 
       } else {
@@ -8954,7 +8967,7 @@ void send_char(byte cw_char, byte omit_letterspace)
           */ 
 
 
-          switch (cw_char){  
+          switch (cw_char){   // THIS SECTION IS AMERICAN MORSE CODE - DO NOT TOUCH IT !
 
             case 'A': send_the_dits_and_dahs(".-");break;
             case 'B': send_the_dits_and_dahs("-...");break;
@@ -8983,6 +8996,8 @@ void send_char(byte cw_char, byte omit_letterspace)
             case 'Y': send_the_dits_and_dahs("..&..");break;
             case 'Z': send_the_dits_and_dahs("...&.");break;
 
+            // THIS SECTION IS AMERICAN MORSE CODE - DO NOT TOUCH IT !
+
             case '&': send_the_dits_and_dahs(".&...");break;
 
             case '0': send_the_dits_and_dahs("=");break;
@@ -8995,12 +9010,13 @@ void send_char(byte cw_char, byte omit_letterspace)
             case '7': send_the_dits_and_dahs("--..");break;
             case '8': send_the_dits_and_dahs("-....");break;
             case '9': send_the_dits_and_dahs("-..-");break;   
+ 
+            // THIS SECTION IS AMERICAN MORSE CODE - DO NOT TOUCH IT !
 
             case ',': send_the_dits_and_dahs(".-.-");break;  
             case '.': send_the_dits_and_dahs("..--..");break;
             case '?': send_the_dits_and_dahs("-..-.");break;  
-//            case '!': send_the_dits_and_dahs("---.");break;  
-            case '!': send_the_dits_and_dahs("--..--");break;  //sp5iou 20180328
+            case '!': send_the_dits_and_dahs("---.");break;  
             case ':': send_the_dits_and_dahs("-.-&.&.");break;    
             case ';': send_the_dits_and_dahs("...&..");break;   
             case '-': send_the_dits_and_dahs("....&.-..");break;    
@@ -12598,6 +12614,7 @@ void service_paddle_echo()
     paddle_echo_space_sent = 0;
   }
   
+  // is it time to echo a space?
   if ((paddle_echo_buffer == 0) && (millis() > (paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!paddle_echo_space_sent)) {
     
     #if defined(FEATURE_CW_COMPUTER_KEYBOARD)
@@ -14825,7 +14842,8 @@ int convert_cw_number_to_ascii (long number_in)
       case 2111212: return '*'; break; // BK 
     #endif 
 //    case 221122: return 44; break;  // ,
-    case 221122: return '!'; break;  // ! sp5iou 20180328
+//    case 221122: return '!'; break;  // ! sp5iou 20180328
+    case 221122: return ','; break; 
     case 121212: return '.'; break;
     case 122121: return '@'; break;
     case 222222: return 92; break;  // special hack; six dahs = \ (backslash)
