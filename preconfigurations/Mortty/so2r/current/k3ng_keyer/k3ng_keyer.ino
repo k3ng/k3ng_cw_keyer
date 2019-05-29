@@ -1037,13 +1037,33 @@ Recent Update History
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/61  (Thanks, W6IPA) 
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/62  (Thanks, W6IPA) 
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/63  (Thanks, W6IPA) 
-      New hardware profile: HARDWARE_MEGAKEYER  https://github.com/w6ipa/megakeyer    (Thanks, W6IPA)
+      New hardware profile: HARDWARE_MEGAKEYER  https://github.com/w6ipa/megakeyer    (Thanks, W6IPA) {needs documented}
 
     2019.05.03.02
-      Added potentiometer_enable_pin
+      Added potentiometer_enable_pin {needs documented}
       Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/64  (Thanks, W6IPA)
 
-  This code is currently maintained for and compiled with Arduino 1.8.1.  Your mileage may vary with other versions.
+    2019.05.15.01
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/65 (Thanks, federicobriata); yaacwk FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/67 (Thanks, OK1CDJ); New hardware profile: HARDWARE_OPENCWKEYER_MK2 https://github.com/ok1cdj/OpenCWKeyerMK2
+      Merged pull request https://github.com/k3ng/k3ng_cw_keyer/pull/66 (Thanks, woodjrx); Last update for K5BCQ
+      
+    2019.05.16.01
+      Fixed issue with factory reset functionality and asynchronous EEPROM write feature (Thanks, Fred, VK2EFL)
+      Relocated sidetone_hz_limit_low and sidetone_hz_limit_high setting from ino file to settings.h files (Thanks, Fred, VK2EFL) {needs documented}
+
+    2019.05.17.01
+      service_async_eeprom_write(): Changed EEPROM.write to EEPROM.update to lessen wear and tear on EEPROM and also reduce writing time.  (Each EEPROM.write = 3.3 mS)  
+      
+    2019.05.17.02
+      OPTION_DIRECT_PADDLE_PIN_READS_UNO (Thanks, Fred, VK2EFL) {needs documented}
+      OPTION_SAVE_MEMORY_NANOKEYER now does direct pin reads rather than digitalRead (Thanks, Fred, VK2EFL) 
+      FEATURE_SD_CARD_SUPPORT - Rolled out SD card support to main keyer_features_and_options.h files {needs documented}
+
+    2019.05.28.01
+      FEATURE_WINKEY_EMULATION - fixed prosign lock up issue with Win-Test (Thanks, Bob, N6TV)  
+
+  This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -1057,7 +1077,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.05.03.02"
+#define CODE_VERSION "2019.05.28.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1079,7 +1099,9 @@ Recent Update History
   #include <EEPROM.h>  
 #endif //ARDUINO_SAM_DUE
 
-#if defined(HARDWARE_NANOKEYER_REV_B)
+#if defined(HARDWARE_OPENCWKEYER_MK2)
+  #include "keyer_features_and_options_opencwkeyer_mk2.h"
+#elif defined(HARDWARE_NANOKEYER_REV_B)
   #include "keyer_features_and_options_nanokeyer_rev_b.h"
 #elif defined(HARDWARE_NANOKEYER_REV_D)
   #include "keyer_features_and_options_nanokeyer_rev_d.h"
@@ -1119,7 +1141,10 @@ Recent Update History
 #include "keyer_dependencies.h"
 #include "keyer_debug.h"
 
-#if defined(HARDWARE_NANOKEYER_REV_B)
+#if defined(HARDWARE_OPENCWKEYER_MK2)
+  #include "keyer_pin_settings_opencwkeyer_mk2.h"
+  #include "keyer_settings_opencwkeyer_mk2.h"
+#elif defined(HARDWARE_NANOKEYER_REV_B)
   #include "keyer_pin_settings_nanokeyer_rev_b.h"
   #include "keyer_settings_nanokeyer_rev_b.h"
 #elif defined(HARDWARE_NANOKEYER_REV_D)
@@ -1220,14 +1245,14 @@ Recent Update History
   #include <goertzel.h>
 #endif
 
-//#if defined(FEATURE_ETHERNET)
+#if defined(FEATURE_ETHERNET)
 #if !defined(ARDUINO_MAPLE_MINI) && !defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
   #include <Ethernet.h>  // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
   #if defined(FEATURE_INTERNET_LINK)
     #include <EthernetUdp.h>
   #endif //FEATURE_INTERNET_LINK
 #endif //!defined(ARDUINO_MAPLE_MINI) && !defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329  
-//#endif //FEATURE_ETHERNET
+#endif //FEATURE_ETHERNET
 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)  // note_usb_uncomment_lines
@@ -1531,9 +1556,6 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
 
 #endif //FEATURE_HELL
-
-#define SIDETONE_HZ_LOW_LIMIT 299
-#define SIDETONE_HZ_HIGH_LIMIT 2001
 
 #ifdef FEATURE_DEAD_OP_WATCHDOG
   byte dead_op_watchdog_active = 1;
@@ -1846,9 +1868,6 @@ unsigned long millis_rollover = 0;
   float  a[]={0.0, A*sin(omega*T/1000000.0),0.0};
   // c1 is the difference equation coefficient
   float c1 = (8.0 - 2.0*pow(omega*T/1000000.0,2))/(4.0+pow(omega*T/1000000.0,2));
-
-  volatile unsigned int sinewave_max_pwm_value = 0;
-    
 #endif //FEATURE_SINEWAVE_SIDETONE
 
 byte async_eeprom_write = 0;
@@ -5571,10 +5590,18 @@ void write_settings_to_eeprom(int initialize_eeprom) {
       EEPROM.write(0,eeprom_magic_number);
       #ifdef FEATURE_MEMORIES
         initialize_eeprom_memories();
-      #endif  //FEATURE_MEMORIES    
-    }
+      #endif  //FEATURE_MEMORIES  
+      const byte* p = (const byte*)(const void*)&configuration;
+      unsigned int i;
+      int ee = 1;  // starting point of configuration struct
+      for (i = 0; i < sizeof(configuration); i++){
+        EEPROM.write(ee++, *p++);  
+      }        
+    } else {
 
-    async_eeprom_write = 1;  // initiate an asyncrhonous eeprom write
+      async_eeprom_write = 1;  // initiate an asyncrhonous eeprom write
+
+    }
   
   #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
@@ -5586,17 +5613,18 @@ void write_settings_to_eeprom(int initialize_eeprom) {
 
 void service_async_eeprom_write(){
 
+  // This writes one byte out to EEPROM each time it is called
+
   static byte last_async_eeprom_write_status = 0;
   static int ee = 0;
   static unsigned int i = 0;
   static const byte* p;
 
-//zzzzzz
-
   if ((async_eeprom_write) && (!send_buffer_bytes) && (!ptt_line_activated) && (!dit_buffer) && (!dah_buffer) && (paddle_pin_read(paddle_left) == HIGH)  && (paddle_pin_read(paddle_right) == HIGH)) {  
     if (last_async_eeprom_write_status){ // we have an ansynchronous write to eeprom in progress
 
-      EEPROM.write(ee++, *p++);  
+      //EEPROM.write(ee++, *p++);  
+      EEPROM.update(ee++, *p++);
 
       if (i < sizeof(configuration)){
         #if defined(DEBUG_ASYNC_EEPROM_WRITE)
@@ -7628,7 +7656,7 @@ void command_tuning_mode() {
 #if defined(FEATURE_SINEWAVE_SIDETONE)
   void sidetone_adj(int hz) {
 
-    if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
+    if ((configuration.hz_sidetone + hz) > sidetone_hz_limit_low && (configuration.hz_sidetone + hz) < sidetone_hz_limit_high) {
       configuration.hz_sidetone = configuration.hz_sidetone + hz;
       compute_sinetone(configuration.hz_sidetone,configuration.sidetone_volume);
       config_dirty = 1;
@@ -7647,7 +7675,7 @@ void command_tuning_mode() {
 
   void sidetone_adj(int hz) {
 
-    if ((configuration.hz_sidetone + hz) > SIDETONE_HZ_LOW_LIMIT && (configuration.hz_sidetone + hz) < SIDETONE_HZ_HIGH_LIMIT) {
+    if ((configuration.hz_sidetone + hz) > sidetone_hz_limit_low && (configuration.hz_sidetone + hz) < sidetone_hz_limit_high) {
       configuration.hz_sidetone = configuration.hz_sidetone + hz;
       config_dirty = 1;
       #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
@@ -9165,10 +9193,24 @@ void service_send_buffer(byte no_print)
           remove_from_send_buffer();
           if (send_buffer_bytes) {
             send_char(send_buffer_array[0],OMIT_LETTERSPACE);
+            #ifdef FEATURE_WINKEY_EMULATION
+              if (winkey_host_open){
+                // Must echo back PROSIGN characters sent  N6TV
+                winkey_port_write(0xc4|winkey_sending|winkey_xoff,0);  // N6TV
+                winkey_port_write(send_buffer_array[0],0);  // N6TV  
+              }          
+            #endif //FEATURE_WINKEY_EMULATION
             remove_from_send_buffer();
           }
           if (send_buffer_bytes) {
             send_char(send_buffer_array[0],KEYER_NORMAL);
+            #ifdef FEATURE_WINKEY_EMULATION
+              if (winkey_host_open){
+                // Must echo back PROSIGN characters sent  N6TV
+                winkey_port_write(0xc4|winkey_sending|winkey_xoff,0);  // N6TV
+                winkey_port_write(send_buffer_array[0],0);  // N6TV  
+              }          
+            #endif //FEATURE_WINKEY_EMULATION
             remove_from_send_buffer();
           }
         }
@@ -12810,8 +12852,8 @@ void serial_set_pot_low_high(PRIMARY_SERIAL_CLS * port_to_use)
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use)
 {
-  int set_sidetone_hz = serial_get_number_input(4,(SIDETONE_HZ_LOW_LIMIT-1),(SIDETONE_HZ_HIGH_LIMIT+1), port_to_use, RAISE_ERROR_MSG);
-  if ((set_sidetone_hz > SIDETONE_HZ_LOW_LIMIT) && (set_sidetone_hz < SIDETONE_HZ_HIGH_LIMIT)) {
+  int set_sidetone_hz = serial_get_number_input(4,(sidetone_hz_limit_low-1),(sidetone_hz_limit_high+1), port_to_use, RAISE_ERROR_MSG);
+  if ((set_sidetone_hz > sidetone_hz_limit_low) && (set_sidetone_hz < sidetone_hz_limit_high)) {
     port_to_use->write("\r\nSetting sidetone to ");
     port_to_use->print(set_sidetone_hz,DEC);
     port_to_use->println(F(" hz"));
@@ -15603,7 +15645,7 @@ byte play_memory(byte memory_number)
                     input_error = 1;
                   }
                 }
-                if ((input_error != 1) && (int_from_macro > SIDETONE_HZ_LOW_LIMIT) && (int_from_macro < SIDETONE_HZ_HIGH_LIMIT)) {
+                if ((input_error != 1) && (int_from_macro > sidetone_hz_limit_low) && (int_from_macro < sidetone_hz_limit_high)) {
                   configuration.hz_sidetone = int_from_macro;
                 }
                 break;
@@ -18180,35 +18222,76 @@ void update_led_ring(){
 //---------------------------------------------------------------------
 int paddle_pin_read(int pin_to_read){
 
+  // Updated code provided by Fred, VK2EFL
+  // 
+  // Note on OPTION_DIRECT_PADDLE_PIN_READS_MEGA, OPTION_DIRECT_PADDLE_PIN_READS_UNO, OPTION_SAVE_MEMORY_NANOKEYER
+  // For Mega2560 and Uno/Nano speed up paddle pin reads by direct read of the register
+  // it saves about 340 bytes of code too
+
 
   #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
     #ifndef OPTION_INVERT_PADDLE_PIN_LOGIC
-      #if defined(OPTION_DIRECT_PADDLE_PIN_READS_MEGA)
-        switch(pin_to_read){
-          case 2: return(bitRead(PINE,4));break;
-          case 5: return(bitRead(PINE,3));break;
-        }
-      #else //OPTION_DIRECT_PADDLE_READS_MEGA
+      #ifdef OPTION_DIRECT_PADDLE_PIN_READS_MEGA              // after April 2019, if this option is not defined then a direct read of the pins can never occur
+        switch(pin_to_read) {
+          case 2: return(bitRead(PINE, 4)); break;
+          case 5: return(bitRead(PINE, 3)); break;
+        }                                                     // end switch
+      #endif                                                  // OPTION_DIRECT_PADDLE_READS_MEGA
+      #ifdef OPTION_DIRECT_PADDLE_PIN_READS_UNO               // since with this verion, April 2019, this option is not defined then a direct read of the pins can never occur
+        return (bitRead(PIND, pin_to_read));                  // use this line on Unos and Nanos
+      #endif                                                  // OPTION_DIRECT_PADDLE_PIN_READS_UNO
+      #ifdef OPTION_SAVE_MEMORY_NANOKEYER                     // 
+        switch(pin_to_read) {
+          case 5: return(bitRead(PIND, 5)); break;
+          case 8: return(bitRead(PINB, 0)); break;
+        }                                                     // end switch
+      #endif                                                  // OPTION_SAVE_MEMORY_NANOKEYER
+      #if !defined(OPTION_DIRECT_PADDLE_PIN_READS_UNO) && !defined(OPTION_DIRECT_PADDLE_PIN_READS_MEGA) && !defined(OPTION_SAVE_MEMORY_NANOKEYER)
+        return digitalRead(pin_to_read);                      // code using digitalRead
+      #endif                                                  // !defined(OPTION_DIRECT_PADDLE_PIN_READS_UNO) && !defined(OPTION_DIRECT_PADDLE_PIN_READS_MEGA)
+    #else                                                     // !OPTION_INVERT_PADDLE_PIN_LOGIC
+      return !digitalRead(pin_to_read);                       // we do the regular digitalRead() if none of the direct register read options are valid
+    #endif                                                    // !OPTION_INVERT_PADDLE_PIN_LOGIC
+  #else                                                       // !FEATURE_CAPACITIVE_PADDLE_PINS
+    if (capactive_paddle_pin_inhibit_pin) {
+      if (digitalRead(capactive_paddle_pin_inhibit_pin) == HIGH) {
         return digitalRead(pin_to_read);
-      #endif //OPTION_DIRECT_PADDLE_READS_MEGA
-    #else 
-      return !digitalRead(pin_to_read);
-    #endif
-  #else
-      if (capactive_paddle_pin_inhibit_pin){ 
-        if (digitalRead(capactive_paddle_pin_inhibit_pin) == HIGH){
-          return digitalRead(pin_to_read);
-        }
+      }                                                       // end if
+    }                                                         // end if (capactive_paddle_pin_inhibit_pin)
+    if (read_capacitive_pin(pin_to_read) > capacitance_threshold) return LOW;
+    else return HIGH;
+  #endif                                                      // !FEATURE_CAPACITIVE_PADDLE_PINS
 
-      }
 
-      if (read_capacitive_pin(pin_to_read) > capacitance_threshold) {
-        return LOW;
-      } else {
-        return HIGH;
-      }
+
+  // #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
+  //   #ifndef OPTION_INVERT_PADDLE_PIN_LOGIC
+  //     #if defined(OPTION_DIRECT_PADDLE_PIN_READS_MEGA)
+  //       switch(pin_to_read){
+  //         case 2: return(bitRead(PINE,4));break;
+  //         case 5: return(bitRead(PINE,3));break;
+  //       }
+  //     #else //OPTION_DIRECT_PADDLE_READS_MEGA
+  //       return digitalRead(pin_to_read);
+  //     #endif //OPTION_DIRECT_PADDLE_READS_MEGA
+  //   #else 
+  //     return !digitalRead(pin_to_read);
+  //   #endif
+  // #else
+  //     if (capactive_paddle_pin_inhibit_pin){ 
+  //       if (digitalRead(capactive_paddle_pin_inhibit_pin) == HIGH){
+  //         return digitalRead(pin_to_read);
+  //       }
+
+  //     }
+
+  //     if (read_capacitive_pin(pin_to_read) > capacitance_threshold) {
+  //       return LOW;
+  //     } else {
+  //       return HIGH;
+  //     }
       
-  #endif //FEATURE_CAPACITIVE_PADDLE_PINS  
+  // #endif //FEATURE_CAPACITIVE_PADDLE_PINS  
 
 }
 //---------------------------------------------------------------------
@@ -20558,7 +20641,6 @@ void compute_sinetone(int hz, int volume){ //dl2dbg
   #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
     Timer3.attachInterrupt(sinewave_interrupt_compute);
   #endif
-  sinewave_max_pwm_value = 0;
 
 
 }
@@ -20570,27 +20652,13 @@ void compute_sinetone(int hz, int volume){ //dl2dbg
 
 void sinewave_interrupt_compute(){ //dl2dbg
 
-  //static byte divide_by = 5;
-
   a[2] = c1 * a[1] - a[0];
   a[0] = a[1] ;
   a[1] = a[2] ;  
-  if (sinewave_max_pwm_value < 1001) {
-    //if (divide_by == 0){
-      sinewave_max_pwm_value;
-    //  divide_by = 5;
-    //} else {
-    
-    //  divide_by--;
-    //}  
-   // 
-  }
   #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
-    //Timer1.setPwmDuty(sidetone_line, map( a[2],-512, 512, 0, sinewave_max_pwm_value));
     Timer1.setPwmDuty(sidetone_line, map( a[2],-512, 512, 0, 1000));
   #endif  
   #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
-    //Timer3.setPwmDuty(sidetone_line, map( a[2],-512, 512, 0, sinewave_max_pwm_value));
     Timer3.setPwmDuty(sidetone_line, map( a[2],-512, 512, 0, 1000));
   #endif
 
@@ -20619,7 +20687,6 @@ void initialize_tonsin(){ //dl2dbg
     Timer3.stop();
   #endif
 
-  sinewave_max_pwm_value = 0;
 
 
 
@@ -20651,7 +20718,7 @@ void sinetone(uint8_t pin_dummy_variable, unsigned short freq){  //dl2dbg
     Timer3.restart();
   #endif
 
-  sinewave_max_pwm_value = 0;
+  
 
 
 }
@@ -20673,8 +20740,6 @@ void nosineTone(uint8_t pin_dummy_variable){    // disable tone on specified pin
   #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
     Timer3.stop();
   #endif
-
-  sinewave_max_pwm_value = 0;
   
 
   //digitalWrite(sidetone_line,LOW);

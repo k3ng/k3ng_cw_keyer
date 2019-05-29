@@ -1060,6 +1060,9 @@ Recent Update History
       OPTION_SAVE_MEMORY_NANOKEYER now does direct pin reads rather than digitalRead (Thanks, Fred, VK2EFL) 
       FEATURE_SD_CARD_SUPPORT - Rolled out SD card support to main keyer_features_and_options.h files {needs documented}
 
+    2019.05.28.01
+      FEATURE_WINKEY_EMULATION - fixed prosign lock up issue with Win-Test (Thanks, Bob, N6TV)  
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1074,7 +1077,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.05.17.02"
+#define CODE_VERSION "2019.05.28.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -9190,10 +9193,24 @@ void service_send_buffer(byte no_print)
           remove_from_send_buffer();
           if (send_buffer_bytes) {
             send_char(send_buffer_array[0],OMIT_LETTERSPACE);
+            #ifdef FEATURE_WINKEY_EMULATION
+              if (winkey_host_open){
+                // Must echo back PROSIGN characters sent  N6TV
+                winkey_port_write(0xc4|winkey_sending|winkey_xoff,0);  // N6TV
+                winkey_port_write(send_buffer_array[0],0);  // N6TV  
+              }          
+            #endif //FEATURE_WINKEY_EMULATION
             remove_from_send_buffer();
           }
           if (send_buffer_bytes) {
             send_char(send_buffer_array[0],KEYER_NORMAL);
+            #ifdef FEATURE_WINKEY_EMULATION
+              if (winkey_host_open){
+                // Must echo back PROSIGN characters sent  N6TV
+                winkey_port_write(0xc4|winkey_sending|winkey_xoff,0);  // N6TV
+                winkey_port_write(send_buffer_array[0],0);  // N6TV  
+              }          
+            #endif //FEATURE_WINKEY_EMULATION
             remove_from_send_buffer();
           }
         }
