@@ -8057,15 +8057,6 @@ void initialize_analog_button_array() {
 #endif //FEATURE_COMMAND_BUTTONS
 }
 
-
-//------------------------------------------------------------------
-
-#ifdef FEATURE_COMMAND_BUTTONS
-int8_t analogbuttonpressed() {
-  return button_array.Pressed();
-}
-#endif //FEATURE_COMMAND_BUTTONS
-
 //------------------------------------------------------------------
 #ifdef FEATURE_COMMAND_BUTTONS
 byte analogbuttonread(byte button_number) {
