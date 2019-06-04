@@ -47,17 +47,17 @@ int32_t Button::low_limit(){
 
 // Add all buttons in incremental order
 ButtonArray::AddAll(){
-    uint8_t index=0;
+    size_t index;
     if (reversed_) {
         index = nb_buttons_ - 1;
-    }
+    } 
     for(size_t i = 0; i < nb_buttons_; i++)
     {
-        ButtonArray::Add(i, index);
         if (reversed_) {
+            Add(i, index);
             index --;
         } else {
-            index = i;
+            Add(i, i);
         }
     }
 }

@@ -6679,6 +6679,7 @@ void command_mode()
 
     looping = 1;
     while (looping) {
+      int8_t button_temp = button_array.Pressed();
 
           #ifdef FEATURE_DISPLAY
             service_display();
@@ -6718,13 +6719,12 @@ void command_mode()
         #endif
         looping = 0;
       }
-
-      if (analogbuttonpressed() < analog_buttons_number_of_buttons){  // check for a button press
+      if (button_temp >=0 ){  // check for a button press
         looping = 0;
         cw_char = 9;
         delay(50);
-        button_that_was_pressed = analogbuttonpressed();
-        while (analogbuttonpressed() < analog_buttons_number_of_buttons) {}
+        button_that_was_pressed = button_temp;
+        while (button_array.Held(button_that_was_pressed)) {}
       }
 
       #if defined(FEATURE_SERIAL)
@@ -7127,6 +7127,9 @@ void command_mode()
 
 
         case 9: // button was hit
+                Serial.print("Button - ");
+                Serial.println(button_that_was_pressed);
+
           #if defined(FEATURE_MEMORIES)
             if (button_that_was_pressed == 0){  // button 0 was hit - exit
               stay_in_command_mode = 0;
@@ -8024,7 +8027,7 @@ void check_the_memory_buttons()
 void initialize_analog_button_array() {
 #ifdef FEATURE_COMMAND_BUTTONS  
   
-  #ifdef DEBUG_BUTTON_ARRAY
+  #ifdef DEBUG_BUTTONS
       debug_serial_port->print("initialize_analog_button_array: ");
   #endif
 

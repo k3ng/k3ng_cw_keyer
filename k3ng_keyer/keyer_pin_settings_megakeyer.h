@@ -24,7 +24,7 @@
 #define potentiometer_enable_pin 0  // if defined, the potentiometer will be enabled only when this pin is held low; set to 0 to ignore this pin
 
 #ifdef FEATURE_COMMAND_BUTTONS
-  #define analog_buttons_pin A1
+  #define analog_buttons_pin A3
   #define command_mode_active_led 0
 #endif //FEATURE_COMMAND_BUTTONS
 
