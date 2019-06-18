@@ -33,7 +33,6 @@
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
-#define memory_area_start 60             // the eeprom location where memory space starts
 #define memory_area_end 1023             // the eeprom location where memory space ends
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
 #define winkey_command_timeout_ms 5000
@@ -137,6 +136,10 @@
 #define WINKEY_HANG_TIME_1_33 1.33
 #define WINKEY_HANG_TIME_1_66 1.66
 #define WINKEY_HANG_TIME_2_0 2.0
+
+#define WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL 0x16
+#define WINKEY_RETURN_THIS_FOR_ADMIN_PADDLE_A2D 0xEE
+#define WINKEY_RETURN_THIS_FOR_ADMIN_SPEED_A2D 0x00
 
 #endif //FEATURE_WINKEY_EMULATION
 

@@ -94,6 +94,9 @@
 // #define OPTION_CMOS_SUPER_KEYER_IAMBIC_B_TIMING_ON_BY_DEFAULT
  #define OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE //comment out if not using the twin T oscillator.  Remember to change audio out pin
 
+// #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA   // only works with Mega and pins 2 and 5 - minor performance increase
+// #define OPTION_DIRECT_PADDLE_PIN_READS_UNO    // Unos or Nanos pins 2 and 5 - do not enable on a nanoKeyer, it uses different pins
+
 // #define OPTION_WORDSWORTH_CZECH
 // #define OPTION_WORDSWORTH_DEUTSCH
 // #define OPTION_WORDSWORTH_NORSK

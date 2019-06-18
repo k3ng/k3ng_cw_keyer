@@ -14,7 +14,7 @@
 
 
 #define FEATURE_COMMAND_BUTTONS
-// #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
+#define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
 #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
 #define FEATURE_MEMORY_MACROS
 #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
@@ -72,7 +72,7 @@
 // #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3  // Arduino Mega: sidetone_line = 2, 3, or 5  (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html)
 
 
-// #define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
+#define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
 #define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 
                                                              //    simultaneously.  This will make Winkey emulation be the default at boot up; 
                                                              //    hold command button down at boot up to activate CLI mode
@@ -130,7 +130,7 @@
 // #define FEATURE_COMPETITION_COMPRESSION_DETECTION //(Experimental)
 
 // #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA   // only works with Mega and pins 2 and 5 - minor performance increase
-// #define OPTION_DIRECT_PADDLE_PIN_READS_UNO // Unos or Nanos
+// #define OPTION_DIRECT_PADDLE_PIN_READS_UNO    // Unos or Nanos pins 2 and 5 - do not enable on a nanoKeyer, it uses different pins
 
 #define OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
 

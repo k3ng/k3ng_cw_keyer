@@ -150,6 +150,10 @@
 #define WINKEY_HANG_TIME_1_66 1.66
 #define WINKEY_HANG_TIME_2_0 2.0
 
+#define WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL 0x16
+#define WINKEY_RETURN_THIS_FOR_ADMIN_PADDLE_A2D 0xEE
+#define WINKEY_RETURN_THIS_FOR_ADMIN_SPEED_A2D 0x00
+
 #endif //FEATURE_WINKEY_EMULATION
 
 
@@ -282,4 +286,3 @@
 
 #define sidetone_volume_low_limit 10
 #define sidetone_volume_high_limit 500
-

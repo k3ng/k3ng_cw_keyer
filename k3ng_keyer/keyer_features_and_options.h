@@ -97,7 +97,7 @@
 // #define FEATURE_SD_CARD_SUPPORT
 
 // #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA   // only works with Mega and pins 2 and 5 - minor performance increase
-// #define OPTION_DIRECT_PADDLE_PIN_READS_UNO    // Unos or Nanos
+// #define OPTION_DIRECT_PADDLE_PIN_READS_UNO    // Unos or Nanos pins 2 and 5 - do not enable on a nanoKeyer, it uses different pins
 
 // #define OPTION_WORDSWORTH_CZECH
 // #define OPTION_WORDSWORTH_DEUTSCH

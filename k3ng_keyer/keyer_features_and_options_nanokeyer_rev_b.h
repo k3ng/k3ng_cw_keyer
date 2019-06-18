@@ -2,10 +2,10 @@
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
 #define FEATURE_COMMAND_BUTTONS
-#define FEATURE_COMMAND_LINE_INTERFACE        // (this no longer requires FEATURE_SERIAL)
+//#define FEATURE_COMMAND_LINE_INTERFACE        // (this no longer requires FEATURE_SERIAL)
 #define FEATURE_MEMORIES
 //#define FEATURE_MEMORY_MACROS
-// #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
+#define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
 //#define FEATURE_BEACON
 //#define FEATURE_TRAINING_COMMAND_LINE_INTERFACE
 #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
@@ -79,7 +79,7 @@
 //#define OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE
 
 // #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA   // only works with Mega and pins 2 and 5 - minor performance increase
-// #define OPTION_DIRECT_PADDLE_PIN_READS_UNO    // Unos or Nanos
+// #define OPTION_DIRECT_PADDLE_PIN_READS_UNO    // Unos or Nanos pins 2 and 5 - do not enable on a nanoKeyer, it uses different pins
 
 // #define OPTION_WORDSWORTH_CZECH
 // #define OPTION_WORDSWORTH_DEUTSCH
@@ -92,4 +92,3 @@
 #define OPTION_EXCLUDE_MILL_MODE
 
 //#define OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS
-
