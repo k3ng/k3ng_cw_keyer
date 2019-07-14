@@ -4769,7 +4769,11 @@ void check_rotary_encoder(){
   int step = chk_rotary_encoder();
 
   if (step != 0) {
-    speed_change(step);
+    if (keyer_machine_mode == KEYER_COMMAND_MODE) {
+      speed_change_command_mode(step);
+    } else {
+      speed_change(step);
+    }
      
     // Start of Winkey Speed change mod for Rotary Encoder -- VE2EVN
     #ifdef FEATURE_WINKEY_EMULATION
