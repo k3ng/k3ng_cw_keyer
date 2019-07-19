@@ -22,6 +22,7 @@
 // #define HARDWARE_MEGAKEYER // https://github.com/w6ipa/megakeyer
 // #define HARDWARE_OPENCWKEYER_MK2 // https://github.com/ok1cdj/OpenCWKeyerMK2  edit these files: keyer_features_and_options_opencwkeyer_mk2.h keyer_pin_settings_opencwkeyer_mk2.h keyer_settings_opencwkeyer_mk2.h
 // #define HARDWARE_TEST_EVERYTHING
+// #define HARDWARE_IZ3GME // https://github.com/iz3gme/k3ng_cw_keyer  edit these files: keyer_features_and_options_iz3gme.h keyer_pin_settings_iz3gme.h keyer_settings.h
 // #define HARDWARE_TEST
 
 
@@ -67,6 +68,9 @@
 #elif defined(TEENSYDUINO)
   #define PRIMARY_SERIAL_CLS usb_serial_class
   #define SECONDARY_SERIAL_CLS usb_serial_class
+#elif defined(_BOARD_PIC32_PINGUINO_) // || defined(_BOARD_PIC32_PINGUINO_OTG_)
+  #define PRIMARY_SERIAL_CLS USBSerial
+  #define SECONDARY_SERIAL_CLS HardwareSerial
 #else
   #define PRIMARY_SERIAL_CLS HardwareSerial
   #define SECONDARY_SERIAL_CLS HardwareSerial 
