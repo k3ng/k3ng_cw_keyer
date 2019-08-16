@@ -1198,7 +1198,7 @@ Recent Update History
   #include "keyer_settings_test.h"
 #elif defined(HARDWARE_IZ3GME)
   #include "keyer_pin_settings_iz3gme.h"
-  #include "keyer_settings.h"
+  #include "keyer_settings_iz3gme.h"
 #else
   #include "keyer_pin_settings.h"
   #include "keyer_settings.h"
