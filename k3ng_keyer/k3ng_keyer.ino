@@ -1072,6 +1072,9 @@ Recent Update History
     2019.06.18.01
       Fixed bug with OPTION_SAVE_MEMORY_NANOKEYER and reading left (dit) paddle
 
+    2019.08.18.01
+      Fixed logic issue with WINKEY_CANCEL_BUFFERED_SPEED_COMMAND that may arise in Logger32
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1086,7 +1089,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.06.18.01"
+#define CODE_VERSION "2019.08.18.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -10838,9 +10841,11 @@ void service_winkey(byte action) {
       }
 
       if (winkey_status == WINKEY_CANCEL_BUFFERED_SPEED_COMMAND) {
-        add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
-        add_to_send_buffer(winkey_last_unbuffered_speed_wpm);
-        winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
+        if (winkey_speed_state == WINKEY_BUFFERED_SPEED){
+          add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
+          add_to_send_buffer(winkey_last_unbuffered_speed_wpm);
+          winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
+        }
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
 
