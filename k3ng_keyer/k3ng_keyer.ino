@@ -1075,6 +1075,9 @@ Recent Update History
     2019.08.18.01
       Fixed logic issue with WINKEY_CANCEL_BUFFERED_SPEED_COMMAND that may arise in Logger32
 
+    2019.08.18.02
+      Fixed issue with OPTION_BLINK_HI_ON_PTT (Thanks, Bob, WO6W)  
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1089,7 +1092,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.08.18.01"
+#define CODE_VERSION "2019.08.18.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -17117,7 +17120,7 @@ void blink_ptt_dits_and_dahs(char const * cw_to_send){
 
   sending_mode = AUTOMATIC_SENDING;
 
-  for (int x = 0;x < 12;x++){
+  for (int x = 0;x < strlen(cw_to_send);x++){
     switch(cw_to_send[x]){
       case '.':
         ptt_key();
