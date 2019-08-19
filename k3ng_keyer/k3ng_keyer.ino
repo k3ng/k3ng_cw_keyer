@@ -4785,7 +4785,8 @@ void check_rotary_encoder(){
   int step = chk_rotary_encoder();
 
   if (step != 0) {
-    speed_change(step);
+    if (keyer_machine_mode == KEYER_COMMAND_MODE) speed_change_command_mode(step);
+    else speed_change(step);
      
     // Start of Winkey Speed change mod for Rotary Encoder -- VE2EVN
     #ifdef FEATURE_WINKEY_EMULATION
@@ -4868,7 +4869,8 @@ void check_potentiometer()
         debug_serial_port->print(F(" analog read: "));
         debug_serial_port->println(analogRead(potentiometer));
       #endif
-      speed_set(pot_value_wpm_read);
+      if (keyer_machine_mode == KEYER_COMMAND_MODE) command_speed_set(pot_value_wpm_read);
+      else speed_set(pot_value_wpm_read);
       last_pot_wpm_read = pot_value_wpm_read;
       #ifdef FEATURE_WINKEY_EMULATION
         if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
@@ -6533,6 +6535,20 @@ void speed_set(int wpm_set){
   }
 }
 //-------------------------------------------------------------------------------------------------------
+
+void command_speed_set(int wpm_set) {
+  if ((wpm_set > 0) && (wpm_set < 1000)) {
+    configuration.wpm_command_mode = wpm_set;
+    config_dirty = 1;
+
+    #ifdef FEATURE_DISPLAY
+      lcd_center_print_timed("Cmd Spd " + String(configuration.wpm_command_mode) + " wpm", 0, default_display_msg_delay);
+    #endif                                                 // FEATURE_DISPLAY
+  }                                                        // end if
+}                                                          // end command_speed_set
+
+//-------------------------------------------------------------------------------------------------------
+
 #ifdef FEATURE_DISPLAY
   void lcd_center_print_timed_wpm(){
 
