@@ -1081,6 +1081,9 @@ Recent Update History
     2019.08.18.03
       Merged pull request 75 https://github.com/k3ng/k3ng_cw_keyer/pull/75 - New HW addition - PIC32 Pinguino (Thanks, IZ3GME)
 
+    2019.08.18.04
+      Merged pull request 73 https://github.com/k3ng/k3ng_cw_keyer/pull/73 - code change to allow the speed input device encoder or potentiometer to change the command mode speed when in Command Mode (Thanks VK2EFL and KG6HUM)  
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1095,7 +1098,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.08.18.03"
+#define CODE_VERSION "2019.08.18.04"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
