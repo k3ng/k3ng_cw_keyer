@@ -1108,6 +1108,8 @@ Recent Update History
   #include <Wire.h>
   #include <EEPROM.h> 
   #include "keyer_stm32duino.h" 
+#elif defined(_BOARD_PIC32_PINGUINO_)
+  #include <EEPROM.h>
 #else
   #include <avr/pgmspace.h>
   #include <avr/wdt.h>
@@ -1142,6 +1144,8 @@ Recent Update History
   #include "keyer_features_and_options_yaacwk.h"
 #elif defined(HARDWARE_TEST)
   #include "keyer_features_and_options_test.h"
+#elif defined(HARDWARE_IZ3GME)
+  #include "keyer_features_and_options_iz3gme.h"
 #else
   #include "keyer_features_and_options.h"
 #endif
@@ -1198,6 +1202,9 @@ Recent Update History
 #elif defined(HARDWARE_TEST)
   #include "keyer_pin_settings_test.h"
   #include "keyer_settings_test.h"
+#elif defined(HARDWARE_IZ3GME)
+  #include "keyer_pin_settings_iz3gme.h"
+  #include "keyer_settings_iz3gme.h"
 #else
   #include "keyer_pin_settings.h"
   #include "keyer_settings.h"
@@ -5638,8 +5645,15 @@ void service_async_eeprom_write(){
   if ((async_eeprom_write) && (!send_buffer_bytes) && (!ptt_line_activated) && (!dit_buffer) && (!dah_buffer) && (paddle_pin_read(paddle_left) == HIGH)  && (paddle_pin_read(paddle_right) == HIGH)) {  
     if (last_async_eeprom_write_status){ // we have an ansynchronous write to eeprom in progress
 
-      //EEPROM.write(ee++, *p++);  
+#if defined(_BOARD_PIC32_PINGUINO_)
+      if (EEPROM.read(ee) != *p) {
+        EEPROM.write(ee, *p);
+      }
+      ee++;
+      p++;
+#else
       EEPROM.update(ee++, *p++);
+#endif
 
       if (i < sizeof(configuration)){
         #if defined(DEBUG_ASYNC_EEPROM_WRITE)
