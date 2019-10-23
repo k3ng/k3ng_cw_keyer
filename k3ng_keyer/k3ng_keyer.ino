@@ -1091,6 +1091,9 @@ Recent Update History
     2019.10.23.02
       https://github.com/k3ng/k3ng_cw_keyer/issues/70  Thanks, SP9RQA
 
+    2019.10.23.03
+      Merged Pull 71 - re-factor analog button functions to support multiple button lines https://github.com/k3ng/k3ng_cw_keyer/pull/71 Thanks, W6IPA
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1105,7 +1108,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.10.23.02"
+#define CODE_VERSION "2019.10.23.03"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
