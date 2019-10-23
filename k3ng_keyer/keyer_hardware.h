@@ -17,12 +17,16 @@
 // #define HARDWARE_MAPLE_MINI  // edit these files: keyer_pin_settings_maple_mini.h, keyer_settings_maple_mini.h, keyer_features_and_options_maple_mini.h
 // #define HARDWARE_GENERIC_STM32F103C  // edit these files: keyer_pin_settings_generic_STM32F103C.h, keyer_settings_generic_STM32F103C.h, keyer_features_and_options_generic_STM32F103C.h //sp5iou 20180329
 // #define HARDWARE_MORTTY  // edit these files: keyer_pin_settings_mortty.h, keyer_settings_mortty.h, keyer_features_and_options_mortty.h
+// #define HARDWARE_MORTTY_REGULAR  // edit these files: keyer_pin_settings_mortty_regular.h, keyer_settings_mortty_regular.h, keyer_features_and_options_mortty_regular.h
+// #define HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER  // edit these files: keyer_pin_settings_mortty_regular_with_potentiometer.h, keyer_settings_mortty_regular_with_potentiometer.h, keyer_features_and_options_mortty_regular_with_potentiometer.h
+// #define HARDWARE_MORTTY_SO2R  // edit these files: keyer_pin_settings_mortty_so2r.h, keyer_settings_mortty_so2r.h, keyer_features_and_options_mortty_so2r.h
+// #define HARDWARE_MORTTY_SO2R_WITH_POTENTIOMETER  // edit these files: keyer_pin_settings_mortty_so2r_with_potentiometer.h, keyer_settings_mortty_so2r_with_potentiometer.h, keyer_features_and_options_mortty_so2r_with_potentiometer.h
 // #define HARDWARE_YAACWK   // http://i1cra.briata.org/yaacwk/  files: keyer_pin_settings_yaacwk.h, keyer_features_and_options_yaacwk.h, keyer_settings_yaacwk.h
 // #define HARDWARE_K5BCQ   // edit these files: keyer_pin_settings_k5bcq.h, keyer_features_and_options_k5bcq.h, keyer_settings_k5bcq.h 
 // #define HARDWARE_MEGAKEYER // https://github.com/w6ipa/megakeyer
 // #define HARDWARE_OPENCWKEYER_MK2 // https://github.com/ok1cdj/OpenCWKeyerMK2  edit these files: keyer_features_and_options_opencwkeyer_mk2.h keyer_pin_settings_opencwkeyer_mk2.h keyer_settings_opencwkeyer_mk2.h
-// #define HARDWARE_TEST_EVERYTHING
 // #define HARDWARE_IZ3GME // https://github.com/iz3gme/k3ng_cw_keyer  edit these files: keyer_features_and_options_iz3gme.h keyer_pin_settings_iz3gme.h keyer_settings.h
+// #define HARDWARE_TEST_EVERYTHING
 // #define HARDWARE_TEST
 
 

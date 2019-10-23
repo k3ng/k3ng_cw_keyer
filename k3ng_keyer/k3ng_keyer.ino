@@ -1083,6 +1083,10 @@ Recent Update History
 
     2019.08.18.04
       Merged pull request 73 https://github.com/k3ng/k3ng_cw_keyer/pull/73 - code change to allow the speed input device encoder or potentiometer to change the command mode speed when in Command Mode (Thanks VK2EFL and KG6HUM)  
+   
+    2019.10.23.01
+      Added HARDWARE_MORTTY_REGULAR, HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER, HARDWARE_MORTTY_SO2R, HARDWARE_MORTTY_SO2R_WITH_POTENTIOMETER
+      (Going to depricate Morrty preconfigurations directory shortly...)
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1098,7 +1102,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.08.18.04"
+#define CODE_VERSION "2019.10.23.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1140,6 +1144,14 @@ Recent Update History
   #include "keyer_features_and_options_generic_STM32F103C.h"
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_features_and_options_mortty.h"
+#elif defined(HARDWARE_MORTTY_REGULAR)
+  #include "keyer_features_and_options_mortty_regular.h"  
+#elif defined(HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER)
+  #include "keyer_features_and_options_mortty_regular_with_potentiometer.h"   
+#elif defined(HARDWARE_MORTTY_SO2R)
+  #include "keyer_features_and_options_mortty_so2r.h"   
+#elif defined(HARDWARE_MORTTY_SO2R_WITH_POTENTIOMETER)
+  #include "keyer_features_and_options_mortty_so2r_with_potentiometer.h"    
 #elif defined(HARDWARE_K5BCQ)
   #include "keyer_features_and_options_k5bcq.h"
 #elif defined(HARDWARE_MEGAKEYER)
@@ -1193,6 +1205,18 @@ Recent Update History
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_pin_settings_mortty.h"
   #include "keyer_settings_mortty.h"  
+#elif defined(HARDWARE_MORTTY_REGULAR)
+  #include "keyer_pin_settings_mortty_regular.h"
+  #include "keyer_settings_mortty_regular.h"   
+#elif defined(HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER)
+  #include "keyer_pin_settings_mortty_regular_with_potentiometer.h"
+  #include "keyer_settings_mortty_regular_with_potentiometer.h"   
+#elif defined(HARDWARE_MORTTY_SO2R)
+  #include "keyer_pin_settings_mortty_so2r.h"
+  #include "keyer_settings_mortty_so2r.h"   
+#elif defined(HARDWARE_MORTTY_SO2R_WITH_POTENTIOMETER)
+  #include "keyer_pin_settings_mortty_so2r_with_potentiometer.h"
+  #include "keyer_settings_mortty_so2r_with_potentiometer.h"    
 #elif defined(HARDWARE_K5BCQ)
   #include "keyer_pin_settings_k5bcq.h"
   #include "keyer_settings_k5bcq.h"
