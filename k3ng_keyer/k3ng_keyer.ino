@@ -1087,6 +1087,7 @@ Recent Update History
     2019.10.23.01
       Added HARDWARE_MORTTY_REGULAR, HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER, HARDWARE_MORTTY_SO2R, HARDWARE_MORTTY_SO2R_WITH_POTENTIOMETER
       (Going to depricate Morrty preconfigurations directory shortly...)
+      
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
