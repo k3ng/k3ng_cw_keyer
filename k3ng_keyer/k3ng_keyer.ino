@@ -1087,7 +1087,9 @@ Recent Update History
     2019.10.23.01
       Added HARDWARE_MORTTY_REGULAR, HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER, HARDWARE_MORTTY_SO2R, HARDWARE_MORTTY_SO2R_WITH_POTENTIOMETER
       (Going to depricate Morrty preconfigurations directory shortly...)
-      
+
+    2019.10.23.02
+      https://github.com/k3ng/k3ng_cw_keyer/issues/70  Thanks, SP9RQA
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1103,7 +1105,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.10.23.01"
+#define CODE_VERSION "2019.10.23.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -7501,7 +7503,7 @@ void command_set_serial_number() {
   for (character_count = 0; character_count < 4; character_count++) {
     cw_char = get_cw_input_from_user(0);
     number_sent = (convert_cw_number_to_ascii(cw_char) - 48);
-    if ((number_sent > -1) && (number_sent < 10)) {
+    if ((number_sent >= 0) && (number_sent < 10)) {
       repeat_value = (repeat_value * 10) + number_sent;
     } else { // we got a bad value
       error_flag = 1;
@@ -7534,7 +7536,7 @@ void command_set_mem_repeat_delay() {
   for (character_count = 0; character_count < 4; character_count++) {
     cw_char = get_cw_input_from_user(0);
     number_sent = (convert_cw_number_to_ascii(cw_char) - 48);
-    if ((number_sent > -1) && (number_sent < 10)) {
+    if ((number_sent >= 0) && (number_sent < 10)) {
       repeat_value = (repeat_value * 10) + number_sent;
     } else { // we got a bad value
       error_flag = 1;
