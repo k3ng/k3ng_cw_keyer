@@ -1093,6 +1093,10 @@ Recent Update History
 
     2019.10.23.03
       Merged Pull 71 - re-factor analog button functions to support multiple button lines https://github.com/k3ng/k3ng_cw_keyer/pull/71 Thanks, W6IPA
+    
+    2019.10.23.04
+      Fixed bug with contest wordspace in K1EL Winkey emulation setmode command.  Thanks, Paul K1XM
+      OPTION_WINKEY_SEND_VERSION_ON_HOST_CLOSE - Made this an option that is disabled by default.
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1108,7 +1112,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.10.23.03"
+#define CODE_VERSION "2019.10.23.04"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -9463,7 +9467,7 @@ void winkey_setmode_command(byte incoming_serial_byte) {
      configuration.autospace_active = 0;
   }
   #endif
-  if ((incoming_serial_byte & 128) == 128) {  //xxxxxxx1 = contest wordspace
+  if ((incoming_serial_byte & 1) == 1) {  //xxxxxxx1 = contest wordspace
      configuration.length_wordspace = 6;
   } else {
      configuration.length_wordspace = 7;
@@ -10792,11 +10796,13 @@ void service_winkey(byte action) {
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             manual_ptt_invoke = 0;
             winkey_host_open = 0;
-            #ifdef OPTION_WINKEY_2_SUPPORT
-              winkey_port_write(WINKEY_2_REPORT_VERSION_NUMBER,1);
-            #else //OPTION_WINKEY_2_SUPPORT
-              winkey_port_write(WINKEY_1_REPORT_VERSION_NUMBER,1);
-            #endif //OPTION_WINKEY_2_SUPPORT            
+            #ifdef OPTION_WINKEY_SEND_VERSION_ON_HOST_CLOSE
+              #ifdef OPTION_WINKEY_2_SUPPORT
+                winkey_port_write(WINKEY_2_REPORT_VERSION_NUMBER,1);
+              #else //OPTION_WINKEY_2_SUPPORT
+                winkey_port_write(WINKEY_1_REPORT_VERSION_NUMBER,1);
+              #endif //OPTION_WINKEY_2_SUPPORT 
+            #endif  //OPTION_WINKEY_SEND_VERSION_ON_HOST_CLOSE           
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND host close");
             #endif //DEBUG_WINKEY                  
