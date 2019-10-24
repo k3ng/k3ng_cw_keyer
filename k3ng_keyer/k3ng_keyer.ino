@@ -1098,6 +1098,11 @@ Recent Update History
       Fixed bug with contest wordspace in K1EL Winkey emulation setmode command.  Thanks, Paul K1XM
       OPTION_WINKEY_SEND_VERSION_ON_HOST_CLOSE - Made this an option that is disabled by default.
 
+    2019.10.24.01
+      Fixed issue in winkey_unbuffered_speed_command
+      Fixed some compiler warnings
+      Fixed compiler redefine errors with Mortty hardware profiles
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1112,7 +1117,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.10.23.04"
+#define CODE_VERSION "2019.10.24.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -9272,7 +9277,7 @@ void winkey_unbuffered_speed_command(byte incoming_serial_byte) {
     #endif
   } else {
     configuration.wpm = incoming_serial_byte;
-    winkey_speed_state == WINKEY_UNBUFFERED_SPEED;
+    winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
     winkey_last_unbuffered_speed_wpm = configuration.wpm;
     //calculate_element_length();
     #ifdef OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM
@@ -9296,6 +9301,8 @@ void winkey_farnsworth_command(byte incoming_serial_byte) {
     if ((incoming_serial_byte > 9) && (incoming_serial_byte < 100)) {
       configuration.wpm_farnsworth = incoming_serial_byte;
     }
+  #else
+    byte dummy_byte = incoming_serial_byte; // to get rid of compiler warning about unused variable
   #endif //FEATURE_FFARNSWORTH
 
 }
@@ -9392,18 +9399,20 @@ void winkey_set_pot_parm2_command(byte incoming_serial_byte) {
 void winkey_set_pot_parm3_command (byte incoming_serial_byte) {
 
   #ifdef FEATURE_POTENTIOMETER
-  #ifdef OPTION_WINKEY_2_SUPPORT
-  pot_full_scale_reading = 1031;
-  #else //OPTION_WINKEY_2_SUPPORT
-  if (incoming_serial_byte == 255) {
-    pot_full_scale_reading = 1031;
-  } else {
-    if (incoming_serial_byte == 127) {
-      pot_full_scale_reading = 515;
-    }
-  }
-  #endif //OPTION_WINKEY_2_SUPPORT
-  configuration.pot_activated = 1;
+    #ifdef OPTION_WINKEY_2_SUPPORT
+      pot_full_scale_reading = 1031;
+    #else //OPTION_WINKEY_2_SUPPORT
+      if (incoming_serial_byte == 255) {
+        pot_full_scale_reading = 1031;
+      } else {
+        if (incoming_serial_byte == 127) {
+          pot_full_scale_reading = 515;
+        }
+      }
+    #endif //OPTION_WINKEY_2_SUPPORT
+    configuration.pot_activated = 1;
+  #else
+    byte dummy_byte = incoming_serial_byte; // to get rid of compiler warning about unused variable
   #endif
 }
 #endif //FEATURE_WINKEY_EMULATION
