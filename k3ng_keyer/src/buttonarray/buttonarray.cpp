@@ -1,4 +1,4 @@
-#include "arduino.h"
+#include "Arduino.h"
 #include "buttonarray.h"
 
 Button::InitLimits(uint8_t step){
