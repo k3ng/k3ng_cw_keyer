@@ -26,6 +26,7 @@
 // #define HARDWARE_MEGAKEYER // https://github.com/w6ipa/megakeyer
 // #define HARDWARE_OPENCWKEYER_MK2 // https://github.com/ok1cdj/OpenCWKeyerMK2  edit these files: keyer_features_and_options_opencwkeyer_mk2.h keyer_pin_settings_opencwkeyer_mk2.h keyer_settings_opencwkeyer_mk2.h
 // #define HARDWARE_IZ3GME // https://github.com/iz3gme/k3ng_cw_keyer  edit these files: keyer_features_and_options_iz3gme.h keyer_pin_settings_iz3gme.h keyer_settings.h
+// #define HARDWARE_YCCC_SO2R_MINI // edit these files: keyer_pin_settings_yccc_so2r_mini.h, keyer_settings_yccc_so2r_mini.h, keyer_features_and_options_yccc_so2r_mini.h
 // #define HARDWARE_TEST_EVERYTHING
 // #define HARDWARE_TEST
 

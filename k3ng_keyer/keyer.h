@@ -219,5 +219,10 @@
 #define COMMAND_PA 3
 #define COMMAND_PI 4
 
-
+#define SO2R_TX_1 1  // Transmitter 1
+#define SO2R_TX_2 2  // Transmitter 2
+#define SO2R_RX_1 1  // Receiver 1
+#define SO2R_RX_2 2  // Receiver 2
+#define SO2R_RX_S 3  // Stereo 1 and 2
+#define SO2R_RX_R 4  // Reverse stereo (implemented as stereo)
 #endif //keyer_h

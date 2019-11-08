@@ -1107,6 +1107,9 @@ Recent Update History
       Merged Pull Request 77 (https://github.com/k3ng/k3ng_cw_keyer/pull/77) Allow for 12 buttons + command - (Thanks, W6IPA)
       Manually merged Pull Request 76 (https://github.com/k3ng/k3ng_cw_keyer/pull/76) Fix case sensitive include - (Thanks, Daniele, IU5HKX)
 
+    2019.11.07.02
+      Manual merge of contributed S02R code in progress.  Details later.  No functionality added or big fixes.
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1121,7 +1124,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.11.07.01"
+#define CODE_VERSION "2019.11.07.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1183,6 +1186,8 @@ Recent Update History
   #include "keyer_features_and_options_test.h"
 #elif defined(HARDWARE_IZ3GME)
   #include "keyer_features_and_options_iz3gme.h"
+#elif defined(HARDWARE_YCCC_SO2R_MINI)
+  #include "keyer_features_and_options_yccc_so2r_mini.h"  
 #else
   #include "keyer_features_and_options.h"
 #endif
@@ -1254,6 +1259,9 @@ Recent Update History
 #elif defined(HARDWARE_IZ3GME)
   #include "keyer_pin_settings_iz3gme.h"
   #include "keyer_settings_iz3gme.h"
+#elif defined(HARDWARE_YCCC_SO2R_MINI)
+  #include "keyer_pin_settings_yccc_so2r_mini.h"
+  #include "keyer_settings_yccc_so2r_mini.h"  
 #else
   #include "keyer_pin_settings.h"
   #include "keyer_settings.h"
@@ -1428,6 +1436,9 @@ struct config_t {  // 111 bytes total
 byte sending_mode = UNDEFINED_SENDING;
 byte command_mode_disable_tx = 0;
 byte current_tx_key_line = tx_key_line_1;
+#ifdef FEATURE_SO2R_BASE
+  byte current_tx_ptt_line = ptt_tx_1;
+#endif
 byte manual_ptt_invoke = 0;
 byte qrss_dit_length = initial_qrss_dit_length;
 byte keyer_machine_mode = KEYER_NORMAL;   // KEYER_NORMAL, BEACON, KEYER_COMMAND_MODE
@@ -1479,7 +1490,9 @@ unsigned long last_config_write = 0;
 
 #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
   byte wk2_mode = 1;
-  byte wk2_both_tx_activated = 0;
+  #ifndef FEATURE_SO2R_BASE
+    byte wk2_both_tx_activated = 0;
+  #endif //FEATURE_SO2R_BASE
   byte wk2_paddle_only_sidetone = 0;
 #endif //defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
 
@@ -1938,6 +1951,25 @@ unsigned long millis_rollover = 0;
   byte sequencer_5_active = 0;
 #endif  
 
+#ifdef FEATURE_SO2R_BASE
+  uint8_t so2r_rx = 1;
+  uint8_t so2r_tx = 1;
+  uint8_t so2r_pending_tx = 0;
+  uint8_t so2r_ptt = 0;
+  uint8_t so2r_latch = 0;
+ 
+  #ifdef FEATURE_SO2R_SWITCHES
+    uint8_t so2r_open = 0;
+    uint8_t so2r_switch_rx = 0;
+    uint8_t so2r_debounce = 0;
+    unsigned long so2r_debounce_time;
+  #endif //FEATURE_SO2R_SWITCHES
+ 
+  #ifdef FEATURE_SO2R_ANTENNA
+    uint8_t so2r_antenna_1 = 0;
+    uint8_t so2r_antenna_2 = 0;
+  #endif //FEATURE_SO2R_ANTENNA
+#endif //FEATURE_SO2R_BASE
 
 // #if defined(FEATURE_SINEWAVE_SIDETONE)  //DL2DBG contributed
 //   const float pi = 3.14159 ;
@@ -2130,7 +2162,6 @@ void loop()
       service_keypad();
     #endif
 
-
     #ifdef FEATURE_SD_CARD_SUPPORT
       service_sd_card();    
     #endif
@@ -2138,6 +2169,10 @@ void loop()
     #ifdef FEATURE_SEQUENCER
       check_sequencer_tail_time();
     #endif  
+
+    #ifdef FEATURE_SO2R_SWITCHES
+      so2r_switches();
+    #endif
 
     service_async_eeprom_write();
     
