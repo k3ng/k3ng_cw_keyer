@@ -1110,6 +1110,9 @@ Recent Update History
     2019.11.07.02
       Manual merge of contributed S02R code in progress.  Details later.  No functionality added or big fixes.
 
+    2019.11.08.01
+      Improved LCD screen refreshes; may improve performance with I2C LCD displays  
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1124,7 +1127,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.11.07.02"
+#define CODE_VERSION "2019.11.08.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -3146,44 +3149,82 @@ void service_display() {
   debug_serial_port->println(F("loop: entering service_display"));
   #endif    
 
-  byte x = 0;
+  #define SCREEN_REFRESH_IDLE 0
+  #define SCREEN_REFRESH_INIT 1
+  #define SCREEN_REFRESH_IN_PROGRESS 2
 
-  if (lcd_status == LCD_REVERT) {
-    lcd_status = lcd_previous_status;
-    switch (lcd_status) {
-      case LCD_CLEAR: lcd_clear(); break;
-      case LCD_SCROLL_MSG:
-         lcd.clear();
-         for (x = 0;x < LCD_ROWS;x++){
-           //clear_display_row(x);
-           lcd.setCursor(0,x);
-           lcd.print(lcd_scroll_buffer[x]);
-         }         
-         lcd_scroll_flag = 0; 
-         lcd_scroll_buffer_dirty = 0;         
-         break;
+  static byte x = 0;
+  static byte y = 0;
+
+  static byte screen_refresh_status = SCREEN_REFRESH_IDLE;
+
+  if (screen_refresh_status == SCREEN_REFRESH_INIT){
+    lcd.setCursor(0,0);
+    y = 0;
+    x = 0;
+    screen_refresh_status = SCREEN_REFRESH_IN_PROGRESS;
+    return;
+  }
+
+  if (screen_refresh_status == SCREEN_REFRESH_IN_PROGRESS){
+    if (x > lcd_scroll_buffer[y].length()){
+      y++;
+      if (y >= LCD_ROWS){
+        screen_refresh_status = SCREEN_REFRESH_IDLE;
+        lcd_scroll_buffer_dirty = 0;
+        return;
+      } else {
+         x = 0;
+         lcd.setCursor(0,y);
+      }
+    } else {
+      if (lcd_scroll_buffer[y].charAt(x) > 0){
+        lcd.print(lcd_scroll_buffer[y].charAt(x));
+      }
+      x++;
     }
-  } else {
-    switch (lcd_status) {
-      case LCD_CLEAR : break;
-      case LCD_TIMED_MESSAGE:
-        if (millis() > lcd_timed_message_clear_time) {
-          lcd_status = LCD_REVERT;
-        }
-      case LCD_SCROLL_MSG:
-        if (lcd_scroll_buffer_dirty) { 
-          if (lcd_scroll_flag) {
-            lcd.clear();
-            lcd_scroll_flag = 0;
-          }         
-          for (x = 0;x < LCD_ROWS;x++){
-            //clear_display_row(x);
-            lcd.setCursor(0,x);
-            lcd.print(lcd_scroll_buffer[x]);
+  }
+
+  if (screen_refresh_status == SCREEN_REFRESH_IDLE){
+    if (lcd_status == LCD_REVERT) {
+      lcd_status = lcd_previous_status;
+      switch (lcd_status) {
+        case LCD_CLEAR: lcd_clear(); break;
+        case LCD_SCROLL_MSG:
+          lcd.clear();
+          // for (x = 0;x < LCD_ROWS;x++){
+          //   //clear_display_row(x);
+          //   lcd.setCursor(0,x);
+          //   lcd.print(lcd_scroll_buffer[x]);
+          // }       
+          screen_refresh_status = SCREEN_REFRESH_INIT;
+          lcd_scroll_flag = 0; 
+          //lcd_scroll_buffer_dirty = 0;         
+          break;
+      }
+    } else {
+      switch (lcd_status) {
+        case LCD_CLEAR : break;
+        case LCD_TIMED_MESSAGE:
+          if (millis() > lcd_timed_message_clear_time) {
+            lcd_status = LCD_REVERT;
           }
-          lcd_scroll_buffer_dirty = 0;
-        }
-      break;
+        case LCD_SCROLL_MSG:
+          if (lcd_scroll_buffer_dirty) { 
+            if (lcd_scroll_flag) {
+              lcd.clear();
+              lcd_scroll_flag = 0;
+            }         
+            // for (x = 0;x < LCD_ROWS;x++){
+            //   //clear_display_row(x);
+            //   lcd.setCursor(0,x);
+            //   lcd.print(lcd_scroll_buffer[x]);
+            // }
+            //lcd_scroll_buffer_dirty = 0;
+            screen_refresh_status = SCREEN_REFRESH_INIT;
+          }
+        break;
+      }
     }
   }
 
