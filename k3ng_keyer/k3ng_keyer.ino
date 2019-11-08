@@ -1103,6 +1103,10 @@ Recent Update History
       Fixed some compiler warnings
       Fixed compiler redefine errors with Mortty hardware profiles
 
+    2019.11.07.01
+      Merged Pull Request 77 (https://github.com/k3ng/k3ng_cw_keyer/pull/77) Allow for 12 buttons + command - (Thanks, W6IPA)
+      Manually merged Pull Request 76 (https://github.com/k3ng/k3ng_cw_keyer/pull/76) Fix case sensitive include - (Thanks, Daniele, IU5HKX)
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1117,7 +1121,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.10.24.01"
+#define CODE_VERSION "2019.11.07.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
