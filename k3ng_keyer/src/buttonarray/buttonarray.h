@@ -1,8 +1,9 @@
 #ifndef buttonarray_h
 #define buttonarray_h
 #include "Arduino.h"
-
-#define MAX_BUTTONS 8
+#ifndef MAX_ARRAY_BUTTONS
+    #define MAX_ARRAY_BUTTONS 13
+#endif
 #define DEBOUNCE_MS 200
 
 #if defined(ARDUINO_ARCH_ESP32)
@@ -30,7 +31,7 @@ class Button {
 
 class ButtonArray {
     private:
-        Button button_array_[MAX_BUTTONS];
+        Button button_array_[MAX_ARRAY_BUTTONS];
         uint8_t pin_;
         uint8_t nb_buttons_;
         int32_t high_limit_;
