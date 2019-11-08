@@ -34,6 +34,20 @@
 #define tx_key_dit 0            // if defined, goes active for dit (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 #define tx_key_dah 0            // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 
+#define so2r_tx_1 0             // Radio 1 transmitter selected (optional, set to zero if not used)
+#define so2r_tx_2 11            // Radio 2 transmitter selected (optional, set to zero if not used)
+#define so2r_rx_1 0             // Radio 1 receiver selected (optional, set to zero if not used)
+#define so2r_rx_2 0             // Radio 2 receiver selected (optional, set to zero if not used)
+#define so2r_rx_1s 0            // Radio 1 receiver or stereo selected (optional, set to zero if not used)
+#define so2r_rx_2s 9            // Radio 2 receiver or stereo selected (optional, set to zero if not used)
+#define so2r_rx_s 10            // Stereo receive selected (optional, set to zero if not used)
+
+#ifdef FEATURE_SO2R_SWITCHES
+  #define so2r_tx_switch A5     // TX switch, low if TX1, high if TX2
+  #define so2r_rx1_switch A4    // RX 1 switch, low if RX1, high if RX2 or stereo
+  #define so2r_rx2_switch A3    // RX 2 switch, low if RX2, high if RX1 or stereo
+#endif
+
 #define potentiometer_enable_pin 0  // if defined, the potentiometer will be enabled only when this pin is held low; set to 0 to ignore this pin
 
 #ifdef FEATURE_COMMAND_BUTTONS

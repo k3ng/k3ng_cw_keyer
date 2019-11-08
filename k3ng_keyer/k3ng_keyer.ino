@@ -1114,7 +1114,11 @@ Recent Update History
       Improved LCD screen refreshes; may improve performance with I2C LCD displays
 
     2019.11.08.02
-      Fixed bug with character displaying during memory playing; bug introduced with improved LCD screen refreshes    
+      Fixed bug with character displaying during memory playing; bug introduced with improved LCD screen refreshes 
+  
+    2019.11.08.03
+      Completed manual merge of contributed code for HARDWARE_YCCC_SO2R_MINI .  Testing in progress.  (Thanks, Paul, K1XM) 
+      Includes FEATURE_SO2R_BASE, FEATURE_SO2R_SWITCHES, FEATURE_SO2R_ANTENNA  
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1130,7 +1134,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.11.08.02"
+#define CODE_VERSION "2019.11.08.03"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5422,18 +5426,31 @@ void ptt_key(){
   #endif 
 
   if (ptt_line_activated == 0) {   // if PTT is currently deactivated, bring it up and insert PTT lead time delay
-    if (configuration.current_ptt_line) {
-      digitalWrite (configuration.current_ptt_line, ptt_line_active_state);    
-      #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
-        if ((wk2_both_tx_activated) && (ptt_tx_2)) {
-          digitalWrite (ptt_tx_2, ptt_line_active_state);
-        }
-      #endif
-      //delay(configuration.ptt_lead_time[configuration.current_tx-1]);
-      #ifdef FEATURE_SEQUENCER
-        sequencer_ptt_inactive_time = 0;
-      #endif  
-    }
+    #ifdef FEATURE_SO2R_BASE
+        if (current_tx_ptt_line) {
+        digitalWrite (current_tx_ptt_line, ptt_line_active_state);
+    #else
+      if (configuration.current_ptt_line) {
+        digitalWrite (configuration.current_ptt_line, ptt_line_active_state);    
+        #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
+          if ((wk2_both_tx_activated) && (ptt_tx_2)) {
+            digitalWrite (ptt_tx_2, ptt_line_active_state);
+          }
+        #endif
+    #endif //FEATURE_SO2R_BASE
+
+    //delay(configuration.ptt_lead_time[configuration.current_tx-1]);
+    #ifdef FEATURE_SEQUENCER
+      sequencer_ptt_inactive_time = 0;
+    #endif  
+  }
+
+    ptt_line_activated = 1;
+
+    #ifdef FEATURE_SO2R_BASE
+      so2r_set_rx();
+    #endif
+
     while (!all_delays_satisfied){
       #ifdef FEATURE_SEQUENCER
         if (sequencer_1_pin){
@@ -5493,7 +5510,7 @@ void ptt_key(){
       #endif //FEATURE_SEQUENCER
 
     } //while (!all_delays_satisfied)
-    ptt_line_activated = 1;
+
   }
   ptt_time = millis();
 }
@@ -5545,23 +5562,36 @@ void check_sequencer_tail_time(){
 //-------------------------------------------------------------------------------------------------------
 void ptt_unkey(){
 
-
-
   if (ptt_line_activated) {
 
-    if (configuration.current_ptt_line) {
-      digitalWrite (configuration.current_ptt_line, ptt_line_inactive_state);
-      #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
-        if ((wk2_both_tx_activated) && (ptt_tx_2)) {
-          digitalWrite (ptt_tx_2, ptt_line_inactive_state);
-        }
-      #endif
-
+    #ifdef FEATURE_SO2R_BASE
+      if (current_tx_ptt_line) {
+        digitalWrite (current_tx_ptt_line, ptt_line_inactive_state);
+    #else
+      if (configuration.current_ptt_line) {
+        digitalWrite (configuration.current_ptt_line, ptt_line_inactive_state);
+        #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
+          if ((wk2_both_tx_activated) && (ptt_tx_2)) {
+            digitalWrite (ptt_tx_2, ptt_line_inactive_state);
+          }
+        #endif
+      #endif //FEATURE_SO2R_BASE
     }
     ptt_line_activated = 0;
     #ifdef FEATURE_SEQUENCER
       sequencer_ptt_inactive_time = millis();
     #endif
+
+    #ifdef FEATURE_SO2R_BASE
+      if (so2r_pending_tx) {
+        so2r_tx = so2r_pending_tx;
+        so2r_pending_tx = 0;
+        so2r_set_tx();
+      }
+
+      so2r_set_rx();
+    #endif //FEATURE_SO2R_BASE
+
   }
 }
 
@@ -5572,8 +5602,13 @@ void check_ptt_tail()
     debug_serial_port->println(F("loop: entering check_ptt_tail"));
   #endif
 
-  static byte manual_ptt_invoke_ptt_input_pin = 0;
+  #ifdef FEATURE_SO2R_BASE
+    if (so2r_ptt) {
+      return;
+    }
+  #endif
 
+  static byte manual_ptt_invoke_ptt_input_pin = 0;
 
   if (ptt_input_pin){
     if ((digitalRead(ptt_input_pin) == ptt_input_pin_active_state)){
@@ -5703,47 +5738,11 @@ void check_ptt_tail()
         }
       }
     }
-
-
-
-
-
   #endif //FEATURE_WINKEY_EMULATION  
-
-
-
-
 
 }
 
 //-------------------------------------------------------------------------------------------------------
-//void write_settings_to_eeprom(int initialize_eeprom) {  //zzzzzz
-// 
-//  #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
-//  
-//  if (initialize_eeprom) {
-//    //configuration.magic_number = eeprom_magic_number;
-//    EEPROM.write(0,eeprom_magic_number);
-//    #ifdef FEATURE_MEMORIES
-//      initialize_eeprom_memories();
-//    #endif  //FEATURE_MEMORIES    
-//  }
-//
-//  const byte* p = (const byte*)(const void*)&configuration;
-//  unsigned int i;
-//  int ee = 1;  // starting point of configuration struct
-//  for (i = 0; i < sizeof(configuration); i++){
-//    EEPROM.write(ee++, *p++);  
-//  }
-//  
-//  #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
-//  
-//  config_dirty = 0;
-//  
-//  
-//}
-
-
 void write_settings_to_eeprom(int initialize_eeprom) {  
  
   #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
@@ -5845,7 +5844,10 @@ int read_settings_from_eeprom() {
         *p++ = EEPROM.read(ee++);  
       }
     
-      switch_to_tx_silent(configuration.current_tx);
+      #ifndef FEATURE_SO2R_BASE
+        switch_to_tx_silent(configuration.current_tx);
+      #endif
+
       config_dirty = 0;
 
       // #if defined(FEATURE_SINEWAVE_SIDETONE)
@@ -6312,7 +6314,7 @@ void tx_and_sidetone_key (int state)
         byte previous_ptt_line_activated = ptt_line_activated;
         ptt_key();
         if (current_tx_key_line) {digitalWrite (current_tx_key_line, tx_key_line_active_state);}
-        #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
+        #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_SO2R_BASE)
           if ((wk2_both_tx_activated) && (tx_key_line_2)) {
             digitalWrite (tx_key_line_2, HIGH);
           }
@@ -6325,7 +6327,9 @@ void tx_and_sidetone_key (int state)
         #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
           tone(sidetone_line, configuration.hz_sidetone);
         #else
-          digitalWrite(sidetone_line, HIGH);
+          if (sidetone_line) {
+            digitalWrite(sidetone_line, HIGH);
+          }
         #endif
       }
       key_state = 1;
@@ -6333,7 +6337,7 @@ void tx_and_sidetone_key (int state)
       if ((state == 0) && (key_state)) {
         if (key_tx) {
           if (current_tx_key_line) {digitalWrite (current_tx_key_line, tx_key_line_inactive_state);}
-          #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
+          #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_SO2R_BASE)
             if ((wk2_both_tx_activated) && (tx_key_line_2)) {
               digitalWrite (tx_key_line_2, LOW);
             }
@@ -6344,7 +6348,9 @@ void tx_and_sidetone_key (int state)
           #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
             noTone(sidetone_line);
           #else
-            digitalWrite(sidetone_line, LOW);
+            if (sidetone_line) {
+              digitalWrite(sidetone_line, LOW);
+            }
           #endif
         }
         key_state = 0;
@@ -6358,7 +6364,7 @@ void tx_and_sidetone_key (int state)
           ptt_key();
         }
         if (current_tx_key_line) {digitalWrite (current_tx_key_line, tx_key_line_active_state);}
-        #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
+        #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_SO2R_BASE)
           if ((wk2_both_tx_activated) && (tx_key_line_2)) {
             digitalWrite (tx_key_line_2, HIGH);
           }
@@ -6371,7 +6377,9 @@ void tx_and_sidetone_key (int state)
         #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
           tone(sidetone_line, configuration.hz_sidetone);
         #else
-          digitalWrite(sidetone_line, HIGH);
+          if (sidetone_line) {
+            digitalWrite(sidetone_line, HIGH);
+          }
         #endif          
       }
       key_state = 1;
@@ -6379,7 +6387,7 @@ void tx_and_sidetone_key (int state)
       if ((state == 0) && (key_state)) {
         if (key_tx) {
           if (current_tx_key_line) {digitalWrite (current_tx_key_line, tx_key_line_inactive_state);}
-          #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
+          #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION) && !defined(FEATURE_SO2R_BASE)
             if ((wk2_both_tx_activated) && (tx_key_line_2)) {
               digitalWrite (tx_key_line_2, LOW);
             }
@@ -6392,7 +6400,9 @@ void tx_and_sidetone_key (int state)
           #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
             noTone(sidetone_line);
           #else
-            digitalWrite(sidetone_line, LOW);
+            if (sidetone_line) {
+              digitalWrite(sidetone_line, LOW);
+            }
           #endif
         }
         key_state = 0;
@@ -6582,6 +6592,11 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
           if (keyer_machine_mode == KEYER_NORMAL) {
             sending_mode = AUTOMATIC_SENDING_INTERRUPTED;
             automatic_sending_interruption_time = millis(); 
+
+            #ifdef FEATURE_SO2R_BASE
+              so2r_set_rx();
+            #endif
+
             return;
           }
         }   
@@ -6597,6 +6612,10 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
           service_web_server();
         }
       #endif //FEATURE_WEB_SERVER
+
+      #ifdef FEATURE_SO2R_SWITCHES
+        so2r_switches();
+      #endif      
       
     }  //while ((millis() < endtime) && (millis() > 200))
   
@@ -8526,9 +8545,11 @@ void beep()
       tone(sidetone_line, hz_high_beep, 200);
     // #endif
   #else
-    digitalWrite(sidetone_line, HIGH);
-    delay(200);
-    digitalWrite(sidetone_line, LOW);
+    if (sidetone_line) {
+      digitalWrite(sidetone_line, HIGH);
+      delay(200);
+      digitalWrite(sidetone_line, LOW);
+    }
   #endif
 }
 
@@ -8541,9 +8562,11 @@ void boop()
     delay(100);
     noTone(sidetone_line);
   #else
-    digitalWrite(sidetone_line, HIGH);
-    delay(100);
-    digitalWrite(sidetone_line, LOW);
+    if (sidetone_line) {
+      digitalWrite(sidetone_line, HIGH);
+      delay(100);
+      digitalWrite(sidetone_line, LOW);
+    }
   #endif    
 }
 
@@ -8558,9 +8581,11 @@ void beep_boop()
     delay(100);
     noTone(sidetone_line);
   #else
-    digitalWrite(sidetone_line, HIGH);
-    delay(200);
-    digitalWrite(sidetone_line, LOW);
+    if (sidetone_line) {
+      digitalWrite(sidetone_line, HIGH);
+      delay(200);
+      digitalWrite(sidetone_line, LOW);
+    }
   #endif     
 }
 
@@ -8575,9 +8600,11 @@ void boop_beep()
     delay(100);
     noTone(sidetone_line);
   #else
-    digitalWrite(sidetone_line, HIGH);
-    delay(200);
-    digitalWrite(sidetone_line, LOW);
+    if (sidetone_line) {
+      digitalWrite(sidetone_line, HIGH);
+      delay(200);
+      digitalWrite(sidetone_line, LOW);
+    }
   #endif         
 }
 
@@ -9121,9 +9148,25 @@ void service_send_buffer(byte no_print)
         if (send_buffer_array[0] == SERIAL_SEND_BUFFER_TX_CHANGE) {  // one byte for transmitter #
           remove_from_send_buffer();
           if (send_buffer_bytes > 1) {
-            if ((send_buffer_array[0] > 0) && (send_buffer_array[0] < 7)){
-              switch_to_tx_silent(send_buffer_array[0]);
-            }
+            // if ((send_buffer_array[0] > 0) && (send_buffer_array[0] < 7)){
+            //   switch_to_tx_silent(send_buffer_array[0]);
+            // }
+            #ifdef FEATURE_SO2R_BASE
+              if ((send_buffer_array[0] > 0) && (send_buffer_array[0] < 3)){
+                if (ptt_line_activated) {
+                  so2r_pending_tx = send_buffer_array[0];
+                }
+                else {
+                  so2r_tx = send_buffer_array[0];
+                  so2r_set_tx();
+                }
+              }
+            #else
+              if ((send_buffer_array[0] > 0) && (send_buffer_array[0] < 7)){
+                switch_to_tx_silent(send_buffer_array[0]);
+              }
+            #endif //FEATURE_SO2R_BASE
+
             remove_from_send_buffer();          
           }
         }
@@ -9647,51 +9690,52 @@ void winkey_set_pinconfig_command(byte incoming_serial_byte) {
     case 32: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_1_66; break;
     case 48: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_2_0; break;
   }
-
-  switch(incoming_serial_byte & 12) {
-    case 0:
-      key_tx = 0; 
-      #ifdef OPTION_WINKEY_2_SUPPORT
-      wk2_both_tx_activated = 0;
-      #endif
-      break;
-    case 4: 
-      key_tx = 1;
-      configuration.current_ptt_line = ptt_tx_1; 
-      current_tx_key_line = tx_key_line_1;
-      configuration.current_tx = 1;
-      #ifdef OPTION_WINKEY_2_SUPPORT
-      wk2_both_tx_activated = 0;
-      #endif
-      break;
-    case 8: 
-      key_tx = 1;
-      if (ptt_tx_2) {
-        configuration.current_ptt_line = ptt_tx_2;
-      } else {
-        configuration.current_ptt_line = ptt_tx_1;
-      }
-      if (tx_key_line_2) {
-        current_tx_key_line = tx_key_line_2;
-      } else {
+  #ifndef FEATURE_SO2R_BASE
+    switch(incoming_serial_byte & 12) {
+      case 0:
+        key_tx = 0; 
+        #ifdef OPTION_WINKEY_2_SUPPORT
+        wk2_both_tx_activated = 0;
+        #endif
+        break;
+      case 4: 
+        key_tx = 1;
+        configuration.current_ptt_line = ptt_tx_1; 
         current_tx_key_line = tx_key_line_1;
+        configuration.current_tx = 1;
+        #ifdef OPTION_WINKEY_2_SUPPORT
+        wk2_both_tx_activated = 0;
+        #endif
+        break;
+      case 8: 
+        key_tx = 1;
+        if (ptt_tx_2) {
+          configuration.current_ptt_line = ptt_tx_2;
+        } else {
+          configuration.current_ptt_line = ptt_tx_1;
+        }
+        if (tx_key_line_2) {
+          current_tx_key_line = tx_key_line_2;
+        } else {
+          current_tx_key_line = tx_key_line_1;
+        }
+        #ifdef OPTION_WINKEY_2_SUPPORT
+        wk2_both_tx_activated = 0;
+        #endif
+        break;
+      case 12:
+        key_tx = 1;
+        configuration.current_ptt_line = ptt_tx_1;
+        current_tx_key_line = tx_key_line_1; 
+        configuration.current_tx = 1;
+        #ifdef OPTION_WINKEY_2_SUPPORT
+        wk2_both_tx_activated = 1;
+        #endif
+        break;
       }
-      #ifdef OPTION_WINKEY_2_SUPPORT
-      wk2_both_tx_activated = 0;
-      #endif
-      break;
-    case 12:
-      key_tx = 1;
-      configuration.current_ptt_line = ptt_tx_1;
-      current_tx_key_line = tx_key_line_1; 
-      configuration.current_tx = 1;
-      #ifdef OPTION_WINKEY_2_SUPPORT
-      wk2_both_tx_activated = 1;
-      #endif
-      break;
-    }
 
-    config_dirty = 1;
+      config_dirty = 1;
+  #endif //FEATURE_SO2R_BASE
 
 }
 #endif
@@ -9914,7 +9958,9 @@ void winkey_admin_get_values_command() {
     if ((configuration.sidetone_mode == SIDETONE_ON) || (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY)) {byte_to_send = byte_to_send | 2;}
     if (current_tx_key_line == tx_key_line_1) {byte_to_send = byte_to_send | 4;}
     if (current_tx_key_line == tx_key_line_2) {byte_to_send = byte_to_send | 8;}
-    if (wk2_both_tx_activated) {byte_to_send = byte_to_send | 12;}
+    #ifndef FEATURE_SO2R_BASE
+      if (wk2_both_tx_activated) {byte_to_send = byte_to_send | 12;}
+    #endif
     if (ultimatic_mode == ULTIMATIC_DIT_PRIORITY) {byte_to_send = byte_to_send | 128;}
     if (ultimatic_mode == ULTIMATIC_DAH_PRIORITY) {byte_to_send = byte_to_send | 64;}  
     if (ptt_hang_time_wordspace_units == 1.33) {byte_to_send = byte_to_send | 16;}
@@ -10314,6 +10360,12 @@ void service_winkey(byte action) {
 
     winkey_last_activity = millis();
     if (winkey_status == WINKEY_NO_COMMAND_IN_PROGRESS) {
+
+      #if defined(FEATURE_SO2R_BASE)
+        if (incoming_serial_byte >= 128) {
+          so2r_command();
+        }
+      #endif //FEATURE_SO2R_BASE
 
       #if defined(OPTION_WINKEY_EXTENDED_COMMANDS_WITH_DOLLAR_SIGNS)
 
@@ -11012,6 +11064,42 @@ void service_winkey(byte action) {
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
           #endif //OPTION_WINKEY_2_SUPPORT  
+
+          #ifdef FEATURE_SO2R_BASE
+            case 0xF0: // Send SO2R device information
+              #ifdef DEBUG_WINKEY
+                debug_serial_port->println("service_winkey: WINKEY_ADMIN_COMMAND get SO2R device information");
+              #endif
+            
+              static const uint8_t device_info[] = { 0xAA, 0x55, 0xCC, 0x33, // Header
+                                                     1, 0, 0, // SO2R Major, minor, patch
+                                                     1, 0, // Protocol major, minor
+                                                     0, // capabilities - bit 0 is stereo reverse, others undefined
+                                                     };
+
+              for (uint8_t i=0; i<sizeof(device_info); i++) {
+                winkey_port_write(device_info[i], 1);
+              }
+
+              static const byte *name = (byte *)SO2R_DEVICE_NAME;
+              for (uint8_t i=0; i<sizeof(SO2R_DEVICE_NAME); i++) {
+                winkey_port_write(name[i], 1);
+              }
+
+              static const byte *version = (byte *)CODE_VERSION;
+              for (uint8_t i=0; i<sizeof(CODE_VERSION); i++) {
+                winkey_port_write(version[i], 1);
+              }
+              winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+              break;
+
+            case 0xFF: // No-op
+              debug_serial_port->println("service_winkey: NO-OP");
+              winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+              break;
+
+          #endif //FEATURE_SO2R_BASE
+
           default:
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             #ifdef DEBUG_WINKEY
@@ -16155,9 +16243,10 @@ void initialize_pins() {
     pinMode (ptt_tx_6, OUTPUT);
     digitalWrite (ptt_tx_6, ptt_line_inactive_state);
   }
-  pinMode (sidetone_line, OUTPUT);
-  digitalWrite (sidetone_line, LOW);
-
+  if (sidetone_line) {
+    pinMode (sidetone_line, OUTPUT);
+    digitalWrite (sidetone_line, LOW);
+  }
   if (tx_key_dit) {
     pinMode (tx_key_dit, OUTPUT);
     digitalWrite (tx_key_dit, tx_key_dit_and_dah_pins_inactive_state);
@@ -16279,6 +16368,53 @@ void initialize_pins() {
       digitalWrite(sequencer_5_pin,sequencer_pins_inactive_state);
     }
   #endif //FEATURE_SEQUENCER
+
+  #ifdef FEATURE_SO2R_BASE
+    if (so2r_tx_1) {
+      pinMode(so2r_tx_1, OUTPUT);
+    }
+
+    if (so2r_tx_2) {
+      pinMode(so2r_tx_2, OUTPUT);
+    }
+
+    if (so2r_rx_1) {
+      pinMode(so2r_rx_1, OUTPUT);
+    }
+
+    if (so2r_rx_1s) {
+      pinMode(so2r_rx_1s, OUTPUT);
+    }
+
+    if (so2r_rx_2) {
+      pinMode(so2r_rx_2, OUTPUT);
+    }
+
+    if (so2r_rx_2s) {
+      pinMode(so2r_rx_2s, OUTPUT);
+    }
+
+    if (so2r_rx_s) {
+      pinMode(so2r_rx_s, OUTPUT);
+    }
+
+    so2r_set_tx();
+    so2r_set_rx();
+
+    #ifdef FEATURE_SO2R_SWITCHES
+      if (so2r_tx_switch) {
+        pinMode(so2r_tx_switch, INPUT_PULLUP);
+      }
+
+      if (so2r_rx1_switch) {
+        pinMode(so2r_rx1_switch, INPUT_PULLUP);
+      }
+
+      if (so2r_rx2_switch) {
+        pinMode(so2r_rx2_switch, INPUT_PULLUP);
+      }
+    #endif // FEATURE_SO2R_SWITCHES
+  #endif // FEATURE_SO2R_BASE 
 
   if (ptt_input_pin){
     pinMode(ptt_input_pin,INPUT_PULLUP);
@@ -16659,7 +16795,9 @@ void initialize_keyer_state(){
     }
   #endif //OPTION_SAVE_MEMORY_NANOKEYER        
 
-  switch_to_tx_silent(1);
+  #ifndef FEATURE_SO2R_BASE
+    switch_to_tx_silent(1);
+  #endif
 
 }  
 
@@ -20571,6 +20709,284 @@ void sd_card_log(String string_to_log,byte byte_to_log){
 #endif //FEATURE_SD_CARD_SUPPORT
 
 //-------------------------------------------------------------------------------------------------------
+
+#ifdef FEATURE_SO2R_BASE
+void so2r_set_tx() {
+  if (so2r_tx == SO2R_TX_1) {
+    if (so2r_tx_1) {
+      digitalWrite(so2r_tx_1, HIGH);
+    }
+
+   if (so2r_tx_2) {
+      digitalWrite(so2r_tx_2, LOW);
+    }
+
+    current_tx_ptt_line = ptt_tx_1;
+    current_tx_key_line = tx_key_line_1;
+  }
+  else {
+    if (so2r_tx_1) {
+      digitalWrite(so2r_tx_1, LOW);
+    }
+
+   if (so2r_tx_2) {
+      digitalWrite(so2r_tx_2, HIGH);
+    }
+
+    if (ptt_tx_2) {
+        current_tx_ptt_line = ptt_tx_2;
+    } else {
+        current_tx_ptt_line = ptt_tx_1;
+    }
+    current_tx_key_line = tx_key_line_2;
+  }
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void so2r_set_rx() {
+  uint8_t rx;
+  if (so2r_latch && (so2r_ptt || (ptt_line_activated && (sending_mode == AUTOMATIC_SENDING)))) {
+    if (so2r_tx == 1) {
+      rx = 2;
+    } else {
+      rx = 1;
+    }
+  }
+  else {
+    rx = so2r_rx;
+  }
+
+  switch (rx) {
+    case SO2R_RX_1:
+    // Receive on radio 1 only
+      if (so2r_rx_1) {
+        digitalWrite(so2r_rx_1, HIGH);
+      }
+
+      if (so2r_rx_1s) {
+        digitalWrite(so2r_rx_1s, HIGH);
+      }
+
+      if (so2r_rx_2) {
+        digitalWrite(so2r_rx_2, LOW);
+      }
+
+      if (so2r_rx_2s) {
+        digitalWrite(so2r_rx_2s, LOW);
+      }
+
+      if (so2r_rx_s) {
+        digitalWrite(so2r_rx_s, LOW);
+      }
+      break;
+
+    case SO2R_RX_2:
+    // Receive on radio 2 only
+      if (so2r_rx_1) {
+        digitalWrite(so2r_rx_1, LOW);
+      }
+
+      if (so2r_rx_1s) {
+        digitalWrite(so2r_rx_1s, LOW);
+      }
+
+      if (so2r_rx_2) {
+        digitalWrite(so2r_rx_2, HIGH);
+      }
+
+      if (so2r_rx_2s) {
+        digitalWrite(so2r_rx_2s, HIGH);
+      }
+
+      if (so2r_rx_s) {
+        digitalWrite(so2r_rx_s, LOW);
+      }
+      break;
+
+    case SO2R_RX_S:
+    case SO2R_RX_R:
+    // Receive on radio 1 and 2 (stereo)
+      if (so2r_rx_1) {
+        digitalWrite(so2r_rx_1, LOW);
+      }
+
+      if (so2r_rx_1s) {
+        digitalWrite(so2r_rx_1s, HIGH);
+      }
+
+      if (so2r_rx_2) {
+        digitalWrite(so2r_rx_2, LOW);
+      }
+
+      if (so2r_rx_2s) {
+        digitalWrite(so2r_rx_2s, HIGH);
+      }
+
+      if (so2r_rx_s) {
+        digitalWrite(so2r_rx_s, HIGH);
+      }
+      break;
+  }
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void so2r_command() {
+  if ((incoming_serial_byte & 0xf0) == 0x90)
+  {
+    // 0 is RX 1
+    // 1 is RX 2
+    // 2 is RX 1 and RX2 stereo
+    // 3 is RX 1 and RX2 stereo (reverse if possible but this box doesn't have that capability) 
+    so2r_rx = (incoming_serial_byte & 3) + 1;
+    so2r_set_rx();
+  
+    byte tx = SO2R_TX_1;
+    if (incoming_serial_byte & 4) {
+      tx = SO2R_TX_2;
+    }
+
+    // Don't switch transmitter while transmitting.
+    if (tx == so2r_tx) {
+      so2r_pending_tx = 0;
+    }
+    else {
+      if (ptt_line_activated) {
+        so2r_pending_tx = tx;
+        #ifdef FEATURE_WINKEY_EMULATION
+          if (winkey_sending && winkey_host_open) {
+            // Fake a paddle interrupt to stop computer sending
+            winkey_port_write(0xc2|winkey_sending|winkey_xoff,0); // 0xc2 - BREAKIN bit set high
+            winkey_interrupted = 1;
+          }
+        #endif
+
+      } else {
+        so2r_tx = tx;
+        so2r_set_tx();
+      }
+    }
+    return;
+  }
+
+  #ifdef FEATURE_SO2R_ANTENNA
+    if ((incoming_serial_byte & 0xf0) == 0xa0)
+    {
+      so2r_antenna_1 = incoming_serial_byte & 0x0f;
+      // TBD:  Provide antenna information outputs
+      return;
+    }
+
+    if ((incoming_serial_byte & 0xf0) == 0xb0)
+    {
+      so2r_antenna_2 = incoming_serial_byte & 0x0f;
+      // TBD:  Provide antenna information outputs
+      return;
+    }
+  #endif //FEATURE_SO2R_ANTENNA
+
+  switch (incoming_serial_byte) {
+      case 0x80:  // SO2R Close
+        #ifdef FEATURE_SO2R_SWITCHES
+          so2r_open = 0;
+          so2r_debounce = 0;
+          so2r_latch = 0;
+        #endif
+        break;
+
+      case 0x81:  // SO2R Open
+        #ifdef FEATURE_SO2R_SWITCHES
+          so2r_open = 1;
+        #endif
+        break;
+
+      case 0x82:  // PTT Off
+        so2r_ptt = 0;
+        break;
+
+      case 0x83:  // PTT On
+        so2r_ptt = 1;
+        ptt_key();
+        break;
+
+      case 0x84:  // Latch Off
+        so2r_latch = 0;
+        so2r_set_rx();
+        break;
+
+      case 0x85:  // Latch On
+        so2r_latch = 1;
+        so2r_set_rx();
+        break;
+  }
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+#ifdef FEATURE_SO2R_SWITCHES
+  void so2r_switches()
+    {
+      if (so2r_open) {
+      return;
+    }
+
+    if (so2r_debounce) {
+      if ((so2r_debounce_time - millis()) < 20) {
+        return;
+      }
+      so2r_debounce = 0;
+    }
+
+    if (so2r_tx_switch) {
+      uint8_t tx = 1;
+      if (digitalRead(so2r_tx_switch) != LOW) {
+        tx = 2;
+      }
+      if (tx != so2r_tx)
+      {
+        if (ptt_line_activated) {
+          #ifdef FEATURE_WINKEY_EMULATION
+            if (winkey_sending && winkey_host_open) {
+              // Fake a paddle interrupt to stop computer sending
+              winkey_port_write(0xc2|winkey_sending|winkey_xoff,0); // 0xc2 - BREAKIN bit set high
+              winkey_interrupted = 1;
+            }
+          #endif
+        }
+        else {
+          so2r_tx = tx;
+          so2r_set_tx();
+          so2r_debounce_time = millis();
+          so2r_debounce = 1;
+        }
+      }
+
+      if (so2r_rx1_switch) {
+        uint8_t rx = 1; // RX 1
+        if (digitalRead(so2r_rx1_switch) != LOW) {
+          if (so2r_rx2_switch && (digitalRead(so2r_rx2_switch) != LOW)) {
+            rx = 3; // Stereo
+          }
+          else {
+            rx = 2; // RX 2
+          }
+        }
+
+        if (rx != so2r_rx) {
+          so2r_rx = rx;
+          so2r_set_rx();
+          so2r_debounce_time = millis();
+          so2r_debounce = 1;
+        }
+      }
+    }
+  }
+#endif // FEATURE_SO2R_SWITCHES
+#endif //FEATURE_SO2R_BASE
+
+//-------------------------------------------------------------------------------------------------------
+
 
 // DL2DBG contributed code (adapted into code by Goody K3NG)
 // Based on https://forum.arduino.cc/index.php?topic=446209.15

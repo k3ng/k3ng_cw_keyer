@@ -294,3 +294,35 @@
 
 #define sidetone_volume_low_limit 10
 #define sidetone_volume_high_limit 500
+
+#ifdef FEATURE_SO2R_BASE
+  #ifdef FEATURE_POTENTIOMETER
+    #ifdef FEATURE_SO2R_SWITCHES
+      #ifdef FEATURE_SO2R_ANTENNAS
+        #define SO2R_DEVICE_NAME "SO2R Mini PSA"
+      #else
+        #define SO2R_DEVICE_NAME "SO2R Mini PS"
+      #endif
+    #else
+      #ifdef FEATURE_SO2R_ANTENNAS
+        #define SO2R_DEVICE_NAME "SO2R Mini PA"
+      #else
+        #define SO2R_DEVICE_NAME "SO2R Mini P"
+      #endif
+    #endif
+  #else
+    #ifdef FEATURE_SO2R_SWITCHES
+      #ifdef FEATURE_SO2R_ANTENNAS
+        #define SO2R_DEVICE_NAME "SO2R Mini SA"
+      #else
+        #define SO2R_DEVICE_NAME "SO2R Mini S"
+      #endif
+    #else
+      #ifdef FEATURE_SO2R_ANTENNAS
+        #define SO2R_DEVICE_NAME "SO2R Mini A"
+      #else
+        #define SO2R_DEVICE_NAME "SO2R Mini"
+      #endif
+    #endif
+  #endif
+#endif
