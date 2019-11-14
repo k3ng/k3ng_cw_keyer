@@ -1120,6 +1120,9 @@ Recent Update History
       Completed manual merge of contributed code for HARDWARE_YCCC_SO2R_MINI .  Testing in progress.  (Thanks, Paul, K1XM) 
       Includes FEATURE_SO2R_BASE, FEATURE_SO2R_SWITCHES, FEATURE_SO2R_ANTENNA  
 
+    2019.11.13.01
+      Various code compilation warning cleanups.  (Thanks, Paul, K1XM) 
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1134,7 +1137,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.11.08.03"
+#define CODE_VERSION "2019.11.13.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -9430,7 +9433,7 @@ void winkey_farnsworth_command(byte incoming_serial_byte) {
       configuration.wpm_farnsworth = incoming_serial_byte;
     }
   #else
-    byte dummy_byte = incoming_serial_byte; // to get rid of compiler warning about unused variable
+    (void)incoming_serial_byte; // to get rid of compiler warning about unused variable
   #endif //FEATURE_FFARNSWORTH
 
 }
@@ -9509,16 +9512,18 @@ void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_set_pot_parm1_command(byte incoming_serial_byte) {
 
-  //#ifdef FEATURE_POTENTIOMETER
   pot_wpm_low_value = incoming_serial_byte;
-  //#endif
+
 }
 #endif //FEATURE_WINKEY_EMULATION
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_set_pot_parm2_command(byte incoming_serial_byte) {
+
   #ifdef FEATURE_POTENTIOMETER
-  pot_wpm_high_value = (pot_wpm_low_value + incoming_serial_byte);
+    pot_wpm_high_value = (pot_wpm_low_value + incoming_serial_byte);
+  #else
+    (void)incoming_serial_byte; // to get rid of compiler warning about unused variable
   #endif
 }
 #endif //FEATURE_WINKEY_EMULATION
@@ -9540,7 +9545,7 @@ void winkey_set_pot_parm3_command (byte incoming_serial_byte) {
     #endif //OPTION_WINKEY_2_SUPPORT
     configuration.pot_activated = 1;
   #else
-    byte dummy_byte = incoming_serial_byte; // to get rid of compiler warning about unused variable
+    (void)incoming_serial_byte; // to get rid of compiler warning about unused variable
   #endif
 }
 #endif //FEATURE_WINKEY_EMULATION
@@ -18060,7 +18065,6 @@ void MouseRptParser::OnMouseMove(MOUSEINFO *mi){
     int current_dY = (mi->dY);
 
     /* X/Y method - doesn't work too well
-    /*
     if ((current_dX != last_dX) && (abs(current_dX) > abs(current_dY)) && (abs(current_dX) > 3)){
       dit_buffer = 1;
     } 

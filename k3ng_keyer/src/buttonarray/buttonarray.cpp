@@ -1,7 +1,9 @@
 #include "Arduino.h"
 #include "buttonarray.h"
 
-Button::InitLimits(uint8_t step){
+/* contributed by W6IPA */
+
+void Button::InitLimits(uint8_t step){
   /* 
   
   typical button values:
@@ -25,7 +27,7 @@ Button::InitLimits(uint8_t step){
     step_ = step;
 }
 
-Button::InitLimits(uint8_t step, int32_t low_limit, int32_t high_limit){
+void Button::InitLimits(uint8_t step, int32_t low_limit, int32_t high_limit){
     low_limit_ = low_limit;
     high_limit_ = high_limit;
     step_ = step;
@@ -46,7 +48,7 @@ int32_t Button::low_limit(){
 }
 
 // Add all buttons in incremental order
-ButtonArray::AddAll(){
+void ButtonArray::AddAll(){
     size_t index;
     if (reversed_) {
         index = nb_buttons_ - 1;
@@ -65,14 +67,14 @@ ButtonArray::AddAll(){
 
 // Adds a single button to the array
 // Takes a step (rank in the resistor ladder), and the index in the button array.
-ButtonArray::Add(uint8_t step, uint8_t index){
+void ButtonArray::Add(uint8_t step, uint8_t index){
     Button button;
     button.InitLimits(step);
     button_array_[index] = button;
     high_limit_ = max(button.high_limit() , high_limit_);
 }
 
-ButtonArray::Add(uint8_t step, uint8_t index, int32_t low_limit, int32_t high_limit){
+void ButtonArray::Add(uint8_t step, uint8_t index, int32_t low_limit, int32_t high_limit){
     Button button;
     button.InitLimits(step, low_limit, high_limit);
     button_array_[index] = button;
@@ -84,15 +86,19 @@ int32_t ButtonArray::high_limit(){
 }
 
 int8_t ButtonArray::ReadButtons(){
-    uint32_t analog_read_temp =0;
-    uint32_t analog_line_read_average=0;
+    uint32_t analog_read_temp = 0;
+    uint32_t analog_line_read_average = 0;
+    //uint8_t number_of_samples = 0;
 
-    for (byte x = 0; x < 19; x++){
+    for (byte x = 0; x < NUMBER_OF_BUTTON_READS_TO_AVERAGE; x++){
         analog_read_temp = analogRead(pin_);
         if (analog_read_temp <= high_limit_){
             analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2;
+            //analog_line_read_average = analog_line_read_average + analog_read_temp;
+            //number_of_samples++;
         }
     }
+    //analog_line_read_average = analog_line_read_average / number_of_samples;
     for (size_t x = 0; x < nb_buttons_; x++) {
         Button button = button_array_[x];
         if (button.Pressed(analog_line_read_average)) {

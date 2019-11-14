@@ -5,6 +5,7 @@
     #define MAX_ARRAY_BUTTONS 13
 #endif
 #define DEBOUNCE_MS 200
+#define NUMBER_OF_BUTTON_READS_TO_AVERAGE 19
 
 #if defined(ARDUINO_ARCH_ESP32)
     #define max_value 4095
@@ -15,6 +16,8 @@
 #define r1_value 10
 #define r2_value 1
 
+/* contributed by W6IPA */
+
 class Button {
     private:
         int32_t low_limit_;
@@ -22,8 +25,8 @@ class Button {
         uint8_t step_;
     public:
         Button(){};
-        InitLimits(uint8_t step);
-        InitLimits(uint8_t step, int32_t low_limit, int32_t high_limit);
+        void InitLimits(uint8_t step);
+        void InitLimits(uint8_t step, int32_t low_limit, int32_t high_limit);
         bool Pressed(int32_t analog_reading);
         int32_t high_limit();
         int32_t low_limit();
@@ -41,9 +44,9 @@ class ButtonArray {
     public:
         uint32_t last_pressed_ms;
         ButtonArray(uint8_t pin, uint8_t nb, bool reversed): pin_(pin), nb_buttons_(nb), reversed_(reversed){};
-        AddAll();
-        Add(uint8_t step, uint8_t index);
-        Add(uint8_t step, uint8_t index, int32_t low_limit, int32_t high_limit);
+        void AddAll();
+        void Add(uint8_t step, uint8_t index);
+        void Add(uint8_t step, uint8_t index, int32_t low_limit, int32_t high_limit);
         int32_t high_limit();
         int8_t Pressed();
         bool Pressed(uint8_t index);
