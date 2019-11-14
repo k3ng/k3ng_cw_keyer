@@ -17151,7 +17151,15 @@ void initialize_display(){
     if (LCD_COLUMNS < 9){
       lcd_center_print_timed("K3NGKeyr",0,4000);
     } else {
-      lcd_center_print_timed("K3NG Keyer",0,4000);
+      #ifdef OPTION_PERSONALIZED_STARTUP_SCREEN
+        if (LCD_ROWS = 2) {
+	  #ifdef OPTION_DO_NOT_SAY_HI                                 // if we wish to display the custom field on the second line, we can't say 'hi'
+	    lcd_center_print_timed(custom_startup_field, 1, 4000);    // display the custom field on the second line of the display, maximum field length is the number of columns
+          #endif                                                      // OPTION_DO_NOT_SAY_HI
+	}  
+	else if (LCD_ROWS > 2) lcd_center_print_timed(custom_startup_field, 2, 4000);      // display the custom field on the third line of the display, maximum field length is the number of columns
+      #endif                                                          // OPTION_PERSONALIZED_STARTUP_SCREEN
+      if (LCD_ROWS > 3) lcd_center_print_timed("V: " + CODE_VERSION, 3, 4000);             // display the code version on the fourth line of the display
     }
   #endif //FEATURE_DISPLAY
 
