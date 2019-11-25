@@ -65,7 +65,7 @@
 
       Note: in order to get the FK-11 USB Host port working correctly you will need to:
       - Uncomment three lines in in file: k3ng_keyer.ino below 'note_usb_uncomment_lines'.
-      - Add line to file k3ng_cw_keyer/libraries/USB_Host_Shield_Library_2.0/settings.h: #define BOARD_MEGA_ADK
+      - Add line to file k3ng_cw_keyer/libraries/USB_Host_Shield_Library_2.0/settings.h, below 'Manual board activation': #define BOARD_MEGA_ADK
 */
 
 
