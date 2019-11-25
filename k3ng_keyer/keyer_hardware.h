@@ -60,12 +60,18 @@
 
     Funtronics FK-11 Programming Notes
 
-      Programming the unit is accomplished by selecting "Mega2560" as the target processor and uploading to the rear USB port with the front
-      switch set to the Arduino position.
+      Programming the unit is accomplished by selecting "Arduino Mega 2560" as the target processor and uploading to the rear USB port with the
+      front switch set to the Arduino position.
 
+      Note: in order to get the FK-11 display working correctly you will need to:
+      - Install FaBo_212_LCD_PCF8574 library
+      - Set the slave address to 0x27 in FaBo_212_LCD_PCF8574/src/FaBoLCD_PCF8574.h
+        #define PCF8574_SLAVE_ADDRESS 0x27
+      
       Note: in order to get the FK-11 USB Host port working correctly you will need to:
       - Uncomment three lines in in file: k3ng_keyer.ino below 'note_usb_uncomment_lines'.
-      - Add line to file k3ng_cw_keyer/libraries/USB_Host_Shield_Library_2.0/settings.h, below 'Manual board activation': #define BOARD_MEGA_ADK
+      - Add line to file k3ng_cw_keyer/libraries/USB_Host_Shield_Library_2.0/settings.h, below 'Manual board activation':
+        #define BOARD_MEGA_ADK
 */
 
 
