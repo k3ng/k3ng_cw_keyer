@@ -6811,8 +6811,7 @@ long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 //-------------------------------------------------------------------------------------------------------
 
 #ifdef FEATURE_COMMAND_BUTTONS
-void command_mode()
-{
+void command_mode() {
 
   keyer_machine_mode = KEYER_COMMAND_MODE;
   
@@ -6823,7 +6822,6 @@ void command_mode()
   #ifdef OPTION_WATCHDOG_TIMER
     wdt_disable();
   #endif //OPTION_WATCHDOG_TIMER
-
   
   byte looping;
   byte button_that_was_pressed = 0;
@@ -6925,10 +6923,7 @@ void command_mode()
         }
       #endif
 
-    } //while (looping)
-
-
-
+    }               //while (looping)
 // end new code
 
     #ifdef DEBUG_COMMAND_MODE
@@ -6969,10 +6964,22 @@ void command_mode()
             } else {
               lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
             }
-          #endif          
+          #endif
           send_dit();
           break;          
-        case 1: // E - announce spEed
+        case 1:    // E - announce spEed
+	  #ifdef FEATURE_DISPLAY
+            #if defined(OPTION_ADVANCED_SPEED_DISPLAY)
+              lcd_center_print_timed("Speed", 0, default_display_msg_delay);
+              lcd_center_print_timed(String(configuration.wpm) + " wpm - " + (configuration.wpm*5) + " cpm ", 1, default_display_msg_delay);
+              if (LCD_ROWS > 2) {
+	        lcd_center_print_timed(String(1200/configuration.wpm) + ":" + (((1200/configuration.wpm)*configuration.dah_to_dit_ratio)/100) + "ms 1:" + (float(configuration.dah_to_dit_ratio)/100.00), 2, default_display_msg_delay);
+	      }
+            #else                                                                       // OPTION_ADVANCED_SPEED_DISPLAY_DISPLAY
+              lcd_center_print_timed("Speed " + String(configuration.wpm) + " wpm", 0, default_display_msg_delay);
+            #endif                                                                      // OPTION_ADVANCED_SPEED_DISPLAY_DISPLAY
+          #endif                                                                        // FEATURE_DISPLAY
+   
           delay(250);
           sprintf(c, "%d", configuration.wpm);
           send_char(c[0],KEYER_NORMAL);
@@ -6985,7 +6992,7 @@ void command_mode()
           configuration.dah_buffer_off = 1;           
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
-            if (LCD_COLUMNS < 9){
+            if (LCD_COLUMNS < 9) {
               lcd_center_print_timed("Ultimatc", 0, default_display_msg_delay);
             } else {
               lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
@@ -7084,7 +7091,6 @@ void command_mode()
           command_speed_mode(COMMAND_SPEED_MODE_COMMAND_MODE_WPM); 
           break;
 
-
         #ifdef FEATURE_MEMORIES
           case 1221: command_program_memory(); break;                       // P - program a memory
         #endif //FEATURE_MEMORIES  Acknowledgement: LA3ZA fixed!
@@ -7115,7 +7121,7 @@ void command_mode()
         case 222: // O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN
           if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
             #ifdef FEATURE_DISPLAY
-              if (LCD_COLUMNS < 9){
+              if (LCD_COLUMNS < 9) {
                 lcd_center_print_timed("ST Off", 0, default_display_msg_delay);
               } else {
                 lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
@@ -7131,7 +7137,7 @@ void command_mode()
               if (LCD_COLUMNS < 9){
                 lcd_center_print_timed("ST Pdl O", 0, default_display_msg_delay);
               }
-              if (LCD_COLUMNS > 19){
+              if (LCD_COLUMNS > 19) {
                 lcd_center_print_timed("Sidetone Paddle Only", 0, default_display_msg_delay);
               } else {
                 lcd_center_print_timed("Sidetone", 0, default_display_msg_delay);
@@ -7147,7 +7153,7 @@ void command_mode()
             beep();
           } else {
             #ifdef FEATURE_DISPLAY
-              if (LCD_COLUMNS < 9){
+              if (LCD_COLUMNS < 9) {
                 lcd_center_print_timed("ST On", 0, default_display_msg_delay);
               } else {
                 lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
@@ -7162,9 +7168,7 @@ void command_mode()
           config_dirty = 1;        
           break; 
 
-
-        case 121: command_set_serial_number(); break;  // R - Set serial number
-
+	case 121: command_set_serial_number(); break;  // R - Set serial number
 
         case 2: command_tuning_mode(); break;                             // T - tuning mode
         #ifdef FEATURE_POTENTIOMETER
@@ -7172,7 +7176,7 @@ void command_mode()
             if (configuration.pot_activated) {
               configuration.pot_activated = 0; 
               #ifdef FEATURE_DISPLAY
-                if (LCD_COLUMNS > 14){
+                if (LCD_COLUMNS > 14) {
                   lcd_center_print_timed("Pot Deactivated", 0, default_display_msg_delay);                  
                 } else {
                   lcd_center_print_timed("Pot Off", 0, default_display_msg_delay);
@@ -7244,7 +7248,6 @@ void command_mode()
                     send_char(55,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(32,KEYER_NORMAL);send_char(69,KEYER_NORMAL);send_char(69,KEYER_NORMAL);
                     break;   
 
-
         #ifdef FEATURE_ALPHABET_SEND_PRACTICE // enhanced by Fred, VK2EFL
           case 111:   // S - Alphabet Send Practice
             #ifdef FEATURE_DISPLAY
@@ -7261,8 +7264,7 @@ void command_mode()
             command_alphabet_send_practice();
             stay_in_command_mode = 0;
             break;
-        #endif  //FEATURE_ALPHABET_SEND_PRACTICE
-
+        #endif                                //FEATURE_ALPHABET_SEND_PRACTICE
  
         #ifdef FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE
           case 112:  // U - 5 Character Echo Practice
@@ -7271,8 +7273,15 @@ void command_mode()
             break;
         #endif //FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_PRACTICE
 
-        case 112211: // ? - status
-          
+        case 112211:                          // ? - status
+          #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Status",              0, default_display_msg_delay);
+            lcd_center_print_timed("speed, mode, weight", 1, default_display_msg_delay);
+            if(LCD_ROWS > 2) {
+	      lcd_center_print_timed("dit/dah ratio",     2, default_display_msg_delay);  / if 
+	    }
+          #endif                                        // FEATURE_DISPLAY
+
           delay(250);
           sprintf(c, "%d", configuration.wpm);
           send_char(c[0],KEYER_NORMAL);
@@ -7299,7 +7308,6 @@ void command_mode()
           send_char(' ',KEYER_NORMAL);
           send_char(' ',KEYER_NORMAL);
         
-
           sprintf(c, "%d", configuration.weighting);
           send_char(c[0],KEYER_NORMAL);
           send_char(c[1],KEYER_NORMAL);
@@ -7311,10 +7319,7 @@ void command_mode()
           send_char(c[1],KEYER_NORMAL);
           send_char(c[2],KEYER_NORMAL);
           send_char(' ',KEYER_NORMAL);          
-
           break; 
-
-
 
         case 9: // button was hit
                 Serial.print("Button - ");
@@ -12898,8 +12903,7 @@ void serial_set_pot_low_high(PRIMARY_SERIAL_CLS * port_to_use)
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use)
-{
+void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use) {
   int set_sidetone_hz = serial_get_number_input(4,(sidetone_hz_limit_low-1),(sidetone_hz_limit_high+1), port_to_use, RAISE_ERROR_MSG);
   if ((set_sidetone_hz > sidetone_hz_limit_low) && (set_sidetone_hz < sidetone_hz_limit_high)) {
     port_to_use->write("\r\nSetting sidetone to ");
@@ -12907,14 +12911,18 @@ void serial_set_sidetone_freq(PRIMARY_SERIAL_CLS * port_to_use)
     port_to_use->println(F(" hz"));
     configuration.hz_sidetone = set_sidetone_hz;
     config_dirty = 1;
+    #ifdef FEATURE_DISPLAY
+      if (LCD_COLUMNS < 9) lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+      else lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+    #endif                                                                    // FEATURE_DISPLAY
   }
 }
 #endif
 
 //---------------------------------------------------------------------
+	    
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use)
-{
+void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use) {
   int set_wpm = serial_get_number_input(3,0,1000, port_to_use, RAISE_ERROR_MSG);
   if (set_wpm > 0) {
     speed_set(set_wpm);
@@ -12926,9 +12934,9 @@ void serial_wpm_set(PRIMARY_SERIAL_CLS * port_to_use)
 #endif
 
 //---------------------------------------------------------------------
+	    
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_FARNSWORTH)
-void serial_set_farnsworth(PRIMARY_SERIAL_CLS * port_to_use)
-{
+void serial_set_farnsworth(PRIMARY_SERIAL_CLS * port_to_use) {
   int set_farnsworth_wpm = serial_get_number_input(3,-1,1000, port_to_use, RAISE_ERROR_MSG);
   if ((set_farnsworth_wpm > 0) || (set_farnsworth_wpm == 0)) {
     configuration.wpm_farnsworth = set_farnsworth_wpm;
@@ -15357,9 +15365,9 @@ void display_serial_number_character(char snumchar){
 
 #endif
 //---------------------------------------------------------------------
+	
 #ifdef FEATURE_MEMORIES
-byte play_memory(byte memory_number)
-{
+byte play_memory(byte memory_number) {
   
   unsigned int jump_back_to_y = 9999;
   byte jump_back_to_memory_number = 255;
@@ -15504,9 +15512,7 @@ byte play_memory(byte memory_number)
                     winkey_port_write(eeprom_byte_read,0);
                   #endif // OPTION_PROSIGN_SUPPORT
 
-
-
-                }
+		}
                 #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                   #if defined(OPTION_PROSIGN_SUPPORT)
                     if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
@@ -15560,7 +15566,6 @@ byte play_memory(byte memory_number)
             #endif    // FEATURE_DISPLAY
 
           }
-
           if (prosign_flag) {
             send_char(eeprom_byte_read,OMIT_LETTERSPACE); 
             prosign_flag = 0;
@@ -15667,7 +15672,7 @@ byte play_memory(byte memory_number)
                 if (delay_result) {   // if a paddle or button0 was hit during the delay, exit
                   return 0;
                 }
-                break;  // case D
+                break;                 // case D
 
               case 'E':                       // E - play serial number, then increment
                   send_serial_number(0,1,0);
@@ -15696,9 +15701,16 @@ byte play_memory(byte memory_number)
                 }
                 if ((input_error != 1) && (int_from_macro > sidetone_hz_limit_low) && (int_from_macro < sidetone_hz_limit_high)) {
                   configuration.hz_sidetone = int_from_macro;
+                  #ifdef FEATURE_DISPLAY
+                    if (LCD_COLUMNS < 9) lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+                    else lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+                  #endif                                                    // FEATURE_DISPLAY
                 }
                 break;
-
+	        if ((input_error != 1) && (int_from_macro > sidetone_hz_limit_low) && (int_from_macro < sidetone_hz_limit_high)) {
+                  configuration.hz_sidetone = int_from_macro;
+                }
+                break;
 
               case 'H':                       // H - Switch to Hell
                 char_send_mode = HELL;
