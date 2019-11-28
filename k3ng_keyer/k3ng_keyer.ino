@@ -12979,7 +12979,9 @@ void serial_tune_command (PRIMARY_SERIAL_CLS * port_to_use)
 
 }
 #endif
+	    
 //---------------------------------------------------------------------
+	    
 #ifdef FEATURE_TRAINING_COMMAND_LINE_INTERFACE
 
 String generate_callsign(byte callsign_mode) {
@@ -13241,7 +13243,6 @@ String generate_callsign(byte callsign_mode) {
 //                 }               
 //                 current_field = FIELD_CALLSIGN;
 //                 break;
-              
 //             }
 //             term.position(13,0);
 //             term.print(callsign);
@@ -13252,9 +13253,7 @@ String generate_callsign(byte callsign_mode) {
 //             term.position(15,0);
 //             term.print(F("                     ")); 
 //             term.position(15,0);           
-            
 //           }
-
 //         } //(user_input_buffer[0] == '\\')
 //       } //(user_input_buffer_characters > 0)
 //       process_user_input_buffer = 0; 
@@ -13296,24 +13295,18 @@ String generate_callsign(byte callsign_mode) {
 //           transition_time = millis();
 //         } //send_buffer_bytes == 0
 //         break;  //CONTEST_PRACTICE_CQ_SENT
-      
-      
 //     } //switch(overall_state)
-    
-
 //   } //while (loop1)
   
 //   configuration.hz_sidetone = previous_sidetone;
 //   configuration.wpm = previous_wpm;
 //   send_buffer_bytes = 0;
-
 // }  
 // #endif
 
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
-  
 
   byte menu_loop = 1;
   byte menu_loop2 = 1;
@@ -13351,7 +13344,6 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
       }
     }
       
-      
     incoming_char = toUpperCase(incoming_char);
     
     switch(incoming_char){
@@ -13370,23 +13362,19 @@ void serial_cw_practice(PRIMARY_SERIAL_CLS * port_to_use){
   check_serial_override = 0;
   key_tx = previous_key_tx_state;
   paddle_echo_buffer = 0;
-  
 }
 #endif
 
-
-
-
 //---------------------------------------------------------------------
+	    
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_receive_transmit_echo_menu(PRIMARY_SERIAL_CLS * port_to_use){
-  
 
   byte menu_loop = 1;
   byte menu_loop2 = 1;
   char incoming_char = ' ';
   
-  while(menu_loop){
+  while(menu_loop) {
   
     while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
       port_to_use->read();
@@ -13419,7 +13407,6 @@ void serial_receive_transmit_echo_menu(PRIMARY_SERIAL_CLS * port_to_use){
     }
       
     incoming_char = toUpperCase(incoming_char);
-    
 
     switch(incoming_char){
       case 'X': menu_loop = 0; break;
@@ -13436,20 +13423,16 @@ void serial_receive_transmit_echo_menu(PRIMARY_SERIAL_CLS * port_to_use){
       case 'Q': receive_transmit_echo_practice(port_to_use,ECHO_QSO_WORDS); break;          
     } //switch(incoming_char)
 
-  } //while(menu_loop)
+  } // while(menu_loop)
       
   port_to_use->println(F("Exiting receive / transmit echo practice..."));
-  
 }
 #endif
 
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
-void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practice_mode_called){
-
-
-
+void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use, byte practice_mode_called) {
 
   byte loop1 = 1;
   byte loop2 = 0;
@@ -13476,13 +13459,13 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
 
   #ifdef FEATURE_DISPLAY
     lcd_clear();
-    if (LCD_COLUMNS > 17){
+    if (LCD_COLUMNS > 17) {
       lcd_center_print_timed("Receive / Transmit", 0, default_display_msg_delay);
       lcd_center_print_timed("Echo Practice", 1, default_display_msg_delay);
     } else {
       lcd_center_print_timed("RX / TX", 0, default_display_msg_delay);
-      if (LCD_ROWS > 1){
-        if (LCD_COLUMNS < 9){
+      if (LCD_ROWS > 1) {
+        if (LCD_COLUMNS < 9) {
           lcd_center_print_timed("EchoPrct", 1, default_display_msg_delay);
         } else {
           lcd_center_print_timed("Echo Practice", 1, default_display_msg_delay); 
@@ -13504,7 +13487,7 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
     incoming_char = port_to_use->read();
   }
 
-  while (loop1){
+  while (loop1) {
 
 
     if (practice_mode_called == ECHO_MIXED){
@@ -13515,7 +13498,7 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
 
     progressive_step_counter = 255;
     
-    switch (practice_mode){
+    switch (practice_mode) {
       case CALLSIGN_INTERNATIONAL:
       case CALLSIGN_US:
       case CALLSIGN_EUROPEAN:
@@ -13552,10 +13535,9 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
         break; 
     } //switch (practice_mode)
     
-    
     loop2 = 1;
     
-    while (loop2){
+    while (loop2) {
   
       user_send_loop = 1;
       user_sent_cw = "";
@@ -13563,7 +13545,7 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
       x = 0;
 
       // send the CW to the user
-      while ((x < (cw_to_send_to_user.length())) && (x < progressive_step_counter)){
+      while ((x < (cw_to_send_to_user.length())) && (x < progressive_step_counter)) {
         send_char(cw_to_send_to_user[x],KEYER_NORMAL);
         // test
         port_to_use->print(cw_to_send_to_user[x]);
@@ -13574,7 +13556,6 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
 
       while (user_send_loop) {
         // get their paddle input
-
 
         #ifdef FEATURE_DISPLAY
           service_display();
@@ -13613,13 +13594,13 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
         if ((paddle_hit) && (millis() > (last_element_time + (float(600/configuration.wpm) * length_letterspace)))) {
           #ifdef DEBUG_PRACTICE_SERIAL
             debug_serial_port->println(F("receive_transmit_echo_practice: user_send_loop: hit length_letterspace"));
-          #endif
+          #endif                                  // DEBUG_PRACTICE_SERIAL
           incoming_char = convert_cw_number_to_ascii(cw_char);
           port_to_use->print(incoming_char);
           #ifdef FEATURE_DISPLAY
             display_scroll_print_char(incoming_char);
             service_display();
-          #endif
+          #endif                                   // FEATURE_DISPLAY
           user_sent_cw.concat(incoming_char);
           cw_char = 0;
           paddle_hit = 0;
@@ -13637,47 +13618,61 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
 
         }
 
-
         // does the user want to exit?
         while(port_to_use->available() > 0) {
           incoming_char = port_to_use->read();
           user_send_loop = 0;
           loop1 = 0;
           loop2 = 0;
+          if (correct_answer_led) digitalWrite(correct_answer_led, LOW);                 // clear the LEDs as we exit
+          if (wrong_answer_led)   digitalWrite(wrong_answer_led,   LOW);
         }
         #ifdef FEATURE_COMMAND_BUTTONS
-          while (analogbuttonread(0)) {
+          while (analogbuttonread(0)) {                                                 // can exit by pressing the Command Mode button
             user_send_loop = 0;
             loop1 = 0;
             loop2 = 0;
+            if (correct_answer_led) digitalWrite(correct_answer_led, LOW);              // clear the LEDs as we exit
+            if (wrong_answer_led)   digitalWrite(wrong_answer_led,   LOW);
           }
-        #endif 
+        #endif                                                                          // FEATURE_COMMAND_BUTTONS
 
+      }                                                                                 //while (user_send_loop)
 
-      } //while (user_send_loop)
+      if (loop1 && loop2) {
 
-      if (loop1 && loop2){
-
-        if (progressive_step_counter < 255){  // we're in progressive mode
-          if (user_sent_cw.substring(0,progressive_step_counter) == cw_to_send_to_user.substring(0,progressive_step_counter)){ 
+        if (progressive_step_counter < 255) {                                          // we're in progressive mode
+          if (user_sent_cw.substring(0,progressive_step_counter) == cw_to_send_to_user.substring(0,progressive_step_counter)) {  // characters are correct
+            if (correct_answer_led) digitalWrite(correct_answer_led, HIGH);             // set the correct answer LED high
+            if (wrong_answer_led)   digitalWrite(wrong_answer_led,    LOW);             // clear the wrong answer LED
+            beep();
             send_char(' ',0);
             send_char(' ',0);
             progressive_step_counter++;
-            if (progressive_step_counter == 6){
+            if (progressive_step_counter == 6) {                                        // all five characters are correct
               loop2 = 0;
-              beep();
-              send_char(' ',0);
-              send_char(' ',0);
+              unsigned int NEWtone               =  400;                                // the initial tone freuency for the tone sequence
+              unsigned int TONEduration          =   50;                                // define the duration of each tone element in the tone sequence to drive a speaker
+              for (int k=0; k<6; k++) {                                                 // a loop to generate some increasing tones
+                tone(sidetone_line,NEWtone);                                            // generate a tone on the speaker pin
+                delay(TONEduration);                                                    // hold the tone for the specified delay period
+                noTone(sidetone_line);                                                  // turn off the tone
+                NEWtone = NEWtone*1.25;                                                 // calculate a new value for the tone frequency
+              }                                                                         // end for
+              send_char(' ', 0);
+              send_char(' ', 0);
             }
-          } else {
+          } else {                                                                      // characters are wrong
+            if (wrong_answer_led)   digitalWrite(wrong_answer_led,  HIGH);              // set the wrong answer LED high
+            if (correct_answer_led) digitalWrite(correct_answer_led, LOW);              // clear the correct answer LED
             boop();
-            send_char(' ',0);
-            send_char(' ',0);
+            send_char(' ', 0);
+            send_char(' ', 0);
           }
-        } else {  
-          if (user_sent_cw == cw_to_send_to_user){     
+        } else {
+          if (user_sent_cw == cw_to_send_to_user) {                                     // we only get here if progressive_step_counter is equal to 255
             beep();
-            send_char(' ',0);
+            send_char(' ', 0);
             send_char(' ',0);        
             loop2 = 0;
           } else {
@@ -13687,9 +13682,8 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
           }
         }
       }
-
-    } //loop2
-  } //loop1
+    }                           // loop2
+  }                             // loop1
   
   speed_mode = speed_mode_before; 
   configuration.keyer_mode = keyer_mode_before;
@@ -13698,17 +13692,16 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use,byte practi
 }
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 
-
 //---------------------------------------------------------------------
+	    
 #if defined(FEATURE_SERIAL) && defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 void serial_receive_practice_menu(PRIMARY_SERIAL_CLS * port_to_use,byte practice_mode){
-  
 
   byte menu_loop = 1;
   byte menu_loop2 = 1;
   char incoming_char = ' ';
   
-  while(menu_loop){
+  while(menu_loop) {
   
     while (port_to_use->available() > 0) {  // clear out the buffer if anything is there
       port_to_use->read();
