@@ -6947,7 +6947,8 @@ void command_mode()
             lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
           #endif
           send_dit();
-          break; 
+          break;
+
         case 2111: // B - Iambic mode
           configuration.keyer_mode = IAMBIC_B;
           keyer_mode_before = IAMBIC_B;
@@ -6959,6 +6960,7 @@ void command_mode()
           #endif          
           send_dit();
           break;
+
         case 2121: // C - Single paddle mode
           configuration.keyer_mode = SINGLE_PADDLE;
           keyer_mode_before = SINGLE_PADDLE;
@@ -6971,13 +6973,15 @@ void command_mode()
             }
           #endif          
           send_dit();
-          break;          
+          break;
+
         case 1: // E - announce spEed
           delay(250);
           sprintf(c, "%d", configuration.wpm);
           send_char(c[0],KEYER_NORMAL);
           send_char(c[1],KEYER_NORMAL);
-          break; 
+          break;
+
         case 211: // D - Ultimatic mode
           configuration.keyer_mode = ULTIMATIC;
           keyer_mode_before = ULTIMATIC;
@@ -6993,13 +6997,15 @@ void command_mode()
           #endif                    
           send_dit();
           break; 
+
         #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
           case 1121: command_sidetone_freq_adj(); break;                    // F - adjust sidetone frequency
           // #if defined(FEATURE_SINEWAVE_SIDETONE)
           //   case 2212: command_sidetone_volume_adj(); break;                    // Q - adjust sinewave sidetone volume
           // #endif
         #endif
-        case 221: // G - switch to buG mode
+
+	  case 221: // G - switch to buG mode
           configuration.keyer_mode = BUG;
           keyer_mode_before = BUG;
           config_dirty = 1;
@@ -7008,7 +7014,8 @@ void command_mode()
           #endif          
           send_dit();
           break;  
-        case 1111:   // H - set weighting and dah to dit ratio to defaults
+
+	  case 1111:   // H - set weighting and dah to dit ratio to defaults
           configuration.weighting = default_weighting;
           configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
           config_dirty = 1;
@@ -7162,7 +7169,6 @@ void command_mode()
           config_dirty = 1;        
           break; 
 
-
         case 121: command_set_serial_number(); break;  // R - Set serial number
 
 
@@ -7192,13 +7198,15 @@ void command_mode()
             send_dit();
             break; 
         #endif
-        case 122: // W - change wpm
+
+	  case 122: // W - change wpm
           command_speed_mode(COMMAND_SPEED_MODE_KEYER_WPM); 
           break;                            
         #ifdef FEATURE_MEMORIES
           case 2122: command_set_mem_repeat_delay(); break; // Y - set memory repeat delay
         #endif  
-        case 2112: stay_in_command_mode = 0; break;     // X - exit command mode
+ 
+	  case 2112: stay_in_command_mode = 0; break;     // X - exit command mode
         #ifdef FEATURE_AUTOSPACE
           case 2211: // Z - Autospace
             if (configuration.autospace_active) {
@@ -7233,14 +7241,107 @@ void command_mode()
             }
             break;
         #endif
+//        #ifdef FEATURE_MEMORIES
+//          case 12222: play_memory(0); break;
+//          case 11222: play_memory(1); break;
+//          case 11122: play_memory(2); break;
+//          case 11112: play_memory(3); break;
+//          case 11111: play_memory(4); break;
+//        #endif
+
         #ifdef FEATURE_MEMORIES
-          case 12222: play_memory(0); break;
-          case 11222: play_memory(1); break;
-          case 11122: play_memory(2); break;
-          case 11112: play_memory(3); break;
-          case 11111: play_memory(4); break;
-        #endif
-        case 121212:send_char(75,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(78,KEYER_NORMAL);send_char(71,KEYER_NORMAL);send_char(32,KEYER_NORMAL);
+          case 12222:
+            if (number_of_memories > 0) {
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("Memory #1", 0, default_display_msg_delay);
+                #ifdef OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
+                  command_display_memory(0);
+                #endif                                                           // OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
+              #endif                                                             // FEATURE_DISPLAY
+              play_memory(0);
+            } else {
+              #ifdef FEATURE_DISPLAY
+                if (LCD_COLUMNS > 17) lcd_center_print_timed("Invalid memory #1", 0, default_display_msg_delay);
+                else if (LCD_COLUMNS > 13) lcd_center_print_timed("Invalid mem #1", 0, default_display_msg_delay);
+              #endif                                                             // FEATURE_DISPLAY
+              beep_boop();
+            }
+            break;
+
+          case 11222:
+            if (number_of_memories > 1) {
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("Memory #2", 0, default_display_msg_delay);
+                #ifdef OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
+                  command_display_memory(1);
+                #endif                                                           // OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
+              #endif                                                             // FEATURE_DISPLAY
+              play_memory(1);
+            } else {
+              #ifdef FEATURE_DISPLAY
+                if (LCD_COLUMNS > 17) lcd_center_print_timed("Invalid memory #2", 0, default_display_msg_delay);
+                else if (LCD_COLUMNS > 13) lcd_center_print_timed("Invalid mem #2", 0, default_display_msg_delay);
+              #endif                                                             // FEATURE_DISPLAY
+              beep_boop();
+            }
+            break;
+
+	  case 11122:
+            if (number_of_memories > 2) {
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("Memory #3", 0, default_display_msg_delay);
+                #ifdef OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
+                  command_display_memory(2);
+                #endif                                                           // OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
+              #endif                                                             // FEATURE_DISPLAY
+              play_memory(2);
+            } else {
+              #ifdef FEATURE_DISPLAY
+                if (LCD_COLUMNS > 17) lcd_center_print_timed("Invalid memory #3", 0, default_display_msg_delay);
+                else if (LCD_COLUMNS > 13) lcd_center_print_timed("Invalid mem #3", 0, default_display_msg_delay);
+              #endif                                                             // FEATURE_DISPLAY
+              beep_boop();
+            }
+            break;
+
+	  case 11112:
+            if (number_of_memories > 3) {
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("Memory #4", 0, default_display_msg_delay);
+                #ifdef OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
+                  command_display_memory(3);
+                #endif                                                           // OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
+              #endif                                                             // FEATURE_DISPLAY
+              play_memory(3);
+            } else {
+              #ifdef FEATURE_DISPLAY
+                if (LCD_COLUMNS > 17) lcd_center_print_timed("Invalid memory #4", 0, default_display_msg_delay);
+                else if (LCD_COLUMNS > 13) lcd_center_print_timed("Invalid mem #4", 0, default_display_msg_delay);
+              #endif                                                             // FEATURE_DISPLAY
+              beep_boop();
+            }
+            break;
+
+	  case 11111:
+            if (number_of_memories > 4) {
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("Memory #5", 0, default_display_msg_delay);
+                #ifdef OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
+                  command_display_memory(4);
+                #endif                                                           // OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
+              #endif                                                             // FEATURE_DISPLAY
+              play_memory(4);
+            } else {
+              #ifdef FEATURE_DISPLAY
+                if (LCD_COLUMNS > 17) lcd_center_print_timed("Invalid memory #5", 0, default_display_msg_delay);
+                else if (LCD_COLUMNS > 13) lcd_center_print_timed("Invalid mem #5", 0, default_display_msg_delay);
+              #endif                                                             // FEATURE_DISPLAY
+              beep_boop();
+            }
+            break;
+        #endif                                                                   // FEATURE_MEMORIES
+
+	case 121212:send_char(75,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(78,KEYER_NORMAL);send_char(71,KEYER_NORMAL);send_char(32,KEYER_NORMAL);
                     send_char(55,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(32,KEYER_NORMAL);send_char(69,KEYER_NORMAL);send_char(69,KEYER_NORMAL);
                     break;   
 
@@ -7311,10 +7412,7 @@ void command_mode()
           send_char(c[1],KEYER_NORMAL);
           send_char(c[2],KEYER_NORMAL);
           send_char(' ',KEYER_NORMAL);          
-
           break; 
-
-
 
         case 9: // button was hit
                 Serial.print("Button - ");
@@ -7375,6 +7473,30 @@ void command_mode()
 #endif //FEATURE_COMMAND_BUTTONS
 
 //-------------------------------------------------------------------------------------------------------
+
+void command_display_memory(byte memory_number) {
+ 
+  #ifdef FEATURE_DISPLAY
+    byte eeprom_byte_read = 0;
+    char memory_char[LCD_COLUMNS];                                                        // an array of char to hold the retrieved memory from EEPROM
+    int j;
+    int fill_char;                                                                        // a flag that is set if we need to fill the char array with spaces
+ 
+    j = 0;
+    fill_char = 0;
+    for(int y = (memory_start(memory_number)); y < (memory_start(memory_number)) + LCD_COLUMNS; y++) {
+      eeprom_byte_read = EEPROM.read(y);                                                  // read memory characters from EEPROM
+      if (eeprom_byte_read == 255) fill_char = 1;                                         // if it is the 'end of stored memory' character set a flag
+      if (!fill_char) memory_char[j] = eeprom_byte_read;                                  // save the retrieved character in the character array
+      else memory_char[j] = ' ';                                                          // else fill the rest of the array with spaces
+      j++;                                                                                // move to the next character to be stored in the array
+    }                                                                                     // end for
+    lcd_center_print_timed(memory_char, 1, default_display_msg_delay);                    // write the retrieved char array to line 2 of LCD display
+  #endif                                                                                  // FEATURE_DISPLAY
+}                                                                                         // end command_display_memory
+
+//-------------------------------------------------------------------------------------------------------
+
 #if defined(FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE) && defined(FEATURE_COMMAND_BUTTONS)
 void command_progressive_5_char_echo_practice(){
 
