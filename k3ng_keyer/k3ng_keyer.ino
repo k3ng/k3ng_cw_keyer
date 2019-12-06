@@ -6828,7 +6828,7 @@ void command_mode()
     wdt_disable();
   #endif //OPTION_WATCHDOG_TIMER
 
-  
+  char weight_deci[] = "00";
   byte looping;
   byte button_that_was_pressed = 0;
   byte paddle_hit = 0;
@@ -7376,47 +7376,83 @@ void command_mode()
             break;
         #endif //FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_PRACTICE
 
-        case 112211: // ? - status
-          
-          delay(250);
+
+        case 112211:                                           // ? - status
+          #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("Status", 0, default_display_msg_delay);
+            lcd_center_print_timed("wpm  " + String(configuration.wpm), 1, default_display_msg_delay);
+            delay(250);
+          #endif                                                         // FEATURE_DISPLAY
           sprintf(c, "%d", configuration.wpm);
           send_char(c[0],KEYER_NORMAL);
           send_char(c[1],KEYER_NORMAL);
-          send_char(' ',KEYER_NORMAL);
-          
-          switch(keyer_mode_before){
+          send_char(' ' ,KEYER_NORMAL);
+
+          switch(keyer_mode_before) {
             case IAMBIC_A:
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("mode  Iambic A", 1, default_display_msg_delay);
+                delay(250);
+              #endif                                                     // FEATURE_DISPLAY
               send_char('A',KEYER_NORMAL);
               break;
             case IAMBIC_B:
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("mode  Iambic B", 1, default_display_msg_delay);
+                delay(250);
+              #endif                                                     // FEATURE_DISPLAY
               send_char('B',KEYER_NORMAL);
-              break;    
+              break;
             case SINGLE_PADDLE:
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("mode  Single Pdl", 1, default_display_msg_delay);
+                delay(250);
+              #endif                                                     // FEATURE_DISPLAY
               send_char('S',KEYER_NORMAL);
               break;
             case ULTIMATIC:
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("mode  Ultimatic", 1, default_display_msg_delay);
+                delay(250);
+              #endif                                                     // FEATURE_DISPLAY
               send_char('U',KEYER_NORMAL);
-              break; 
+              break;
             case BUG:
+              #ifdef FEATURE_DISPLAY
+                lcd_center_print_timed("mode  Bug", 1, default_display_msg_delay);
+                delay(250);
+              #endif                                                     // FEATURE_DISPLAY
               send_char('G',KEYER_NORMAL);
-              break;                                        
-          }
+              break;
+          }                                                            // switch(keyer_mode_before)
           send_char(' ',KEYER_NORMAL);
           send_char(' ',KEYER_NORMAL);
-        
 
+          #ifdef FEATURE_DISPLAY
+            lcd_center_print_timed("weighting  " + String(configuration.weighting), 1, default_display_msg_delay);
+            delay(250);
+          #endif                                                       // FEATURE_DISPLAY
           sprintf(c, "%d", configuration.weighting);
           send_char(c[0],KEYER_NORMAL);
           send_char(c[1],KEYER_NORMAL);
           send_char(' ',KEYER_NORMAL);
 
+          #ifdef FEATURE_DISPLAY
+            strcpy(weight_deci, "00");                                                      // reset the two character array
+            if ((configuration.dah_to_dit_ratio % 100) != 0) {                              // test if it is X.00
+              weight_deci[0] = ((configuration.dah_to_dit_ratio % 100) / 10) + '0';         // for cases where decimal part is 10 to 99
+              weight_deci[1] = (configuration.dah_to_dit_ratio % 10) + '0';                 // get the single digit units part
+            }                                                                               // end if ((configuration.dah_to_dit_ratio % 100) != 0)
+            lcd_center_print_timed("dah:dit  " + String(configuration.dah_to_dit_ratio / 100) + "." + weight_deci, 1, default_display_msg_delay);
+            delay(250);
+          #endif                                                                            // FEATURE_DISPLAY
           sprintf(c, "%d", configuration.dah_to_dit_ratio);
           send_char(c[0],KEYER_NORMAL);
           send_char('.',KEYER_NORMAL);
           send_char(c[1],KEYER_NORMAL);
           send_char(c[2],KEYER_NORMAL);
-          send_char(' ',KEYER_NORMAL);          
-          break; 
+          send_char(' ',KEYER_NORMAL);    
+          break;
 
         case 9: // button was hit
                 Serial.print("Button - ");
