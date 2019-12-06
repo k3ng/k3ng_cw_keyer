@@ -1814,7 +1814,11 @@ PRIMARY_SERIAL_CLS * debug_serial_port;
   byte paddle_echo = 0;
   long paddle_echo_buffer = 0;
   unsigned long paddle_echo_buffer_decode_time = 0;
-#endif //FEATURE_PADDLE_ECHO 
+#endif //FEATURE_PADDLE_ECHO
+
+#ifndef FEATURE_PADDLE_ECHO
+  long paddle_echo_buffer = 0;
+#endif                                 // FEATURE_PADDLE_ECHO
 
 #if defined(FEATURE_CW_DECODER) && defined(OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR)
   Goertzdetector cwtonedetector;
