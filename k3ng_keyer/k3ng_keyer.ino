@@ -7877,10 +7877,10 @@ void command_tuning_mode() {
         }
       }
     }
-   if ((analogbuttonread(0)) || ((paddle_pin_read(paddle_left) == LOW) && (paddle_pin_read(paddle_right) == LOW))) { // if paddles are squeezed or button0 pressed - exit
-     looping = 0;
-   }
-   
+    if ((analogbuttonread(0)) || ((paddle_pin_read(paddle_left) == LOW) && (paddle_pin_read(paddle_right) == LOW))) { // if paddles are squeezed or button0 pressed - exit
+      looping = 0;
+    }
+  
   }
   sending_mode = MANUAL_SENDING;
   tx_and_sidetone_key(0);
@@ -7892,10 +7892,8 @@ void command_tuning_mode() {
   dah_buffer = 0;
 }
 #endif //FEATURE_COMMAND_BUTTONS
+	
 //-------------------------------------------------------------------------------------------------------
-
-
-
 
 // #if defined(FEATURE_SINEWAVE_SIDETONE)
 //   void sidetone_adj(int hz) {
@@ -7912,10 +7910,9 @@ void command_tuning_mode() {
 //         }
 //       #endif   
 //     }
-
 //   }
 
-// #else //FEATURE_SINEWAVE_SIDETONE
+// #else // FEATURE_SINEWAVE_SIDETONE
 
   void sidetone_adj(int hz) {
 
@@ -7930,16 +7927,15 @@ void command_tuning_mode() {
         }
       #endif   
     }
-
   }
 
-// #endif //FEATURE_SINEWAVE_SIDETONE
+// #endif // FEATURE_SINEWAVE_SIDETONE
 
 //-------------------------------------------------------------------------------------------------------
 
 // #if defined(FEATURE_SINEWAVE_SIDETONE)
 
-// void sidetone_adj_volume(int vo) { //dl2dbg
+// void sidetone_adj_volume(int vo) {                            //dl2dbg
 
 //   if ((vo > 0) && ((configuration.sidetone_volume + vo) > sidetone_volume_high_limit)){
 //     configuration.sidetone_volume = sidetone_volume_high_limit;
@@ -7949,33 +7945,28 @@ void command_tuning_mode() {
 //       configuration.sidetone_volume = sidetone_volume_low_limit;
 //       config_dirty = 1;
 //     } else {
-//         if (((configuration.sidetone_volume + vo) >= sidetone_volume_low_limit) && ((configuration.sidetone_volume + vo) <= sidetone_volume_high_limit)){
-//           configuration.sidetone_volume = configuration.sidetone_volume + vo;
-//           config_dirty = 1;
-//         }
+//       if (((configuration.sidetone_volume + vo) >= sidetone_volume_low_limit) && ((configuration.sidetone_volume + vo) <= sidetone_volume_high_limit)){
+//         configuration.sidetone_volume = configuration.sidetone_volume + vo;
+//         config_dirty = 1;
+//       }
 //     }
 //   }
-
-
-
-
-
 //   if (config_dirty) {
 //     compute_sinetone(configuration.hz_sidetone,configuration.sidetone_volume);
 //     #if defined(FEATURE_DISPLAY) && defined(OPTION_MORE_DISPLAY_MSGS)
-//       if (LCD_COLUMNS < 9){
+//       if (LCD_COLUMNS < 9) {
 //         lcd_center_print_timed(String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
 //       } else {
 //         lcd_center_print_timed("Sidetone " + String(map(configuration.sidetone_volume,sidetone_volume_low_limit,sidetone_volume_high_limit,0,100)) + "%", 0, default_display_msg_delay);
 //       }
 //     #endif   
 //   }
-
 // }
 
 // #endif //FEATURE_SINEWAVE_SIDETONE
 
 //-------------------------------------------------------------------------------------------------------
+	
 #if defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
 void command_sidetone_freq_adj() {
 
@@ -7993,28 +7984,44 @@ void command_sidetone_freq_adj() {
     tone(sidetone_line, configuration.hz_sidetone);
     if (paddle_pin_read(paddle_left) == LOW) {
       #ifdef FEATURE_DISPLAY
-        sidetone_adj(5);   
+	#ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+	  sidetone_adj(-5);
+	#else
+	  sidetone_adj(5);
+	#endif                                               // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION  
         if (LCD_COLUMNS < 9){
           lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
         } else {   
           lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);  
         }      
       #else
-        sidetone_adj(1);
-      #endif
+	#ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+	  sidetone_adj(-1);
+	#else
+	  sidetone_adj(1);
+	#endif                                              // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+      #endif                                                // FEATURE_DISPLAY
       delay(10);
     }
     if (paddle_pin_read(paddle_right) == LOW) {
       #ifdef FEATURE_DISPLAY
-        sidetone_adj(-5);
+	#ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+	  sidetone_adj(5);  
+	#else
+	  sidetone_adj(-5);
+	#endif                                              // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
         if (LCD_COLUMNS < 9){
           lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
         } else {   
           lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);  
         }        
       #else
-        sidetone_adj(-1);
-      #endif
+        #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+	   sidetone_adj(1); 
+        #else
+	    sidetone_adj(-1);
+	#endif                                              // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+      #endif                                                // FEATURE_DISPLAY
       delay(10);
     }
     while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
@@ -8028,13 +8035,11 @@ void command_sidetone_freq_adj() {
   }
   while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   noTone(sidetone_line);
-
 }
-#endif //FEATURE_COMMAND_BUTTONS
-
-
+#endif                                                        //FEATURE_COMMAND_BUTTONS
 
 //-------------------------------------------------------------------------------------------------------
+
 // #if defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE) && defined(FEATURE_SINEWAVE_SIDETONE)
 // void command_sidetone_volume_adj() {
 
@@ -8092,13 +8097,11 @@ void command_sidetone_freq_adj() {
 //   noTone(sidetone_line);
 
 // }
-// #endif //defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE) && defined(FEATURE_SINEWAVE_SIDETONE)
-
+// #endif // defined(FEATURE_COMMAND_BUTTONS) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE) && defined(FEATURE_SINEWAVE_SIDETONE)
 
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_COMMAND_BUTTONS
-void command_speed_mode(byte mode)
-{
+void command_speed_mode(byte mode) {
 
   byte looping = 1;
   #ifndef FEATURE_DISPLAY
@@ -8128,17 +8131,33 @@ void command_speed_mode(byte mode)
   while (looping) {
     send_dit();
     if ((paddle_pin_read(paddle_left) == LOW)) {
-      if (mode == COMMAND_SPEED_MODE_KEYER_WPM){
-        speed_change(1);
+      if (mode == COMMAND_SPEED_MODE_KEYER_WPM) {
+        #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+	  speed_change(-1);
+	#else
+	  speed_change(1);
+	#endif                                      // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
       } else {
-        speed_change_command_mode(1);
-      }
-    }
-    if ((paddle_pin_read(paddle_right) == LOW)) {
-      if (mode == COMMAND_SPEED_MODE_KEYER_WPM){
-        speed_change(-1);
-      } else {
+      #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
         speed_change_command_mode(-1);
+      #else
+        speed_change_command_mode(1);
+      #endif                                        // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+      }                                             // endif (mode == COMMAND_SPEED_MODE_KEYER_WPM)
+    }                                               // end while looping
+    if ((paddle_pin_read(paddle_right) == LOW)) {
+      if (mode == COMMAND_SPEED_MODE_KEYER_WPM) {
+        #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+          speed_change(1);
+	#else
+          speed_change(-1);
+	#endif                                      // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+      } else {
+        #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+          speed_change_command_mode(1);
+	#else
+          speed_change_command_mode(-1);
+	#endif                                      // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
       }
     }
     while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0) ))  // if paddles are squeezed or button0 pressed - exit
@@ -8170,11 +8189,11 @@ void command_speed_mode(byte mode)
     send_char(c[1],KEYER_NORMAL);    
   #endif
 
- 
-
 }
 #endif //FEATURE_COMMAND_BUTTONS
+	
 //------------------------------------------------------------------
+	
 #ifndef FEATURE_DISPLAY
 void send_tx() {
 
@@ -8291,8 +8310,7 @@ byte analogbuttonread(byte button_number) {
 //------------------------------------------------------------------
 
 #ifdef FEATURE_COMMAND_BUTTONS
-void check_command_buttons()
-{
+void check_command_buttons() {
 
   #ifdef DEBUG_LOOP
     debug_serial_port->println(F("loop: entering check_buttons"));
@@ -8376,8 +8394,12 @@ void check_command_buttons()
         key_tx = 0;
         // do stuff if this is a command button hold down
         while (button_array.Held(analogbuttontemp)) {
-          if (paddle_pin_read(paddle_left) == LOW) {                     // left paddle increase speed
-            speed_change(1);
+          if (paddle_pin_read(paddle_left) == LOW) { 
+ 	    #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+              speed_change(-1);                                           // left paddle decrease speed
+	    #else
+	      speed_change(1);                                            // left paddle increase speed
+	    #endif                                                        // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
             previous_sidetone_mode = configuration.sidetone_mode;
             configuration.sidetone_mode = SIDETONE_ON; 
             sending_mode = MANUAL_SENDING;
@@ -8387,8 +8409,12 @@ void check_command_buttons()
             dit_buffer = 0;
             
             #ifdef DEBUG_BUTTONS
-              debug_serial_port->println(F("\ncheck_buttons: speed_change(1)"));
-            #endif //DEBUG_BUTTONS            
+	      #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+		debug_serial_port->println(F("\ncheck_buttons: speed_change(-1)"));
+ 	      #else
+		debug_serial_port->println(F("\ncheck_buttons: speed_change(1)"));
+	      #endif                                                 // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION                                                      
+            #endif                                                   // DEBUG_BUTTONS            
 
             #if defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_POTENTIOMETER)
               if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
@@ -8398,8 +8424,12 @@ void check_command_buttons()
             #endif
 
           }
-          if (paddle_pin_read(paddle_right) == LOW) {                    // right paddle decreases speed
-            speed_change(-1);
+          if (paddle_pin_read(paddle_right) == LOW) {
+ 	    #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+              speed_change(1);                                           // right paddle increase speed
+	    #else
+	      speed_change(-1);                                          // right paddle decrease speed
+	    #endif                                                       
             previous_sidetone_mode = configuration.sidetone_mode;
             configuration.sidetone_mode = SIDETONE_ON; 
             sending_mode = MANUAL_SENDING;
@@ -8409,8 +8439,12 @@ void check_command_buttons()
             dah_buffer = 0;
 
             #ifdef DEBUG_BUTTONS
-              debug_serial_port->println(F("\ncheck_buttons: speed_change(-1)"));
-            #endif //DEBUG_BUTTONS            
+	      #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+                debug_serial_port->println(F("\ncheck_buttons: speed_change(1)"));
+	      #else
+                debug_serial_port->println(F("\ncheck_buttons: speed_change(-1)"));
+              #endif                                // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+            #endif                                  // DEBUG_BUTTONS            
 
             #if defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_POTENTIOMETER)
               if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
@@ -8421,7 +8455,7 @@ void check_command_buttons()
           }
         }
         key_tx = 1;
-      }  //(analogbuttontemp == 0)
+      }  // (analogbuttontemp == 0)
       if ((analogbuttontemp > 0) && (analogbuttontemp < analog_buttons_number_of_buttons)) {
         while (button_array.Held(analogbuttontemp)) {
           if (((paddle_pin_read(paddle_left) == LOW) || (paddle_pin_read(paddle_right) == LOW)) && (analogbuttontemp < (number_of_memories + 1))){
@@ -8445,7 +8479,7 @@ void check_command_buttons()
             configuration.sidetone_mode = previous_sidetone_mode;
         }
       }
-    //} // button hold
+    //}                                  // button hold
   }
   last_button_action = millis();
   #ifdef FEATURE_SLEEP
@@ -8453,7 +8487,7 @@ void check_command_buttons()
   #endif //FEATURE_SLEEP
   
 }
-#endif //FEATURE_COMMAND_BUTTONS
+#endif                                    // FEATURE_COMMAND_BUTTONS
 
 //-------------------------------------------------------------------------------------------------------
 
