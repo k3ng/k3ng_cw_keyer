@@ -1173,6 +1173,8 @@ Recent Update History
   #include "keyer_features_and_options_tinykeyer.h"
 #elif defined(HARDWARE_FK_10)
   #include "keyer_features_and_options_fk_10.h"  
+#elif defined(HARDWARE_FK_11)
+  #include "keyer_features_and_options_fk_11.h"
 #elif defined(HARDWARE_MAPLE_MINI)//sp5iou 20180328
   #include "keyer_features_and_options_maple_mini.h"
 #elif defined(HARDWARE_GENERIC_STM32F103C)//sp5iou 20180329
@@ -1233,6 +1235,9 @@ Recent Update History
 #elif defined(HARDWARE_FK_10)
   #include "keyer_pin_settings_fk_10.h"
   #include "keyer_settings_fk_10.h"
+#elif defined(HARDWARE_FK_11)
+  #include "keyer_pin_settings_fk_11.h"
+  #include "keyer_settings_fk_11.h"
 #elif defined(HARDWARE_MAPLE_MINI)
   #include "keyer_pin_settings_maple_mini.h"
   #include "keyer_settings_maple_mini.h"
