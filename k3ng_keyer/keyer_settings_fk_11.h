@@ -1,3 +1,5 @@
+// Funtronics FK-11
+
 // Initial and hardcoded settings
 #define initial_speed_wpm 26             // "factory default" keyer speed setting
 #define initial_command_mode_speed_wpm 20 // "factory default" command mode speed setting 
@@ -40,8 +42,9 @@
 #define winkey_xoff_threshold 20         // the number of chars in the buffer when we begin sending XOFFs
 #define winkey_xon_threshold 10          // the number of chars in the buffer below which we deactivate XOFF
 #define default_memory_repeat_time 3000  // time in milliseconds
-#define LCD_COLUMNS 20
-#define LCD_ROWS 4
+#define LCD_COLUMNS 16
+#define LCD_ROWS 2
+#define lcd_i2c_address_mathertel_PCF8574 0x27             // I2C address of display
 #define hell_pixel_microseconds 4025
 #define program_memory_limit_consec_spaces 1
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
@@ -50,7 +53,7 @@
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
 #define cw_echo_timing_factor 0.25
 #define winkey_paddle_echo_buffer_decode_timing_factor 0.25
-#define potentiometer_always_on 1
+#define potentiometer_always_on 0
 #define ptt_interlock_check_every_ms 100
 #define ptt_interlock_active_state HIGH
 #define unknown_cw_character '*'
@@ -66,9 +69,8 @@
 #define serial_program_memory_buffer_size 500
 #define eeprom_write_time_ms 30000
 
-
 #ifdef FEATURE_COMMAND_BUTTONS
-  #define analog_buttons_number_of_buttons 8
+  #define analog_buttons_number_of_buttons 5  // includes the command button (command button + 3 memory buttons = 4)
   #define analog_buttons_r1 10
   #define analog_buttons_r2 1
 #endif
@@ -99,11 +101,11 @@
 
 
 #ifdef FEATURE_WINKEY_EMULATION
-  #ifdef OPTION_WINKEY_UCXLOG_9600_BAUD
+  #ifdef OPTION_WINKEY_UCXLOG_9600_BAUD || defined(FEATURE_SO2R_BASE)
     #define WINKEY_DEFAULT_BAUD 9600
   #else
     #define WINKEY_DEFAULT_BAUD 1200
-  #endif //OPTION_WINKEY_UCXLOG_9600_BAUD
+  #endif //OPTION_WINKEY_UCXLOG_9600_BAUD  || FEATURE_SO2R_BASE
 // alter these below to map alternate sidetones for Winkey interface protocol emulation
 #ifdef OPTION_WINKEY_2_SUPPORT
 	#define WINKEY_SIDETONE_1 3759
@@ -145,6 +147,7 @@
 #endif //FEATURE_WINKEY_EMULATION
 
 
+
 #define PRIMARY_SERIAL_PORT &Serial
 #define PRIMARY_SERIAL_PORT_BAUD 115200     // This applies only when the port is in Command Line Interface mode.  In Winkey mode it will default to 1200.
 
@@ -153,7 +156,8 @@
   #define SECONDARY_SERIAL_PORT_BAUD 115200
 #endif
 
-#define CW_DECODER_SCREEN_COLUMNS 40        // word wrap at this many columns
+
+#define CW_DECODER_SCREEN_COLUMNS 120        // word wrap at this many columns
 #define CW_DECODER_SPACE_PRINT_THRESH 4.5   // print space if no tone for this many element lengths
 #define CW_DECODER_SPACE_DECODE_THRESH 2.0  // invoke character decode if no tone for this many element lengths
 #define CW_DECODER_NOISE_FILTER 20          // ignore elements shorter than this (mS)
@@ -177,12 +181,12 @@
 #if defined(FEATURE_SLEEP)
   #define KEYER_AWAKE_PIN_AWAKE_STATE HIGH
   #define KEYER_AWAKE_PIN_ASLEEP_STATE LOW
-#endif
+#endif 
 
 #if defined(FEATURE_ETHERNET)
   // #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
   // #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
-  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.178")
+  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.179")
   #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
 
   #define FEATURE_ETHERNET_GATEWAY {192,168,1,1}                   // default gateway
@@ -196,7 +200,7 @@
 
 #define FEATURE_INTERNET_LINK_MAX_LINKS 2
 #define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
-#define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500
+#define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500 
 
 #if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
   #define KEYPAD_ROWS 4 //KeyPad Rows
@@ -248,7 +252,6 @@
   #define dfrobot_btnNONE   255 // do not change
 
 #endif
-
 
 #define sequencer_pins_active_state HIGH
 #define sequencer_pins_inactive_state LOW
