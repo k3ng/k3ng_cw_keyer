@@ -1134,8 +1134,11 @@ Recent Update History
       Added OPTION_PERSONALIZED_STARTUP_SCREEN and custom_startup_field to feature and settings files of all hardware profiles (from pull request 78)  
 
     2019.12.07.03
-      Resolved conflict and merged pull request 83 ( https://github.com/k3ng/k3ng_cw_keyer/pull/83/)
+      Resolved conflict and merged pull request 83 ( https://github.com/k3ng/k3ng_cw_keyer/pull/83/) Thanks, Fred, VK2EFL
       Added OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION  to feature and settings files of all hardware profiles (OPTION from pull request 83)
+
+    2019.12.07.04
+      Resolved conflict and merged pull request 84 ( https://github.com/k3ng/k3ng_cw_keyer/pull/84/) Thanks, Fred, VK2EFL
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1151,7 +1154,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.12.07.03"
+#define CODE_VERSION "2019.12.07.04"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
