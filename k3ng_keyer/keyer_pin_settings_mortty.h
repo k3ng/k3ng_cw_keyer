@@ -86,10 +86,8 @@ FEATURE_SIDETONE_SWITCH
   #define led_ring_le     A8 //4    //Latch
 #endif //FEATURE_LED_RING
 
-#ifdef FEATURE_ALPHABET_SEND_PRACTICE
-  #define correct_answer_led 0
-  #define wrong_answer_led 0
-#endif //FEATURE_ALPHABET_SEND_PRACTICE
+#define correct_answer_led 0
+#define wrong_answer_led 0
 
 #ifdef FEATURE_PTT_INTERLOCK
   #define ptt_interlock 0  // this pin disables PTT and TX KEY
