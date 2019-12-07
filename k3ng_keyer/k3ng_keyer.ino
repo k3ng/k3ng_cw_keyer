@@ -1123,6 +1123,14 @@ Recent Update History
     2019.11.13.01
       Various code compilation warning cleanups.  (Thanks, Paul, K1XM) 
 
+    2019.12.07.01
+      Updated version number for multiple merged pull requests
+        https://github.com/k3ng/k3ng_cw_keyer/pull/78 - Custom startup text - Thanks, Fred, VK2EFL
+        https://github.com/k3ng/k3ng_cw_keyer/pull/80 - FK-11 Support - Thanks, Ben git1k2 
+        https://github.com/k3ng/k3ng_cw_keyer/pull/82 - Additional display info - Thanks, Fred, VK2EFL
+      Fixed errant text at line 7293 from merge of pull request 82
+
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1137,7 +1145,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.11.13.01"
+#define CODE_VERSION "2019.12.07.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -7282,9 +7290,9 @@ void command_mode() {
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Status",              0, default_display_msg_delay);
             lcd_center_print_timed("speed, mode, weight", 1, default_display_msg_delay);
-            if(LCD_ROWS > 2) {
-	      lcd_center_print_timed("dit/dah ratio",     2, default_display_msg_delay);  / if 
-	    }
+            if(LCD_ROWS > 2){
+	            lcd_center_print_timed("dit/dah ratio",     2, default_display_msg_delay);
+	          }
           #endif                                        // FEATURE_DISPLAY
 
           delay(250);
