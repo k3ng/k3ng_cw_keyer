@@ -98,4 +98,5 @@
 
 // #define OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS
 // #define OPTION_PERSONALIZED_STARTUP_SCREEN        // displays a user defined string of characters on the second or fourth row of the screen during startup. 1602 display requires OPTION_DO_NOT_SAY_HI
+// #define OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION        // reverses the up/down direction when using the paddles to change the wpm or sidetone frequency
 
