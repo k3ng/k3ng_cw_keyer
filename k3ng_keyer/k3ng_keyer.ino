@@ -1130,6 +1130,9 @@ Recent Update History
         https://github.com/k3ng/k3ng_cw_keyer/pull/82 - Additional display info - Thanks, Fred, VK2EFL
       Fixed errant text at line 7293 from merge of pull request 82
 
+    2019.12.07.02
+      Added OPTION_PERSONALIZED_STARTUP_SCREEN and custom_startup_field to feature and settings files of all hardware profiles (from pull request 78)  
+
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1145,7 +1148,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.12.07.01"
+#define CODE_VERSION "2019.12.07.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -17138,13 +17141,13 @@ void initialize_display(){
     if (LCD_COLUMNS < 9){
       lcd_center_print_timed("K3NGKeyr",0,4000);
     } else {
+      lcd_center_print_timed("K3NG Keyer",0,4000);
       #ifdef OPTION_PERSONALIZED_STARTUP_SCREEN
         if (LCD_ROWS == 2) {
-	  #ifdef OPTION_DO_NOT_SAY_HI                                 // if we wish to display the custom field on the second line, we can't say 'hi'
-	    lcd_center_print_timed(custom_startup_field, 1, 4000);    // display the custom field on the second line of the display, maximum field length is the number of columns
+	        #ifdef OPTION_DO_NOT_SAY_HI                                 // if we wish to display the custom field on the second line, we can't say 'hi'
+	          lcd_center_print_timed(custom_startup_field, 1, 4000);    // display the custom field on the second line of the display, maximum field length is the number of columns
           #endif                                                      // OPTION_DO_NOT_SAY_HI
-	}  
-	else if (LCD_ROWS > 2) lcd_center_print_timed(custom_startup_field, 2, 4000);      // display the custom field on the third line of the display, maximum field length is the number of columns
+	      } else if (LCD_ROWS > 2) lcd_center_print_timed(custom_startup_field, 2, 4000);      // display the custom field on the third line of the display, maximum field length is the number of columns
       #endif                                                          // OPTION_PERSONALIZED_STARTUP_SCREEN
       if (LCD_ROWS > 3) lcd_center_print_timed("V: " + String(CODE_VERSION), 3, 4000);             // display the code version on the fourth line of the display
     }
