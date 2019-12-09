@@ -69,6 +69,7 @@
   #define PROSIGN_SK 135
   #define PROSIGN_SN 136
   #define PROSIGN_HH 137    // iz0rus
+  #define PROSIGN_SOS 138
   #define PROSIGN_END 138  // iz0rus
 #endif
 
