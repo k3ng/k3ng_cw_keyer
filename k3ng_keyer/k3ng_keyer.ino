@@ -12818,11 +12818,12 @@ void service_paddle_echo()
           if ((byte_temp > PROSIGN_START) && (byte_temp < PROSIGN_END)){
             primary_serial_port->print(prosign_temp[0]);
             primary_serial_port->print(prosign_temp[1]);
+            if(strlen(prosign_temp) == 3) primary_serial_port->print(prosign_temp[2]);
             #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
               secondary_serial_port->print(prosign_temp[0]);
               secondary_serial_port->print(prosign_temp[1]);
-             if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
-             #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
+              if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
+            #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
           } else {
             if (configuration.cli_mode == CLI_MILL_MODE_KEYBOARD_RECEIVE){
               primary_serial_port->println();
@@ -15686,6 +15687,7 @@ byte play_memory(byte memory_number) {
                       #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                         secondary_serial_port->print(prosign_temp[0]);
                         secondary_serial_port->print(prosign_temp[1]);
+                        if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
                       #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
                     } else {
                       primary_serial_port->write(eeprom_byte_read);
