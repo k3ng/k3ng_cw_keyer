@@ -9077,6 +9077,7 @@ void send_char(byte cw_char, byte omit_letterspace)
         case PROSIGN_SK: send_the_dits_and_dahs("...-.-");break;
         case PROSIGN_SN: send_the_dits_and_dahs("...-.");break;
         case PROSIGN_HH: send_the_dits_and_dahs("........");break;  // iz0rus
+        case PROSIGN_SOS: send_the_dits_and_dahs("...---..."); break;
       #endif 
 
       #ifdef OPTION_NON_ENGLISH_EXTENSIONS
@@ -12764,6 +12765,7 @@ void service_paddle_echo()
               prosign_temp = convert_prosign(byte_temp);
               display_scroll_print_char(prosign_temp[0]);
               display_scroll_print_char(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) display_scroll_print_char(prosign_temp[2]);
             } else {
               display_scroll_print_char(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
             }
@@ -12773,6 +12775,7 @@ void service_paddle_echo()
               prosign_temp = convert_prosign(ascii_temp);
               display_scroll_print_char(prosign_temp[0]);
               display_scroll_print_char(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) display_scroll_print_char(prosign_temp[2]);
             } else {
               switch (ascii_temp){
                 case 220: ascii_temp = 0;break; // U_umlaut  (D, ...)
@@ -12818,7 +12821,8 @@ void service_paddle_echo()
             #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
               secondary_serial_port->print(prosign_temp[0]);
               secondary_serial_port->print(prosign_temp[1]);
-            #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
+             if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
+             #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
           } else {
             if (configuration.cli_mode == CLI_MILL_MODE_KEYBOARD_RECEIVE){
               primary_serial_port->println();
@@ -15005,17 +15009,13 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   #endif
 
   port_to_use->println(F(">"));
-  
 }
 #endif
 
 //---------------------------------------------------------------------
 
-
-
 #if defined(OPTION_PROSIGN_SUPPORT)
-char * convert_prosign(byte prosign_code)
-{
+char * convert_prosign(byte prosign_code) {
 
   switch(prosign_code){
     case PROSIGN_AA: return((char*)"AA"); break;
@@ -15028,17 +15028,15 @@ char * convert_prosign(byte prosign_code)
     case PROSIGN_SK: return((char*)"SK"); break;
     case PROSIGN_SN: return((char*)"SN"); break;
     case PROSIGN_HH: return((char*)"HH"); break; // iz0rus
+    case PROSIGN_SOS: return((char*)"SOS"); break;
     default: return((char*)""); break;
-
   }
-
 }
 #endif //OPTION_PROSIGN_SUPPORT
 
 //---------------------------------------------------------------------
 
-int convert_cw_number_to_ascii (long number_in)
-{
+int convert_cw_number_to_ascii (long number_in) {
 
   // number_in:  1 = dit, 2 = dah, 9 = a space
 
@@ -15116,7 +15114,6 @@ int convert_cw_number_to_ascii (long number_in)
       case 12121: return 60; break; // AR (store as ascii < ) // sp5iou
     #endif //OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
 
-
     #if defined(OPTION_PROSIGN_SUPPORT)
       #if !defined(OPTION_NON_ENGLISH_EXTENSIONS)
         case 1212:   return PROSIGN_AA; break;
@@ -15130,7 +15127,8 @@ int convert_cw_number_to_ascii (long number_in)
       case 111212:   return PROSIGN_SK; break;
       case 11121:    return PROSIGN_SN; break;
       case 11111111: return PROSIGN_HH; break;  // iz0rus
-    #else //OPTION_PROSIGN_SUPPORT
+      case 111222111: return PROSIGN_SOS; break;
+     #else //OPTION_PROSIGN_SUPPORT
       case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou //aaaaaaa
     #endif //OPTION_PROSIGN_SUPPORT
 
@@ -15154,16 +15152,13 @@ int convert_cw_number_to_ascii (long number_in)
       case 221121: return 142; break;    // Ž
     #endif //OPTION_NON_ENGLISH_EXTENSIONS
 
-
     default: 
       #ifdef OPTION_UNKNOWN_CHARACTER_ERROR_TONE
         boop();
       #endif  //OPTION_UNKNOWN_CHARACTER_ERROR_TONE
       return unknown_cw_character; 
       break;
-
   }
-
 }
 
 //---------------------------------------------------------------------
@@ -15234,6 +15229,7 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
               prosign_temp = convert_prosign(eeprom_temp);
               port_to_use->print(prosign_temp[0]);
               port_to_use->print(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) port_to_use->print(prosign_temp[2]);
             } else {
               port_to_use->write(eeprom_temp);
             }
@@ -15686,6 +15682,7 @@ byte play_memory(byte memory_number) {
                     if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
                       primary_serial_port->print(prosign_temp[0]);
                       primary_serial_port->print(prosign_temp[1]);
+                      if(strlen(prosign_temp) == 3) primary_serial_port->print(prosign_temp[2]);
                       #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                         secondary_serial_port->print(prosign_temp[0]);
                         secondary_serial_port->print(prosign_temp[1]);
@@ -19657,12 +19654,9 @@ void web_print_page_keyer_settings_process(EthernetClient client){
 
 //-------------------------------------------------------------------------------------------------------
 
-
 #if defined(FEATURE_WEB_SERVER) && defined(FEATURE_MEMORIES)
 
-void web_print_page_memories(EthernetClient client){
-
-
+void web_print_page_memories(EthernetClient client) {
 
   int memory_number_to_send = 0;
   int last_memory_location;
@@ -19671,9 +19665,6 @@ void web_print_page_memories(EthernetClient client){
     byte eeprom_temp = 0;
     static char * prosign_temp = 0;
   #endif
-
-
-
 
   web_print_header(client);
 
@@ -19690,7 +19681,6 @@ void web_print_page_memories(EthernetClient client){
   if ((web_server_incoming_string.indexOf("?m") > 0) && (web_server_incoming_string.length() > (web_server_incoming_string.indexOf("?m")+2))) {
     memory_number_to_send = ((web_server_incoming_string.charAt(web_server_incoming_string.indexOf("?m")+2)-48)*10) + (web_server_incoming_string.charAt(web_server_incoming_string.indexOf("?m")+3)-48);
 
-
 // web_client_print(client,web_server_incoming_string);
 // web_client_print(client,F("<br><br>"));
 
@@ -19706,15 +19696,12 @@ void web_print_page_memories(EthernetClient client){
     add_to_send_buffer(memory_number_to_send-1);
   }
 
-
   for(int i = 0;i < number_of_memories;i++){
     web_client_print(client,F("<a href=\"/mem?m"));
     if(i < 9){web_client_print(client,"0");}
     web_client_print(client,i+1);
     web_client_print(client,"\" class=\"ctrl\">");
     web_client_print(client,i+1);
-    
-
   
     last_memory_location = memory_end(i) + 1;
 
@@ -19731,6 +19718,7 @@ void web_print_page_memories(EthernetClient client){
               prosign_temp = convert_prosign(eeprom_temp);
               web_client_write(client,prosign_temp[0]);
               web_client_write(client,prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) web_client_write(client,prosign_temp[2]);
             } else {
               web_client_write(client,eeprom_temp);
             }
@@ -19742,7 +19730,6 @@ void web_print_page_memories(EthernetClient client){
         }
       }
     }
-
 
     web_client_print(client,"</a>");
     // web_client_print(client,"<br><br><br>");
@@ -19756,16 +19743,10 @@ void web_print_page_memories(EthernetClient client){
   web_print_home_link(client);
 
   web_print_footer(client);
-
-
-  
-
 }
 #endif //FEATURE_WEB_SERVER && FEATURE_MEMORIES
 
-
 //-------------------------------------------------------------------------------------------------------
-
 
 #if defined(FEATURE_WEB_SERVER)
 
