@@ -9077,6 +9077,7 @@ void send_char(byte cw_char, byte omit_letterspace)
         case PROSIGN_SK: send_the_dits_and_dahs("...-.-");break;
         case PROSIGN_SN: send_the_dits_and_dahs("...-.");break;
         case PROSIGN_HH: send_the_dits_and_dahs("........");break;  // iz0rus
+        case PROSIGN_SOS: send_the_dits_and_dahs("...---..."); break;
       #endif 
 
       #ifdef OPTION_NON_ENGLISH_EXTENSIONS
@@ -12764,6 +12765,7 @@ void service_paddle_echo()
               prosign_temp = convert_prosign(byte_temp);
               display_scroll_print_char(prosign_temp[0]);
               display_scroll_print_char(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) display_scroll_print_char(prosign_temp[2]);
             } else {
               display_scroll_print_char(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
             }
@@ -12773,6 +12775,7 @@ void service_paddle_echo()
               prosign_temp = convert_prosign(ascii_temp);
               display_scroll_print_char(prosign_temp[0]);
               display_scroll_print_char(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) display_scroll_print_char(prosign_temp[2]);
             } else {
               switch (ascii_temp){
                 case 220: ascii_temp = 0;break; // U_umlaut  (D, ...)
@@ -12815,9 +12818,11 @@ void service_paddle_echo()
           if ((byte_temp > PROSIGN_START) && (byte_temp < PROSIGN_END)){
             primary_serial_port->print(prosign_temp[0]);
             primary_serial_port->print(prosign_temp[1]);
-            #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+            if(strlen(prosign_temp) == 3) primary_serial_port->print(prosign_temp[2]);
+           #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
               secondary_serial_port->print(prosign_temp[0]);
               secondary_serial_port->print(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
             #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
           } else {
             if (configuration.cli_mode == CLI_MILL_MODE_KEYBOARD_RECEIVE){
@@ -15011,8 +15016,6 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
 
 //---------------------------------------------------------------------
 
-
-
 #if defined(OPTION_PROSIGN_SUPPORT)
 char * convert_prosign(byte prosign_code)
 {
@@ -15028,10 +15031,9 @@ char * convert_prosign(byte prosign_code)
     case PROSIGN_SK: return((char*)"SK"); break;
     case PROSIGN_SN: return((char*)"SN"); break;
     case PROSIGN_HH: return((char*)"HH"); break; // iz0rus
+    case PROSIGN_SOS: send_the_dits_and_dahs("...---..."); break;
     default: return((char*)""); break;
-
   }
-
 }
 #endif //OPTION_PROSIGN_SUPPORT
 
@@ -15130,6 +15132,8 @@ int convert_cw_number_to_ascii (long number_in)
       case 111212:   return PROSIGN_SK; break;
       case 11121:    return PROSIGN_SN; break;
       case 11111111: return PROSIGN_HH; break;  // iz0rus
+      case 111222111: return PROSIGN_SOS; break;
+      case PROSIGN_SOS: return((char*)"SOS"); break;
     #else //OPTION_PROSIGN_SUPPORT
       case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou //aaaaaaa
     #endif //OPTION_PROSIGN_SUPPORT
@@ -15234,6 +15238,7 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
               prosign_temp = convert_prosign(eeprom_temp);
               port_to_use->print(prosign_temp[0]);
               port_to_use->print(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) port_to_use->print(prosign_temp[2]);
             } else {
               port_to_use->write(eeprom_temp);
             }
@@ -15686,9 +15691,11 @@ byte play_memory(byte memory_number) {
                     if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
                       primary_serial_port->print(prosign_temp[0]);
                       primary_serial_port->print(prosign_temp[1]);
-                      #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                      if(strlen(prosign_temp) == 3) primary_serial_port->print(prosign_temp[2]);
+                       #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                         secondary_serial_port->print(prosign_temp[0]);
                         secondary_serial_port->print(prosign_temp[1]);
+                        if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
                       #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
                     } else {
                       primary_serial_port->write(eeprom_byte_read);
@@ -19731,6 +19738,7 @@ void web_print_page_memories(EthernetClient client){
               prosign_temp = convert_prosign(eeprom_temp);
               web_client_write(client,prosign_temp[0]);
               web_client_write(client,prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) web_client_write(client,prosign_temp[2]);
             } else {
               web_client_write(client,eeprom_temp);
             }
