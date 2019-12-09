@@ -15123,17 +15123,16 @@ int convert_cw_number_to_ascii (long number_in)
       #if !defined(OPTION_NON_ENGLISH_EXTENSIONS)
         case 1212:   return PROSIGN_AA; break;
       #endif
-      case 12111:    return PROSIGN_AS; break;
-      case 2111212:  return PROSIGN_BK; break;
-      case 21211211: return PROSIGN_CL; break;
-      case 21212:    return PROSIGN_CT; break;
-      case 21221:    return PROSIGN_KN; break;
-      case 211222:   return PROSIGN_NJ; break;
-      case 111212:   return PROSIGN_SK; break;
-      case 11121:    return PROSIGN_SN; break;
-      case 11111111: return PROSIGN_HH; break;  // iz0rus
+      case 12111:     return PROSIGN_AS; break;
+      case 2111212:   return PROSIGN_BK; break;
+      case 21211211:  return PROSIGN_CL; break;
+      case 21212:     return PROSIGN_CT; break;
+      case 21221:     return PROSIGN_KN; break;
+      case 211222:    return PROSIGN_NJ; break;
+      case 111212:    return PROSIGN_SK; break;
+      case 11121:     return PROSIGN_SN; break;
+      case 11111111:  return PROSIGN_HH; break;  // iz0rus
       case 111222111: return PROSIGN_SOS; break;
-      case PROSIGN_SOS: return((char*)"SOS"); break;
     #else //OPTION_PROSIGN_SUPPORT
       case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou //aaaaaaa
     #endif //OPTION_PROSIGN_SUPPORT
