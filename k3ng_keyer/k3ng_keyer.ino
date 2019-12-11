@@ -7899,9 +7899,9 @@ void adjust_dah_to_dit_ratio(int adjustment) {
    #ifdef FEATURE_DISPLAY
      #ifdef OPTION_MORE_DISPLAY_MSGS
         if (LCD_COLUMNS < 9){
-          lcd_center_print_timed("DDR:" + String(configuration.dah_to_dit_ratio), 0, default_display_msg_delay);
+          lcd_center_print_timed("DDR:" + String(configuration.dah_to_dit_ratio), 1, default_display_msg_delay);
         } else {   
-          lcd_center_print_timed("Dah/Dit: " + String(configuration.dah_to_dit_ratio), 0, default_display_msg_delay);
+          lcd_center_print_timed("Dah/Dit: " + String(configuration.dah_to_dit_ratio), 1, default_display_msg_delay);
         }
        service_display();
      #endif
@@ -7919,37 +7919,43 @@ void command_dah_to_dit_ratio_adjust() {
   byte looping = 1;
 
   #ifdef FEATURE_DISPLAY
-    if (LCD_COLUMNS < 9){
+    if (LCD_COLUMNS < 9) {
       lcd_center_print_timed("Adj DTDR", 0, default_display_msg_delay);
     } else {
-      lcd_center_print_timed("Adj dah to dit", 0, default_display_msg_delay);  
-    }        
+      lcd_center_print_timed("Adj dah to dit", 0, default_display_msg_delay);
+    }
   #endif
 
   while (looping) {
     send_dit();
     send_dah();
     if (paddle_pin_read(paddle_left) == LOW) {
-      adjust_dah_to_dit_ratio(10);
+      #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+        adjust_dah_to_dit_ratio(-10);
+      #else
+        adjust_dah_to_dit_ratio(10);
+      #endif
     }
     if (paddle_pin_read(paddle_right) == LOW) {
-      adjust_dah_to_dit_ratio(-10);
+      #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+        adjust_dah_to_dit_ratio(10);
+      #else
+        adjust_dah_to_dit_ratio(-10);
+      #endif
     }
-    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) {     // if paddles are squeezed or button0 pressed - exit
       looping = 0;
     }
-   
 
     #ifdef OPTION_WATCHDOG_TIMER
       wdt_reset();
-    #endif  //OPTION_WATCHDOG_TIMER
-
+    #endif                                                                          // OPTION_WATCHDOG_TIMER
   }
-  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}          // wait for all lines to go high
   dit_buffer = 0;
   dah_buffer = 0;
 }
-#endif //FEATURE_COMMAND_BUTTONS
+#endif                                                                          // FEATURE_COMMAND_BUTTONS
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -7970,17 +7976,49 @@ void command_weighting_adjust() {
     send_dit();
     send_dah();
     if (paddle_pin_read(paddle_left) == LOW) {
-      configuration.weighting = configuration.weighting + 1;
-      if (configuration.weighting > 90){configuration.weighting = 90;}
+      #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+        configuration.weighting = configuration.weighting - 1;
+        if (configuration.weighting < 10) {configuration.weighting = 10;}
+        #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Weighting " + String(configuration.weighting), 1, default_display_msg_delay);
+        #else
+          delay(50);
+        #endif                                 // FEATURE_DISPLAY
+      #else
+        configuration.weighting = configuration.weighting + 1;
+        if (configuration.weighting > 90) {configuration.weighting = 90;}
+        #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Weighting " + String(configuration.weighting), 1, default_display_msg_delay);
+        #else
+          delay(50);
+        #endif                                 // FEATURE_DISPLAY
+      #endif                                   // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
     }
     if (paddle_pin_read(paddle_right) == LOW) {
-      configuration.weighting = configuration.weighting - 1;
-      if (configuration.weighting < 10){configuration.weighting = 10;}
+      #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
+        configuration.weighting = configuration.weighting + 1;
+        if (configuration.weighting > 90) {configuration.weighting = 90;}
+        #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Weighting " + String(configuration.weighting), 1, default_display_msg_delay);
+        #else
+          delay(50);
+        #endif                                 // FEATURE_DISPLAY
+      #else
+        configuration.weighting = configuration.weighting - 1;
+        if (configuration.weighting < 10) {configuration.weighting = 10;}
+        #ifdef FEATURE_DISPLAY
+          lcd_center_print_timed("Weighting " + String(configuration.weighting), 1, default_display_msg_delay);
+        #else
+          delay(50);
+        #endif                                 // FEATURE_DISPLAY
+      #endif                                   // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
     }
+
     while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
       looping = 0;
     }
-   
+    config_dirty = 1;
+
     #ifdef OPTION_WATCHDOG_TIMER
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
@@ -7990,7 +8028,7 @@ void command_weighting_adjust() {
   dit_buffer = 0;
   dah_buffer = 0;
 }
-#endif //FEATURE_COMMAND_BUTTONS
+#endif                                                   //FEATURE_COMMAND_BUTTONS
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -8063,7 +8101,7 @@ void command_tuning_mode() {
   dit_buffer = 0;
   dah_buffer = 0;
 }
-#endif //FEATURE_COMMAND_BUTTONS
+#endif                                                    //FEATURE_COMMAND_BUTTONS
 	
 //-------------------------------------------------------------------------------------------------------
 
@@ -8135,7 +8173,7 @@ void command_tuning_mode() {
 //   }
 // }
 
-// #endif //FEATURE_SINEWAVE_SIDETONE
+// #endif                                           //FEATURE_SINEWAVE_SIDETONE
 
 //-------------------------------------------------------------------------------------------------------
 	
