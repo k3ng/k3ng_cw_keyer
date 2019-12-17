@@ -1146,6 +1146,9 @@ Recent Update History
       Added OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE from pull request 85 to all hardware profile feature files
       Updated all pin settings files so that correct_answer_led and wrong_answer_led are always defined
 
+    2019.12.16.01
+      Fixed bug with K1EL Winkeyer emulation cancel buffered speed command (Thanks, Drew, N7DA)  
+
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1161,7 +1164,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.12.07.05"
+#define CODE_VERSION "2019.12.16.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -11062,7 +11065,8 @@ void service_winkey(byte action) {
       if (winkey_status == WINKEY_CANCEL_BUFFERED_SPEED_COMMAND) {
         if (winkey_speed_state == WINKEY_BUFFERED_SPEED){
           add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
-          add_to_send_buffer(winkey_last_unbuffered_speed_wpm);
+          add_to_send_buffer(0);
+          add_to_send_buffer((byte)winkey_last_unbuffered_speed_wpm);
           winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
         }
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
