@@ -7552,7 +7552,7 @@ void command_mode() {
 
 void command_display_memory(byte memory_number) {
  
-  #ifdef FEATURE_DISPLAY
+  #if defined(FEATURE_DISPLAY) && defined(FEATURE_MEMORIES)
     byte eeprom_byte_read = 0;
     char memory_char[LCD_COLUMNS];                                                        // an array of char to hold the retrieved memory from EEPROM
     int j;
