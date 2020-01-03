@@ -99,7 +99,7 @@
 
 
 #ifdef FEATURE_WINKEY_EMULATION
-  #ifdef OPTION_WINKEY_UCXLOG_9600_BAUD || defined(FEATURE_SO2R_BASE)
+  #if defined(OPTION_WINKEY_UCXLOG_9600_BAUD) || defined(FEATURE_SO2R_BASE)
     #define WINKEY_DEFAULT_BAUD 9600
   #else
     #define WINKEY_DEFAULT_BAUD 1200
@@ -143,8 +143,6 @@
 #define WINKEY_RETURN_THIS_FOR_ADMIN_SPEED_A2D 0x00
 
 #endif //FEATURE_WINKEY_EMULATION
-
-
 
 #define PRIMARY_SERIAL_PORT &Serial
 #define PRIMARY_SERIAL_PORT_BAUD 115200     // This applies only when the port is in Command Line Interface mode.  In Winkey mode it will default to 1200.
@@ -200,7 +198,7 @@
 #define FEATURE_INTERNET_LINK_DEFAULT_RCV_UDP_PORT 8888
 #define FEATURE_INTERNET_LINK_BUFFER_TIME_MS 500 
 
-#if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
+#if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
   #define KEYPAD_ROWS 4 //KeyPad Rows
   #if defined(FEATURE_4x4_KEYPAD)
     #define KEYPAD_COLS 4 //keypad Columns
@@ -219,7 +217,7 @@
   #define mem10 9
   #define mem11 10
   #define mem12 11
-#endif //#if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
+#endif //#if defined(FEATURE_4x4_KEYPAD) || defined(FEATURE_3x4_KEYPAD)
 
 #define initial_sidetone_mode 1            // Sidetone mode, 0=OFF, 1=ON, 2=PADDLE_ONLY
 
