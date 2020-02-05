@@ -2,7 +2,7 @@
 
  K3NG Arduino CW Keyer
 
- Copyright 2010 - 2019 Anthony Good, K3NG
+ Copyright 2010 - 2020 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
 
     
@@ -1153,7 +1153,12 @@ Recent Update History
       Fixed bug with K1EL Winkeyer emulation with SO2R operation and errant CW being sent after switching radios
 
     2020.02.04.01
-      Fixed bug with handling of K1EL Winkeyer emulation and handling of PINCONFIG bit 0 and PTT lead time (Thanks, Bill, K1GQ)  
+      Fixed bug with handling of K1EL Winkeyer emulation and handling of PINCONFIG bit 0 and PTT lead time (Thanks, Bill, K1GQ) 
+  
+    2020.02.04.02
+      Renabled serial port checking during CW sending specifically when automatic sending is happening
+      OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS has been depricated
+      OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW added
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1169,7 +1174,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2020.02.04.01"
+#define CODE_VERSION "2020.02.04.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1579,7 +1584,7 @@ byte pot_wpm_low_value;
 #endif //FEATURE_POTENTIOMETER
 
 #if defined(FEATURE_SERIAL)
-  #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
+  #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
     byte loop_element_lengths_breakout_flag;
     byte dump_current_character_flag;
   #endif
@@ -5549,7 +5554,6 @@ void ptt_key(){
         }
 
       #else //FEATURE_SEQUENCER
-        //qqqqqqq
         #if defined(FEATURE_WINKEY_EMULATION)
           if (((millis() - ptt_activation_time) >= configuration.ptt_lead_time[configuration.current_tx-1]) || (winkey_host_open && !winkey_pinconfig_ptt_bit) ) {
             all_delays_satisfied = 1;
@@ -6477,7 +6481,7 @@ void tx_and_sidetone_key (int state)
 
 void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm_in){
 
-    #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
+    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
       loop_element_lengths_breakout_flag = 1;
     #endif //FEATURE_SERIAL  
     
@@ -6511,7 +6515,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     unsigned long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
     unsigned long start = micros();
 
-    #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
+    #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
     while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0) && loop_element_lengths_breakout_flag ){
     #else
     while (((micros() - start) < ticks) && (service_tx_inhibit_and_pause() == 0)){
@@ -6519,8 +6523,8 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
       check_ptt_tail();
       
-      #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
-        if ((ticks - (micros() - start)) > (10 * 1000)) {
+      #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
+        if (((ticks - (micros() - start)) > (10 * 1000)) && (sending_mode == AUTOMATIC_SENDING)){
           check_serial();
           if (loop_element_lengths_breakout_flag == 0){
             dump_current_character_flag = 1;
@@ -8884,7 +8888,7 @@ void send_the_dits_and_dahs(char const * cw_to_send){
   sending_mode = AUTOMATIC_SENDING;
 
 
-  #if defined(FEATURE_SERIAL) && defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
+  #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
     dump_current_character_flag = 0;
   #endif  
 
@@ -8937,7 +8941,7 @@ void send_the_dits_and_dahs(char const * cw_to_send){
     }
     #if defined(FEATURE_SERIAL)
       check_serial();
-      #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
+      #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
         if (dump_current_character_flag){
           x = 12;
         }
@@ -10120,7 +10124,6 @@ void winkey_set_pinconfig_command(byte incoming_serial_byte) {
     configuration.ptt_buffer_hold_active = 0;
     #ifdef OPTION_WINKEY_2_SUPPORT
       winkey_pinconfig_ptt_bit = 0;
-      //qqqqqqqq
     #endif
   }
 
@@ -10983,7 +10986,7 @@ void service_winkey(byte action) {
             pause_sending_buffer = 0;
             winkey_buffer_counter = 0;
             winkey_buffer_pointer = 0;
-            #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
+            #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
               loop_element_lengths_breakout_flag = 0;
             #endif
             #ifdef FEATURE_MEMORIES
@@ -12333,7 +12336,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     
     case 92:  // \ - double backslash - clear serial send buffer
       clear_send_buffer();
-      #if defined(OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS)
+      #if !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
         loop_element_lengths_breakout_flag = 0;
       #endif
       #ifdef FEATURE_MEMORIES
