@@ -1152,6 +1152,9 @@ Recent Update History
     2019.12.17.01
       Fixed bug with K1EL Winkeyer emulation with SO2R operation and errant CW being sent after switching radios
 
+    2020.02.04.01
+      Fixed bug with handling of K1EL Winkeyer emulation and handling of PINCONFIG bit 0 and PTT lead time (Thanks, Bill, K1GQ)  
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1166,7 +1169,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2019.12.17.01"
+#define CODE_VERSION "2020.02.04.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1625,6 +1628,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   byte winkey_interrupted = 0;
   byte winkey_xoff = 0;
   byte winkey_session_ptt_tail = 0;
+  byte winkey_pinconfig_ptt_bit = 1;
   #ifdef OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
     byte winkey_breakin_status_byte_inhibit = 0;
   #endif //OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
@@ -5545,9 +5549,16 @@ void ptt_key(){
         }
 
       #else //FEATURE_SEQUENCER
-        if ((millis() - ptt_activation_time) >= configuration.ptt_lead_time[configuration.current_tx-1]){
-          all_delays_satisfied = 1;
-        }
+        //qqqqqqq
+        #if defined(FEATURE_WINKEY_EMULATION)
+          if (((millis() - ptt_activation_time) >= configuration.ptt_lead_time[configuration.current_tx-1]) || (winkey_host_open && !winkey_pinconfig_ptt_bit) ) {
+            all_delays_satisfied = 1;
+          }
+        #else
+          if ((millis() - ptt_activation_time) >= configuration.ptt_lead_time[configuration.current_tx-1]){
+            all_delays_satisfied = 1;
+          }
+        #endif
       #endif //FEATURE_SEQUENCER
 
     } //while (!all_delays_satisfied)
@@ -9825,6 +9836,16 @@ void add_to_send_buffer(byte incoming_serial_byte)
   }
 
 }
+//-------------------------------------------------------------------------------------------------------
+
+/*
+
+10 CLS 
+20 PRINT "HELLO"
+30 GOTO 20
+
+*/
+
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -10094,8 +10115,13 @@ void winkey_set_pinconfig_command(byte incoming_serial_byte) {
   
   if (incoming_serial_byte & 1) {
     configuration.ptt_buffer_hold_active = 1;
+    winkey_pinconfig_ptt_bit = 1;
   } else {
     configuration.ptt_buffer_hold_active = 0;
+    #ifdef OPTION_WINKEY_2_SUPPORT
+      winkey_pinconfig_ptt_bit = 0;
+      //qqqqqqqq
+    #endif
   }
 
   if (incoming_serial_byte & 2) {
@@ -15204,7 +15230,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     port_to_use->println(F("ff"));
   }  
 
-  #if defined(FEATURE_PADDLE_ECHO) //qqqqqq
+  #if defined(FEATURE_PADDLE_ECHO)
     port_to_use->print(F("Paddle Echo: O"));
     if (cli_paddle_echo){
       port_to_use->println(F("n"));
@@ -15738,6 +15764,23 @@ void check_button0()
   #endif
 }
 
+//---------------------------------------------------------------------
+/*
+
+program HelloWorld;
+
+{ HelloWorld version 2019.12.27.02 by K3NG }
+
+VAR
+ Callsign:string; 
+
+BEGIN
+ Write('What is your callsign: ');
+ Readln(Callsign);
+ WriteLn('Hello ', Callsign);
+END.
+
+*/
 //---------------------------------------------------------------------
 #if defined(FEATURE_MEMORIES) || defined(FEATURE_COMMAND_LINE_INTERFACE)
 void send_serial_number(byte cut_numbers,int increment_serial_number,byte buffered_sending){
