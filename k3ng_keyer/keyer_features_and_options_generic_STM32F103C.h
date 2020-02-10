@@ -76,6 +76,7 @@ Generic STM32F103C "Blue Pill"
 // #define OPTION_WINKEY_IGNORE_LOWERCASE               // Enable for typical K1EL Winkeyer behavior (use for SkookumLogger version 1.10.14 and prior to workaround "r" bug)
 // #define OPTION_WINKEY_BLINK_PTT_ON_HOST_OPEN
 // #define OPTION_WINKEY_SEND_VERSION_ON_HOST_CLOSE
+// #define OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD // Instead of normal K1EL Winkeyer PINCONFIG PTT bit 0 behavior (activating/deactivating PTT) have this bit control PTT hold when characters are buffered
 // #define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
 #define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode
 #define OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT         // this makes dit paddle memory interruption a little smoother
