@@ -1163,6 +1163,9 @@ Recent Update History
     2020.02.10.01
       Added OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD - Instead of normal K1EL Winkeyer PINCONFIG PTT bit 0 behavior (activating/deactivating PTT) have this bit control PTT hold when characters are buffered  (Thanks, Bill, K1GQ) 
 
+    2020.02.13.01
+      Enabling OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD by default with YCCC SO2R Mini hardware profile while we continue to troubleshoot issue involving PTT line, SO2R Mini footswitch, and K1EL Winkey emulation PINCONFIG PTT bit 0
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1177,7 +1180,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2020.02.10.01"
+#define CODE_VERSION "2020.02.13.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -7272,10 +7275,11 @@ void command_mode() {
 
 	  case 122: // W - change wpm
           command_speed_mode(COMMAND_SPEED_MODE_KEYER_WPM); 
-          break;                            
-        #ifdef FEATURE_MEMORIES
-          case 2122: command_set_mem_repeat_delay(); break; // Y - set memory repeat delay
-        #endif  
+          break;   
+
+    #ifdef FEATURE_MEMORIES
+      case 2122: command_set_mem_repeat_delay(); break; // Y - set memory repeat delay
+    #endif  
  
 	  case 2112: stay_in_command_mode = 0; break;     // X - exit command mode
         #ifdef FEATURE_AUTOSPACE
