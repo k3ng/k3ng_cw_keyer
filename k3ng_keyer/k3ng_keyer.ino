@@ -1166,6 +1166,9 @@ Recent Update History
     2020.02.13.01
       Enabling OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD by default with YCCC SO2R Mini hardware profile while we continue to troubleshoot issue involving PTT line, SO2R Mini footswitch, and K1EL Winkey emulation PINCONFIG PTT bit 0
 
+    2020.02.18.01
+      Fix for YCCC SO2R Mini issue involving PTT line, SO2R Mini footswitch, and K1EL Winkey emulation PINCONFIG PTT bit 0 (Thanks, K1GC and JH5GHM)
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1180,7 +1183,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2020.02.13.01"
+#define CODE_VERSION "2020.02.18.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1490,6 +1493,7 @@ byte current_tx_key_line = tx_key_line_1;
   byte current_tx_ptt_line = ptt_tx_1;
 #endif
 byte manual_ptt_invoke = 0;
+byte manual_ptt_invoke_ptt_input_pin = 0;
 byte qrss_dit_length = initial_qrss_dit_length;
 byte keyer_machine_mode = KEYER_NORMAL;   // KEYER_NORMAL, BEACON, KEYER_COMMAND_MODE
 byte char_send_mode = 0; // CW, HELL, AMERICAN_MORSE
@@ -5472,8 +5476,8 @@ void ptt_key(){
 
   if (ptt_line_activated == 0) {   // if PTT is currently deactivated, bring it up and insert PTT lead time delay
     #ifdef FEATURE_SO2R_BASE
-        if (current_tx_ptt_line) {
-
+        //if (current_tx_ptt_line) {
+        if (current_tx_ptt_line && (configuration.ptt_buffer_hold_active || manual_ptt_invoke_ptt_input_pin)) {
 
           #if defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)
             if (winkey_pinconfig_ptt_bit){
@@ -5681,7 +5685,7 @@ void check_ptt_tail()
     }
   #endif
 
-  static byte manual_ptt_invoke_ptt_input_pin = 0;
+  //static byte manual_ptt_invoke_ptt_input_pin = 0;
 
   if (ptt_input_pin){
     if ((digitalRead(ptt_input_pin) == ptt_input_pin_active_state)){
