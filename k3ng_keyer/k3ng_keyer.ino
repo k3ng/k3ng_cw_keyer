@@ -1169,6 +1169,10 @@ Recent Update History
     2020.02.18.01
       Fix for YCCC SO2R Mini issue involving PTT line, SO2R Mini footswitch, and K1EL Winkey emulation PINCONFIG PTT bit 0 (Thanks, K1GC and JH5GHM)
 
+    2020.02.18.02
+      Corrected fix for YCCC SO2R Mini issue involving PTT line, SO2R Mini footswitch, and K1EL Winkey emulation PINCONFIG PTT bit 0 (Thanks, K1GC and JH5GHM)
+      In K1EL Winkey emulation character echo is now sent after character CW is sent
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1183,7 +1187,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2020.02.18.01"
+#define CODE_VERSION "2020.02.18.02"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5474,46 +5478,64 @@ void ptt_key(){
     byte sequencer_5_ok = 0;
   #endif 
 
+  // if (ptt_line_activated == 0) {   // if PTT is currently deactivated, bring it up and insert PTT lead time delay
+  //   #ifdef FEATURE_SO2R_BASE
+  //       //if (current_tx_ptt_line) {
+  //       if (current_tx_ptt_line && (configuration.ptt_buffer_hold_active || manual_ptt_invoke_ptt_input_pin)) {
+
+  //         #if defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)
+  //           if (winkey_pinconfig_ptt_bit){
+  //             digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
+  //           }
+  //         #else
+  //           digitalWrite (configuration.current_ptt_line, ptt_line_active_state);  
+  //         #endif // defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD) 
+
+
+  //         //digitalWrite (current_tx_ptt_line, ptt_line_active_state);
+  //         #ifdef FEATURE_SEQUENCER
+  //           sequencer_ptt_inactive_time = 0;
+  //         #endif  
+  //       }
+  //   #else
+  //     if (configuration.current_ptt_line) {
+  //       #if defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)
+  //         if (winkey_pinconfig_ptt_bit){
+  //           digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
+  //         }
+  //       #else
+  //         digitalWrite (configuration.current_ptt_line, ptt_line_active_state);  
+  //       #endif // defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)   
+  //       #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
+  //         if ((wk2_both_tx_activated) && (ptt_tx_2)) {
+  //           digitalWrite (ptt_tx_2, ptt_line_active_state);
+  //         }
+  //       #endif
+  //       #ifdef FEATURE_SEQUENCER
+  //         sequencer_ptt_inactive_time = 0;
+  //       #endif  
+  //     }
+  //   #endif //FEATURE_SO2R_BASE
+
   if (ptt_line_activated == 0) {   // if PTT is currently deactivated, bring it up and insert PTT lead time delay
     #ifdef FEATURE_SO2R_BASE
-        //if (current_tx_ptt_line) {
         if (current_tx_ptt_line && (configuration.ptt_buffer_hold_active || manual_ptt_invoke_ptt_input_pin)) {
-
-          #if defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)
-            if (winkey_pinconfig_ptt_bit){
-              digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
-            }
-          #else
-            digitalWrite (configuration.current_ptt_line, ptt_line_active_state);  
-          #endif // defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD) 
-
-
-          //digitalWrite (current_tx_ptt_line, ptt_line_active_state);
-          #ifdef FEATURE_SEQUENCER
-            sequencer_ptt_inactive_time = 0;
-          #endif  
-        }
+        digitalWrite (current_tx_ptt_line, ptt_line_active_state);
     #else
       if (configuration.current_ptt_line) {
-        #if defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)
-          if (winkey_pinconfig_ptt_bit){
-            digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
-          }
-        #else
-          digitalWrite (configuration.current_ptt_line, ptt_line_active_state);  
-        #endif // defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)   
+        digitalWrite (configuration.current_ptt_line, ptt_line_active_state);    
         #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
           if ((wk2_both_tx_activated) && (ptt_tx_2)) {
             digitalWrite (ptt_tx_2, ptt_line_active_state);
           }
         #endif
+    #endif //FEATURE_SO2R_BASE
+
+        //delay(configuration.ptt_lead_time[configuration.current_tx-1]);
         #ifdef FEATURE_SEQUENCER
           sequencer_ptt_inactive_time = 0;
         #endif  
       }
-    #endif //FEATURE_SO2R_BASE
-
-
 
 
     ptt_line_activated = 1;
@@ -9622,15 +9644,15 @@ void service_send_buffer(byte no_print)
 
       } else {   // if ((send_buffer_array[0] > SERIAL_SEND_BUFFER_SPECIAL_START) && (send_buffer_array[0] < SERIAL_SEND_BUFFER_SPECIAL_END))
 
-        #ifdef FEATURE_WINKEY_EMULATION
-          if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open) && (!no_print) && (!cw_send_echo_inhibit)){
-            #if defined(OPTION_WINKEY_ECHO_7C_BYTE)
-              if (send_buffer_array[0] > 30) {winkey_port_write(send_buffer_array[0],0);}
-            #else
-              if ((send_buffer_array[0]!= 0x7C) && (send_buffer_array[0] > 30)) {winkey_port_write(send_buffer_array[0],0);}
-            #endif
-          }
-        #endif //FEATURE_WINKEY_EMULATION
+        // #ifdef FEATURE_WINKEY_EMULATION
+        //   if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open) && (!no_print) && (!cw_send_echo_inhibit)){
+        //     #if defined(OPTION_WINKEY_ECHO_7C_BYTE)
+        //       if (send_buffer_array[0] > 30) {winkey_port_write(send_buffer_array[0],0);}
+        //     #else
+        //       if ((send_buffer_array[0]!= 0x7C) && (send_buffer_array[0] > 30)) {winkey_port_write(send_buffer_array[0],0);}
+        //     #endif
+        //   }
+        // #endif //FEATURE_WINKEY_EMULATION
 
 
         #if defined(FEATURE_COMMAND_LINE_INTERFACE)
@@ -9663,6 +9685,16 @@ void service_send_buffer(byte no_print)
         #endif
 
         send_char(send_buffer_array[0],KEYER_NORMAL);  //****************
+
+        #ifdef FEATURE_WINKEY_EMULATION
+          if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open) && (!no_print) && (!cw_send_echo_inhibit)){
+            #if defined(OPTION_WINKEY_ECHO_7C_BYTE)
+              if (send_buffer_array[0] > 30) {winkey_port_write(send_buffer_array[0],0);}
+            #else
+              if ((send_buffer_array[0]!= 0x7C) && (send_buffer_array[0] > 30)) {winkey_port_write(send_buffer_array[0],0);}
+            #endif
+          }
+        #endif //FEATURE_WINKEY_EMULATION
 
         if (!pause_sending_buffer){
 
