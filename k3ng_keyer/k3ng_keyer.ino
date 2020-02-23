@@ -8553,7 +8553,7 @@ void check_command_buttons() {
   #endif
 
   static long last_button_action = 0;
-  byte analogbuttontemp = button_array.Pressed();
+  int analogbuttontemp = button_array.Pressed();
   long button_depress_time;
   byte paddle_was_hit = 0;
   //byte store_key_tx = key_tx; //Commented this out as not needed with new code (WD9DMP)
