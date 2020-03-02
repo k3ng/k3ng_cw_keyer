@@ -112,10 +112,10 @@
 // #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
 
 // #define OPTION_EXCLUDE_MILL_MODE
+// #define OPTION_NO_ULTIMATIC // reduce memory usage by removing ultimatic code.
 
 // #define OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW
 
 // #define OPTION_PERSONALIZED_STARTUP_SCREEN        // displays a user defined string of characters on the second or fourth row of the screen during startup. 1602 display requires OPTION_DO_NOT_SAY_HI
 // #define OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION        // reverses the up/down direction when using the paddles to change the wpm or sidetone frequency
 #define OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
-
