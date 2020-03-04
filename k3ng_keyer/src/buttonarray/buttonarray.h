@@ -40,6 +40,7 @@ class ButtonArray {
         int32_t high_limit_;
         bool   reversed_;
         int8_t ReadButtons();
+        bool AnyPressed();
 
     public:
         uint32_t last_pressed_ms;
