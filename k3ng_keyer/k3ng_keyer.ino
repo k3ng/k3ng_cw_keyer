@@ -1173,6 +1173,9 @@ Recent Update History
       Corrected fix for YCCC SO2R Mini issue involving PTT line, SO2R Mini footswitch, and K1EL Winkey emulation PINCONFIG PTT bit 0 (Thanks, K1GC and JH5GHM)
       In K1EL Winkey emulation character echo is now sent after character CW is sent
 
+    2020.03.06.01
+      Merged pull request 92 - Fix button logic and add test https://github.com/k3ng/k3ng_cw_keyer/pull/92  (Thanks W6IPA)
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1187,7 +1190,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2020.02.18.02"
+#define CODE_VERSION "2020.03.06.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
