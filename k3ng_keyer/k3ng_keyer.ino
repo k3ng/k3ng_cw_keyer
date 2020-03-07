@@ -83,8 +83,8 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \@     Mill Mode
     \}#### Set potentiometer range - low ## / high ##
     \"     Hold PTT active with buffered characters
+    \]     PTT Enable / Disable
     \;     FUTURE
-    \]     FUTURE
     \_     FUTURE - Set Clock
     \\     Immediately clear the buffer, stop memory sending, etc.
     \:     Extended CLLI commands
@@ -1180,6 +1180,9 @@ Recent Update History
       Added OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_LINE - K1EL Winkeyer PTT setting activates/deactivates PTT line rather than controls buffered character PTT hold 
       TinyKeyer - OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW enabled by default for TinyKeyer (keyer_features_and_options_tinykeyer.h)
 
+    2020.03.07.02
+      Command Line Interface - Added \] to disable and enable PTT
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1194,8 +1197,8 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2020.03.07.01"
-#define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2020.03.07.02"
+#define eeprom_magic_number 36               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1434,10 +1437,10 @@ Recent Update History
 #endif //FEATURE_SD_CARD_SUPPORT
 
 
-#define memory_area_start 113
+#define memory_area_start 114
 
 // Variables and stuff
-struct config_t {  // 111 bytes total
+struct config_t {  // 112 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1458,7 +1461,8 @@ struct config_t {  // 111 bytes total
   uint8_t wordsworth_repetition;
   uint8_t cli_mode;
   uint8_t ptt_buffer_hold_active;
-    // 19 bytes
+  uint8_t ptt_disabled;
+    // 20 bytes
 
   unsigned int wpm;
   unsigned int hz_sidetone;
@@ -5524,8 +5528,9 @@ void ptt_key(){
   //     }
   //   #endif //FEATURE_SO2R_BASE
 
+//zzzzzz
 
-
+  if (configuration.ptt_disabled){return;}
 
   if (ptt_line_activated == 0) {   // if PTT is currently deactivated, bring it up and insert PTT lead time delay
     #ifdef FEATURE_SO2R_BASE
@@ -12541,7 +12546,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         break;
     #endif // !defined(OPTION_EXCLUDE_MILL_MODE)
     case '"':
-      port_to_use->print(F("\r\nPTT buffered character hold active O"));
+      port_to_use->print(F("\r\nPTT Buffered Character Hold O"));
       if (configuration.ptt_buffer_hold_active){
         configuration.ptt_buffer_hold_active = 0;
         port_to_use->println(F("ff"));
@@ -12551,6 +12556,20 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       }
       config_dirty = 1;
       break;
+    case ']':
+      port_to_use->print(F("\r\nPTT "));
+      if (configuration.ptt_disabled){
+        configuration.ptt_disabled = 0;
+        port_to_use->print(F("en"));
+      } else {
+        configuration.ptt_disabled = 1;
+        port_to_use->print(F("dis"));
+      }
+      port_to_use->println(F("abled"));
+      config_dirty = 1;
+      break;
+
+
     #if !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) 
     case ':':
       cli_extended_commands(port_to_use);
@@ -15303,12 +15322,16 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     }
   #endif // !defined(OPTION_EXCLUDE_MILL_MODE)
 
-  port_to_use->print(F("PTT buffered character hold active: O"));
+  port_to_use->print(F("PTT Buffered Character Hold: O"));
   if (configuration.ptt_buffer_hold_active){
     port_to_use->println(F("n"));
   } else {
     port_to_use->println(F("ff"));
   }  
+
+  if (configuration.ptt_disabled){
+    port_to_use->println(F("PTT: Disabled"));
+  }
 
   port_to_use->print(F("TX Inhibit: O"));
   if ((digitalRead(tx_inhibit_pin) == tx_inhibit_pin_active_state)){
@@ -17396,6 +17419,7 @@ void initialize_keyer_state(){
   configuration.wpm_command_mode = initial_command_mode_speed_wpm;
   configuration.ptt_buffer_hold_active = 0;
   configuration.sidetone_volume = sidetone_volume_low_limit + ((sidetone_volume_high_limit - sidetone_volume_low_limit) / 2);
+  configuration.ptt_disabled = 0;
 
   configuration.ptt_lead_time[0] = initial_ptt_lead_time_tx1;
   configuration.ptt_tail_time[0] = initial_ptt_tail_time_tx1;
