@@ -1183,6 +1183,10 @@ Recent Update History
     2020.03.07.02
       Command Line Interface - Added \] to disable and enable PTT
 
+    2020.03.07.03
+      Fixed bug with \] and \U interaction (Thanks SV5FRI)
+      Added \] to serial help  
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1197,7 +1201,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2020.03.07.02"
+#define CODE_VERSION "2020.03.07.03"
 #define eeprom_magic_number 36               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5488,47 +5492,6 @@ void ptt_key(){
     byte sequencer_4_ok = 0;
     byte sequencer_5_ok = 0;
   #endif 
-
-  // if (ptt_line_activated == 0) {   // if PTT is currently deactivated, bring it up and insert PTT lead time delay
-  //   #ifdef FEATURE_SO2R_BASE
-  //       //if (current_tx_ptt_line) {
-  //       if (current_tx_ptt_line && (configuration.ptt_buffer_hold_active || manual_ptt_invoke_ptt_input_pin)) {
-
-  //         #if defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)
-  //           if (winkey_pinconfig_ptt_bit){
-  //             digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
-  //           }
-  //         #else
-  //           digitalWrite (configuration.current_ptt_line, ptt_line_active_state);  
-  //         #endif // defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD) 
-
-
-  //         //digitalWrite (current_tx_ptt_line, ptt_line_active_state);
-  //         #ifdef FEATURE_SEQUENCER
-  //           sequencer_ptt_inactive_time = 0;
-  //         #endif  
-  //       }
-  //   #else
-  //     if (configuration.current_ptt_line) {
-  //       #if defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)
-  //         if (winkey_pinconfig_ptt_bit){
-  //           digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
-  //         }
-  //       #else
-  //         digitalWrite (configuration.current_ptt_line, ptt_line_active_state);  
-  //       #endif // defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)   
-  //       #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
-  //         if ((wk2_both_tx_activated) && (ptt_tx_2)) {
-  //           digitalWrite (ptt_tx_2, ptt_line_active_state);
-  //         }
-  //       #endif
-  //       #ifdef FEATURE_SEQUENCER
-  //         sequencer_ptt_inactive_time = 0;
-  //       #endif  
-  //     }
-  //   #endif //FEATURE_SO2R_BASE
-
-//zzzzzz
 
   if (configuration.ptt_disabled){return;}
 
@@ -12158,6 +12121,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\(\t\t: Send current serial number in cut numbers")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\)\t\t: Send serial number with cut numbers, then increment")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\[\t\t: Set quiet paddle interruption - 0 to 20 element lengths; 0 = off")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\]\t\t: PTT disable/enable"));
   #ifdef FEATURE_AMERICAN_MORSE
     port_to_use->println(F("\\=\t\t: Toggle American Morse mode")); //Added missing command(WD9DMP)
   #endif
@@ -12391,6 +12355,8 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         port_to_use->println(F("ff"));
       } else {
         manual_ptt_invoke = 1;
+        configuration.ptt_disabled = 0;
+        config_dirty = 1;
         ptt_key();
         port_to_use->println(F("n"));
       }
