@@ -1176,6 +1176,10 @@ Recent Update History
     2020.03.06.01
       Merged pull request 92 - Fix button logic and add test https://github.com/k3ng/k3ng_cw_keyer/pull/92  (Thanks W6IPA)
 
+    2020.03.07.01
+      Added OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_LINE - K1EL Winkeyer PTT setting activates/deactivates PTT line rather than controls buffered character PTT hold 
+      TinyKeyer - OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW enabled by default for TinyKeyer (keyer_features_and_options_tinykeyer.h)
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1190,7 +1194,7 @@ Recent Update History
 
 */
 
-#define CODE_VERSION "2020.03.06.01"
+#define CODE_VERSION "2020.03.07.01"
 #define eeprom_magic_number 35               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5520,26 +5524,55 @@ void ptt_key(){
   //     }
   //   #endif //FEATURE_SO2R_BASE
 
+
+
+
   if (ptt_line_activated == 0) {   // if PTT is currently deactivated, bring it up and insert PTT lead time delay
     #ifdef FEATURE_SO2R_BASE
         if (current_tx_ptt_line && (configuration.ptt_buffer_hold_active || manual_ptt_invoke_ptt_input_pin)) {
-        digitalWrite (current_tx_ptt_line, ptt_line_active_state);
+
+          #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_LINE)
+            if (winkey_pinconfig_ptt_bit){
+              digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
+            }
+          #else
+            digitalWrite (configuration.current_ptt_line, ptt_line_active_state);  
+          #endif // defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD) 
+
+
+          //digitalWrite (current_tx_ptt_line, ptt_line_active_state);
+
+          //delay(configuration.ptt_lead_time[configuration.current_tx-1]);
+          #ifdef FEATURE_SEQUENCER
+            sequencer_ptt_inactive_time = 0;
+          #endif  
+        }
     #else
       if (configuration.current_ptt_line) {
-        digitalWrite (configuration.current_ptt_line, ptt_line_active_state);    
+
+          #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_LINE)
+            if (winkey_pinconfig_ptt_bit){
+              digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
+            }
+          #else
+            digitalWrite (configuration.current_ptt_line, ptt_line_active_state);  
+          #endif // defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD) 
+
+        //digitalWrite (configuration.current_ptt_line, ptt_line_active_state); 
+
+
+
         #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
           if ((wk2_both_tx_activated) && (ptt_tx_2)) {
             digitalWrite (ptt_tx_2, ptt_line_active_state);
           }
         #endif
-    #endif //FEATURE_SO2R_BASE
-
-        //delay(configuration.ptt_lead_time[configuration.current_tx-1]);
+         //delay(configuration.ptt_lead_time[configuration.current_tx-1]);
         #ifdef FEATURE_SEQUENCER
           sequencer_ptt_inactive_time = 0;
         #endif  
       }
-
+    #endif //FEATURE_SO2R_BASE
 
     ptt_line_activated = 1;
 
