@@ -1187,6 +1187,9 @@ Recent Update History
       Fixed bug with \] and \U interaction (Thanks SV5FRI)
       Added \] to serial help  
 
+    2020.03.08.01  
+      Fixed another bug with \] and \U interaction (Thanks SV5FRI)
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1199,9 +1202,15 @@ Recent Update History
   
   "Make good code and share it with friends."
 
+
+If you offer a hardware kit using this software, show your appreciation by sending the author a complimentary kit or a bottle of bourbon ;-)
+Full documentation can be found at https://github.com/k3ng/k3ng_cw_keyer/wiki .  Please read it before requesting help.
+For help, please post on the Radio Artisan group: https://groups.io/g/radioartisan .  Please do not email K3NG directly for support.  Thanks and 73
+
+
 */
 
-#define CODE_VERSION "2020.03.07.03"
+#define CODE_VERSION "2020.03.08.01"
 #define eeprom_magic_number 36               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -12529,6 +12538,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
         port_to_use->print(F("en"));
       } else {
         configuration.ptt_disabled = 1;
+        ptt_unkey();
         port_to_use->print(F("dis"));
       }
       port_to_use->println(F("abled"));
