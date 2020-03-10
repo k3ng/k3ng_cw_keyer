@@ -38,7 +38,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \a     Iambic A mode
     \b     Iambic B mode
     \c     Single Paddle mode
-    \d     Ultimatic mode
+    \d     Ultimatic mode (if OPTION_NO_ULTIMATIC not set)
     \e#### Set serial number to ####
     \f#### Set sidetone frequency to #### hertz
     \g     Bug mode
@@ -110,14 +110,15 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     A  Switch to Iambic A mode
     B  Switch to Iambic B mode
     C  Switch to Single Paddle Mode
-    D  Switch to Ultimatic mode
+    D  Switch to Ultimatic mode (if OPTION_NO_ULTIMATIC not set)
+
     E  Announce speed
     F  Adjust sidetone frequency
     G  Switch to bug mode
     H  Set weighting and dah to dit ratio to defaults
     I  TX enable / disable
     J  Dah to dit ratio adjust
-    K  Toggle Dit and Dah Buffers on and off (Ultimatic Mode)
+    K  Toggle Dit and Dah Buffers on and off (Ultimatic Mode) (if OPTION_NO_ULTIMATIC is not set)
     L  Adjust weighting
     M  Change command mode speed
     N  Toggle paddle reverse
@@ -166,7 +167,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
    CTRL-A           Iambic A
    CTRL-B           Iambic B
    CTRL-C           Single Paddle
-   CTRL-D           Ultimatic
+   CTRL-D           Ultimatic                            (if OPTION_NO_ULTIMATIC not set)
    CTRL-E           Set Serial Number
    CTRL-G           Bug
    CTRL-H           Toggle Hell Mode On/Off              (requires FEATURE_HELL)
@@ -3770,6 +3771,7 @@ void check_ps2_keyboard()
           config_dirty = 1;
           break;
 
+        #ifndef OPTION_NO_ULTIMATIC
         case PS2_D_CTRL :
           configuration.keyer_mode = ULTIMATIC;
           #ifdef FEATURE_DISPLAY
@@ -3781,7 +3783,7 @@ void check_ps2_keyboard()
           #endif        
           config_dirty = 1;
           break;
-
+        #endif // OPTION_NO_ULTIMATIC
         #ifndef OPTION_SAVE_MEMORY_NANOKEYER
           case PS2_E_CTRL :
             #ifdef FEATURE_DISPLAY
@@ -4328,6 +4330,7 @@ void check_ps2_keyboard()
           config_dirty = 1;
           break;
 
+        #ifndef OPTION_NO_ULTIMATIC
         case PS2_D_CTRL :
           configuration.keyer_mode = ULTIMATIC;
           #ifdef FEATURE_DISPLAY
@@ -4339,6 +4342,7 @@ void check_ps2_keyboard()
           #endif        
           config_dirty = 1;
           break;
+        #endif // OPTION_NO_ULTIMATIC
 
         case PS2_E_CTRL :
           #ifdef FEATURE_DISPLAY
@@ -5305,7 +5309,7 @@ void check_paddles()
       dah_buffer = 1;
     }
   #endif //FEATURE_WINKEY_EMULATION
-
+  #ifndef OPTION_NO_ULTIMATIC
   if (configuration.keyer_mode == ULTIMATIC) {
     if (ultimatic_mode == ULTIMATIC_NORMAL) {
 
@@ -5397,6 +5401,7 @@ void check_paddles()
      }
     } // if (ultimatic_mode == ULTIMATIC_NORMAL)
   } // if (configuration.keyer_mode == ULTIMATIC)
+  #endif // OPTION_NO_ULTIMATIC
 
   if (configuration.keyer_mode == SINGLE_PADDLE){
     switch (last_closure) {
@@ -6671,8 +6676,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
         #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 
       } else { //(configuration.keyer_mode != ULTIMATIC)
-
-
+        #ifndef OPTION_NO_ULTIMATIC
         if (being_sent == SENDING_DIT) {
           check_dah_paddle();
         } else {
@@ -6683,6 +6687,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
             check_dit_paddle();                
           }
         }   
+        #endif // OPTION_NO_ULTIMATIC
 
       }
       
@@ -7096,7 +7101,7 @@ void command_mode() {
           send_char(c[0],KEYER_NORMAL);
           send_char(c[1],KEYER_NORMAL);
           break;
-
+        #ifndef OPTION_NO_ULTIMATIC
         case 211: // D - Ultimatic mode
           configuration.keyer_mode = ULTIMATIC;
           keyer_mode_before = ULTIMATIC;
@@ -7112,7 +7117,7 @@ void command_mode() {
           #endif                    
           send_dit();
           break; 
-
+          #endif //OPTION_NO_ULTIMATIC
         #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
           case 1121: command_sidetone_freq_adj(); break;                    // F - adjust sidetone frequency
           // #if defined(FEATURE_SINEWAVE_SIDETONE)
@@ -7158,6 +7163,7 @@ void command_mode() {
           send_dit();
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
+        #ifndef OPTION_NO_ULTIMATIC
         case 212:                                                                   // K - turn dit and dah buffers on and off
           if (configuration.keyer_mode == ULTIMATIC){
             send_char('O',KEYER_NORMAL);
@@ -7200,6 +7206,8 @@ void command_mode() {
             send_char('R',KEYER_NORMAL);
           }
           break;
+          #endif //OPTION_NO_ULTIMATIC
+
         case 1211: command_weighting_adjust();break; // L - weight adjust
 
         case 22: // M - Set command mode WPM
@@ -7518,6 +7526,8 @@ void command_mode() {
               #endif                                                     // FEATURE_DISPLAY
               send_char('S',KEYER_NORMAL);
               break;
+
+            #ifndef OPTION_NO_ULTIMATIC
             case ULTIMATIC:
               #ifdef FEATURE_DISPLAY
                 lcd_center_print_timed("mode  Ultimatic", 1, default_display_msg_delay);
@@ -7525,6 +7535,7 @@ void command_mode() {
               #endif                                                     // FEATURE_DISPLAY
               send_char('U',KEYER_NORMAL);
               break;
+            #endif //OPTION_NO_ULTIMATIC
             case BUG:
               #ifdef FEATURE_DISPLAY
                 lcd_center_print_timed("mode  Bug", 1, default_display_msg_delay);
@@ -10208,11 +10219,13 @@ void winkey_set_pinconfig_command(byte incoming_serial_byte) {
     configuration.sidetone_mode = SIDETONE_OFF;
   }
   
+  #ifndef OPTION_NO_ULTIMATIC
   switch (incoming_serial_byte & 192) {
     case 0:  ultimatic_mode = ULTIMATIC_NORMAL; break;
     case 64: ultimatic_mode = ULTIMATIC_DAH_PRIORITY; break;
     case 128: ultimatic_mode = ULTIMATIC_DIT_PRIORITY; break;
   }
+  #endif
 
   switch(incoming_serial_byte & 48) {
     case 0: ptt_hang_time_wordspace_units = WINKEY_HANG_TIME_1_0; break;
@@ -10491,8 +10504,12 @@ void winkey_admin_get_values_command() {
     #ifndef FEATURE_SO2R_BASE
       if (wk2_both_tx_activated) {byte_to_send = byte_to_send | 12;}
     #endif
+
+    #ifndef OPTION_NO_ULTIMATIC
     if (ultimatic_mode == ULTIMATIC_DIT_PRIORITY) {byte_to_send = byte_to_send | 128;}
     if (ultimatic_mode == ULTIMATIC_DAH_PRIORITY) {byte_to_send = byte_to_send | 64;}  
+    #endif
+
     if (ptt_hang_time_wordspace_units == 1.33) {byte_to_send = byte_to_send | 16;}
     if (ptt_hang_time_wordspace_units == 1.66) {byte_to_send = byte_to_send | 32;}
     if (ptt_hang_time_wordspace_units == 2.0) {byte_to_send = byte_to_send | 48;}
@@ -12076,7 +12093,9 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\A\t\t: Iambic A"));
   port_to_use->println(F("\\B\t\t: Iambic B"));
   port_to_use->println(F("\\C\t\t: Single paddle")); //Upper case to first letter only(WD9DMP)
+  #ifndef OPTION_NO_ULTIMATIC
   port_to_use->println(F("\\D\t\t: Ultimatic"));
+  #endif
   port_to_use->println(F("\\E####\t\t: Set serial number to ####"));
   port_to_use->println(F("\\F####\t\t: Set sidetone to #### hz"));
   port_to_use->println(F("\\G\t\t: Switch to bug mode")); //Upper case to first letter only(WD9DMP)
@@ -12249,6 +12268,8 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       configuration.keyer_mode = SINGLE_PADDLE; 
       config_dirty = 1; port_to_use->println(F("\r\nSingle Paddle")); 
       break;    
+
+    #ifndef OPTION_NO_ULTIMATIC
     case 'D': // D - Ultimatic mode
       configuration.keyer_mode = ULTIMATIC; 
       configuration.dit_buffer_off = 1;
@@ -12256,6 +12277,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       config_dirty = 1; 
       port_to_use->println(F("\r\nUltimatic")); 
       break;  
+    #endif
     case 'E': serial_set_serial_number(port_to_use); break;                                   // E - set serial number
     case 'F': serial_set_sidetone_freq(port_to_use); break;                                   // F - set sidetone frequency
     case 'G': configuration.keyer_mode = BUG; config_dirty = 1; port_to_use->println(F("\r\nBug")); break;              // G - Bug mode
@@ -15170,6 +15192,8 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
       break;
     case BUG: port_to_use->print(F("Bug")); break;
     case STRAIGHT: port_to_use->print(F("Straight Key")); break;
+
+    #ifndef OPTION_NO_ULTIMATIC
     case ULTIMATIC: 
       port_to_use->print(F("Ultimatic ")); 
       switch(ultimatic_mode){
@@ -15184,6 +15208,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
           break;        
       }
     break;
+    #endif // OPTION_NO_ULTIMATIC
     case SINGLE_PADDLE: port_to_use->print(F("Single Paddle")); break;
 
     break;
@@ -18156,6 +18181,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         config_dirty = 1;
         break;
 
+      #ifndef OPTION_NO_ULTIMATIC
       case 0x07 : // CTRL-D
         configuration.keyer_mode = ULTIMATIC;
         #ifdef FEATURE_DISPLAY
@@ -18167,6 +18193,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
         #endif        
         config_dirty = 1;
         break;
+      #endif
 
       case 0x08 : // CTRL-E
         #ifdef FEATURE_DISPLAY
@@ -19811,7 +19838,9 @@ void web_print_page_keyer_settings(EthernetClient client){
   web_print_control_radio(client,"md",IAMBIC_B,(configuration.keyer_mode == IAMBIC_B)?1:0,"Iambic B ");
   web_print_control_radio(client,"md",BUG,(configuration.keyer_mode == BUG)?1:0,"Bug ");
   web_print_control_radio(client,"md",STRAIGHT,(configuration.keyer_mode == STRAIGHT)?1:0,"Straight Key");
+  #ifndef OPTION_NO_ULTIMATIC
   web_print_control_radio(client,"md",ULTIMATIC,(configuration.keyer_mode == ULTIMATIC)?1:0,"Ultimatic");
+  #endif
   web_print_control_radio(client,"md",SINGLE_PADDLE,(configuration.keyer_mode == SINGLE_PADDLE)?1:0,"Single Paddle");
   web_client_println(client,"<br>");  
 
