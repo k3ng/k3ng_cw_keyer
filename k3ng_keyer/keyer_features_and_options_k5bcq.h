@@ -108,6 +108,7 @@
 // #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
 
 // #define OPTION_EXCLUDE_MILL_MODE
+// #define OPTION_NO_ULTIMATIC // reduce memory usage by removing ultimatic code.
 
 // #define OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW
 
