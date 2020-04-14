@@ -1466,6 +1466,10 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
   #include <SD.h>
 #endif //FEATURE_SD_CARD_SUPPORT
 
+#if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
+  extern uint32_t __get_MSP(void);
+  #define SP __get_MSP()
+#endif  
 
 #define memory_area_start 114
 
