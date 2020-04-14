@@ -1199,7 +1199,11 @@ Recent Update History
       Fixed compilation error when LCD display is enabled without FEATURE_MEMORIES (Thanks Nigel M0NDE)
 
     2020.04.14.01
-      Support for FlashAsEEPROM (Thanks Phil M0VSE)  
+      Support for FlashAsEEPROM (Thanks Phil M0VSE) 
+  
+    2020.04.14.02
+      Support for FlashAsEEPROM, take two; ARDUINO_SAMD_VARIANT_COMPLIANCE support (Thanks Phil M0VSE) 
+
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1221,7 +1225,7 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
 
 */
 
-#define CODE_VERSION "2020.04.14.01"
+#define CODE_VERSION "2020.04.14.02"
 #define eeprom_magic_number 36               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1239,14 +1243,12 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
   #include "keyer_stm32duino.h" 
 #elif defined(_BOARD_PIC32_PINGUINO_)
   #include <EEPROM.h>
+#elif defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
+  #include <FlashAsEEPROM.h>  
 #else
   #include <avr/pgmspace.h>
   #include <avr/wdt.h>
-  #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
-    #include <FlashAsEEPROM.h>
-  #else
-    #include <EEPROM.h>  
-  #endif
+  #include <EEPROM.h>  
 #endif //ARDUINO_SAM_DUE
 
 #if defined(HARDWARE_OPENCWKEYER_MK2)
