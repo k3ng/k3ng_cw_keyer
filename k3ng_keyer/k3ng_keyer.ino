@@ -1193,8 +1193,10 @@ Recent Update History
 
     2020.03.10.01
       Merged pull request 94 - HARDWARE_GENERIC_STM32F103C - Fixed error : call of overloaded 'noTone(<anonymous enum>)' is ambiguous (Thanks 7m4mon)  
-      Merged pull request 93 - Option to disable ultimatic to save space (Thanks, K6IPA)
+      Merged pull request 93 - Option to disable ultimatic to save space (Thanks, W6IPA)
 
+    2020.04.13.01
+      Fixed compilation error when LCD display is enabled without FEATURE_MEMORIES (Thanks Nigel M0NDE)
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1216,7 +1218,7 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
 
 */
 
-#define CODE_VERSION "2020.03.10.01"
+#define CODE_VERSION "2020.04.13.01"
 #define eeprom_magic_number 36               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -7640,7 +7642,7 @@ void command_mode() {
 
 void command_display_memory(byte memory_number) {
  
-  #ifdef FEATURE_DISPLAY
+  #if defined(FEATURE_DISPLAY) && defined(FEATURE_MEMORIES)
     byte eeprom_byte_read = 0;
     char memory_char[LCD_COLUMNS];                                                        // an array of char to hold the retrieved memory from EEPROM
     int j;
