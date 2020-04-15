@@ -1208,6 +1208,8 @@ Recent Update History
       Support for FlashAsEEPROM, take three; ARDUINO_SAMD_VARIANT_COMPLIANCE support (Thanks Phil M0VSE) 
       Added DEBUG_EEPROM_READ_SETTINGS
 
+    2020.04.15.01
+      Support for FlashAsEEPROM, take four; ARDUINO_SAMD_VARIANT_COMPLIANCE support (Thanks Phil M0VSE) 
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1229,7 +1231,7 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
 
 */
 
-#define CODE_VERSION "2020.04.14.03"
+#define CODE_VERSION "2020.04.15.01"
 #define eeprom_magic_number 36               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -5926,7 +5928,8 @@ void service_async_eeprom_write(){
   if ((async_eeprom_write) && (!send_buffer_bytes) && (!ptt_line_activated) && (!dit_buffer) && (!dah_buffer) && (paddle_pin_read(paddle_left) == HIGH)  && (paddle_pin_read(paddle_right) == HIGH)) {  
     if (last_async_eeprom_write_status){ // we have an ansynchronous write to eeprom in progress
 
-      #if defined(_BOARD_PIC32_PINGUINO_)
+
+      #if defined(_BOARD_PIC32_PINGUINO_) || defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
         if (EEPROM.read(ee) != *p) {
           EEPROM.write(ee, *p);
         }
@@ -5934,23 +5937,24 @@ void service_async_eeprom_write(){
         p++;
       #else
         EEPROM.update(ee++, *p++);
-        #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
-          EEPROM.commit();
-        #endif        
       #endif
 
       if (i < sizeof(configuration)){
         #if defined(DEBUG_ASYNC_EEPROM_WRITE)
           debug_serial_port->print(F("service_async_eeprom_write: write: "));
           debug_serial_port->println(i);
-        #endif        
+        #endif       
         i++;
       } else { // we're done
         async_eeprom_write = 0;
         last_async_eeprom_write_status = 0;
+        #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
+          EEPROM.commit();
+        #endif       
+
         #if defined(DEBUG_ASYNC_EEPROM_WRITE)
           debug_serial_port->println(F("service_async_eeprom_write: complete"));
-        #endif        
+        #endif    
       }
 
     } else { // we don't have one in progress - initialize things
