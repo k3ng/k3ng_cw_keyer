@@ -1204,6 +1204,10 @@ Recent Update History
     2020.04.14.02
       Support for FlashAsEEPROM, take two; ARDUINO_SAMD_VARIANT_COMPLIANCE support (Thanks Phil M0VSE) 
 
+    2020.04.14.03
+      Support for FlashAsEEPROM, take three; ARDUINO_SAMD_VARIANT_COMPLIANCE support (Thanks Phil M0VSE) 
+      Added DEBUG_EEPROM_READ_SETTINGS
+
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1225,7 +1229,7 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
 
 */
 
-#define CODE_VERSION "2020.04.14.02"
+#define CODE_VERSION "2020.04.14.03"
 #define eeprom_magic_number 36               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -2117,16 +2121,16 @@ void setup()
   initialize_default_modes();
   initialize_watchdog();
   initialize_ethernet_variables();
+  #if defined(DEBUG_EEPROM_READ_SETTINGS)
+    initialize_serial_ports();
+  #endif
   check_eeprom_for_initialization();
   check_for_beacon_mode();
   check_for_debug_modes();
   initialize_analog_button_array();
-  initialize_serial_ports();
-
-  // #if defined(FEATURE_SINEWAVE_SIDETONE)  // UNDER DEVELOPMENT
-  //   initialize_tonsin();
-  // #endif  
-  
+  #if !defined(DEBUG_EEPROM_READ_SETTINGS)
+    initialize_serial_ports();
+  #endif 
   initialize_ps2_keyboard();
   initialize_usb();
   initialize_cw_keyboard();
@@ -5930,6 +5934,9 @@ void service_async_eeprom_write(){
         p++;
       #else
         EEPROM.update(ee++, *p++);
+        #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
+          EEPROM.commit();
+        #endif        
       #endif
 
       if (i < sizeof(configuration)){
@@ -5941,9 +5948,6 @@ void service_async_eeprom_write(){
       } else { // we're done
         async_eeprom_write = 0;
         last_async_eeprom_write_status = 0;
-        #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
-          EEPROM.commit();
-        #endif
         #if defined(DEBUG_ASYNC_EEPROM_WRITE)
           debug_serial_port->println(F("service_async_eeprom_write: complete"));
         #endif        
@@ -5973,7 +5977,13 @@ int read_settings_from_eeprom() {
     return 1;
   #endif
   
+
+
   #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+
+    #if defined(DEBUG_EEPROM_READ_SETTINGS)
+      debug_serial_port->println(F("read_settings_from_eeprom: start"));
+    #endif
 
     if (EEPROM.read(0) == eeprom_magic_number){
     
@@ -5981,6 +5991,13 @@ int read_settings_from_eeprom() {
       unsigned int i;
       int ee = 1; // starting point of configuration struct
       for (i = 0; i < sizeof(configuration); i++){
+        #if defined(DEBUG_EEPROM_READ_SETTINGS)
+          debug_serial_port->print(F("read_settings_from_eeprom: read: i:"));
+          debug_serial_port->print(i);
+          debug_serial_port->print(F(":"));
+          debug_serial_port->print(EEPROM.read(ee));
+          debug_serial_port->println();
+        #endif
         *p++ = EEPROM.read(ee++);  
       }
     
@@ -5990,18 +6007,22 @@ int read_settings_from_eeprom() {
 
       config_dirty = 0;
 
-      // #if defined(FEATURE_SINEWAVE_SIDETONE)
-      //   initialize_tonsin();
-      // #endif 
-
+      #if defined(DEBUG_EEPROM_READ_SETTINGS)
+        debug_serial_port->println(F("read_settings_from_eeprom: read complete"));
+      #endif
       return 0;
     } else {
+      #if defined(DEBUG_EEPROM_READ_SETTINGS)
+        debug_serial_port->println(F("read_settings_from_eeprom: eeprom needs initialized"));
+      #endif      
       return 1;
     }
   
   #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
-
+  #if defined(DEBUG_EEPROM_READ_SETTINGS)
+    debug_serial_port->println(F("read_settings_from_eeprom: bypassed read - no eeprom"));
+  #endif
  
   return 1;
 
@@ -15818,6 +15839,10 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
   } else {
     port_to_use->println(F("\n\rError"));
   }
+
+  #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
+    EEPROM.commit();
+  #endif
 
 }
 
