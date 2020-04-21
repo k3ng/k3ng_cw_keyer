@@ -167,8 +167,8 @@ FEATURE_SIDETONE_SWITCH
 
 #define ptt_input_pin 0  
 
-#define tx_inhibit_pin 50
-#define tx_pause_pin 48 
+#define tx_inhibit_pin 0
+#define tx_pause_pin 0
 
 
 #else

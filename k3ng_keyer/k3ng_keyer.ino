@@ -84,8 +84,8 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \}#### Set potentiometer range - low ## / high ##
     \"     Hold PTT active with buffered characters
     \]     PTT Enable / Disable
-    \;     FUTURE
-    \_     FUTURE - Set Clock
+    \_     Beacon Mode at Boot Up Enable / Disable (requires FEATURE_BEACON_SETTING)
+    \;     CW Send Inhibit Enable / Disable
     \\     Immediately clear the buffer, stop memory sending, etc.
     \:     Extended CLLI commands
             eepromdump              - do a byte dump of EEPROM for troubleshooting
@@ -1211,6 +1211,11 @@ Recent Update History
     2020.04.15.01
       Support for FlashAsEEPROM, take four; ARDUINO_SAMD_VARIANT_COMPLIANCE support (Thanks Phil M0VSE) 
 
+    2020.04.21.01
+      FEATURE_BEACON_SETTING
+      Command Line Interface: \_ Command - Beacon Mode at Boot Up Enable / Disable (requires FEATURE_BEACON_SETTING)
+      {Need to update wiki}
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1231,8 +1236,8 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
 
 */
 
-#define CODE_VERSION "2020.04.15.01"
-#define eeprom_magic_number 36               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2020.04.21.01"
+#define eeprom_magic_number 37               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1477,10 +1482,10 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
   #define SP __get_MSP()
 #endif  
 
-#define memory_area_start 114
+#define memory_area_start 115
 
 // Variables and stuff
-struct config_t {  // 112 bytes total
+struct config_t {  // 113 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1502,7 +1507,8 @@ struct config_t {  // 112 bytes total
   uint8_t cli_mode;
   uint8_t ptt_buffer_hold_active;
   uint8_t ptt_disabled;
-    // 20 bytes
+  uint8_t beacon_mode_on_boot_up;
+    // 21 bytes
 
   unsigned int wpm;
   unsigned int hz_sidetone;
@@ -2157,7 +2163,7 @@ void loop()
     wdt_reset();
   #endif  //OPTION_WATCHDOG_TIMER
   
-  #if defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
+  #if defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)  // paddle_left pin LOW at boot up beacon mode
     if (keyer_machine_mode == BEACON) {
       delay(201);
       while (keyer_machine_mode == BEACON) {  // if we're in beacon mode, just keep playing memory 1
@@ -2176,7 +2182,11 @@ void loop()
     }
   #endif //defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
 
- if (keyer_machine_mode == KEYER_NORMAL) {
+  #if defined(FEATURE_BEACON_SETTING)
+    service_beacon();
+  #endif
+
+  if (keyer_machine_mode == KEYER_NORMAL) {
     #ifdef FEATURE_COMMAND_BUTTONS
       check_command_buttons();
     #endif //FEATURE_COMMAND_BUTTONS
@@ -2357,6 +2367,15 @@ byte service_tx_inhibit_and_pause(){
 
 //-------------------------------------------------------------------------------------------------------
 
+#if defined(FEATURE_BEACON_SETTING)
+  void service_beacon(){
+    if ((configuration.beacon_mode_on_boot_up) && (!send_buffer_bytes)){
+      serial_play_memory(0);
+    }
+  }
+#endif //FEATURE_BEACON_SETTING
+
+//-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
   void service_competition_compression_detection(){
@@ -12332,20 +12351,20 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     #ifdef FEATURE_HELL
       case 'H': // H - Hell mode
         if ((char_send_mode == CW) || (char_send_mode == AMERICAN_MORSE)){
-          char_send_mode = HELL; port_to_use->println(F("\r\nHell mode"));
+          char_send_mode = HELL; port_to_use->println(F("\r\nHell Mode"));
         } else {
-          char_send_mode = CW; port_to_use->println(F("\r\nCW mode"));
+          char_send_mode = CW; port_to_use->println(F("\r\nCW Mode"));
         }  
         break;         
     #endif //FEATURE_HELL
     #ifdef FEATURE_AMERICAN_MORSE
       case '=': // = - American Morse
         if ((char_send_mode == CW) || (char_send_mode == HELL)){
-          char_send_mode = AMERICAN_MORSE; port_to_use->println(F("\r\nAmerican Morse mode"));
+          char_send_mode = AMERICAN_MORSE; port_to_use->println(F("\r\nAmerican Morse Mode"));
           previous_dah_to_dit_ratio = configuration.dah_to_dit_ratio;
           configuration.dah_to_dit_ratio = 200;
         } else {
-          char_send_mode = CW; port_to_use->println(F("\r\nInternational CW mode"));
+          char_send_mode = CW; port_to_use->println(F("\r\nInternational CW Mode"));
           configuration.dah_to_dit_ratio = previous_dah_to_dit_ratio;
         }  
         break;         
@@ -12393,10 +12412,10 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       port_to_use->print(F("\r\nPaddles "));
       if (configuration.paddle_mode == PADDLE_NORMAL) {
         configuration.paddle_mode = PADDLE_REVERSE;
-        port_to_use->println(F("reversed"));
+        port_to_use->println(F("Reversed"));
       } else {
         configuration.paddle_mode = PADDLE_NORMAL;
-        port_to_use->println(F("normal"));
+        port_to_use->println(F("Normal"));
       }
       config_dirty = 1;
     break;
@@ -12405,17 +12424,17 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
         configuration.sidetone_mode = SIDETONE_OFF;
         boop();      
-        port_to_use->println(F("OFF"));
+        port_to_use->println(F("Off"));
       } else if (configuration.sidetone_mode == SIDETONE_ON) {
         configuration.sidetone_mode = SIDETONE_PADDLE_ONLY;
         beep();
         delay(200);
         beep();
-        port_to_use->println(F("PADDLE ONLY"));
+        port_to_use->println(F("Paddle Only"));
       } else {
         configuration.sidetone_mode = SIDETONE_ON;
         beep();
-        port_to_use->println(F("ON"));
+        port_to_use->println(F("On"));
       }
       config_dirty = 1;
     break;
@@ -12427,7 +12446,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       #endif
       serial_tune_command(port_to_use); break;
     case 'U':
-      port_to_use->print(F("\r\nPTT o"));
+      port_to_use->print(F("\r\nPTT O"));
       if (ptt_line_activated) {
         manual_ptt_invoke = 0;
         ptt_unkey();
@@ -12539,7 +12558,11 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       config_dirty = 1;    
       break;
     case ';':
-      if (cw_send_echo_inhibit) cw_send_echo_inhibit = 0; else cw_send_echo_inhibit = 1;
+      if (cw_send_echo_inhibit){
+        cw_send_echo_inhibit = 0;
+      } else {
+        cw_send_echo_inhibit = 1;
+      }
       break;
     #ifdef FEATURE_QLF
       case '{':
@@ -12605,15 +12628,30 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       port_to_use->print(F("\r\nPTT "));
       if (configuration.ptt_disabled){
         configuration.ptt_disabled = 0;
-        port_to_use->print(F("en"));
+        port_to_use->print(F("En"));
       } else {
         configuration.ptt_disabled = 1;
         ptt_unkey();
-        port_to_use->print(F("dis"));
+        port_to_use->print(F("Dis"));
       }
       port_to_use->println(F("abled"));
       config_dirty = 1;
       break;
+
+    #if defined(FEATURE_BEACON_SETTING)
+    case '_':
+        port_to_use->print(F("\r\nBeacon Mode At Boot Up "));
+        if (!configuration.beacon_mode_on_boot_up){
+          configuration.beacon_mode_on_boot_up = 1;
+          port_to_use->print(F("En"));
+        } else {
+          configuration.beacon_mode_on_boot_up = 0;
+          port_to_use->print(F("Dis"));
+        }
+        port_to_use->println(F("abled"));
+        config_dirty = 1;
+        break;
+    #endif  
 
 
     #if !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) 
@@ -15395,6 +15433,15 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     port_to_use->println(F("ff"));
   }  
 
+  #if defined(FEATURE_BEACON_SETTING)
+    port_to_use->print(F("Beacon Mode At Boot Up: O"));
+    if (configuration.beacon_mode_on_boot_up){
+      port_to_use->println(F("n"));
+    } else {
+      port_to_use->println(F("ff"));
+    }  
+  #endif
+
   #if defined(FEATURE_PADDLE_ECHO)
     port_to_use->print(F("Paddle Echo: O"));
     if (cli_paddle_echo){
@@ -15403,6 +15450,7 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
       port_to_use->println(F("ff"));
     }  
   #endif
+
 
   #if defined(FEATURE_STRAIGHT_KEY_ECHO)
     port_to_use->print(F("Straight Key Echo: O"));
@@ -17473,6 +17521,7 @@ void initialize_keyer_state(){
   configuration.ptt_buffer_hold_active = 0;
   configuration.sidetone_volume = sidetone_volume_low_limit + ((sidetone_volume_high_limit - sidetone_volume_low_limit) / 2);
   configuration.ptt_disabled = 0;
+  configuration.beacon_mode_on_boot_up = 0;
 
   configuration.ptt_lead_time[0] = initial_ptt_lead_time_tx1;
   configuration.ptt_tail_time[0] = initial_ptt_tail_time_tx1;
