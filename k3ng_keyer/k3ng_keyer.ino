@@ -1216,6 +1216,10 @@ Recent Update History
       Command Line Interface: \_ Command - Beacon Mode at Boot Up Enable / Disable (requires FEATURE_BEACON_SETTING)
       {Need to update wiki}
 
+    2020.04.24.01
+      Added to settings files: command_mode_acknowledgement_character 'E'
+
+
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
@@ -1236,7 +1240,7 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
 
 */
 
-#define CODE_VERSION "2020.04.21.01"
+#define CODE_VERSION "2020.04.24.01"
 #define eeprom_magic_number 37               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -7123,7 +7127,7 @@ void command_mode() {
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
           #endif
-          send_dit();
+          send_char(command_mode_acknowledgement_character, 0);
           break;
 
         case 2111: // B - Iambic mode
@@ -7135,7 +7139,7 @@ void command_mode() {
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
           #endif          
-          send_dit();
+          send_char(command_mode_acknowledgement_character, 0);
           break;
 
         case 2121: // C - Single paddle mode
@@ -7149,7 +7153,7 @@ void command_mode() {
               lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
             }
           #endif
-          send_dit();
+          send_char(command_mode_acknowledgement_character, 0);
           break;          
         case 1:    // E - announce spEed
 	        #ifdef FEATURE_DISPLAY
@@ -7182,14 +7186,11 @@ void command_mode() {
               lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
             }          
           #endif                    
-          send_dit();
+          send_char(command_mode_acknowledgement_character, 0);
           break; 
           #endif //OPTION_NO_ULTIMATIC
         #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
           case 1121: command_sidetone_freq_adj(); break;                    // F - adjust sidetone frequency
-          // #if defined(FEATURE_SINEWAVE_SIDETONE)
-          //   case 2212: command_sidetone_volume_adj(); break;                    // Q - adjust sinewave sidetone volume
-          // #endif
         #endif
 
 	  case 221: // G - switch to buG mode
@@ -7199,7 +7200,7 @@ void command_mode() {
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Bug", 0, default_display_msg_delay);
           #endif          
-          send_dit();
+          send_char(command_mode_acknowledgement_character, 0);
           break;  
 
 	  case 1111:   // H - set weighting and dah to dit ratio to defaults
@@ -7213,7 +7214,7 @@ void command_mode() {
               lcd_center_print_timed("Dflt Wght & Ratio", 0, default_display_msg_delay); 
             }              
           #endif         
-          send_dit();
+          send_char(command_mode_acknowledgement_character, 0);
           break;  
         case 11:                                                     // I - toggle TX enable / disable
           if (command_mode_disable_tx) {
@@ -7227,7 +7228,7 @@ void command_mode() {
               lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
             #endif            
           }
-          send_dit();
+          send_char(command_mode_acknowledgement_character, 0);
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
         #ifndef OPTION_NO_ULTIMATIC
@@ -7305,7 +7306,7 @@ void command_mode() {
             configuration.paddle_mode = PADDLE_NORMAL;
           }
           config_dirty = 1;
-          send_dit();
+          send_char(command_mode_acknowledgement_character, 0);
           break;  
 
         case 222: // O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN
@@ -7383,7 +7384,7 @@ void command_mode() {
               #endif 
             }
             config_dirty = 1;
-            send_dit();
+            send_char(command_mode_acknowledgement_character, 0);
             break; 
         #endif
 
@@ -7407,7 +7408,7 @@ void command_mode() {
                 } else {
                   lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
                 }              
-                send_dit();
+                send_char(command_mode_acknowledgement_character, 0);
               #else
                 send_char('O',KEYER_NORMAL);
                 send_char('F',KEYER_NORMAL);
@@ -7422,7 +7423,7 @@ void command_mode() {
                 } else {
                   lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
                 }  
-                send_dit();
+                send_char(command_mode_acknowledgement_character, 0);
               #else            
                 send_char('O',KEYER_NORMAL);
                 send_char('N',KEYER_NORMAL);

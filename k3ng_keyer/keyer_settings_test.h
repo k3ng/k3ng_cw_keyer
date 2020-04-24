@@ -298,6 +298,7 @@
 #define sidetone_volume_low_limit 10
 #define sidetone_volume_high_limit 500
 
+#define command_mode_acknowledgement_character 'E'
 
 #endif //TEST_SETTINGS_1
 
@@ -588,6 +589,7 @@
 
 #define custom_startup_field "your custom text here"   // an example could be callsign and name, eg. "AB1XYZ Bob", (or "Worlds best operator" which requires a 20 column display), string length shouldo be no more than the number of columns on the display
 
+#define command_mode_acknowledgement_character 'R'
 
 #endif //TEST_SETTINGS_2
 
