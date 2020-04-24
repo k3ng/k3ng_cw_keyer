@@ -110,4 +110,4 @@
 // #define OPTION_EXCLUDE_MILL_MODE
 
 //#define OPTION_ENABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW_MAY_CAUSE_PROBLEMS
-
+//#define OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT    // when in Command Mode respond with an 'R' instead of a dit
