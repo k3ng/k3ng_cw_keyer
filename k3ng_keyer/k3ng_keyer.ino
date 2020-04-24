@@ -6627,12 +6627,11 @@ long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 
 //-------------------------------------------------------------------------------------------------------
 
-#ifdef FEATURE_COMMAND_BUTTONS
-void command_mode()
-{
+	#ifdef FEATURE_COMMAND_BUTTONS
+void command_mode() {
 
   keyer_machine_mode = KEYER_COMMAND_MODE;
-  
+
   #ifdef DEBUG_COMMAND_MODE
     debug_serial_port->println(F("command_mode: entering"));
   #endif
@@ -6641,7 +6640,6 @@ void command_mode()
     wdt_disable();
   #endif //OPTION_WATCHDOG_TIMER
 
-  
   byte looping;
   byte button_that_was_pressed = 0;
   byte paddle_hit = 0;
@@ -6671,7 +6669,7 @@ void command_mode()
     } else {
       lcd_center_print_timed("Command Mode", 0, default_display_msg_delay);
     }
-  #endif 
+  #endif
 
   #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE)
     winkey_breakin_status_byte_inhibit = 1;
@@ -6696,10 +6694,10 @@ void command_mode()
           check_potentiometer();
         }
       #endif
-      
+
       #ifdef FEATURE_ROTARY_ENCODER
         check_rotary_encoder();
-      #endif //FEATURE_ROTARY_ENCODER    
+      #endif //FEATURE_ROTARY_ENCODER
 
       check_paddles();
 
@@ -6738,13 +6736,11 @@ void command_mode()
         configuration.keyer_mode = keyer_mode_before;
         check_serial();
         if ((configuration.keyer_mode != IAMBIC_A) && (configuration.keyer_mode != IAMBIC_B) && (configuration.keyer_mode != ULTIMATIC)  && (configuration.keyer_mode != SINGLE_PADDLE)) {
-          configuration.keyer_mode = IAMBIC_B;                   
+          configuration.keyer_mode = IAMBIC_B;
         }
       #endif
 
     } //while (looping)
-
-
 
 // end new code
 
@@ -6752,9 +6748,9 @@ void command_mode()
       debug_serial_port->print(F("command_mode: cwchar: "));
       debug_serial_port->println(cw_char);
     #endif
-    if (cw_char > 0) {              // do the command      
+    if (cw_char > 0) {              // do the command
       switch (cw_char) {
-        case 12: // A - Iambic mode
+        case 12:                                   // A - Iambic mode
           configuration.keyer_mode = IAMBIC_A;
           keyer_mode_before = IAMBIC_A;
           configuration.dit_buffer_off = 0;
@@ -6763,20 +6759,34 @@ void command_mode()
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
           #endif
-          send_dit();
-          break; 
-        case 2111: // B - Iambic mode
+          #ifdef OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+            send_char('R',KEYER_NORMAL);    // sound out an 'R' character
+          #else
+            #ifdef OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+              send_char('R',KEYER_NORMAL);    // sound out an 'R' character
+            #else
+              send_dit();                    // sound a dit
+            #endif                           // OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+          #endif
+          break;
+
+        case 2111:                                // B - Iambic mode
           configuration.keyer_mode = IAMBIC_B;
           keyer_mode_before = IAMBIC_B;
           configuration.dit_buffer_off = 0;
-          configuration.dah_buffer_off = 0;          
+          configuration.dah_buffer_off = 0;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
-          #endif          
-          send_dit();
+          #endif
+          #ifdef OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+            send_char('R',KEYER_NORMAL);    // sound out an 'R' character
+          #else
+            send_dit();                    // sound a dit
+          #endif                           // OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
           break;
-        case 2121: // C - Single paddle mode
+
+        case 2121:                               // C - Single paddle mode
           configuration.keyer_mode = SINGLE_PADDLE;
           keyer_mode_before = SINGLE_PADDLE;
           config_dirty = 1;
@@ -6786,73 +6796,101 @@ void command_mode()
             } else {
               lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
             }
-          #endif          
-          send_dit();
-          break;          
-        case 1: // E - announce spEed
+          #endif
+          #ifdef OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+            send_char('R',KEYER_NORMAL);    // sound out an 'R' character
+          #else
+            send_dit();                    // sound a dit
+          #endif                           // OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+          break;
+
+        case 1:                               // E - announce spEed
           delay(250);
           sprintf(c, "%d", configuration.wpm);
           send_char(c[0],KEYER_NORMAL);
           send_char(c[1],KEYER_NORMAL);
-          break; 
-        case 211: // D - Ultimatic mode
+          break;
+
+        case 211:                             // D - Ultimatic mode
           configuration.keyer_mode = ULTIMATIC;
           keyer_mode_before = ULTIMATIC;
           configuration.dit_buffer_off = 1;
-          configuration.dah_buffer_off = 1;           
+          configuration.dah_buffer_off = 1;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
             if (LCD_COLUMNS < 9){
               lcd_center_print_timed("Ultimatc", 0, default_display_msg_delay);
             } else {
               lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
-            }          
-          #endif                    
-          send_dit();
-          break; 
+            }
+          #endif
+          #ifdef OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+            send_char('R',KEYER_NORMAL);    // sound out an 'R' character
+          #else
+            send_dit();                    // sound a dit
+          #endif                           // OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+          break;
+
         #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
           case 1121: command_sidetone_freq_adj(); break;                    // F - adjust sidetone frequency
           // #if defined(FEATURE_SINEWAVE_SIDETONE)
           //   case 2212: command_sidetone_volume_adj(); break;                    // Q - adjust sinewave sidetone volume
           // #endif
         #endif
-        case 221: // G - switch to buG mode
+
+        case 221:                               // G - switch to buG mode
           configuration.keyer_mode = BUG;
           keyer_mode_before = BUG;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Bug", 0, default_display_msg_delay);
-          #endif          
-          send_dit();
-          break;  
-        case 1111:   // H - set weighting and dah to dit ratio to defaults
+          #endif
+          #ifdef OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+            send_char('R',KEYER_NORMAL);    // sound out an 'R' character
+          #else
+            send_dit();                    // sound a dit
+          #endif                           // OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+          break;
+
+        case 1111:                                // H - set weighting and dah to dit ratio to defaults
           configuration.weighting = default_weighting;
           configuration.dah_to_dit_ratio = initial_dah_to_dit_ratio;
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
             if (LCD_COLUMNS < 9){
-              lcd_center_print_timed("Dflt W+R", 0, default_display_msg_delay); 
+              lcd_center_print_timed("Dflt W+R", 0, default_display_msg_delay);
             } else {
-              lcd_center_print_timed("Dflt Wght & Ratio", 0, default_display_msg_delay); 
-            }              
-          #endif         
-          send_dit();
-          break;  
+              lcd_center_print_timed("Dflt Wght & Ratio", 0, default_display_msg_delay);
+            }
+          #endif
+          #ifdef OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+            send_char('R',KEYER_NORMAL);    // sound out an 'R' character
+          #else
+            send_dit();                    // sound a dit
+          #endif                           // OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+          break;
+
         case 11:                                                     // I - toggle TX enable / disable
           if (command_mode_disable_tx) {
             command_mode_disable_tx = 0;
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("TX On", 0, default_display_msg_delay);
-            #endif            
+            #endif
           } else {
             command_mode_disable_tx = 1;
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
-            #endif            
+            #endif
           }
-          send_dit();
+          #ifdef OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+            send_char('R',KEYER_NORMAL);    // sound out an 'R' character
+          #else
+            send_dit();                    // sound a dit
+          #endif                           // OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
           break;
+
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
+
         case 212:                                                                   // K - turn dit and dah buffers on and off
           if (configuration.keyer_mode == ULTIMATIC){
             send_char('O',KEYER_NORMAL);
@@ -6864,12 +6902,12 @@ void command_mode()
                   lcd_center_print_timed("BffersOn", 0, default_display_msg_delay);
                 }
                 if (LCD_COLUMNS > 17){
-                  lcd_center_print_timed("Dit Dah Buffers On", 0, default_display_msg_delay);                  
+                  lcd_center_print_timed("Dit Dah Buffers On", 0, default_display_msg_delay);
                 } else {
                   lcd_center_print_timed("Buffers On", 0, default_display_msg_delay);
-                }                 
+                }
               #endif
-              send_char('N',KEYER_NORMAL);           
+              send_char('N',KEYER_NORMAL);
             } else {
               configuration.dit_buffer_off = 1;
               configuration.dah_buffer_off = 1;
@@ -6878,34 +6916,35 @@ void command_mode()
                   lcd_center_print_timed("BffrsOff", 0, default_display_msg_delay);
                 }
                 if (LCD_COLUMNS > 18){
-                  lcd_center_print_timed("Dit Dah Buffers Off", 0, default_display_msg_delay);                  
+                  lcd_center_print_timed("Dit Dah Buffers Off", 0, default_display_msg_delay);
                 } else {
                   lcd_center_print_timed("Buffers Off", 0, default_display_msg_delay);
-                }                                  
-              #endif 
+                }
+              #endif
               send_char('F',KEYER_NORMAL);
-              send_char('F',KEYER_NORMAL);             
+              send_char('F',KEYER_NORMAL);
             }
           } else {
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("Error", 0, default_display_msg_delay);
-            #endif             
+            #endif
             send_char('E',KEYER_NORMAL);
             send_char('R',KEYER_NORMAL);
             send_char('R',KEYER_NORMAL);
           }
           break;
-        case 1211: command_weighting_adjust();break; // L - weight adjust
+
+        case 1211: command_weighting_adjust();break;        // L - weight adjust
 
         case 22: // M - Set command mode WPM
-          command_speed_mode(COMMAND_SPEED_MODE_COMMAND_MODE_WPM); 
+          command_speed_mode(COMMAND_SPEED_MODE_COMMAND_MODE_WPM);
           break;
-
 
         #ifdef FEATURE_MEMORIES
           case 1221: command_program_memory(); break;                       // P - program a memory
         #endif //FEATURE_MEMORIES  Acknowledgement: LA3ZA fixed!
-        case 21: // N - paddle mode toggle
+
+        case 21:                                                  // N - paddle mode toggle
           if (configuration.paddle_mode == PADDLE_NORMAL) {
             configuration.paddle_mode = PADDLE_REVERSE;
             #ifdef FEATURE_DISPLAY
@@ -6913,7 +6952,7 @@ void command_mode()
                 lcd_center_print_timed("Pdl Rev", 0, default_display_msg_delay);
               } else {
                 lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
-              }               
+              }
             #endif //FEATURE_DISPLAY
           } else {
             #ifdef FEATURE_DISPLAY
@@ -6921,15 +6960,19 @@ void command_mode()
                 lcd_center_print_timed("Pdl Norm", 0, default_display_msg_delay);
               } else {
                 lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
-              }               
-            #endif //FEATURE_DISPLAY         
+              }
+            #endif //FEATURE_DISPLAY
             configuration.paddle_mode = PADDLE_NORMAL;
           }
           config_dirty = 1;
-          send_dit();
-          break;  
+          #ifdef OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+            send_char('R',KEYER_NORMAL);    // sound out an 'R' character
+          #else
+            send_dit();                    // sound a dit
+          #endif                           // OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+          break;
 
-        case 222: // O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN
+        case 222:                      // O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN
           if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
             #ifdef FEATURE_DISPLAY
               if (LCD_COLUMNS < 9){
@@ -6937,7 +6980,7 @@ void command_mode()
               } else {
                 lcd_center_print_timed("Sidetone Off", 0, default_display_msg_delay);
               }
-            #endif 
+            #endif
             #ifdef DEBUG_COMMAND_MODE
               debug_serial_port->println(F("command_mode: SIDETONE_OFF"));
             #endif
@@ -6954,10 +6997,10 @@ void command_mode()
                 lcd_center_print_timed("Sidetone", 0, default_display_msg_delay);
                 lcd_center_print_timed("Paddle Only", 1, default_display_msg_delay);
               }
-            #endif 
+            #endif
             #ifdef DEBUG_COMMAND_MODE
               debug_serial_port->println(F("command_mode: SIDETONE_PADDLE_ONLY"));
-            #endif             
+            #endif
             configuration.sidetone_mode = SIDETONE_PADDLE_ONLY;
             beep();
             delay(200);
@@ -6969,32 +7012,31 @@ void command_mode()
               } else {
                 lcd_center_print_timed("Sidetone On", 0, default_display_msg_delay);
               }
-            #endif 
+            #endif
             #ifdef DEBUG_COMMAND_MODE
               debug_serial_port->println(F("command_mode: SIDETONE_ON"));
-            #endif             
+            #endif
             configuration.sidetone_mode = SIDETONE_ON;
             beep();
           }
-          config_dirty = 1;        
-          break; 
+          config_dirty = 1;
+          break;
 
-
-        case 121: command_set_serial_number(); break;  // R - Set serial number
-
+        case 121: command_set_serial_number(); break;                     // R - Set serial number
 
         case 2: command_tuning_mode(); break;                             // T - tuning mode
+
         #ifdef FEATURE_POTENTIOMETER
           case 1112:  // V - toggle pot active
             if (configuration.pot_activated) {
-              configuration.pot_activated = 0; 
+              configuration.pot_activated = 0;
               #ifdef FEATURE_DISPLAY
                 if (LCD_COLUMNS > 14){
-                  lcd_center_print_timed("Pot Deactivated", 0, default_display_msg_delay);                  
+                  lcd_center_print_timed("Pot Deactivated", 0, default_display_msg_delay);
                 } else {
                   lcd_center_print_timed("Pot Off", 0, default_display_msg_delay);
                 }
-              #endif             
+              #endif
             } else {
               configuration.pot_activated = 1;
               #ifdef FEATURE_DISPLAY
@@ -7003,19 +7045,26 @@ void command_mode()
                 } else {
                   lcd_center_print_timed("Pot On", 0, default_display_msg_delay);
                 }
-              #endif 
+              #endif
             }
             config_dirty = 1;
-            send_dit();
-            break; 
+            #ifdef OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+              send_char('R',KEYER_NORMAL);    // sound out an 'R' character
+            #else
+              send_dit();                    // sound a dit
+            #endif                           // OPTION_COMMAND_MODE_R_ACKNOWLEDGEMENT
+            break;
         #endif
-        case 122: // W - change wpm
-          command_speed_mode(COMMAND_SPEED_MODE_KEYER_WPM); 
-          break;                            
+
+        case 122:                                           // W - change wpm
+          command_speed_mode(COMMAND_SPEED_MODE_KEYER_WPM);
+          break;
+
         #ifdef FEATURE_MEMORIES
           case 2122: command_set_mem_repeat_delay(); break; // Y - set memory repeat delay
-        #endif  
-        case 2112: stay_in_command_mode = 0; break;     // X - exit command mode
+        #endif
+
+        case 2112: stay_in_command_mode = 0; break;         // X - exit command mode
         #ifdef FEATURE_AUTOSPACE
           case 2211: // Z - Autospace
             if (configuration.autospace_active) {
@@ -7026,7 +7075,7 @@ void command_mode()
                   lcd_center_print_timed("AutoSOff", 0, default_display_msg_delay);
                 } else {
                   lcd_center_print_timed("Autospace Off", 0, default_display_msg_delay);
-                }              
+                }
                 send_dit();
               #else
                 send_char('O',KEYER_NORMAL);
@@ -7041,9 +7090,9 @@ void command_mode()
                   lcd_center_print_timed("AutoS On", 0, default_display_msg_delay);
                 } else {
                   lcd_center_print_timed("Autospace On", 0, default_display_msg_delay);
-                }  
+                }
                 send_dit();
-              #else            
+              #else
                 send_char('O',KEYER_NORMAL);
                 send_char('N',KEYER_NORMAL);
               #endif
@@ -7059,11 +7108,10 @@ void command_mode()
         #endif
         case 121212:send_char(75,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(78,KEYER_NORMAL);send_char(71,KEYER_NORMAL);send_char(32,KEYER_NORMAL);
                     send_char(55,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(32,KEYER_NORMAL);send_char(69,KEYER_NORMAL);send_char(69,KEYER_NORMAL);
-                    break;   
+                    break;
 
-
-        #ifdef FEATURE_ALPHABET_SEND_PRACTICE // enhanced by Fred, VK2EFL
-          case 111:   // S - Alphabet Send Practice
+        #ifdef FEATURE_ALPHABET_SEND_PRACTICE                 // enhanced by Fred, VK2EFL
+          case 111:                                           // S - Alphabet Send Practice
             #ifdef FEATURE_DISPLAY
                if (LCD_COLUMNS < 9){
                  lcd_center_print_timed("SendPrct", 0, default_display_msg_delay);
@@ -7080,42 +7128,39 @@ void command_mode()
             break;
         #endif  //FEATURE_ALPHABET_SEND_PRACTICE
 
- 
         #ifdef FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE
-          case 112:  // U - 5 Character Echo Practice
+          case 112:                                           // U - 5 Character Echo Practice
             command_progressive_5_char_echo_practice();
             stay_in_command_mode = 0;
             break;
         #endif //FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_PRACTICE
 
-        case 112211: // ? - status
-          
+        case 112211:                                          // ? - status
           delay(250);
           sprintf(c, "%d", configuration.wpm);
           send_char(c[0],KEYER_NORMAL);
           send_char(c[1],KEYER_NORMAL);
           send_char(' ',KEYER_NORMAL);
-          
+
           switch(keyer_mode_before){
             case IAMBIC_A:
               send_char('A',KEYER_NORMAL);
               break;
             case IAMBIC_B:
               send_char('B',KEYER_NORMAL);
-              break;    
+              break;
             case SINGLE_PADDLE:
               send_char('S',KEYER_NORMAL);
               break;
             case ULTIMATIC:
               send_char('U',KEYER_NORMAL);
-              break; 
+              break;
             case BUG:
               send_char('G',KEYER_NORMAL);
-              break;                                        
+              break;
           }
           send_char(' ',KEYER_NORMAL);
           send_char(' ',KEYER_NORMAL);
-        
 
           sprintf(c, "%d", configuration.weighting);
           send_char(c[0],KEYER_NORMAL);
@@ -7127,47 +7172,45 @@ void command_mode()
           send_char('.',KEYER_NORMAL);
           send_char(c[1],KEYER_NORMAL);
           send_char(c[2],KEYER_NORMAL);
-          send_char(' ',KEYER_NORMAL);          
+          send_char(' ',KEYER_NORMAL);
 
-          break; 
+          break;
 
-
-
-        case 9: // button was hit
+        case 9:                                 // button was hit
           #if defined(FEATURE_MEMORIES)
             if (button_that_was_pressed == 0){  // button 0 was hit - exit
               stay_in_command_mode = 0;
             } else {
               program_memory(button_that_was_pressed - 1); // a button other than 0 was pressed - program a memory
             }
-          #else 
+          #else
             stay_in_command_mode = 0;
           #endif
-          break;                           
-        default: // unknown command, send a ?
+          break;
+        default:                                // unknown command, send a ?
           #ifdef FEATURE_DISPLAY
             if (LCD_COLUMNS < 9){
-              lcd_center_print_timed("???", 0, default_display_msg_delay); 
+              lcd_center_print_timed("???", 0, default_display_msg_delay);
             } else {
-              lcd_center_print_timed("Unknown command", 0, default_display_msg_delay); 
-            }         
+              lcd_center_print_timed("Unknown command", 0, default_display_msg_delay);
+            }
           #endif
-          send_char('?',KEYER_NORMAL); 
-          break;                                   
+          send_char('?',KEYER_NORMAL);
+          break;
       }
     }
   }
   beep_boop();
   #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE)
     winkey_breakin_status_byte_inhibit = 0;
-  #endif  
+  #endif
 
   #ifdef command_mode_active_led
     if (command_mode_active_led) {digitalWrite(command_mode_active_led,LOW);}
   #endif //command_mode_active_led
 
   keyer_machine_mode = KEYER_NORMAL;
-  //configuration.wpm = speed_wpm_before;  
+  //configuration.wpm = speed_wpm_before;
   speed_mode = speed_mode_before;   // go back to whatever speed mode we were in before
   configuration.keyer_mode = keyer_mode_before;
 
@@ -7189,6 +7232,7 @@ void command_mode()
 #endif //FEATURE_COMMAND_BUTTONS
 
 //-------------------------------------------------------------------------------------------------------
+	
 #if defined(FEATURE_COMMAND_MODE_PROGRESSIVE_5_CHAR_ECHO_PRACTICE) && defined(FEATURE_COMMAND_BUTTONS)
 void command_progressive_5_char_echo_practice(){
 
