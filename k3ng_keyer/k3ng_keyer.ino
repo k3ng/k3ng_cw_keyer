@@ -134,6 +134,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     Y#### Change memory repeat delay to #### mS
     Z  Autospace On/Off
     #  Play a memory without transmitting
+    -  Enable / disable PTT Line
     ?  Status
          1. Speed in WPM
          2. Keyer Mode (A = Iambic A, B = Iambic B, G = Bug, S = Single Paddle, U = Ultimatic)
@@ -1219,6 +1220,10 @@ Recent Update History
     2020.04.24.01
       Added to settings files: command_mode_acknowledgement_character 'E'
 
+    2020.04.25.01
+      -....- now echoes as dash "-"
+      Added Command Mode command: -  Enable / disable PTT Line
+
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
 
@@ -1240,7 +1245,7 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
 
 */
 
-#define CODE_VERSION "2020.04.24.01"
+#define CODE_VERSION "2020.04.25.01"
 #define eeprom_magic_number 37               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -7530,6 +7535,16 @@ void command_mode() {
             }
             break;
         #endif                                                                   // FEATURE_MEMORIES
+
+    case 21112: // - : enable / disable PTT                                                               
+      if (configuration.ptt_disabled){
+        configuration.ptt_disabled = 0; 
+      } else {
+        configuration.ptt_disabled = 1; 
+      }
+      config_dirty = 1;
+      send_char(command_mode_acknowledgement_character, 0);
+      break;
 
 	case 121212:send_char(75,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(78,KEYER_NORMAL);send_char(71,KEYER_NORMAL);send_char(32,KEYER_NORMAL);
                     send_char(55,KEYER_NORMAL);send_char(51,KEYER_NORMAL);send_char(32,KEYER_NORMAL);send_char(69,KEYER_NORMAL);send_char(69,KEYER_NORMAL);
@@ -15596,13 +15611,14 @@ int convert_cw_number_to_ascii (long number_in)
     case 122121: return '@'; break;
     case 222222: return 92; break;  // special hack; six dahs = \ (backslash)
     case 21112: return '='; break;  // BT
+    case 211112: return '-'; break;
     //case 2222222: return '+'; break;
     case 9: return 32; break;       // special 9 = space
 
     #ifndef OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
       case 12121: return '+'; break;
     #else
-      case 211112: return 45; break; // - // sp5iou
+
       case 212122: return 33; break; // ! //sp5iou
       case 1112112: return 36; break; // $ //sp5iou
       #if !defined(OPTION_PROSIGN_SUPPORT)
