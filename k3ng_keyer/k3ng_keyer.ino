@@ -134,7 +134,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     Y#### Change memory repeat delay to #### mS
     Z  Autospace On/Off
     #  Play a memory without transmitting
-    -  Enable / disable PTT Line
+    =  Enable / disable PTT Line (-...-)
     ?  Status
          1. Speed in WPM
          2. Keyer Mode (A = Iambic A, B = Iambic B, G = Bug, S = Single Paddle, U = Ultimatic)
@@ -1221,8 +1221,11 @@ Recent Update History
       Added to settings files: command_mode_acknowledgement_character 'E'
 
     2020.04.25.01
-      -....- now echoes as dash "-"
+      -....- now echoes as dash "-"  (-...- is double dash / equals =)
       Added Command Mode command: -  Enable / disable PTT Line
+
+    2020.04.26.01
+      memory_area_end is now automagically calculated at runtime and is no longer in settings files  
 
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
@@ -1245,7 +1248,7 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
 
 */
 
-#define CODE_VERSION "2020.04.25.01"
+#define CODE_VERSION "2020.04.26.01"
 #define eeprom_magic_number 37               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1590,6 +1593,7 @@ byte last_sending_mode = MANUAL_SENDING;
 byte zero = 0;
 byte iambic_flag = 0;
 unsigned long last_config_write = 0;
+uint16_t memory_area_end = 0;
 
 #ifdef FEATURE_SLEEP
   unsigned long last_activity_time = 0;
@@ -15604,7 +15608,6 @@ int convert_cw_number_to_ascii (long number_in)
     #if !defined(OPTION_PROSIGN_SUPPORT)
       case 2111212: return '*'; break; // BK 
     #endif 
-//    case 221122: return 44; break;  // ,
 //    case 221122: return '!'; break;  // ! sp5iou 20180328
     case 221122: return ','; break; 
     case 121212: return '.'; break;
@@ -17562,6 +17565,10 @@ void initialize_keyer_state(){
 
   #ifndef FEATURE_SO2R_BASE
     switch_to_tx_silent(1);
+  #endif
+
+  #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+    memory_area_end = EEPROM.length() - 1;
   #endif
 
 }  

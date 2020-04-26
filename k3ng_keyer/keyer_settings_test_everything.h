@@ -210,14 +210,6 @@
 
 #define WEB_SERVER_CONTROL_TX_KEY_TIME_LIMIT_SECS 10
 
-#if defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
-  #define memory_area_end 4095             // the eeprom location where memory space ends
-#elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega168__)
-  #define memory_area_end 511             // the eeprom location where memory space ends
-#else
-  #define memory_area_end 1023             // the eeprom location where memory space ends
-#endif
-
 #if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
   #define KEYPAD_ROWS 4 //KeyPad Rows
   #if defined(FEATURE_4x4_KEYPAD)

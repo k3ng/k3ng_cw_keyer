@@ -213,14 +213,6 @@
 
 #define WEB_SERVER_CONTROL_TX_KEY_TIME_LIMIT_SECS 10
 
-#if defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
-  #define memory_area_end 4095             // the eeprom location where memory space ends
-#elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega168__)
-  #define memory_area_end 511             // the eeprom location where memory space ends
-#else
-  #define memory_area_end 1023             // the eeprom location where memory space ends
-#endif
-
 #if defined(FEATURE_4x4_KEYPAD)|| defined (FEATURE_3x4_KEYPAD)
   #define KEYPAD_ROWS 4 //KeyPad Rows
   #if defined(FEATURE_4x4_KEYPAD)
@@ -345,7 +337,6 @@
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
-#define memory_area_end 1023             // the eeprom location where memory space ends
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
 #define winkey_command_timeout_ms 5000
 #define winkey_discard_bytes_startup 3   // this is used if OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP is enabled above
