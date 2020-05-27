@@ -52,6 +52,7 @@
 // #define FEATURE_3x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
 // #define FEATURE_SEQUENCER
 // #define FEATURE_SD_CARD_SUPPORT
+// #define FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
 
 // #define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
 #define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 

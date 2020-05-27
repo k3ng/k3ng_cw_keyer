@@ -29,7 +29,7 @@
 // #define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code - Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
 // #define FEATURE_CW_COMPUTER_KEYBOARD  // Have an Arduino Due or Leonardo act as a USB HID (Human Interface Device) keyboard and use the paddle to "type" characters on the computer
 // #define FEATURE_DEAD_OP_WATCHDOG
-// #define FEATURE_AUTOSPACE
+#define FEATURE_AUTOSPACE
 // #define FEATURE_FARNSWORTH
 // #define FEATURE_DL2SBA_BANKSWITCH       // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
 // #define FEATURE_LCD_4BIT                // classic LCD display using 4 I/O lines
@@ -56,7 +56,7 @@
 // #define FEATURE_EEPROM_E24C1024
 // #define FEATURE_STRAIGHT_KEY
 // #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
-// #define FEATURE_PADDLE_ECHO
+#define FEATURE_PADDLE_ECHO
 // #define FEATURE_STRAIGHT_KEY_ECHO
 // #define FEATURE_WEB_SERVER
 // #define FEATURE_INTERNET_LINK
@@ -70,6 +70,7 @@
 // #define FEATURE_SO2R_BASE           // SO2R Box base protocol extensions
 // #define FEATURE_SO2R_SWITCHES       // SO2R Box TX and RX switches
 // #define FEATURE_SO2R_ANTENNA        // SO2R Box antenna selection (not fully implemented)
+#define FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
 
 // UNDER DEVELOPMENT
 // #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1  // Arduino Uno: sidetone_line = 9 or 10 ; Mega: sidetone_line = 11, 12, or 13 (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html )
@@ -138,7 +139,7 @@
 // #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA   // only works with Mega and pins 2 and 5 - minor performance increase
 // #define OPTION_DIRECT_PADDLE_PIN_READS_UNO    // Unos or Nanos pins 2 and 5 - do not enable on a nanoKeyer, it uses different pins
 
-#define OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
+// #define OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
 
 // #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
 

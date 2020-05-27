@@ -26,6 +26,8 @@ Full documentation can be found at https://github.com/k3ng/k3ng_cw_keyer/wiki . 
 
 For help, please post on the Radio Artisan group: https://groups.io/g/radioartisan .  Please do not email the developer directly for support.  Thanks
 
+YouTube Channel: https://www.youtube.com/channel/UC5o8UM1-heT5kJbwnJRkUYg
+
 Wordsworth CW training method created by George Allison, K1IG
 English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
 
@@ -97,6 +99,8 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
             cat <filename>          - print filename on SD card
             pl <transmitter> <mS>   - Set PTT lead time
             pt <transmitter> <mS>   - Set PTT tail time
+            af ###                  - Set autospace timing factor; 100 = 1.00
+            pf ###                  - Set paddle echo timing factor; 100 = 1.00
 
 
  Buttons
@@ -1227,8 +1231,24 @@ Recent Update History
     2020.04.26.01
       memory_area_end is now automagically calculated at runtime and is no longer in settings files  
 
+    2020.05.27.01
+      The Paddle Echo timing factor is now in eeprom and can be set with the \:pf ### extended CLI command ( https://github.com/k3ng/k3ng_cw_keyer/wiki/310-Feature:-Command-Line-Interface#cli-commands )
+      Autospace now has a configurable timing factor which can be set with the \:af ### extended CLI command
+      cw_echo_timing_factor setting has been deprecated and replaced with default_cw_echo_timing_factor
+      default_autospace_timing_factor setting created
+      memory_area_start is now automagically calculated
+      FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT created which has customizable CW feedback messages for most command mode commands
+      New settings in settings files for FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT ( https://github.com/k3ng/k3ng_cw_keyer/wiki/320-Feature:-Command-Mode#feedback )
+
+  Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
+
+  Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
+
+  YouTube Channel: https://www.youtube.com/channel/UC5o8UM1-heT5kJbwnJRkUYg
+
 
   This code is currently maintained for and compiled with Arduino 1.8.x.  Your mileage may vary with other versions.
+
 
   ATTENTION: LIBRARY FILES MUST BE PUT IN LIBRARIES DIRECTORIES AND NOT THE INO SKETCH DIRECTORY !!!!
 
@@ -1242,14 +1262,13 @@ Recent Update History
 
 
 If you offer a hardware kit using this software, show your appreciation by sending the author a complimentary kit or a bottle of bourbon ;-)
-Full documentation can be found at https://github.com/k3ng/k3ng_cw_keyer/wiki .  Please read it before requesting help.
-For help, please post on the Radio Artisan group: https://groups.io/g/radioartisan .  Please do not email K3NG directly for support.  Thanks and 73
+
 
 
 */
 
-#define CODE_VERSION "2020.04.26.01"
-#define eeprom_magic_number 37               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2020.05.27.01"
+#define eeprom_magic_number 38               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1494,10 +1513,11 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
   #define SP __get_MSP()
 #endif  
 
-#define memory_area_start 115
+
+#define memory_area_start (sizeof(configuration)+1)
 
 // Variables and stuff
-struct config_t {  // 113 bytes total
+struct config_t {  // 115 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1529,12 +1549,12 @@ struct config_t {  // 113 bytes total
   unsigned int memory_repeat_time;
   unsigned int wpm_command_mode;
   unsigned int link_receive_udp_port; 
-    
-
   unsigned int wpm_ps2_usb_keyboard;
   unsigned int wpm_cli;
   unsigned int wpm_winkey;
-    // 20 bytes 
+  unsigned int cw_echo_timing_factor;
+  unsigned int autospace_timing_factor;
+    // 24 bytes 
 
   uint8_t ip[4];
   uint8_t gateway[4];  
@@ -2103,19 +2123,6 @@ unsigned long millis_rollover = 0;
     uint8_t so2r_antenna_2 = 0;
   #endif //FEATURE_SO2R_ANTENNA
 #endif //FEATURE_SO2R_BASE
-
-// #if defined(FEATURE_SINEWAVE_SIDETONE)  //DL2DBG contributed
-//   const float pi = 3.14159 ;
-//   const float T = 100 ;    // sample time in microseconds
-//         float freq = 800 ;  // frequency of tone in hertz
-//         float omega = 2*pi*freq ;
-//         float A = 490 ;  // amplitude
-        
-//   // next line initializes oscillation with amplitude A
-//   float  a[]={0.0, A*sin(omega*T/1000000.0),0.0};
-//   // c1 is the difference equation coefficient
-//   float c1 = (8.0 - 2.0*pow(omega*T/1000000.0,2))/(4.0+pow(omega*T/1000000.0,2));
-// #endif //FEATURE_SINEWAVE_SIDETONE
 
 byte async_eeprom_write = 0;
 
@@ -6266,7 +6273,7 @@ void send_dit(){
       check_paddles();
     }
     if ((sending_mode == MANUAL_SENDING) && (configuration.autospace_active) && (dit_buffer == 0) && (dah_buffer == 0)) {
-      loop_element_lengths(2,0,configuration.wpm);
+      loop_element_lengths((float)configuration.autospace_timing_factor/(float)100,0,configuration.wpm);
       autospace_end_of_character_flag = 1;
     }
   #endif
@@ -6287,7 +6294,7 @@ void send_dit(){
   #ifdef FEATURE_PADDLE_ECHO
     if (sending_mode == MANUAL_SENDING) {
       paddle_echo_buffer = (paddle_echo_buffer * 10) + 1;
-      paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+      paddle_echo_buffer_decode_time = millis() + (((float)1200.0/(float)configuration.wpm) * ((float)configuration.cw_echo_timing_factor/(float)100));
 
       #ifdef FEATURE_AUTOSPACE
         if (autospace_end_of_character_flag){paddle_echo_buffer_decode_time = 0;}
@@ -6376,7 +6383,7 @@ void send_dah(){
   #ifdef FEATURE_PADDLE_ECHO
     if (sending_mode == MANUAL_SENDING) {
       paddle_echo_buffer = (paddle_echo_buffer * 10) + 2;
-      paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*1200.0)/configuration.wpm)*length_letterspace);
+      paddle_echo_buffer_decode_time = millis() + (((float)1200.0/(float)configuration.wpm) * ((float)configuration.cw_echo_timing_factor/(float)100));
 
       #ifdef FEATURE_AUTOSPACE
         if (autospace_end_of_character_flag){paddle_echo_buffer_decode_time = 0;}
@@ -7003,6 +7010,19 @@ long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 }
 
 //-------------------------------------------------------------------------------------------------------
+#ifdef FEATURE_COMMAND_BUTTONS
+void send_chars(char* buffer){
+
+  int x = 0;
+
+  while(buffer[x] != 0){
+    send_char(buffer[x++],0);
+  }
+}
+
+#endif
+
+//-------------------------------------------------------------------------------------------------------
 
 #ifdef FEATURE_COMMAND_BUTTONS
 void command_mode() {
@@ -7136,7 +7156,11 @@ void command_mode() {
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Iambic A", 0, default_display_msg_delay);
           #endif
-          send_char(command_mode_acknowledgement_character, 0);
+          #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+            send_chars((char*)command_a_iambic_a);  
+          #else               
+            send_dit();
+          #endif  
           break;
 
         case 2111: // B - Iambic mode
@@ -7148,7 +7172,11 @@ void command_mode() {
           #ifdef FEATURE_DISPLAY
             lcd_center_print_timed("Iambic B", 0, default_display_msg_delay);
           #endif          
-          send_char(command_mode_acknowledgement_character, 0);
+          #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+            send_chars((char*)command_b_iambic_b);  
+          #else               
+            send_dit();
+          #endif  
           break;
 
         case 2121: // C - Single paddle mode
@@ -7162,7 +7190,11 @@ void command_mode() {
               lcd_center_print_timed("Single Paddle", 0, default_display_msg_delay);
             }
           #endif
-          send_char(command_mode_acknowledgement_character, 0);
+          #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+            send_chars((char*)command_c_single_paddle);  
+          #else               
+            send_dit();
+          #endif  
           break;          
         case 1:    // E - announce spEed
 	        #ifdef FEATURE_DISPLAY
@@ -7195,7 +7227,11 @@ void command_mode() {
               lcd_center_print_timed("Ultimatic", 0, default_display_msg_delay);
             }          
           #endif                    
-          send_char(command_mode_acknowledgement_character, 0);
+          #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+            send_chars((char*)command_d_ultimatic);  
+          #else               
+            send_dit();
+          #endif  
           break; 
           #endif //OPTION_NO_ULTIMATIC
         #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
@@ -7223,27 +7259,39 @@ void command_mode() {
               lcd_center_print_timed("Dflt Wght & Ratio", 0, default_display_msg_delay); 
             }              
           #endif         
-          send_char(command_mode_acknowledgement_character, 0);
+          #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+            send_chars((char*)command_h_weight_dit_dah_ratio_default);  
+          #else               
+            send_dit();
+          #endif  
           break;  
         case 11:                                                     // I - toggle TX enable / disable
           if (command_mode_disable_tx) {
             command_mode_disable_tx = 0;
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("TX On", 0, default_display_msg_delay);
-            #endif            
+            #endif  
+            #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+              send_chars((char*)command_i_tx_on);  
+            #endif       
           } else {
             command_mode_disable_tx = 1;
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("TX Off", 0, default_display_msg_delay);
-            #endif            
+            #endif        
+            #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+              send_chars((char*)command_i_tx_off);  
+            #endif        
           }
-          send_char(command_mode_acknowledgement_character, 0);
+          #if !defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT)
+            send_dit();
+          #endif
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
         #ifndef OPTION_NO_ULTIMATIC
         case 212:                                                                   // K - turn dit and dah buffers on and off
           if (configuration.keyer_mode == ULTIMATIC){
-            send_char('O',KEYER_NORMAL);
+            //send_char('O',KEYER_NORMAL);
             if (configuration.dit_buffer_off){
               configuration.dit_buffer_off = 0;
               configuration.dah_buffer_off = 0;
@@ -7257,7 +7305,12 @@ void command_mode() {
                   lcd_center_print_timed("Buffers On", 0, default_display_msg_delay);
                 }                 
               #endif
-              send_char('N',KEYER_NORMAL);           
+              //send_char('N',KEYER_NORMAL); 
+              #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+                send_chars((char*)command_k_dit_dah_buffers_on);  
+              #else
+                send_dit();  
+              #endif            
             } else {
               configuration.dit_buffer_off = 1;
               configuration.dah_buffer_off = 1;
@@ -7271,16 +7324,26 @@ void command_mode() {
                   lcd_center_print_timed("Buffers Off", 0, default_display_msg_delay);
                 }                                  
               #endif 
-              send_char('F',KEYER_NORMAL);
-              send_char('F',KEYER_NORMAL);             
+              //send_char('F',KEYER_NORMAL);
+              //send_char('F',KEYER_NORMAL);  
+              #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+                send_chars((char*)command_k_dit_dah_buffers_off);  
+              #else
+                send_dit();  
+              #endif                           
             }
           } else {
             #ifdef FEATURE_DISPLAY
               lcd_center_print_timed("Error", 0, default_display_msg_delay);
-            #endif             
-            send_char('E',KEYER_NORMAL);
-            send_char('R',KEYER_NORMAL);
-            send_char('R',KEYER_NORMAL);
+            #endif      
+            #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+              send_chars((char*)command_error);  
+            #else               
+              boop();
+            #endif                     
+            // send_char('E',KEYER_NORMAL);
+            // send_char('R',KEYER_NORMAL);
+            // send_char('R',KEYER_NORMAL);
           }
           break;
           #endif //OPTION_NO_ULTIMATIC
@@ -7304,6 +7367,9 @@ void command_mode() {
                 lcd_center_print_timed("Paddle Reverse", 0, default_display_msg_delay);
               }               
             #endif //FEATURE_DISPLAY
+            #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+              send_chars((char*)command_n_paddle_reverse);  
+            #endif               
           } else {
             #ifdef FEATURE_DISPLAY
               if (LCD_COLUMNS < 9){
@@ -7311,13 +7377,18 @@ void command_mode() {
               } else {
                 lcd_center_print_timed("Paddle Normal", 0, default_display_msg_delay);
               }               
-            #endif //FEATURE_DISPLAY         
+            #endif //FEATURE_DISPLAY   
+            #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+              send_chars((char*)command_n_paddle_normal);  
+            #endif                    
             configuration.paddle_mode = PADDLE_NORMAL;
           }
           config_dirty = 1;
-          send_char(command_mode_acknowledgement_character, 0);
+          #if !defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+            send_dit();  
+          #endif  
           break;  
-
+//zzzzzzzz
         case 222: // O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN
           if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
             #ifdef FEATURE_DISPLAY
@@ -7331,7 +7402,11 @@ void command_mode() {
               debug_serial_port->println(F("command_mode: SIDETONE_OFF"));
             #endif
             configuration.sidetone_mode = SIDETONE_OFF;
-            boop();
+            #if !defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+              boop();
+            #else
+              send_chars((char*)command_o_sidetone_off); 
+            #endif
           } else if (configuration.sidetone_mode == SIDETONE_ON) {
             #ifdef FEATURE_DISPLAY
               if (LCD_COLUMNS < 9){
@@ -7348,9 +7423,13 @@ void command_mode() {
               debug_serial_port->println(F("command_mode: SIDETONE_PADDLE_ONLY"));
             #endif             
             configuration.sidetone_mode = SIDETONE_PADDLE_ONLY;
-            beep();
-            delay(200);
-            beep();
+            #if !defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+              beep();
+              delay(200);
+              beep();
+            #else
+              send_chars((char*)command_o_sidetone_paddle_only); 
+            #endif
           } else {
             #ifdef FEATURE_DISPLAY
               if (LCD_COLUMNS < 9) {
@@ -7363,7 +7442,11 @@ void command_mode() {
               debug_serial_port->println(F("command_mode: SIDETONE_ON"));
             #endif             
             configuration.sidetone_mode = SIDETONE_ON;
-            beep();
+            #if !defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+              beep();
+            #else
+              send_chars((char*)command_o_sidetone_on); 
+            #endif
           }
           config_dirty = 1;        
           break; 
@@ -7375,6 +7458,9 @@ void command_mode() {
           case 1112:  // V - toggle pot active
             if (configuration.pot_activated) {
               configuration.pot_activated = 0; 
+              #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+                send_chars((char*)command_v_potentiometer_off); 
+              #endif
               #ifdef FEATURE_DISPLAY
                 if (LCD_COLUMNS > 14) {
                   lcd_center_print_timed("Pot Deactivated", 0, default_display_msg_delay);                  
@@ -7384,6 +7470,9 @@ void command_mode() {
               #endif             
             } else {
               configuration.pot_activated = 1;
+              #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+                send_chars((char*)command_v_potentiometer_on); 
+              #endif              
               #ifdef FEATURE_DISPLAY
                 if (LCD_COLUMNS > 13){
                   lcd_center_print_timed("Pot Activated", 0, default_display_msg_delay);
@@ -7393,7 +7482,9 @@ void command_mode() {
               #endif 
             }
             config_dirty = 1;
-            send_char(command_mode_acknowledgement_character, 0);
+            #if !defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+              send_char(command_mode_acknowledgement_character, 0);
+            #endif
             break; 
         #endif
 
@@ -8900,12 +8991,7 @@ void service_dit_dah_buffers()
           #endif //FEATURE_PADDLE_ECHO
         }   
 
-        #ifdef FEATURE_PADDLE_ECHO
 
-//zzzzzz
-
-          //paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*3000.0)/configuration.wpm)*length_letterspace);
-        #endif //FEATURE_PADDLE_ECHO 
 
       } else {
         if (bug_dah_flag){
@@ -8918,7 +9004,7 @@ void service_dit_dah_buffers()
               } else {
                 paddle_echo_buffer = (paddle_echo_buffer * 10) + 1;
               }
-              paddle_echo_buffer_decode_time = millis() + (float((cw_echo_timing_factor*3000.0)/configuration.wpm)*length_letterspace);
+              paddle_echo_buffer_decode_time = millis() + (((float)3000.0/(float)configuration.wpm) * ((float)configuration.cw_echo_timing_factor/(float)100));
             }
           #endif //FEATURE_PADDLE_ECHO            
           bug_dah_flag = 0;
@@ -12357,13 +12443,13 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       break;    
 
     #ifndef OPTION_NO_ULTIMATIC
-    case 'D': // D - Ultimatic mode
-      configuration.keyer_mode = ULTIMATIC; 
-      configuration.dit_buffer_off = 1;
-      configuration.dah_buffer_off = 1;        
-      config_dirty = 1; 
-      port_to_use->println(F("\r\nUltimatic")); 
-      break;  
+      case 'D': // D - Ultimatic mode
+        configuration.keyer_mode = ULTIMATIC; 
+        configuration.dit_buffer_off = 1;
+        configuration.dah_buffer_off = 1;        
+        config_dirty = 1; 
+        port_to_use->println(F("\r\nUltimatic")); 
+        break;  
     #endif
     case 'E': serial_set_serial_number(port_to_use); break;                                   // E - set serial number
     case 'F': serial_set_sidetone_freq(port_to_use); break;                                   // F - set sidetone frequency
@@ -12747,10 +12833,49 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
     if (userinput.startsWith("CAT ")){sd_card_print_file(port_to_use,userinput.substring(4));return;}    
   #endif // defined(FEATURE_SD_CARD_SUPPORT)
 
+  #if defined(FEATURE_PADDLE_ECHO)
+    if (userinput.startsWith("PF ")){cli_paddle_echo_factor(port_to_use,userinput.substring(3));return;}
+  #endif // defined(FEATURE_PADDLE_ECHO)
+
+  #if defined(FEATURE_AUTOSPACE)
+    if (userinput.startsWith("AF ")){cli_autospace_timing_factor(port_to_use,userinput.substring(3));return;}
+  #endif // defined(FEATURE_AUTOSPACE)
+
+
   port_to_use->println(F("\r\nError"));
 
 }
 #endif
+
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_AUTOSPACE)
+void cli_autospace_timing_factor(PRIMARY_SERIAL_CLS * port_to_use,String command_arguments){
+
+  configuration.autospace_timing_factor = command_arguments.toInt();
+  config_dirty = 1;
+  port_to_use->print(F("\r\nAutospace Timing Factor Set To: "));
+  port_to_use->println((float)configuration.autospace_timing_factor/(float)100);
+
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_AUTOSPACE)
+
+
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+void cli_paddle_echo_factor(PRIMARY_SERIAL_CLS * port_to_use,String command_arguments){
+
+  configuration.cw_echo_timing_factor = command_arguments.toInt();
+  config_dirty = 1;
+  port_to_use->print(F("\r\nPaddle Echo Factor Set To: "));
+  port_to_use->println((float)configuration.cw_echo_timing_factor/(float)100);
+
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
@@ -15397,6 +15522,8 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     } else {
       port_to_use->println(F("ff"));
     }
+    port_to_use->print(F("Autospace Timing Factor: "));
+    port_to_use->println((float)configuration.autospace_timing_factor/(float)100);
   #endif
   port_to_use->print(F("Wordspace: "));
   port_to_use->println(configuration.length_wordspace,DEC);
@@ -15469,6 +15596,8 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     } else {
       port_to_use->println(F("ff"));
     }  
+    port_to_use->print(F("Paddle Echo Timing Factor: "));
+    port_to_use->println((float)configuration.cw_echo_timing_factor/(float)100);
   #endif
 
 
@@ -17542,6 +17671,8 @@ void initialize_keyer_state(){
   configuration.sidetone_volume = sidetone_volume_low_limit + ((sidetone_volume_high_limit - sidetone_volume_low_limit) / 2);
   configuration.ptt_disabled = 0;
   configuration.beacon_mode_on_boot_up = 0;
+  configuration.cw_echo_timing_factor = 100 * default_cw_echo_timing_factor;
+  configuration.autospace_timing_factor = 100 * default_autospace_timing_factor;
 
   configuration.ptt_lead_time[0] = initial_ptt_lead_time_tx1;
   configuration.ptt_tail_time[0] = initial_ptt_tail_time_tx1;

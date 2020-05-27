@@ -48,7 +48,8 @@
 #define serial_cut_numbers 0              // set to 1 to activate cut numbers in serial numbers (i.e. #10 = 1T, #19 = 1N)
 #define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
-#define cw_echo_timing_factor 0.25
+#define default_cw_echo_timing_factor 1.75 // "factory default" setting
+#define default_autospace_timing_factor 2.0 // "factory default" setting
 #define winkey_paddle_echo_buffer_decode_timing_factor 0.25
 #define potentiometer_always_on 0
 #define ptt_interlock_check_every_ms 100
@@ -271,3 +272,24 @@
 
 #define command_mode_acknowledgement_character 'E'
 
+#if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT)
+  #define command_a_iambic_a "A"
+  #define command_b_iambic_b "B"
+  #define command_c_single_paddle "SINGLE"
+  #define command_d_ultimatic "ULT"
+  #define command_h_weight_dit_dah_ratio_default "R"
+  #define command_i_tx_on  "TX ON"
+  #define command_i_tx_off "TX OFF"
+  #define command_k_dit_dah_buffers_on "ON"
+  #define command_k_dit_dah_buffers_off "OFF"
+  #define command_n_paddle_reverse "REV"
+  #define command_n_paddle_normal "NORM"
+  #define command_o_sidetone_off "ST OFF"
+  #define command_o_sidetone_paddle_only "ST PD ONLY"
+  #define command_o_sidetone_on "ST ON"
+  #define command_v_potentiometer_on "POT ON"
+  #define command_v_potentiometer_off "POT OFF"
+
+  #define command_error "ERR"
+
+#endif //FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT

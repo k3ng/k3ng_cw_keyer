@@ -101,6 +101,7 @@
 // #define FEATURE_SO2R_BASE           // SO2R Box base protocol extensions
 // #define FEATURE_SO2R_SWITCHES       // SO2R Box TX and RX switches
 // #define FEATURE_SO2R_ANTENNA        // SO2R Box antenna selection (not fully implemented)
+// #define FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
 
 // #define OPTION_DIRECT_PADDLE_PIN_READS_MEGA   // only works with Mega and pins 2 and 5 - minor performance increase
 // #define OPTION_DIRECT_PADDLE_PIN_READS_UNO    // Unos or Nanos pins 2 and 5 - do not enable on a nanoKeyer, it uses different pins
