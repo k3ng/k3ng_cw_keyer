@@ -1244,6 +1244,11 @@ Recent Update History
       Fixed issue (hopefully) with memory_area_start automatic cacluation
       Fixed issue of command_mode_acknowledgement_character not used for command acknowledgement when FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT is disabled
 
+    2020.06.03.02
+      In FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT added setting command_t_tune_mode for T (tune) command
+      Without FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT, setting command_mode_acknowledgement_character now is used for T (tune) command
+      Added setting FEATURE_ETHERNET_DNS {8,8,8,8} to FEATURE_WEB_SERVER and FEATURE_INTERNET_LINK (FEATURE_ETHERNET)
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1271,8 +1276,8 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.06.03.01"
-#define eeprom_magic_number 39               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2020.06.03.02"
+#define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1521,7 +1526,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #define memory_area_start (sizeof(configuration)+5)
 
 // Variables and stuff
-struct config_t {  // 115 bytes total
+struct config_t {  // 119 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1563,7 +1568,8 @@ struct config_t {  // 115 bytes total
   uint8_t ip[4];
   uint8_t gateway[4];  
   uint8_t subnet[4]; 
-    // 12 bytes
+  uint8_t dns_server[4];
+    // 16 bytes
 
   uint8_t link_send_ip[4][FEATURE_INTERNET_LINK_MAX_LINKS];   // FEATURE_INTERNET_LINK_MAX_LINKS = 2
   uint8_t link_send_enabled[FEATURE_INTERNET_LINK_MAX_LINKS];
@@ -1984,6 +1990,7 @@ PRIMARY_SERIAL_CLS * debug_serial_port;
   uint8_t default_ip[] = FEATURE_ETHERNET_IP;                      // default IP address ("192.168.1.178")
   uint8_t default_gateway[] = FEATURE_ETHERNET_GATEWAY;                   // default gateway
   uint8_t default_subnet[] = FEATURE_ETHERNET_SUBNET_MASK;                  // default subnet mask
+  uint8_t dns_server[] = FEATURE_ETHERNET_DNS;
   uint8_t mac[] = FEATURE_ETHERNET_MAC;   // default physical mac address
   uint8_t restart_networking = 0;
 
@@ -8279,7 +8286,13 @@ void command_tuning_mode() {
     }        
   #endif  
   
-  send_dit();
+
+  #if !defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
+    send_char(command_mode_acknowledgement_character, 0);
+  #else
+    send_chars((char*)command_t_tune_mode); 
+  #endif
+
   key_tx = 1;
   while (looping) {
 
@@ -19436,7 +19449,7 @@ void initialize_ethernet_variables(){
 void initialize_ethernet(){
 
   #if defined(FEATURE_ETHERNET)
-    Ethernet.begin(mac, configuration.ip, configuration.gateway, configuration.subnet);
+    Ethernet.begin(mac, configuration.ip, configuration.dns_server, configuration.gateway, configuration.subnet);
   #endif
 
 }

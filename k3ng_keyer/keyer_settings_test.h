@@ -196,6 +196,7 @@
 #if defined(FEATURE_ETHERNET)
   #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
   #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
+  #define FEATURE_ETHERNET_DNS {8,8,8,8} 
 //  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.179")
 //  #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
 
@@ -308,6 +309,7 @@
   #define command_o_sidetone_off "ST OFF"
   #define command_o_sidetone_paddle_only "ST PD ONLY"
   #define command_o_sidetone_on "ST ON"
+  #define command_t_tune_mode "TUNE"
   #define command_v_potentiometer_on "POT ON"
   #define command_v_potentiometer_off "POT OFF"
 

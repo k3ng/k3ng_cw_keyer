@@ -70,7 +70,7 @@
 // #define FEATURE_SO2R_BASE           // SO2R Box base protocol extensions
 // #define FEATURE_SO2R_SWITCHES       // SO2R Box TX and RX switches
 // #define FEATURE_SO2R_ANTENNA        // SO2R Box antenna selection (not fully implemented)
-// #define FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
+#define FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
 
 // UNDER DEVELOPMENT
 // #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1  // Arduino Uno: sidetone_line = 9 or 10 ; Mega: sidetone_line = 11, 12, or 13 (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html )
