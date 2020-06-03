@@ -291,7 +291,7 @@
 #define sidetone_volume_low_limit 10
 #define sidetone_volume_high_limit 500
 
-#define command_mode_acknowledgement_character 'E'
+#define command_mode_acknowledgement_character 'C'
 
 #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT)
   #define command_a_iambic_a "A"

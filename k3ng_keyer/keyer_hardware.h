@@ -75,7 +75,7 @@
 */
 
 
-// Do not touch anything below this line!
+
 // Serial port class definitions for various devices
 
 #if defined(ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329

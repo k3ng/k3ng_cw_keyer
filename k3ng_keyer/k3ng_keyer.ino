@@ -1240,6 +1240,10 @@ Recent Update History
       FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT created which has customizable CW feedback messages for most command mode commands
       New settings in settings files for FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT ( https://github.com/k3ng/k3ng_cw_keyer/wiki/320-Feature:-Command-Mode#feedback )
 
+    2020.06.03.01
+      Fixed issue (hopefully) with memory_area_start automatic cacluation
+      Fixed issue of command_mode_acknowledgement_character not used for command acknowledgement when FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT is disabled
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1267,8 +1271,8 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.05.27.01"
-#define eeprom_magic_number 38               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2020.06.03.01"
+#define eeprom_magic_number 39               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1514,7 +1518,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #endif  
 
 
-#define memory_area_start (sizeof(configuration)+1)
+#define memory_area_start (sizeof(configuration)+5)
 
 // Variables and stuff
 struct config_t {  // 115 bytes total
@@ -7159,7 +7163,7 @@ void command_mode() {
           #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
             send_chars((char*)command_a_iambic_a);  
           #else               
-            send_dit();
+            send_char(command_mode_acknowledgement_character, 0);
           #endif  
           break;
 
@@ -7175,7 +7179,7 @@ void command_mode() {
           #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
             send_chars((char*)command_b_iambic_b);  
           #else               
-            send_dit();
+            send_char(command_mode_acknowledgement_character, 0);
           #endif  
           break;
 
@@ -7193,7 +7197,7 @@ void command_mode() {
           #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
             send_chars((char*)command_c_single_paddle);  
           #else               
-            send_dit();
+            send_char(command_mode_acknowledgement_character, 0);
           #endif  
           break;          
         case 1:    // E - announce spEed
@@ -7230,7 +7234,7 @@ void command_mode() {
           #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
             send_chars((char*)command_d_ultimatic);  
           #else               
-            send_dit();
+            send_char(command_mode_acknowledgement_character, 0);
           #endif  
           break; 
           #endif //OPTION_NO_ULTIMATIC
@@ -7262,7 +7266,7 @@ void command_mode() {
           #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
             send_chars((char*)command_h_weight_dit_dah_ratio_default);  
           #else               
-            send_dit();
+            send_char(command_mode_acknowledgement_character, 0);
           #endif  
           break;  
         case 11:                                                     // I - toggle TX enable / disable
@@ -7284,7 +7288,7 @@ void command_mode() {
             #endif        
           }
           #if !defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT)
-            send_dit();
+            send_char(command_mode_acknowledgement_character, 0);
           #endif
           break;
         case 1222: command_dah_to_dit_ratio_adjust(); break;                        // J - dah to dit ratio adjust
@@ -7309,7 +7313,7 @@ void command_mode() {
               #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
                 send_chars((char*)command_k_dit_dah_buffers_on);  
               #else
-                send_dit();  
+                send_char(command_mode_acknowledgement_character, 0); 
               #endif            
             } else {
               configuration.dit_buffer_off = 1;
@@ -7329,7 +7333,7 @@ void command_mode() {
               #if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
                 send_chars((char*)command_k_dit_dah_buffers_off);  
               #else
-                send_dit();  
+                send_char(command_mode_acknowledgement_character, 0); 
               #endif                           
             }
           } else {
@@ -7385,7 +7389,7 @@ void command_mode() {
           }
           config_dirty = 1;
           #if !defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT) 
-            send_dit();  
+            send_char(command_mode_acknowledgement_character, 0);
           #endif  
           break;  
 //zzzzzzzz
@@ -15904,16 +15908,21 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
     }
 
     #if defined(DEBUG_MEMORY_LOCATIONS)
-      port_to_use->print("  start: ");
+      port_to_use->print(F("  start: "));
       port_to_use->print(memory_start(x));
-      port_to_use->print(" end: ");
+      port_to_use->print(F(" end: "));
       port_to_use->print(memory_end(x));
-      port_to_use->print(" size: ");
+      port_to_use->print(F(" size: "));
       port_to_use->print(memory_end(x)-memory_start(x));
     #endif
 
     port_to_use->println();
   }
+
+  #if defined(DEBUG_MEMORY_LOCATIONS)
+    port_to_use->print(F("Config Area end: "));
+    port_to_use->println(sizeof(configuration));
+  #endif
 }
 #endif
 
