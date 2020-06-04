@@ -1249,6 +1249,11 @@ Recent Update History
       Without FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT, setting command_mode_acknowledgement_character now is used for T (tune) command
       Added setting FEATURE_ETHERNET_DNS {8,8,8,8} to FEATURE_WEB_SERVER and FEATURE_INTERNET_LINK (FEATURE_ETHERNET)
 
+    2020.06.03.03
+      Fixed issue with paddle interruption of stacked memories not being consistent (Thanks, Marcin SP5IOU)
+      \S memory macro now prints space on CLI and LCD display
+
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1276,7 +1281,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.06.03.02"
+#define CODE_VERSION "2020.06.03.03"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -6152,7 +6157,6 @@ void check_dit_paddle()
     #ifdef FEATURE_MEMORIES
       if (repeat_memory < 255) {
         repeat_memory = 255;
-        clear_send_buffer();
         #ifdef OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT
           dit_buffer = 0;
           while (!paddle_pin_read(dit_paddle)) {};
@@ -6160,6 +6164,7 @@ void check_dit_paddle()
         #endif
       }
     #endif
+    clear_send_buffer();
   }
 
 
@@ -6211,6 +6216,7 @@ void check_dah_paddle()
     #ifdef FEATURE_MEMORIES
       repeat_memory = 255;
     #endif
+    clear_send_buffer();
     manual_ptt_invoke = 0;
   }
 
@@ -16521,6 +16527,15 @@ byte play_memory(byte memory_number) {
           
               case 'S': // insert space
                 send_char(' ',KEYER_NORMAL);
+                primary_serial_port->print(' ');
+                #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                  secondary_serial_port->print(' ');
+                #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                #ifdef FEATURE_DISPLAY
+                if (lcd_send_echo) {
+                  display_scroll_print_char(' ');
+                }
+                #endif //FEATURE_DISPLAY               
                 break;
 
               case 'X':                         // X - switch transmitter
