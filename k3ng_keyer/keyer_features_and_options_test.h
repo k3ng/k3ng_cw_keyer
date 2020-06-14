@@ -17,7 +17,7 @@
 #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
 #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
 #define FEATURE_MEMORY_MACROS
-// #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
+#define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
 // #define FEATURE_BEACON                // Go into beacon mode if paddle_left pin is LOW at boot up
 // #define FEATURE_BEACON_SETTING        // Go into beacon mode at boot up if EEPROM setting is enabled (\_ CLI Command)
 // #define FEATURE_TRAINING_COMMAND_LINE_INTERFACE
@@ -45,7 +45,6 @@
 // #define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE, may have mixed results with Mega and Mega ADK)
 // #define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
 // #define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-// #define FEATURE_HI_PRECISION_LOOP_TIMING
 // #define FEATURE_USB_MOUSE               // Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
 // #define FEATURE_CAPACITIVE_PADDLE_PINS  // remove the bypass capacitors on the paddle_left and paddle_right lines when using capactive paddles
 // #define FEATURE_LED_RING                // Mayhew Labs Led Ring support
@@ -77,7 +76,7 @@
 // #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3  // Arduino Mega: sidetone_line = 2, 3, or 5  (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html)
 
 
-//#define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
+#define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
 #define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 
                                                              //    simultaneously.  This will make Winkey emulation be the default at boot up; 
                                                              //    hold command button down at boot up to activate CLI mode

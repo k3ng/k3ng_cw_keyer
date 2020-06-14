@@ -28,6 +28,8 @@ For help, please post on the Radio Artisan group: https://groups.io/g/radioartis
 
 YouTube Channel: https://www.youtube.com/channel/UC5o8UM1-heT5kJbwnJRkUYg
 
+2020 Recipient of the Amateur Radio Software Award https://amateurradiosoftwareaward.github.io/ 
+
 Wordsworth CW training method created by George Allison, K1IG
 English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
 
@@ -1253,6 +1255,11 @@ Recent Update History
       Fixed issue with paddle interruption of stacked memories not being consistent (Thanks, Marcin SP5IOU)
       \S memory macro now prints space on CLI and LCD display
 
+    2020.06.13.01
+      HARDWARE_GENERIC_STM32F103C - hard code EEPROM length to account for length() method not being available on this platform
+
+    2020.06.14.01
+      Added [ character as prosign AS for K1EL Winkeyer / N1MM+ compatibility (Thanks, Mark WH7W)
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
@@ -1281,7 +1288,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.06.03.03"
+#define CODE_VERSION "2020.06.14.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -9245,32 +9252,32 @@ void send_char(byte cw_char, byte omit_letterspace)
 
   if (char_send_mode == CW) {
     switch (cw_char) {
-      case 'A': send_the_dits_and_dahs(".-");break;
-      case 'B': send_the_dits_and_dahs("-...");break;
-      case 'C': send_the_dits_and_dahs("-.-.");break;
-      case 'D': send_the_dits_and_dahs("-..");break;
-      case 'E': send_the_dits_and_dahs(".");break;
-      case 'F': send_the_dits_and_dahs("..-.");break;
-      case 'G': send_the_dits_and_dahs("--.");break;
-      case 'H': send_the_dits_and_dahs("....");break;
-      case 'I': send_the_dits_and_dahs("..");break;
-      case 'J': send_the_dits_and_dahs(".---");break;
-      case 'K': send_the_dits_and_dahs("-.-");break;
-      case 'L': send_the_dits_and_dahs(".-..");break;
-      case 'M': send_the_dits_and_dahs("--");break;
-      case 'N': send_the_dits_and_dahs("-.");break;
-      case 'O': send_the_dits_and_dahs("---");break;
-      case 'P': send_the_dits_and_dahs(".--.");break;
-      case 'Q': send_the_dits_and_dahs("--.-");break;
-      case 'R': send_the_dits_and_dahs(".-.");break;
-      case 'S': send_the_dits_and_dahs("...");break;
-      case 'T': send_the_dits_and_dahs("-");break;
-      case 'U': send_the_dits_and_dahs("..-");break;
-      case 'V': send_the_dits_and_dahs("...-");break;
-      case 'W': send_the_dits_and_dahs(".--");break;
-      case 'X': send_the_dits_and_dahs("-..-");break;
-      case 'Y': send_the_dits_and_dahs("-.--");break;
-      case 'Z': send_the_dits_and_dahs("--..");break;
+      case 'A': send_the_dits_and_dahs(".-");   break;
+      case 'B': send_the_dits_and_dahs("-..."); break;
+      case 'C': send_the_dits_and_dahs("-.-."); break;
+      case 'D': send_the_dits_and_dahs("-..");  break;
+      case 'E': send_the_dits_and_dahs(".");    break;
+      case 'F': send_the_dits_and_dahs("..-."); break;
+      case 'G': send_the_dits_and_dahs("--.");  break;
+      case 'H': send_the_dits_and_dahs("...."); break;
+      case 'I': send_the_dits_and_dahs("..");   break;
+      case 'J': send_the_dits_and_dahs(".---"); break;
+      case 'K': send_the_dits_and_dahs("-.-");  break;
+      case 'L': send_the_dits_and_dahs(".-.."); break;
+      case 'M': send_the_dits_and_dahs("--");   break;
+      case 'N': send_the_dits_and_dahs("-.");   break;
+      case 'O': send_the_dits_and_dahs("---");  break;
+      case 'P': send_the_dits_and_dahs(".--."); break;
+      case 'Q': send_the_dits_and_dahs("--.-"); break;
+      case 'R': send_the_dits_and_dahs(".-.");  break;
+      case 'S': send_the_dits_and_dahs("...");  break;
+      case 'T': send_the_dits_and_dahs("-");    break;
+      case 'U': send_the_dits_and_dahs("..-");  break;
+      case 'V': send_the_dits_and_dahs("...-"); break;
+      case 'W': send_the_dits_and_dahs(".--");  break;
+      case 'X': send_the_dits_and_dahs("-..-"); break;
+      case 'Y': send_the_dits_and_dahs("-.--"); break;
+      case 'Z': send_the_dits_and_dahs("--.."); break;
 
       case '0': send_the_dits_and_dahs("-----");break;
       case '1': send_the_dits_and_dahs(".----");break;
@@ -9283,31 +9290,33 @@ void send_char(byte cw_char, byte omit_letterspace)
       case '8': send_the_dits_and_dahs("---..");break;
       case '9': send_the_dits_and_dahs("----.");break;
 
-      case '=': send_the_dits_and_dahs("-...-");break;
-      case '/': send_the_dits_and_dahs("-..-.");break;
+      case '=': send_the_dits_and_dahs("-...-");   break;
+      case '/': send_the_dits_and_dahs("-..-.");   break;
+      case '*': send_the_dits_and_dahs("-...-.-"); break;
+      case '.': send_the_dits_and_dahs(".-.-.-");  break;
+      case ',': send_the_dits_and_dahs("--..--");  break;
+      case '!': send_the_dits_and_dahs("--..--");  break;  //sp5iou 20180328
+      //case '!': send_the_dits_and_dahs("-.-.--");break;//sp5iou 20180328
+      case '\'': send_the_dits_and_dahs(".----."); break; // apostrophe
+      case '(': send_the_dits_and_dahs("-.--.");   break;
+      case ')': send_the_dits_and_dahs("-.--.-");  break;
+      case '&': send_the_dits_and_dahs(".-...");   break;
+      //case '&': send_dit(); loop_element_lengths(3); send_dits(3); break;
+      case ':': send_the_dits_and_dahs("---...");  break;
+      case ';': send_the_dits_and_dahs("-.-.-.");  break;
+      case '+': send_the_dits_and_dahs(".-.-.");   break;
+      case '-': send_the_dits_and_dahs("-....-");  break;
+      case '_': send_the_dits_and_dahs("..--.-");  break;
+      case '"': send_the_dits_and_dahs(".-..-.");  break;
+      case '$': send_the_dits_and_dahs("...-..-"); break;
+      case '@': send_the_dits_and_dahs(".--.-.");  break;
+      case '<': send_the_dits_and_dahs(".-.-.");   break; // AR
+      case '>': send_the_dits_and_dahs("...-.-");  break; // SK
+      case '[': send_the_dits_and_dahs(".-...");   break; // AS (K1EL Winkeyer compability)
+
       case ' ': 
         loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm); 
         break;
-      case '*': send_the_dits_and_dahs("-...-.-");break;
-      //case '&': send_dit(); loop_element_lengths(3); send_dits(3); break;
-      case '.': send_the_dits_and_dahs(".-.-.-");break;
-      case ',': send_the_dits_and_dahs("--..--");break;
-      case '!': send_the_dits_and_dahs("--..--");break;//sp5iou 20180328
-      case '\'': send_the_dits_and_dahs(".----.");break;// apostrophe
-//      case '!': send_the_dits_and_dahs("-.-.--");break;//sp5iou 20180328
-      case '(': send_the_dits_and_dahs("-.--.");break;
-      case ')': send_the_dits_and_dahs("-.--.-");break;
-      case '&': send_the_dits_and_dahs(".-...");break;
-      case ':': send_the_dits_and_dahs("---...");break;
-      case ';': send_the_dits_and_dahs("-.-.-.");break;
-      case '+': send_the_dits_and_dahs(".-.-.");break;
-      case '-': send_the_dits_and_dahs("-....-");break;
-      case '_': send_the_dits_and_dahs("..--.-");break;
-      case '"': send_the_dits_and_dahs(".-..-.");break;
-      case '$': send_the_dits_and_dahs("...-..-");break;
-      case '@': send_the_dits_and_dahs(".--.-.");break;
-      case '<': send_the_dits_and_dahs(".-.-.");break; // AR
-      case '>': send_the_dits_and_dahs("...-.-");break; // SK
 
       #ifdef OPTION_RUSSIAN_LANGUAGE_SEND_CLI    // Contributed by Павел Бирюков, UA1AQC
         case 192: send_the_dits_and_dahs(".-");break; //А
@@ -17735,8 +17744,14 @@ void initialize_keyer_state(){
     switch_to_tx_silent(1);
   #endif
 
-  #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if (!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))) && !defined(HARDWARE_GENERIC_STM32F103C)
     memory_area_end = EEPROM.length() - 1;
+  #else
+    #if defined(HARDWARE_GENERIC_STM32F103C)
+      memory_area_end = 254;
+    #else
+      memory_area_end = 1024; // not sure if this is a valid assumption
+    #endif  
   #endif
 
 }  
