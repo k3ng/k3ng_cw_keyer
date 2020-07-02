@@ -6556,7 +6556,7 @@ void tx_and_sidetone_key (int state)
           tone(sidetone_line, configuration.hz_sidetone);
         #else
           if (sidetone_line) {
-            digitalWrite(sidetone_line, HIGH);
+            digitalWrite(sidetone_line, sidetone_line_active_state);
           }
         #endif
       }
@@ -6577,7 +6577,7 @@ void tx_and_sidetone_key (int state)
             noTone(sidetone_line);
           #else
             if (sidetone_line) {
-              digitalWrite(sidetone_line, LOW);
+              digitalWrite(sidetone_line, sidetone_line_inactive_state);
             }
           #endif
         }
@@ -6606,7 +6606,7 @@ void tx_and_sidetone_key (int state)
           tone(sidetone_line, configuration.hz_sidetone);
         #else
           if (sidetone_line) {
-            digitalWrite(sidetone_line, HIGH);
+            digitalWrite(sidetone_line, sidetone_line_active_state);
           }
         #endif          
       }
@@ -6629,7 +6629,7 @@ void tx_and_sidetone_key (int state)
             noTone(sidetone_line);
           #else
             if (sidetone_line) {
-              digitalWrite(sidetone_line, LOW);
+              digitalWrite(sidetone_line, sidetone_line_inactive_state);
             }
           #endif
         }
@@ -9076,9 +9076,9 @@ void beep()
     // #endif
   #else
     if (sidetone_line) {
-      digitalWrite(sidetone_line, HIGH);
+      digitalWrite(sidetone_line, sidetone_line_active_state);
       delay(200);
-      digitalWrite(sidetone_line, LOW);
+      digitalWrite(sidetone_line, sidetone_line_inactive_state);
     }
   #endif
 }
@@ -9093,9 +9093,9 @@ void boop()
     noTone(sidetone_line);
   #else
     if (sidetone_line) {
-      digitalWrite(sidetone_line, HIGH);
+      digitalWrite(sidetone_line, sidetone_line_active_state);
       delay(100);
-      digitalWrite(sidetone_line, LOW);
+      digitalWrite(sidetone_line, sidetone_line_inactive_state);
     }
   #endif    
 }
@@ -9112,9 +9112,9 @@ void beep_boop()
     noTone(sidetone_line);
   #else
     if (sidetone_line) {
-      digitalWrite(sidetone_line, HIGH);
+      digitalWrite(sidetone_line, sidetone_line_active_state);
       delay(200);
-      digitalWrite(sidetone_line, LOW);
+      digitalWrite(sidetone_line, sidetone_line_inactive_state);
     }
   #endif     
 }
@@ -9131,9 +9131,9 @@ void boop_beep()
     noTone(sidetone_line);
   #else
     if (sidetone_line) {
-      digitalWrite(sidetone_line, HIGH);
+      digitalWrite(sidetone_line, sidetone_line_active_state);
       delay(200);
-      digitalWrite(sidetone_line, LOW);
+      digitalWrite(sidetone_line, sidetone_line_inactive_state);
     }
   #endif         
 }
@@ -17186,7 +17186,7 @@ void initialize_pins() {
   }
   if (sidetone_line) {
     pinMode (sidetone_line, OUTPUT);
-    digitalWrite (sidetone_line, LOW);
+    digitalWrite (sidetone_line, sidetone_line_inactive_state);
   }
   if (tx_key_dit) {
     pinMode (tx_key_dit, OUTPUT);

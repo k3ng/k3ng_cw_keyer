@@ -271,6 +271,8 @@ GENERIC STM32F103C
 #define tx_inhibit_pin_inactive_state HIGH
 #define tx_pause_pin_active_state LOW
 #define tx_pause_pin_inactive_state HIGH
+#define sidetone_line_active_state HIGH
+#define sidetone_line_inactive_state LOW
 
 #if defined(ARDUINO_MAPLE_MINI) || defined(ARDUINO_GENERIC_STM32f103C) //sp5iou 20180329
   #define button_value_factor 4095  //sp5iou contributed

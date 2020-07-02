@@ -277,6 +277,8 @@
 #define tx_inhibit_pin_inactive_state HIGH
 #define tx_pause_pin_active_state LOW
 #define tx_pause_pin_inactive_state HIGH
+#define sidetone_line_active_state HIGH
+#define sidetone_line_inactive_state LOW
 
 #if defined(ARDUINO_MAPLE_MINI)
   #define button_value_factor 4095
