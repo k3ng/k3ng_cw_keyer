@@ -1442,6 +1442,12 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include "src/buttonarray/buttonarray.h"
 #endif
 
+#if defined(FEATURE_SIDETONE_NEWTONE) && !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
+  #include <NewTone.h>
+  #define tone   NewTone
+  #define noTone noNewTone
+#endif //FEATURE_SIDETONE_NEWTONE
+
 #if defined(FEATURE_SLEEP)
   #include <avr/sleep.h>  // It should be different library for ARM sp5iou
 #endif 
