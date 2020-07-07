@@ -35,6 +35,8 @@
 //#define FEATURE_QLF
 //#define FEATURE_EEPROM_E24C1024
 //#define FEATURE_STRAIGHT_KEY
+//#define FEATURE_WEB_SERVER      // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
+//#define FEATURE_INTERNET_LINK   // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
 //#define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
 //#define FEATURE_AMERICAN_MORSE
 //#define FEATURE_4x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
@@ -42,6 +44,8 @@
 //#define FEATURE_SEQUENCER
 //#define FEATURE_SD_CARD_SUPPORT
 //#define FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
+// #define FEATURE_WEB_SERVER      // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
+// #define FEATURE_INTERNET_LINK   // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
 
 //#define OPTION_SUPPRESS_SERIAL_BOOT_MSG
 #define OPTION_INCLUDE_PTT_TAIL_FOR_MANUAL_SENDING

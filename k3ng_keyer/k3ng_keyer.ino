@@ -1266,7 +1266,15 @@ Recent Update History
       New settings: sidetone_line_active_state, sidetone_line_inactive_state   
 
     2020.07.04.01
-      Added OPTION_WINKEY_PROSIGN_COMPATIBILITY for additional character mappings to support K1EL Winkey emulation prosigns  
+      Added OPTION_WINKEY_PROSIGN_COMPATIBILITY for additional character mappings to support K1EL Winkey emulation prosigns 
+
+    2020.07.07.01
+      Merge of pull request 99 - Add support for using the NewTone library (https://github.com/k3ng/k3ng_cw_keyer/pull/99) (Thanks, Costin Stroie)
+        Added support for configuring the sidetone line states HIGH and LOW.
+        Use the NewTone instead of the standard tone library (~1k smaller code).
+        Included the NewTone library by Tim Eckel <teckel@leethost.com>
+      Added FEATURE_WEB_SERVER and FEATURE_INTERNET_LINK to all features and options files  
+
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
@@ -1295,7 +1303,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.07.04.01"
+#define CODE_VERSION "2020.07.07.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>

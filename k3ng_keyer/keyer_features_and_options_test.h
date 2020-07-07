@@ -58,8 +58,6 @@
 // #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
 #define FEATURE_PADDLE_ECHO
 // #define FEATURE_STRAIGHT_KEY_ECHO
-// #define FEATURE_WEB_SERVER
-// #define FEATURE_INTERNET_LINK
 // #define FEATURE_AMERICAN_MORSE
 // #define FEATURE_4x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
 // #define FEATURE_3x4_KEYPAD          // code contributed by Jack, W0XR - documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki/380-Feature:-Keypad
@@ -71,6 +69,8 @@
 // #define FEATURE_SO2R_SWITCHES       // SO2R Box TX and RX switches
 // #define FEATURE_SO2R_ANTENNA        // SO2R Box antenna selection (not fully implemented)
 #define FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
+// #define FEATURE_WEB_SERVER      // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
+// #define FEATURE_INTERNET_LINK   // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
 
 // UNDER DEVELOPMENT
 // #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1  // Arduino Uno: sidetone_line = 9 or 10 ; Mega: sidetone_line = 11, 12, or 13 (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html )
