@@ -1261,6 +1261,13 @@ Recent Update History
     2020.06.14.01
       Added [ character as prosign AS for K1EL Winkeyer / N1MM+ compatibility (Thanks, Mark WH7W)
 
+    2020.07.01.01
+      Pull request 98 - Support for configuring the side tone line states - merged.  (https://github.com/k3ng/k3ng_cw_keyer/pull/98) (Thanks, Costin Stroie)
+      New settings: sidetone_line_active_state, sidetone_line_inactive_state   
+
+    2020.07.04.01
+      Added OPTION_WINKEY_PROSIGN_COMPATIBILITY for additional character mappings to support K1EL Winkey emulation prosigns  
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1288,7 +1295,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.06.14.01"
+#define CODE_VERSION "2020.07.04.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -9308,8 +9315,7 @@ void send_char(byte cw_char, byte omit_letterspace)
       case ')': send_the_dits_and_dahs("-.--.-");  break;
       case '&': send_the_dits_and_dahs(".-...");   break;
       //case '&': send_dit(); loop_element_lengths(3); send_dits(3); break;
-      case ':': send_the_dits_and_dahs("---...");  break;
-      case ';': send_the_dits_and_dahs("-.-.-.");  break;
+
       case '+': send_the_dits_and_dahs(".-.-.");   break;
       case '-': send_the_dits_and_dahs("-....-");  break;
       case '_': send_the_dits_and_dahs("..--.-");  break;
@@ -9318,7 +9324,23 @@ void send_char(byte cw_char, byte omit_letterspace)
       case '@': send_the_dits_and_dahs(".--.-.");  break;
       case '<': send_the_dits_and_dahs(".-.-.");   break; // AR
       case '>': send_the_dits_and_dahs("...-.-");  break; // SK
-      case '[': send_the_dits_and_dahs(".-...");   break; // AS (K1EL Winkeyer compability)
+     
+
+
+
+    
+      #if defined(OPTION_WINKEY_PROSIGN_COMPATIBILITY)
+        case 0x5C: send_the_dits_and_dahs("-..-.");  break;   // Backslash 
+        case '[': send_the_dits_and_dahs(".-...");  break;
+        case ':': send_the_dits_and_dahs("-.--.");  break;
+        case ';': send_the_dits_and_dahs(".-.-");   break;
+        case ']': send_the_dits_and_dahs("-.--.");  break;
+      #else
+        case ':': send_the_dits_and_dahs("---...");  break;
+        case ';': send_the_dits_and_dahs("-.-.-.");  break;
+
+      #endif
+
 
       case ' ': 
         loop_element_lengths((configuration.length_wordspace-length_letterspace-2),0,configuration.wpm); 
