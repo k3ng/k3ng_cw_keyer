@@ -1275,6 +1275,9 @@ Recent Update History
         Included the NewTone library by Tim Eckel <teckel@leethost.com>
       Added FEATURE_WEB_SERVER and FEATURE_INTERNET_LINK to all features and options files  
 
+    2020.07.17.01
+      Merge of pull request 100 - Command buttons 1-3 are not working with ARDUINO_GENERIC_STM32F103C (https://github.com/k3ng/k3ng_cw_keyer/pull/100) (Thanks, 7m4mon)  
+
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
@@ -1303,7 +1306,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.07.07.01"
+#define CODE_VERSION "2020.07.17.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
