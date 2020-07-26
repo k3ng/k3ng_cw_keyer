@@ -1277,6 +1277,9 @@ Recent Update History
 
     2020.07.17.01
       Merge of pull request 100 - Command buttons 1-3 are not working with ARDUINO_GENERIC_STM32F103C (https://github.com/k3ng/k3ng_cw_keyer/pull/100) (Thanks, 7m4mon)  
+  
+    2020.07.26.01
+      Extended CLI commands now work with linefeed line terminations in addition to carriage return; Issue 101 (https://github.com/k3ng/k3ng_cw_keyer/issues/101), (Thanks, devcpu)
 
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1306,7 +1309,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.07.17.01"
+#define CODE_VERSION "2020.07.26.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -12881,7 +12884,7 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
       if ((incoming_serial_byte > 31) && (incoming_serial_byte < 127)) {
         userinput.concat((char)incoming_serial_byte);
       }
-      if (incoming_serial_byte == 13) {   // carriage return - get out
+      if (incoming_serial_byte == 13 || incoming_serial_byte == 10) {   // carriage return - get out
         looping = 0;
       }
     }
