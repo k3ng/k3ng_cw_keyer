@@ -1081,7 +1081,7 @@ Recent Update History
       Fixed bug with OPTION_SAVE_MEMORY_NANOKEYER and reading left (dit) paddle
 
     2019.08.18.01
-      Fixed logic issue with WINKEY_CANCEL_BUFFERED_SPEED_COMMAND that may arise in Logger32
+      Fixed logic issue with W INKEY_CANCEL_BUFFERED_SPEED_COMMAND that may arise in Logger32
 
     2019.08.18.02
       Fixed issue with OPTION_BLINK_HI_ON_PTT (Thanks, Bob, WO6W)  
@@ -1281,6 +1281,8 @@ Recent Update History
     2020.07.26.01
       Extended CLI commands now work with linefeed line terminations in addition to carriage return; Issue 101 (https://github.com/k3ng/k3ng_cw_keyer/issues/101), (Thanks, devcpu)
 
+    2020.08.17.01
+      FEATURE_WINKEY_EMULATION - fixed bug that adversly affected operation with Logger32
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
@@ -1309,7 +1311,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.07.26.01"
+#define CODE_VERSION "2020.08.17.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -9761,6 +9763,9 @@ void service_send_buffer(byte no_print)
             #ifdef FEATURE_WINKEY_EMULATION
               if ((winkey_host_open) && (winkey_speed_state == WINKEY_UNBUFFERED_SPEED)){
                 winkey_speed_state = WINKEY_BUFFERED_SPEED;
+                #if defined(DEBUG_SERVICE_SEND_BUFFER)
+                  debug_serial_port->println("service_send_buffer: winkey_speed_state = WINKEY_BUFFERED_SPEED");
+                #endif
                 winkey_last_unbuffered_speed_wpm = configuration.wpm;
               }
             #endif
@@ -11091,7 +11096,7 @@ void service_winkey(byte action) {
         winkey_buffer_counter = 0;
         winkey_buffer_pointer = 0;  
       }
-    } else {
+    } else { //if (winkey_interrupted)
       //if ((winkey_host_open) && (winkey_sending) && (send_buffer_bytes < 1) && ((millis() - winkey_last_activity) > winkey_c0_wait_time)) {
       if ((primary_serial_port->available() == 0) && (winkey_host_open) && (winkey_sending) && (send_buffer_bytes < 1) && ((millis() - winkey_last_activity) > winkey_c0_wait_time)) {
         #ifdef OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
@@ -11106,17 +11111,20 @@ void service_winkey(byte action) {
         winkey_buffer_counter = 0;
         winkey_buffer_pointer = 0;
       }
-    }
+    }  // if (winkey_interrupted)
+    
     // failsafe check - if we've been in some command status for awhile waiting for something, clear things out
     if ((winkey_status != WINKEY_NO_COMMAND_IN_PROGRESS) && ((millis() - winkey_last_activity) > winkey_command_timeout_ms)) {
       #ifdef DEBUG_WINKEY
-        debug_serial_port->println("\r\nservice_winkey:cmd tout!->WINKEY_NO_COMMAND_IN_PROGRESS");
+        debug_serial_port->print("\r\nservice_winkey:cmd tout!->WINKEY_NO_COMMAND_IN_PROGRESS cmd was:");
+        debug_serial_port->println(winkey_status);
       #endif //DEBUG_WINKEY      
       winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       winkey_buffer_counter = 0;
       winkey_buffer_pointer = 0;
       winkey_port_write(0xc0|winkey_sending|winkey_xoff,0);    //send a status byte back for giggles
     }  
+
     if ((winkey_host_open) && (winkey_paddle_echo_buffer) && (winkey_paddle_echo_activated) && (millis() > winkey_paddle_echo_buffer_decode_time)) {
       #ifdef DEBUG_WINKEY
         debug_serial_port->println("\r\nservice_winkey:sending paddle echo char");
@@ -11126,6 +11134,7 @@ void service_winkey(byte action) {
       winkey_paddle_echo_buffer_decode_time = millis() + (float(600/configuration.wpm)*length_letterspace);
       winkey_paddle_echo_space_sent = 0;
     }
+
     if ((winkey_host_open) && (winkey_paddle_echo_buffer == 0) && (winkey_paddle_echo_activated) && (millis() > (winkey_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!winkey_paddle_echo_space_sent)) {
       #ifdef DEBUG_WINKEY
         debug_serial_port->println("\r\nservice_winkey:sending paddle echo space");
@@ -11135,7 +11144,7 @@ void service_winkey(byte action) {
     }
   }  // if (action == WINKEY_HOUSEKEEPING)
 
-  if (action == SERVICE_SERIAL_BYTE) {
+  if (action == SERVICE_SERIAL_BYTE){
     #ifdef DEBUG_WINKEY
       debug_serial_port->print("Winkey Port RX: ");
       if ((incoming_serial_byte > 31) && (incoming_serial_byte < 127)){
@@ -11153,8 +11162,8 @@ void service_winkey(byte action) {
     #endif //DEBUG_WINKEY
 
     winkey_last_activity = millis();
-    if (winkey_status == WINKEY_NO_COMMAND_IN_PROGRESS) {
 
+    if (winkey_status == WINKEY_NO_COMMAND_IN_PROGRESS){ 
       #if defined(FEATURE_SO2R_BASE)
         if (incoming_serial_byte >= 128) {
           so2r_command();
@@ -11332,8 +11341,6 @@ void service_winkey(byte action) {
               debug_serial_port->print("service_winkey:0A clearbuff send_buffer_bytes:");
               debug_serial_port->println(send_buffer_bytes);
             #endif //DEBUG_WINKEY 
-
-
             break;
           case 0x0b:
             winkey_status = WINKEY_KEY_COMMAND;
@@ -11476,10 +11483,25 @@ void service_winkey(byte action) {
             #endif //DEBUG_WINKEY            
             break;
           case 0x1e:  // cancel buffered speed command - buffered
-            winkey_status = WINKEY_CANCEL_BUFFERED_SPEED_COMMAND;
+
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey:WINKEY_CANCEL_BUFFERED_SPEED_COMMAND");
-            #endif //DEBUG_WINKEY            
+            #endif //DEBUG_WINKEY     
+
+            if (winkey_speed_state == WINKEY_BUFFERED_SPEED){
+              add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
+              add_to_send_buffer(0);
+              add_to_send_buffer((byte)winkey_last_unbuffered_speed_wpm);
+              winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
+              #ifdef DEBUG_WINKEY
+                debug_serial_port->println("service_winkey:winkey_speed_state = WINKEY_UNBUFFERED_SPEED");
+              #endif //DEBUG_WINKEY 
+            } else {
+              #ifdef DEBUG_WINKEY
+                debug_serial_port->println("service_winkey:WINKEY_CANCEL_BUFFERED_SPEED_COMMAND: no action");
+              #endif //DEBUG_WINKEY         
+            }       
+            winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
           case 0x1f:  // buffered NOP - no need to do anything
             #ifdef DEBUG_WINKEY
@@ -11503,7 +11525,7 @@ void service_winkey(byte action) {
         #endif
         
       }
-    } else {
+    } else { //if (winkey_status == WINKEY_NO_COMMAND_IN_PROGRESS) 
 
       if (winkey_status == WINKEY_UNSUPPORTED_COMMAND) {
         winkey_parmcount--;
@@ -11564,6 +11586,7 @@ void service_winkey(byte action) {
           winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
         }
       }
+
       if (winkey_status == WINKEY_UNBUFFERED_SPEED_COMMAND) {
         winkey_unbuffered_speed_command(incoming_serial_byte);
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
@@ -11641,18 +11664,25 @@ void service_winkey(byte action) {
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
 
-      if (winkey_status == WINKEY_CANCEL_BUFFERED_SPEED_COMMAND) {
-        if (winkey_speed_state == WINKEY_BUFFERED_SPEED){
-          add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
-          add_to_send_buffer(0);
-          add_to_send_buffer((byte)winkey_last_unbuffered_speed_wpm);
-          winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
-        }
-        #ifdef DEBUG_WINKEY
-          debug_serial_port->println("service_winkey:CANCEL_BUFFERED_SPEED_COMMAND->NOCMD");
-        #endif //DEBUG_WINKEY         
-        winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
-      }
+      // if (winkey_status == WINKEY_CANCEL_BUFFERED_SPEED_COMMAND) {  //zzzzzz
+      //   if (winkey_speed_state == WINKEY_BUFFERED_SPEED){
+      //     add_to_send_buffer(SERIAL_SEND_BUFFER_WPM_CHANGE);
+      //     add_to_send_buffer(0);
+      //     add_to_send_buffer((byte)winkey_last_unbuffered_speed_wpm);
+      //     winkey_speed_state = WINKEY_UNBUFFERED_SPEED;
+      //     #ifdef DEBUG_WINKEY
+      //       debug_serial_port->println("service_winkey:winkey_speed_state = WINKEY_UNBUFFERED_SPEED");
+      //     #endif //DEBUG_WINKEY 
+      //   } else {
+      //     #ifdef DEBUG_WINKEY
+      //       debug_serial_port->println("service_winkey:WINKEY_CANCEL_BUFFERED_SPEED_COMMAND: no action");
+      //     #endif //DEBUG_WINKEY         
+      //   }
+      //   #ifdef DEBUG_WINKEY
+      //     debug_serial_port->println("service_winkey:CANCEL_BUFFERED_SPEED_COMMAND->NOCMD");
+      //   #endif //DEBUG_WINKEY         
+      //   winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+      // }
 
       if (winkey_status == WINKEY_POINTER_01_COMMAND) { // move input pointer to new positon in overwrite mode
         winkey_buffer_pointer = incoming_serial_byte;
@@ -11754,16 +11784,16 @@ void service_winkey(byte action) {
       }
 
       #ifdef OPTION_WINKEY_2_SUPPORT
-      if (winkey_status == WINKEY_SEND_MSG) {
-        if ((incoming_serial_byte > 0) && (incoming_serial_byte < 7)) {
-          add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
-          add_to_send_buffer(incoming_serial_byte - 1);
-          #ifdef FEATURE_MEMORIES
-            repeat_memory = 255;
-          #endif
+        if (winkey_status == WINKEY_SEND_MSG) {
+          if ((incoming_serial_byte > 0) && (incoming_serial_byte < 7)) {
+            add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
+            add_to_send_buffer(incoming_serial_byte - 1);
+            #ifdef FEATURE_MEMORIES
+              repeat_memory = 255;
+            #endif
+          }
+          winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;  
         }
-        winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;  
-      }
       #endif //OPTION_WINKEY_2_SUPPORT
 
       if (winkey_status == WINKEY_ADMIN_COMMAND) {
