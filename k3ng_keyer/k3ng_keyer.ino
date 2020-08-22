@@ -1288,6 +1288,9 @@ Recent Update History
       FEATURE_COMMAND_BUTTONS is now called FEATURE_BUTTONS
       Command mode is now broken out into its own feature, FEATURE_COMMAND_MODE
 
+    2020.08.22.01
+      Minor tweak in check_buttons()  
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1315,7 +1318,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.08.21.01"
+#define CODE_VERSION "2020.08.22.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -8688,6 +8691,13 @@ byte analogbuttonread(byte button_number) {
 
 #ifdef FEATURE_BUTTONS
 void check_buttons() {
+
+  /*
+
+  It seems to use more space than I'd expect. 
+  Is it more than just a little routine to scan one analog pin and then jump to the extant 'play memory' routine as used by keyboard etc?
+
+  */
 
   #ifdef DEBUG_LOOP
     debug_serial_port->println(F("loop: entering check_buttons"));
