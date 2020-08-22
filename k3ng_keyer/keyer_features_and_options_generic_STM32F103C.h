@@ -9,7 +9,8 @@ Generic STM32F103C "Blue Pill"
 // FEATURES add more bytes to the compiled binary, OPTIONS change code behavior
 
 
-#define FEATURE_COMMAND_BUTTONS
+#define FEATURE_BUTTONS
+#define FEATURE_COMMAND_MODE
 #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
 #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
 #define FEATURE_MEMORY_MACROS

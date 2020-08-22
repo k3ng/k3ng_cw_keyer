@@ -43,3 +43,7 @@
 #if defined(FEATURE_BEACON_SETTING) && !defined(FEATURE_MEMORIES)
   #error "FEATURE_BEACON_SETTING requires FEATURE_MEMORIES and you may also want FEATURE_MEMORY_MACROS"
 #endif
+
+#if defined(FEATURE_COMMAND_MODE) && !defined(FEATURE_BUTTONS)
+  #error "FEATURE_COMMAND_MODE requires FEATURE_BUTTONS"
+#endif

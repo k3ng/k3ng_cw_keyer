@@ -66,14 +66,14 @@
 #define serial_program_memory_buffer_size 500
 #define eeprom_write_time_ms 30000
 
-#ifdef FEATURE_COMMAND_BUTTONS
+#ifdef FEATURE_BUTTONS
 #define analog_buttons_number_of_buttons 4
 #define analog_buttons_r1 10
 #define analog_buttons_r2 1
 #endif
 
 
-#if defined(FEATURE_COMMAND_BUTTONS) &&  !defined(FEATURE_PS2_KEYBOARD) && !defined(FEATURE_USB_KEYBOARD) && !defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(FEATURE_WINKEY_EMULATION)
+#if defined(FEATURE_BUTTONS) &&  !defined(FEATURE_PS2_KEYBOARD) && !defined(FEATURE_USB_KEYBOARD) && !defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(FEATURE_WINKEY_EMULATION)
 #define number_of_memories byte(analog_buttons_number_of_buttons-1)
 #else
 #define number_of_memories byte(3) //12

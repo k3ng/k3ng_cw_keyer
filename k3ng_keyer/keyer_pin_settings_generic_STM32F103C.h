@@ -29,10 +29,10 @@ GENERIC STM32F103C Blue Pill board
 
 #define potentiometer_enable_pin 0  // if defined, the potentiometer will be enabled only when this pin is held low; set to 0 to ignore this pin
 
-#ifdef FEATURE_COMMAND_BUTTONS
+#ifdef FEATURE_BUTTONS
   #define analog_buttons_pin PA3
   #define command_mode_active_led PC13 //for Generic STM32103C On Board LED
-#endif //FEATURE_COMMAND_BUTTONS
+#endif //FEATURE_BUTTONS
 
 /*
 FEATURE_SIDETONE_SWITCH
