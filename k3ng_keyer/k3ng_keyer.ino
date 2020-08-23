@@ -1291,6 +1291,14 @@ Recent Update History
     2020.08.22.01
       Minor tweak in check_buttons()  
 
+    2020.08.23.01
+      Added FEATURE_LCD_I2C_FDEBRABANDER
+      Added settings
+        lcd_i2c_address_mathertel_PCF8574 0x27             // I2C address of display for FEATURE_LCD_MATHERTEL_PCF8574
+        lcd_i2c_address_fdebrander_lcd 0x27                // I2C address of display for FEATURE_LCD_I2C_FDEBRABANDER
+        lcd_i2c_address_ydv1_lcd 0x27                      // I2C address of display for FEATURE_LCD_YDv1
+        lcd_i2c_address_sainsmart_lcd 0x27                // I2C address of display for FEATURE_LCD_SAINSMART_I2C       
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1318,7 +1326,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.08.22.01"
+#define CODE_VERSION "2020.08.23.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1510,7 +1518,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 #if defined(FEATURE_LCD_SAINSMART_I2C)
   #include <LiquidCrystal_I2C.h>
-#endif //FEATURE_SAINSMART_I2C_LCD  
+#endif
 
 #if defined(FEATURE_LCD_FABO_PCF8574)
   #include <FaBoLCD_PCF8574.h>
@@ -1518,6 +1526,10 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 #if defined(FEATURE_LCD_MATHERTEL_PCF8574)
   #include <LiquidCrystal_PCF8574.h>
+#endif
+
+#if defined(FEATURE_LCD_I2C_FDEBRABANDER)
+  #include <LiquidCrystal_I2C.h>
 #endif
 
 #if defined(FEATURE_LCD_HD44780)
@@ -1932,12 +1944,12 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   // #define D6_pin        6
   // #define D7_pin        7
   // LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin, BACKLIGHT_PIN, POSITIVE);  
-  LiquidCrystal_I2C lcd(0x27,20,4);
+  LiquidCrystal_I2C lcd(lcd_i2c_address_sainsmart_lcd,LCD_COLUMNS,LCD_ROWS);
 #endif //FEATURE_SAINSMART_I2C_LCD    
 
 #if defined(FEATURE_LCD_YDv1)
   //LiquidCrystal_I2C lcd(0x38);
-  LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
+  LiquidCrystal_I2C lcd(lcd_i2c_address_ydv1_lcd, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
 #endif
 
 #if defined(FEATURE_LCD_FABO_PCF8574)
@@ -1946,6 +1958,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
 #if defined(FEATURE_LCD_MATHERTEL_PCF8574)
   LiquidCrystal_PCF8574 lcd(lcd_i2c_address_mathertel_PCF8574);
+#endif
+
+#if defined(FEATURE_LCD_I2C_FDEBRABANDER)
+  LiquidCrystal_I2C lcd(lcd_i2c_address_fdebrander_lcd, LCD_COLUMNS, LCD_ROWS, /*charsize*/ LCD_5x8DOTS);
 #endif
 
 #if defined(FEATURE_LCD_HD44780)
@@ -8692,12 +8708,6 @@ byte analogbuttonread(byte button_number) {
 #ifdef FEATURE_BUTTONS
 void check_buttons() {
 
-  /*
-
-  It seems to use more space than I'd expect. 
-  Is it more than just a little routine to scan one analog pin and then jump to the extant 'play memory' routine as used by keyboard etc?
-
-  */
 
   #ifdef DEBUG_LOOP
     debug_serial_port->println(F("loop: entering check_buttons"));
@@ -17945,7 +17955,7 @@ void ps2int_write() {
 void initialize_display(){
 
   #ifdef FEATURE_DISPLAY    
-    #if defined(FEATURE_LCD_SAINSMART_I2C)
+    #if defined(FEATURE_LCD_SAINSMART_I2C) || defined(FEATURE_LCD_I2C_FDEBRABANDER)
       lcd.begin();
       lcd.home();
     #else

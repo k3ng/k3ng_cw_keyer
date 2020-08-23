@@ -24,6 +24,7 @@
 //#define FEATURE_LCD_4BIT                // classic LCD disidefplay using 4 I/O lines
 //#define FEATURE_LCD_ADAFRUIT_I2C          // Adafruit I2C LCD display using MCP23017 at addr 0x20
 //#define FEATURE_LCD_YDv1                // YourDuino I2C LCD display with old LCM 1602 V1 ic
+//#define FEATURE_LCD_I2C_FDEBRABANDER //https://github.com/fdebrabander/Arduino-LiquidCrystal-I2C-library
 //#define FEATURE_CW_DECODER
 //#define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE, may have mixed results with Mega and Mega ADK)
 //#define FEATURE_ROTARY_ENCODER          // rotary encoder speed control

@@ -41,6 +41,11 @@
 #define default_memory_repeat_time 3000  // time in milliseconds
 #define LCD_COLUMNS 20
 #define LCD_ROWS 4
+#define lcd_i2c_address_mathertel_PCF8574 0x27             // I2C address of display for FEATURE_LCD_MATHERTEL_PCF8574
+#define lcd_i2c_address_fdebrander_lcd 0x27                // I2C address of display for FEATURE_LCD_I2C_FDEBRABANDER
+#define lcd_i2c_address_ydv1_lcd 0x27                      // I2C address of display for FEATURE_LCD_YDv1
+//#define lcd_i2c_address_ydv1_lcd 0x38                    // I2C address of display for FEATURE_LCD_YDv1
+#define lcd_i2c_address_sainsmart_lcd 0x27                // I2C address of display for FEATURE_LCD_SAINSMART_I2C 
 #define hell_pixel_microseconds 4025
 #define program_memory_limit_consec_spaces 1
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
