@@ -1297,7 +1297,7 @@ Recent Update History
         lcd_i2c_address_mathertel_PCF8574 0x27             // I2C address of display for FEATURE_LCD_MATHERTEL_PCF8574
         lcd_i2c_address_fdebrander_lcd 0x27                // I2C address of display for FEATURE_LCD_I2C_FDEBRABANDER
         lcd_i2c_address_ydv1_lcd 0x27                      // I2C address of display for FEATURE_LCD_YDv1
-        lcd_i2c_address_sainsmart_lcd 0x27                // I2C address of display for FEATURE_LCD_SAINSMART_I2C  
+        lcd_i2c_address_sainsmart_lcd 0x27                 // I2C address of display for FEATURE_LCD_SAINSMART_I2C  
 
     2020.08.24.01
       In pin settings files clarified the function of pins for FEATURE_CW_DECODER & OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR   
