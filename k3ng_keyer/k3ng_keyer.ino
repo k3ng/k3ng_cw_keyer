@@ -1297,7 +1297,11 @@ Recent Update History
         lcd_i2c_address_mathertel_PCF8574 0x27             // I2C address of display for FEATURE_LCD_MATHERTEL_PCF8574
         lcd_i2c_address_fdebrander_lcd 0x27                // I2C address of display for FEATURE_LCD_I2C_FDEBRABANDER
         lcd_i2c_address_ydv1_lcd 0x27                      // I2C address of display for FEATURE_LCD_YDv1
-        lcd_i2c_address_sainsmart_lcd 0x27                // I2C address of display for FEATURE_LCD_SAINSMART_I2C       
+        lcd_i2c_address_sainsmart_lcd 0x27                // I2C address of display for FEATURE_LCD_SAINSMART_I2C  
+
+    2020.08.24.01
+      In pin settings files clarified the function of pins for FEATURE_CW_DECODER & OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR   
+      Updated CW Decoder Wiki Page https://github.com/k3ng/k3ng_cw_keyer/wiki/385-Feature:-CW-Decoder       
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
@@ -1326,7 +1330,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.08.23.01"
+#define CODE_VERSION "2020.08.24.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>

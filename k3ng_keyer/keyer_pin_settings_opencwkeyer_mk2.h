@@ -98,13 +98,11 @@ FEATURE_SIDETONE_SWITCH
   #define pin_straight_key 52
 #endif //FEATURE_STRAIGHT_KEY
 
-#ifdef FEATURE_CW_DECODER
-  #define cw_decoder_pin A3//A11 //A5 //A3  
-  #ifdef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-    #define cw_decoder_audio_input_pin 0 // this must be an analog pin!
-  #endif //OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-  #define cw_decoder_indicator 24
-#endif //FEATURE_CW_DECODER
+// FEATURE_CW_DECODER & OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+// See https://github.com/k3ng/k3ng_cw_keyer/wiki/385-Feature:-CW-Decoder for details
+#define cw_decoder_pin 0             // This is for use with external decoding hardware
+#define cw_decoder_audio_input_pin 0 // This is for audio detection decoding using OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR; this must be an analog pin!
+#define cw_decoder_indicator 0       // Output - goes HIGH when cw tone is detected by OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
 
 
 #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
