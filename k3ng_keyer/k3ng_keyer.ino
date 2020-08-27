@@ -17098,6 +17098,7 @@ void initialize_display(){
         } else if (LCD_ROWS > 2) {
 	  lcd_center_print_timed("hi", 1, 4000);                    // display 'hi' on the 2nd line anyway
           lcd_center_print_timed(custom_startup_field, 2, 4000);    // display the custom field on the third line of the display, maximum field length is the number of columns
+	}
       #else
         lcd_center_print_timed("hi", 1, 4000);
       #endif                                                        // OPTION_PERSONALIZED_STARTUP_SCREEN
