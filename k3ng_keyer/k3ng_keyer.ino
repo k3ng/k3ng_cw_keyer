@@ -1330,7 +1330,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.08.24.01"
+#define CODE_VERSION "2020.08.28.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -18003,9 +18003,10 @@ void initialize_display(){
       lcd.clear(); // you have to ;o)
     #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
 
-    if (LCD_COLUMNS < 9){
-      lcd_center_print_timed("K3NGKeyr",0,4000);
+     if (LCD_COLUMNS < 9) {
+      lcd_center_print_timed("K3NGKeyr", 0, 4000);
     } else {
+<<<<<<< HEAD
       lcd_center_print_timed("K3NG Keyer",0,4000);
       #ifdef OPTION_PERSONALIZED_STARTUP_SCREEN
         if (LCD_ROWS == 2) {
@@ -18015,32 +18016,39 @@ void initialize_display(){
 	      } else if (LCD_ROWS > 2) lcd_center_print_timed(custom_startup_field, 2, 4000);      // display the custom field on the third line of the display, maximum field length is the number of columns
       #endif                                                          // OPTION_PERSONALIZED_STARTUP_SCREEN
       if (LCD_ROWS > 3) lcd_center_print_timed("V: " + String(CODE_VERSION), 3, 4000);             // display the code version on the fourth line of the display
+=======
+      lcd_center_print_timed("K3NG Keyer", 0, 4000);
+      #ifdef OPTION_PERSONALIZED_STARTUP_SCREEN
+        if (LCD_ROWS == 2) {
+          lcd_center_print_timed(custom_startup_field, 1, 4000);    // display the custom field on the second line of the display, maximum field length is the number of columns
+        } else if (LCD_ROWS > 2) {
+	  lcd_center_print_timed("hi", 1, 4000);                    // display 'hi' on the 2nd line anyway
+          lcd_center_print_timed(custom_startup_field, 2, 4000);    // display the custom field on the third line of the display, maximum field length is the number of columns
+	}
+      #else
+        lcd_center_print_timed("hi", 1, 4000);
+      #endif                                                        // OPTION_PERSONALIZED_STARTUP_SCREEN
+      if (LCD_ROWS > 3) lcd_center_print_timed("V: " + String(CODE_VERSION), 3, 4000);      // display the code version on the fourth line of the display
+>>>>>>> 31ee159c664575269fc4b7ba894c5cde54a21053
     }
   #endif //FEATURE_DISPLAY
 
   if (keyer_machine_mode != BEACON) {
     #ifndef OPTION_DO_NOT_SAY_HI
-      // say HI
+      // sound out HI
       // store current setting (compliments of DL2SBA - http://dl2sba.com/ )
-      byte oldKey = key_tx; 
+      byte oldKey = key_tx;
       byte oldSideTone = configuration.sidetone_mode;
       key_tx = 0;
       configuration.sidetone_mode = SIDETONE_ON;     
-      #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("h",1,4000);
-      #endif
       send_char('H',KEYER_NORMAL);
-      #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("hi",1,4000);
-      #endif
-      send_char('I',KEYER_NORMAL); 
-      configuration.sidetone_mode = oldSideTone; 
-      key_tx = oldKey;     
+      send_char('I',KEYER_NORMAL);
+      configuration.sidetone_mode = oldSideTone;
+      key_tx = oldKey;
     #endif //OPTION_DO_NOT_SAY_HI
     #ifdef OPTION_BLINK_HI_ON_PTT
       blink_ptt_dits_and_dahs(".... ..");
     #endif
-
   }
 }
 
