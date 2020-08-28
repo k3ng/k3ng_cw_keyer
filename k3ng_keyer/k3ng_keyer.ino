@@ -1301,7 +1301,10 @@ Recent Update History
 
     2020.08.24.01
       In pin settings files clarified the function of pins for FEATURE_CW_DECODER & OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR   
-      Updated CW Decoder Wiki Page https://github.com/k3ng/k3ng_cw_keyer/wiki/385-Feature:-CW-Decoder       
+      Updated CW Decoder Wiki Page https://github.com/k3ng/k3ng_cw_keyer/wiki/385-Feature:-CW-Decoder   
+
+    2020.08.28.02
+      Merged pull request 103 Change personalized startup operation ( https://github.com/k3ng/k3ng_cw_keyer/pull/103 )  (Thanks, VK2EFL)     
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
@@ -1330,7 +1333,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.08.28.01"
+#define CODE_VERSION "2020.08.28.02"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -18006,30 +18009,18 @@ void initialize_display(){
      if (LCD_COLUMNS < 9) {
       lcd_center_print_timed("K3NGKeyr", 0, 4000);
     } else {
-<<<<<<< HEAD
-      lcd_center_print_timed("K3NG Keyer",0,4000);
-      #ifdef OPTION_PERSONALIZED_STARTUP_SCREEN
-        if (LCD_ROWS == 2) {
-	        #ifdef OPTION_DO_NOT_SAY_HI                                 // if we wish to display the custom field on the second line, we can't say 'hi'
-	          lcd_center_print_timed(custom_startup_field, 1, 4000);    // display the custom field on the second line of the display, maximum field length is the number of columns
-          #endif                                                      // OPTION_DO_NOT_SAY_HI
-	      } else if (LCD_ROWS > 2) lcd_center_print_timed(custom_startup_field, 2, 4000);      // display the custom field on the third line of the display, maximum field length is the number of columns
-      #endif                                                          // OPTION_PERSONALIZED_STARTUP_SCREEN
-      if (LCD_ROWS > 3) lcd_center_print_timed("V: " + String(CODE_VERSION), 3, 4000);             // display the code version on the fourth line of the display
-=======
       lcd_center_print_timed("K3NG Keyer", 0, 4000);
       #ifdef OPTION_PERSONALIZED_STARTUP_SCREEN
         if (LCD_ROWS == 2) {
           lcd_center_print_timed(custom_startup_field, 1, 4000);    // display the custom field on the second line of the display, maximum field length is the number of columns
         } else if (LCD_ROWS > 2) {
-	  lcd_center_print_timed("hi", 1, 4000);                    // display 'hi' on the 2nd line anyway
+	        lcd_center_print_timed("hi", 1, 4000);                    // display 'hi' on the 2nd line anyway
           lcd_center_print_timed(custom_startup_field, 2, 4000);    // display the custom field on the third line of the display, maximum field length is the number of columns
-	}
+	      }
       #else
         lcd_center_print_timed("hi", 1, 4000);
       #endif                                                        // OPTION_PERSONALIZED_STARTUP_SCREEN
       if (LCD_ROWS > 3) lcd_center_print_timed("V: " + String(CODE_VERSION), 3, 4000);      // display the code version on the fourth line of the display
->>>>>>> 31ee159c664575269fc4b7ba894c5cde54a21053
     }
   #endif //FEATURE_DISPLAY
 
