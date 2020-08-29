@@ -1304,7 +1304,10 @@ Recent Update History
       Updated CW Decoder Wiki Page https://github.com/k3ng/k3ng_cw_keyer/wiki/385-Feature:-CW-Decoder   
 
     2020.08.28.02
-      Merged pull request 103 Change personalized startup operation ( https://github.com/k3ng/k3ng_cw_keyer/pull/103 )  (Thanks, VK2EFL)     
+      Merged pull request 103 Change personalized startup operation ( https://github.com/k3ng/k3ng_cw_keyer/pull/103 )  (Thanks, VK2EFL) 
+
+    2020.08.29.01
+      Implemented fix for memories not halting after a paddle press ( https://groups.io/g/radioartisan/message/13500 ) (Thanks, Gary, AF8A, for code )    
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
@@ -1333,7 +1336,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.08.28.02"
+#define CODE_VERSION "2020.08.29.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -6817,7 +6820,8 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
             }
           }            
         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          if (configuration.cmos_super_keyer_iambic_b_timing_on){
+          //if (configuration.cmos_super_keyer_iambic_b_timing_on){
+          if ((configuration.cmos_super_keyer_iambic_b_timing_on) && (sending_mode == MANUAL_SENDING)) {  
             if ((float(float(micros()-start)/float(ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
             //if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
              if (being_sent == SENDING_DIT) {
