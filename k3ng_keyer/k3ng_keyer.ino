@@ -1309,6 +1309,9 @@ Recent Update History
     2020.08.29.01
       Implemented fix for memories not halting after a paddle press ( https://groups.io/g/radioartisan/message/13500 ) (Thanks, Gary, AF8A, for code )    
 
+    2020.11.01.01
+      Fixed issues with FEATURE_WEB_SERVER and FEATURE_INTERNET_LINK when compiled with main features and settings files.
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1336,7 +1339,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.08.29.01"
+#define CODE_VERSION "2020.11.01.01"
 #define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -20272,7 +20275,9 @@ void web_print_page_keyer_settings_process(EthernetClient client){
       temp_string_dit_dah_ratio.replace(".","");
       configuration.dah_to_dit_ratio =  temp_string_dit_dah_ratio.toInt();
       configuration.weighting = temp_weight;
-      serial_number = temp_serial;
+      #if defined(FEATURE_COMMAND_MODE)
+        serial_number = temp_serial;
+      #endif 
       configuration.length_wordspace = temp_wordspace;
       configuration.current_tx = temp_tx;
       #if defined(FEATURE_QLF)
