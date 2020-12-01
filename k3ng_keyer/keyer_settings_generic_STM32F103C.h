@@ -46,8 +46,8 @@ GENERIC STM32F103C
 #define winkey_xoff_threshold 20         // the number of chars in the buffer when we begin sending XOFFs
 #define winkey_xon_threshold 10          // the number of chars in the buffer below which we deactivate XOFF
 #define default_memory_repeat_time 3000  // time in milliseconds
-#define LCD_COLUMNS 16
-#define LCD_ROWS 2
+#define LCD_COLUMNS 20
+#define LCD_ROWS 4
 #define lcd_i2c_address_mathertel_PCF8574 0x27             // I2C address of display for FEATURE_LCD_MATHERTEL_PCF8574
 #define lcd_i2c_address_fdebrander_lcd 0x27                // I2C address of display for FEATURE_LCD_I2C_FDEBRABANDER
 #define lcd_i2c_address_ydv1_lcd 0x27                      // I2C address of display for FEATURE_LCD_YDv1
@@ -75,7 +75,7 @@ GENERIC STM32F103C
 #define default_paddle_interruption_quiet_time_element_lengths 0
 #define default_wordsworth_wordspace 6
 #define default_wordsworth_repetition 1
-#define serial_program_memory_buffer_size 500
+#define serial_program_memory_buffer_size 1000
 #define eeprom_write_time_ms 30000
 
 #ifdef FEATURE_BUTTONS
@@ -89,7 +89,7 @@ GENERIC STM32F103C
   #define number_of_memories byte(analog_buttons_number_of_buttons-1)
 #else
 //  #define number_of_memories byte(12)
-  #define number_of_memories byte(10) //sp5iou 20180329 With many memories, be carefull to not put to much content. It caould disable memory programming and eeprom formatting is then necessary
+  #define number_of_memories byte(9) //sp5iou 20180329 With many memories, be carefull to not put to much content. It caould disable memory programming and eeprom formatting is then necessary
 #endif
 
 #ifdef FEATURE_CAPACITIVE_PADDLE_PINS

@@ -1381,7 +1381,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include "keyer_features_and_options_fk_11.h"
 #elif defined(HARDWARE_MAPLE_MINI)//sp5iou 20180328
   #include "keyer_features_and_options_maple_mini.h"
-#elif defined(HARDWARE_GENERIC_STM32F103C)//sp5iou 20180329
+#elif defined(ARDUINO_GENERIC_STM32F103C)//ik2biy
   #include "keyer_features_and_options_generic_STM32F103C.h"
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_features_and_options_mortty.h"
@@ -1445,7 +1445,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #elif defined(HARDWARE_MAPLE_MINI)
   #include "keyer_pin_settings_maple_mini.h"
   #include "keyer_settings_maple_mini.h"
-#elif defined(HARDWARE_GENERIC_STM32F103C)
+#elif defined(ARDUINO_GENERIC_STM32F103C)//ik2biy
   #include "keyer_pin_settings_generic_STM32F103C.h"
   #include "keyer_settings_generic_STM32F103C.h"
 #elif defined(HARDWARE_MORTTY)
@@ -1957,7 +1957,7 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   // #define D6_pin        6
   // #define D7_pin        7
   // LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin, BACKLIGHT_PIN, POSITIVE);  
-  LiquidCrystal_I2C lcd(lcd_i2c_address_sainsmart_lcd,LCD_COLUMNS,LCD_ROWS);
+  LiquidCrystal_I2C lcd(lcd_i2c_address_sainsmart_lcd, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);//ik2biy
 #endif //FEATURE_SAINSMART_I2C_LCD    
 
 #if defined(FEATURE_LCD_YDv1)
@@ -6058,7 +6058,7 @@ void service_async_eeprom_write(){
     if (last_async_eeprom_write_status){ // we have an ansynchronous write to eeprom in progress
 
 
-      #if defined(_BOARD_PIC32_PINGUINO_) || defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
+      #if defined(_BOARD_PIC32_PINGUINO_) || defined(ARDUINO_SAMD_VARIANT_COMPLIANCE) || defined(ARDUINO_GENERIC_STM32F103C) //ik2biy
         if (EEPROM.read(ee) != *p) {
           EEPROM.write(ee, *p);
         }
@@ -12210,17 +12210,20 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\A\t\t: Iambic A"));
   port_to_use->println(F("\\B\t\t: Iambic B"));
   port_to_use->println(F("\\C\t\t: Single paddle")); //Upper case to first letter only(WD9DMP)
+  delayMicroseconds(1000);//ik2biy
   #ifndef OPTION_NO_ULTIMATIC
   port_to_use->println(F("\\D\t\t: Ultimatic"));
   #endif
   port_to_use->println(F("\\E####\t\t: Set serial number to ####"));
   port_to_use->println(F("\\F####\t\t: Set sidetone to #### hz"));
   port_to_use->println(F("\\G\t\t: Switch to bug mode")); //Upper case to first letter only(WD9DMP)
+  delayMicroseconds(1000);//ik2biy
   #ifdef FEATURE_HELL
     port_to_use->println(F("\\H\t\t: Toggle CW / Hell mode"));
   #endif
   port_to_use->println(F("\\I\t\t: TX line disable/enable"));
   port_to_use->println(F("\\J###\t\t: Set dah to dit ratio")); //Upper case to first letter only(WD9DMP)
+  delayMicroseconds(1000);//ik2biy
   #ifdef FEATURE_TRAINING_COMMAND_LINE_INTERFACE
     port_to_use->println(F("\\K\t\t: Training"));
   #endif
@@ -12237,12 +12240,14 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\S\t\t: Status report")); //Upper case to first letter only(WD9DMP)
   port_to_use->println(F("\\T\t\t: Tune mode"));
   port_to_use->println(F("\\U\t\t: PTT toggle"));
+  delayMicroseconds(1000);//ik2biy
   #ifdef FEATURE_POTENTIOMETER
   port_to_use->println(F("\\V\t\t: Potentiometer activate/deactivate"));
   #endif //FEATURE_POTENTIOMETER
   port_to_use->println(F("\\W#[#][#]\t: Change WPM to ###"));
   port_to_use->println(F("\\X#\t\t: Switch to transmitter #"));
   port_to_use->println(F("\\Y#\t\t: Change wordspace to #"));
+  delayMicroseconds(1000);//ik2biy
   #ifdef FEATURE_AUTOSPACE
     port_to_use->println(F("\\Z\t\t: Autospace on/off"));
   #endif //FEATURE_AUTOSPACE
@@ -12252,6 +12257,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\*\t\t: Toggle paddle echo")); //Added missing command(WD9DMP) 
   port_to_use->println(F("\\`\t\t: Toggle straight key echo")); //Added missing command(WD9DMP) 
   port_to_use->println(F("\\^\t\t: Toggle wait for carriage return to send CW / send CW immediately")); //Added missing command(WD9DMP)
+  delayMicroseconds(1000);//ik2biy
   #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
     port_to_use->println(F("\\&\t\t: Toggle CMOS Super Keyer timing on/off")); //Upper case to first letter only(WD9DMP)
     port_to_use->println(F("\\%##\t\t: Set CMOS Super Keyer timing %")); //Upper case to first letter only(WD9DMP)
@@ -12261,12 +12267,14 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\~\t\t: Reset unit")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\:\t\t: Toggle cw send echo")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\{\t\t: QLF mode on/off")); //Added missing command(WD9DMP)
+  delayMicroseconds(1000);//ik2biy
   port_to_use->println(F("\\>\t\t: Send serial number, then increment")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\<\t\t: Send current serial number")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\(\t\t: Send current serial number in cut numbers")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\)\t\t: Send serial number with cut numbers, then increment")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\[\t\t: Set quiet paddle interruption - 0 to 20 element lengths; 0 = off")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\]\t\t: PTT disable/enable"));
+  delayMicroseconds(1000);//ik2biy
   #ifdef FEATURE_AMERICAN_MORSE
     port_to_use->println(F("\\=\t\t: Toggle American Morse mode")); //Added missing command(WD9DMP)
   #endif
@@ -12280,6 +12288,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   if (paged_help) {serial_page_pause(port_to_use,10);}
   //Memory Macros below (WD9DMP)
   #ifdef FEATURE_MEMORY_MACROS
+  delayMicroseconds(1000);//ik2biy  
   port_to_use->println(F("\nMemory Macros:"));
   port_to_use->println(F("\\#\t\t: Jump to memory #"));
   port_to_use->println(F("\\C\t\t: Send serial number with cut numbers, then increment"));//Added "then increment" (WD9DMP)
@@ -12292,7 +12301,8 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\I\t\t: Insert memory #"));//Added missing macro (WD9DMP)
   #ifdef FEATURE_HELL
     port_to_use->println(F("\\L\t\t: Switch to CW (from Hell mode)"));
-  #endif //FEATURE_HELL    
+  #endif //FEATURE_HELL
+  delayMicroseconds(1000);//ik2biy   
   port_to_use->println(F("\\N\t\t: Decrement serial number - do not send"));//Added "do not send" (WD9DMP)
   port_to_use->println(F("\\Q##\t\t: Switch to QRSS with ## second dit length"));
   port_to_use->println(F("\\R\t\t: Switch to regular speed mode"));
@@ -12307,9 +12317,10 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\+\t\t: Prosign the next two characters"));//Added "the next two characters" (WD9DMP)
   #endif //FEATURE_MEMORY_MACROS
   
-  #if !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+  #if !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)//ik2biy
+    delayMicroseconds(1000);//ik2biy  
     if (paged_help) {serial_page_pause(port_to_use,10);}
-    port_to_use->println(F("\r\n\\:\tExtended CLLI commands"));
+    port_to_use->println(F("\r\n\\:\tExtended CLI commands"));
     port_to_use->println(F("\t\teepromdump\t\t- do a byte dump of EEPROM for troubleshooting"));
     port_to_use->println(F("\t\tsaveeeprom <filename>\t- store EEPROM in a file"));
     port_to_use->println(F("\t\tloadeeprom <filename> \t- load into EEPROM from a file"));
@@ -12320,7 +12331,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
     port_to_use->println(F("\t\tpl <transmitter> <mS>\t- Set PTT lead time"));
     port_to_use->println(F("\t\tpt <transmitter> <mS> \t- Set PTT tail time"));
   #endif //OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
-
+  delayMicroseconds(1000);//ik2biy
 
   port_to_use->println(F("\r\n\\/\t\t: Paginated help"));
 
@@ -15945,7 +15956,7 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
 
       } else {
 
-        if (incoming_serial_byte == 13){  // we got a carriage return
+        if ((incoming_serial_byte == 13) or (incoming_serial_byte == 10)){  // we got a carriage return //ik2biy
           looping = 0;
           EEPROM.write((memory_start(memory_number-1)+memory_index),255);
         } else {  // looking for memory data
@@ -15955,7 +15966,7 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
               incoming_serial_byte_buffer[incoming_serial_byte_buffer_size] = uppercase(port_to_use->read()); 
               incoming_serial_byte_buffer_size++;
             }  
-          #endif           
+          #endif  
           EEPROM.write((memory_start(memory_number-1)+memory_index),incoming_serial_byte);
           #if !defined(OPTION_SAVE_MEMORY_NANOKEYER)
             while ((port_to_use->available()) && (incoming_serial_byte_buffer_size < serial_program_memory_buffer_size)){  // get serial data if available
@@ -17029,7 +17040,7 @@ int memory_end(byte memory_number) {
 
 void initialize_pins() {
   
-#if defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
+#if defined (ARDUINO_MAPLE_MINI) || defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
   pinMode (paddle_left, INPUT_PULLUP);
   pinMode (paddle_right, INPUT_PULLUP);
 #else
@@ -17659,11 +17670,11 @@ void initialize_keyer_state(){
     switch_to_tx_silent(1);
   #endif
 
-  #if (!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))) && !defined(HARDWARE_GENERIC_STM32F103C)
+  #if (!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))) && !defined(ARDUINO_GENERIC_STM32F103C)//ik2biy
     memory_area_end = EEPROM.length() - 1;
   #else
-    #if defined(HARDWARE_GENERIC_STM32F103C)
-      memory_area_end = 254;
+    #if defined(ARDUINO_GENERIC_STM32F103C)//ik2biy
+      memory_area_end = 1024;//ik2biy
     #else
       memory_area_end = 1024; // not sure if this is a valid assumption
     #endif  
@@ -17744,12 +17755,16 @@ void check_eeprom_for_initialization(){
   // do an eeprom reset to defaults if paddles are squeezed
   if (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {
     while (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {}
+      #if defined(ARDUINO_GENERIC_STM32F103C)//ik2biy
+        EEPROM.init();//ik2biy
+        EEPROM.format();//ik2biy
+      #endif//ik2biy
     initialize_eeprom();
   }
 
   // read settings from eeprom and initialize eeprom if it has never been written to
   if (read_settings_from_eeprom()) {
-    #if defined(HARDWARE_GENERIC_STM32F103C)
+    #if defined(ARDUINO_GENERIC_STM32F103C)
       EEPROM.init(); //sp5iou 20180328 to reinitialize / initialize EEPROM
       EEPROM.format();//sp5iou 20180328 to reinitialize / format EEPROM
     #endif
@@ -17970,7 +17985,7 @@ void initialize_display(){
 
   #ifdef FEATURE_DISPLAY    
     #if defined(FEATURE_LCD_SAINSMART_I2C) || defined(FEATURE_LCD_I2C_FDEBRABANDER)
-      lcd.begin();
+      lcd.begin(LCD_COLUMNS, LCD_ROWS);//ik2biy
       lcd.home();
     #else
       lcd.begin(LCD_COLUMNS, LCD_ROWS);
@@ -19815,7 +19830,7 @@ void web_print_page_about(EthernetClient client){
   web_client_println(client,CODE_VERSION);
   web_client_println(client,"<br>");
 
-  #if !defined(HARDWARE_GENERIC_STM32F103C)
+  #if !defined(ARDUINO_GENERIC_STM32F103C)//ik2biy
     void* HP = malloc(4);
     if (HP){
       free (HP);
