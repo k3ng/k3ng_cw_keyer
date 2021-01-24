@@ -1312,6 +1312,11 @@ Recent Update History
     2020.11.01.01
       Fixed issues with FEATURE_WEB_SERVER and FEATURE_INTERNET_LINK when compiled with main features and settings files.
 
+    2021.01.24.01
+      Added the \:comp extended command to change keying compensation in the CLI
+      keying_compensation is now stored in eeprom
+      NOTE: increasing keying compensation above 35 mS at ~24 WPM causes wonkiness.  Probably need to add code to limit this value based on current WPM
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1339,8 +1344,8 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2020.11.01.01"
-#define eeprom_magic_number 40               // you can change this number to have the unit re-initialize EEPROM
+#define CODE_VERSION "2021.01.24.01"
+#define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1599,7 +1604,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #define memory_area_start (sizeof(configuration)+5)
 
 // Variables and stuff
-struct config_t {  // 119 bytes total
+struct config_t {  // 120 bytes total
   
   uint8_t paddle_mode;                                                   
   uint8_t keyer_mode;            
@@ -1622,7 +1627,8 @@ struct config_t {  // 119 bytes total
   uint8_t ptt_buffer_hold_active;
   uint8_t ptt_disabled;
   uint8_t beacon_mode_on_boot_up;
-    // 21 bytes
+  uint8_t keying_compensation;
+    // 22 bytes
 
   unsigned int wpm;
   unsigned int hz_sidetone;
@@ -1688,7 +1694,7 @@ byte speed_mode = SPEED_NORMAL;
 #endif
 byte pause_sending_buffer = 0;
 byte length_letterspace = default_length_letterspace;
-byte keying_compensation = default_keying_compensation;
+//byte keying_compensation = default_keying_compensation;
 byte first_extension_time = default_first_extension_time;
 byte ultimatic_mode = ULTIMATIC_NORMAL;
 float ptt_hang_time_wordspace_units = default_ptt_hang_time_wordspace_units;
@@ -6337,12 +6343,12 @@ void send_dit(){
 
   #ifdef FEATURE_QLF
     if (qlf_active){
-      loop_element_lengths((1.0*(float(configuration.weighting)/50)*(random(qlf_dit_min,qlf_dit_max)/100.0)),keying_compensation,character_wpm);
+      loop_element_lengths((1.0*(float(configuration.weighting)/50)*(random(qlf_dit_min,qlf_dit_max)/100.0)),configuration.keying_compensation,character_wpm);
     } else {
-      loop_element_lengths((1.0*(float(configuration.weighting)/50)),keying_compensation,character_wpm);
+      loop_element_lengths((1.0*(float(configuration.weighting)/50)),configuration.keying_compensation,character_wpm);
     }
   #else //FEATURE_QLF 
-    loop_element_lengths((1.0*(float(configuration.weighting)/50)),keying_compensation,character_wpm);
+    loop_element_lengths((1.0*(float(configuration.weighting)/50)),configuration.keying_compensation,character_wpm);
   #endif //FEATURE_QLF
 
 
@@ -6354,7 +6360,7 @@ void send_dit(){
   tx_and_sidetone_key(0);
 
 
-  loop_element_lengths((2.0-(float(configuration.weighting)/50)),(-1.0*keying_compensation),character_wpm);
+  loop_element_lengths((2.0-(float(configuration.weighting)/50)),(-1.0*configuration.keying_compensation),character_wpm);
 
   #ifdef FEATURE_AUTOSPACE
 
@@ -6429,12 +6435,12 @@ void send_dah(){
 
   #ifdef FEATURE_QLF
     if (qlf_active){
-      loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)*(random(qlf_dah_min,qlf_dah_max)/100.0)),keying_compensation,character_wpm);
+      loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)*(random(qlf_dah_min,qlf_dah_max)/100.0)),configuration.keying_compensation,character_wpm);
     } else {
-      loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),keying_compensation,character_wpm);
+      loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),configuration.keying_compensation,character_wpm);
     }
   #else //FEATURE_QLF 
-    loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),keying_compensation,character_wpm);
+    loop_element_lengths((float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)),configuration.keying_compensation,character_wpm);
   #endif //FEATURE_QLF 
 
   if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_inactive_state);}
@@ -6445,7 +6451,7 @@ void send_dah(){
 
   tx_and_sidetone_key(0);
 
-  loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),character_wpm);
+  loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*configuration.keying_compensation),character_wpm);
 
   #ifdef FEATURE_AUTOSPACE
 
@@ -9122,24 +9128,24 @@ void send_the_dits_and_dahs(char const * cw_to_send){
         being_sent = SENDING_DAH;
         tx_and_sidetone_key(1);
         if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_active_state);}
-        loop_element_lengths((float(4.0)*(float(configuration.weighting)/50)),keying_compensation,configuration.wpm);
+        loop_element_lengths((float(4.0)*(float(configuration.weighting)/50)),configuration.keying_compensation,configuration.wpm);
         if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_inactive_state);}
         tx_and_sidetone_key(0);
-        loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),configuration.wpm);
+        loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*configuration.keying_compensation),configuration.wpm);
         break;
 
       case '=': 
         being_sent = SENDING_DAH;
         tx_and_sidetone_key(1);
         if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_active_state);}
-        loop_element_lengths((float(5.0)*(float(configuration.weighting)/50)),keying_compensation,configuration.wpm);
+        loop_element_lengths((float(5.0)*(float(configuration.weighting)/50)),configuration.keying_compensation,configuration.wpm);
         if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_inactive_state);}
         tx_and_sidetone_key(0);
-        loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),configuration.wpm);
+        loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*configuration.keying_compensation),configuration.wpm);
         break;
 
       case '&': 
-        loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*keying_compensation),configuration.wpm);
+        loop_element_lengths((4.0-(3.0*(float(configuration.weighting)/50))),(-1.0*configuration.keying_compensation),configuration.wpm);
         break;            
       #endif //FEATURE_AMERICAN_MORSE
       default: 
@@ -10143,7 +10149,7 @@ void winkey_farnsworth_command(byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_keying_compensation_command(byte incoming_serial_byte) {
 
-  keying_compensation = incoming_serial_byte;
+  configuration.keying_compensation = incoming_serial_byte;
 }
 #endif //FEATURE_WINKEY_EMULATION
 
@@ -10647,7 +10653,7 @@ void winkey_admin_get_values_command() {
   winkey_port_write(first_extension_time,1);
 
   // 10 - compensation
-  winkey_port_write(keying_compensation,1);
+  winkey_port_write(configuration.keying_compensation,1);
 
   // 11 - farnsworth wpm
   #ifdef FEATURE_FARNSWORTH
@@ -11856,7 +11862,7 @@ void service_winkey(byte action) {
         #ifdef DEBUG_WINKEY
           debug_serial_port->println("service_winkey:ADMIN_CMD WINKEY_KEYING_COMPENSATION_COMMAND byte");
         #endif //DEBUG_WINKEY         
-        keying_compensation = incoming_serial_byte;
+        configuration.keying_compensation = incoming_serial_byte;
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
 
@@ -12319,6 +12325,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
     port_to_use->println(F("\t\tcat <filename>\t\t- print filename on SD card"));
     port_to_use->println(F("\t\tpl <transmitter> <mS>\t- Set PTT lead time"));
     port_to_use->println(F("\t\tpt <transmitter> <mS> \t- Set PTT tail time"));
+    port_to_use->println(F("\t\tcomp <mS> \t- Set keying compensation time"));
   #endif //OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
 
 
@@ -12785,11 +12792,28 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
     if (userinput.startsWith("AF ")){cli_autospace_timing_factor(port_to_use,userinput.substring(3));return;}
   #endif // defined(FEATURE_AUTOSPACE)
 
+  if (userinput.startsWith("COMP ")){cli_keying_compensation(port_to_use,userinput.substring(5));return;}
 
   port_to_use->println(F("\r\nError"));
 
 }
 #endif
+
+//---------------------------------------------------------------------
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+void cli_keying_compensation(PRIMARY_SERIAL_CLS * port_to_use,String command_arguments){
+
+  configuration.keying_compensation = command_arguments.toInt();
+  config_dirty = 1;
+  port_to_use->print(F("\r\nKeying Compensation Set To: "));
+  port_to_use->println(configuration.keying_compensation);
+
+
+}
+#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_AUTOSPACE)
+
+
 
 //---------------------------------------------------------------------
 
@@ -15570,9 +15594,9 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
       port_to_use->println(configuration.wpm_farnsworth);
     #endif //FEATURE_FARNSWORTH
     port_to_use->println(1.0*(float(configuration.weighting)/50));
-    port_to_use->println(keying_compensation,DEC);
+    port_to_use->println(configuration.keying_compensation,DEC);
     port_to_use->println(2.0-(float(configuration.weighting)/50));
-    port_to_use->println(-1.0*keying_compensation);
+    port_to_use->println(-1.0*configuration.keying_compensation);
     port_to_use->println((dit_end_time-dit_start_time),DEC);
     port_to_use->println((dah_end_time-dah_start_time),DEC);
     port_to_use->println(millis(),DEC);
@@ -17634,6 +17658,7 @@ void initialize_keyer_state(){
   configuration.beacon_mode_on_boot_up = 0;
   configuration.cw_echo_timing_factor = 100 * default_cw_echo_timing_factor;
   configuration.autospace_timing_factor = 100 * default_autospace_timing_factor;
+  configuration.keying_compensation = default_keying_compensation;
 
   configuration.ptt_lead_time[0] = initial_ptt_lead_time_tx1;
   configuration.ptt_tail_time[0] = initial_ptt_tail_time_tx1;
