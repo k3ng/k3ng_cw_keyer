@@ -130,6 +130,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     N  Toggle paddle reverse
     O  Toggle sidetone on / off
     P#(#) Program a memory
+    Q  Adjust keying compensation (left paddle = increase, right paddle = decrease)
     R####  Set serial number to ####
     S  Alphabet code practice (FEATURE_ALPHABET_SEND_PRACTICE)
     T  Tune mode
@@ -1317,6 +1318,11 @@ Recent Update History
       keying_compensation is now stored in eeprom
       NOTE: increasing keying compensation above 35 mS at ~24 WPM causes wonkiness.  Probably need to add code to limit this value based on current WPM
 
+    2021.01.25.01
+      Keying compensation now displayed in \S status CLI command
+      Added Q command to FEATURE_COMMAND_MODE: Adjust keying compensation (left paddle = increase, right paddle = decrease)
+      FEATURE_COMMAND_LINE_INTERFACE \:comp command now displays warning if keying compensation setting is probably too high
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1344,7 +1350,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2021.01.24.01"
+#define CODE_VERSION "2021.01.25.01"
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -6729,6 +6735,11 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
     #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
       loop_element_lengths_breakout_flag = 1;
     #endif //FEATURE_SERIAL  
+
+    #if defined(DEBUG_LOOP_ELEMENT_LENGTHS)
+      debug_serial_port->println("loop_element_lengths: enter");
+    #endif
+
     
     float element_length;
 
@@ -6756,8 +6767,12 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
       }
     #endif //FEATURE_FARNSWORTH
 
-
-    unsigned long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
+    unsigned long ticks;
+    if ((long(element_length*lengths*1000) + long(additional_time_ms*1000)) < 0){
+      return;
+    } else {
+      ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000); // improvement from Paul, K1XM
+    }
     unsigned long start = micros();
 
     #if defined(FEATURE_SERIAL) && !defined(OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW)
@@ -6932,7 +6947,10 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
       if (configuration.dah_buffer_off) {dah_buffer = 0;}
     }  
 
-   
+    #if defined(DEBUG_LOOP_ELEMENT_LENGTHS)
+      debug_serial_port->println("loop_element_lengths: exit");
+    #endif
+
 
 } //void loop_element_lengths
 
@@ -7476,7 +7494,6 @@ void command_mode() {
             send_char(command_mode_acknowledgement_character, 0);
           #endif  
           break;  
-//zzzzzzzz
         case 222: // O - cycle through sidetone modes on, paddle only and off - enhanced by Marc-Andre, VE2EVN
           if (configuration.sidetone_mode == SIDETONE_PADDLE_ONLY) {
             #ifdef FEATURE_DISPLAY
@@ -7538,6 +7555,10 @@ void command_mode() {
           }
           config_dirty = 1;        
           break; 
+        case 2212: // Q - set keying compensation
+//zzzzzz 
+          command_keying_compensation_adjust();
+          break;
 
         case 121: command_set_serial_number(); break;  // R - Set serial number
 
@@ -8264,6 +8285,52 @@ void adjust_dah_to_dit_ratio(int adjustment) {
 
  config_dirty = 1;
 }
+
+//-------------------------------------------------------------------------------------------------------
+
+#ifdef FEATURE_COMMAND_MODE
+void command_keying_compensation_adjust() {
+
+  byte looping = 1;
+
+  #ifdef FEATURE_DISPLAY
+    if (LCD_COLUMNS < 9){
+      lcd_center_print_timed("Key Comp", 0, default_display_msg_delay);
+    } else {
+      lcd_center_print_timed("Adj Keying Comp", 0, default_display_msg_delay);  
+    }        
+  #endif
+
+  while (looping) {
+    send_dit();
+    send_dah();
+    if (paddle_pin_read(paddle_left) == LOW) {
+      if (configuration.keying_compensation < 255){
+        configuration.keying_compensation++;
+      }
+    }
+    if (paddle_pin_read(paddle_right) == LOW) {
+      if (configuration.keying_compensation > 0){
+        configuration.keying_compensation--;
+      }
+    }
+    while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
+      looping = 0;
+    }
+   
+
+    #ifdef OPTION_WATCHDOG_TIMER
+      wdt_reset();
+    #endif  //OPTION_WATCHDOG_TIMER
+
+  }
+  while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
+  dit_buffer = 0;
+  dah_buffer = 0;
+  config_dirty = 1;
+}
+#endif //FEATURE_COMMAND_MODE
+
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -12807,8 +12874,12 @@ void cli_keying_compensation(PRIMARY_SERIAL_CLS * port_to_use,String command_arg
   configuration.keying_compensation = command_arguments.toInt();
   config_dirty = 1;
   port_to_use->print(F("\r\nKeying Compensation Set To: "));
-  port_to_use->println(configuration.keying_compensation);
-
+  port_to_use->print(configuration.keying_compensation);
+  port_to_use->println(F(" mS"));
+  if (configuration.keying_compensation > (0.90 * (1200.0/(float)configuration.wpm))) {
+    port_to_use->println(F("WARNING: This is setting is probably too high for your current speed setting."));
+  }
+  config_dirty = 1;
 
 }
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_AUTOSPACE)
@@ -15468,7 +15539,10 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   port_to_use->println((float(configuration.dah_to_dit_ratio)/100));
   port_to_use->print(F("Weighting: "));
   port_to_use->println(configuration.weighting,DEC);
-  port_to_use->print(F("Serial Number: "));
+  port_to_use->print(F("Keying Compensation: "));
+  port_to_use->print(configuration.keying_compensation,DEC);
+  port_to_use->println(F(" mS"));
+  port_to_use->print(F("Serial Number: "));  
   port_to_use->println(serial_number,DEC);
   #ifdef FEATURE_POTENTIOMETER
     port_to_use->print(F("Potentiometer WPM: "));
