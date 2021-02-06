@@ -135,3 +135,5 @@
 
 //Added in version 2020.07.04.01
 //#define OPTION_WINKEY_PROSIGN_COMPATIBILITY  // Additional character mappings to support K1EL Winkey emulation prosigns
+
+// #define OPTION_WABUN_CODE // Japanese text in Morse code
