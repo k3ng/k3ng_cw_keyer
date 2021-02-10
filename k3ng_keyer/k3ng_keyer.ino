@@ -9434,6 +9434,66 @@ void send_char(byte cw_char, byte omit_letterspace)
       case 238: send_the_dits_and_dahs("--.--");break;// 'ñ' LA3ZA
       case 226: send_the_dits_and_dahs("------");break;// 'ß' LA3ZA
       #endif //OPTION_NON_ENGLISH_EXTENSIONS   
+
+      
+      #if defined(OPTION_WABUN_CODE)
+      case 177  : send_the_dits_and_dahs("--.--"); break;   // ｱ
+      case 178  : send_the_dits_and_dahs(".-"); break;
+      case 179  : send_the_dits_and_dahs("..-"); break;
+      case 180  : send_the_dits_and_dahs("-.---"); break;
+      case 181  : send_the_dits_and_dahs(".-..."); break;
+      case 182  : send_the_dits_and_dahs(".-.."); break;
+      case 183  : send_the_dits_and_dahs("-.-.."); break;
+      case 184  : send_the_dits_and_dahs("...-"); break;
+      case 185  : send_the_dits_and_dahs("-.--"); break;
+      case 186  : send_the_dits_and_dahs("----"); break;
+      case 187  : send_the_dits_and_dahs("-.-.-"); break;
+      case 188  : send_the_dits_and_dahs("--.-."); break;
+      case 189  : send_the_dits_and_dahs("---.-"); break;
+      case 190  : send_the_dits_and_dahs(".---."); break;
+      case 191  : send_the_dits_and_dahs("---."); break;
+      case 192  : send_the_dits_and_dahs("-."); break;
+      case 193  : send_the_dits_and_dahs("..-."); break;
+      case 194  : send_the_dits_and_dahs(".--."); break;
+      case 195  : send_the_dits_and_dahs(".-.--"); break;
+      case 196  : send_the_dits_and_dahs("..-.."); break;
+      case 197  : send_the_dits_and_dahs(".-."); break;
+      case 198  : send_the_dits_and_dahs("-.-."); break;
+      case 199  : send_the_dits_and_dahs("...."); break;
+      case 200  : send_the_dits_and_dahs("--.-"); break;
+      case 201  : send_the_dits_and_dahs("..--"); break;
+      case 202  : send_the_dits_and_dahs("-..."); break;
+      case 203  : send_the_dits_and_dahs("--..-"); break;
+      case 204  : send_the_dits_and_dahs("--.."); break;
+      case 205  : send_the_dits_and_dahs("."); break;
+      case 206  : send_the_dits_and_dahs("-.."); break;
+      case 207  : send_the_dits_and_dahs("-..-"); break;
+      case 208  : send_the_dits_and_dahs("..-.-"); break;
+      case 209  : send_the_dits_and_dahs("-"); break;
+      case 210  : send_the_dits_and_dahs("-...-"); break;
+      case 211  : send_the_dits_and_dahs("-..-."); break;
+      case 212  : send_the_dits_and_dahs(".--"); break;
+      case 213  : send_the_dits_and_dahs("-..--"); break;
+      case 214  : send_the_dits_and_dahs("--"); break;
+      case 215  : send_the_dits_and_dahs("..."); break;
+      case 216  : send_the_dits_and_dahs("--."); break;
+      case 217  : send_the_dits_and_dahs("-.--."); break;
+      case 218  : send_the_dits_and_dahs("---"); break;
+      case 219  : send_the_dits_and_dahs(".-.-"); break;
+      case 220  : send_the_dits_and_dahs("-.-"); break;     // ﾜ
+      case 166  : send_the_dits_and_dahs(".---"); break;    // ｦ
+      case 221  : send_the_dits_and_dahs(".-.-."); break;   // ﾝ
+      case 222  : send_the_dits_and_dahs(".."); break;      // ﾞ
+      case 223  : send_the_dits_and_dahs("..--."); break;   // ﾟ
+      case 176  : send_the_dits_and_dahs(".--.-"); break;   // -
+      case 164  : send_the_dits_and_dahs(".-.-.-"); break;  // ､
+      case 161  : send_the_dits_and_dahs(".-.-.."); break;  // ｡
+      case 162  : send_the_dits_and_dahs("-..---"); break;  // Start wabun mode "DO(ﾎﾚ)" ｢ 
+      case 163  : send_the_dits_and_dahs("...-."); break;   // Stop wabun mode "SN(ﾗﾀ)" ｣
+      case 91   : send_the_dits_and_dahs("-.--.-"); break;  // Start english in wabun_mode "KK" [
+      case 93   : send_the_dits_and_dahs(".-..-."); break;  // Stop english in wabun_mode "RR" ]
+      #endif
+
       
       case '|': 
         #if !defined(OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE)
