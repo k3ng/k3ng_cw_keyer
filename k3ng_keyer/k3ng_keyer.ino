@@ -2283,24 +2283,39 @@ void loop()
     wdt_reset();
   #endif  //OPTION_WATCHDOG_TIMER
   
-  #if defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)  // paddle_left pin LOW at boot up beacon mode
+  #if defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
     if (keyer_machine_mode == BEACON) {
-      delay(201);
-      while (keyer_machine_mode == BEACON) {  // if we're in beacon mode, just keep playing memory 1
+      delay(201);                                                                   // an odd duration delay before we enter BEACON mode
+      #ifdef OPTION_BEACON_MODE_MEMORY_REPEAT_TIME
+        unsigned int time_to_delay = configuration.memory_repeat_time - configuration.ptt_tail_time[configuration.current_tx - 1];
+      #endif                                                                        // OPTION_BEACON_MODE_MEMORY_REPEAT_TIME
+
+      while (keyer_machine_mode == BEACON) {                                        // if we're in beacon mode, just keep playing memory 1
         if (!send_buffer_bytes) {
           add_to_send_buffer(SERIAL_SEND_BUFFER_MEMORY_NUMBER);
           add_to_send_buffer(0);
         }
         service_send_buffer(PRINTCHAR);
+        #ifdef OPTION_BEACON_MODE_PTT_TAIL_TIME
+          delay(configuration.ptt_tail_time[configuration.current_tx - 1]);         // after memory 1 has played, this holds the PTT line active for the ptt tail time of the current tx
+          check_ptt_tail();                                                         // this resets things so that the ptt line will go high during the next playout
+          digitalWrite (configuration.current_ptt_line, ptt_line_inactive_state);   // forces the ptt line of the current tx to be inactive
+        #endif                                                                      // OPTION_BEACON_MODE_PTT_TAIL_TIME
+
         #ifdef FEATURE_SERIAL
           check_serial();
         #endif
+
         #ifdef OPTION_WATCHDOG_TIMER
           wdt_reset();
-        #endif  //OPTION_WATCHDOG_TIMER      
-      }
-    }
-  #endif //defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
+        #endif                                                                      // OPTION_WATCHDOG_TIMER
+
+        #ifdef OPTION_BEACON_MODE_MEMORY_REPEAT_TIME
+          if (time_to_delay > 0) delay(time_to_delay);                              // this provdes a delay between succesive playouts of the memory contents
+        #endif                                                                      // OPTION_BEACON_MODE_MEMORY_REPEAT_TIME
+      }                                                                             // end while (keyer_machine_mode == BEACON)
+    }                                                                               // end if (keyer_machine_mode == BEACON)
+  #endif                                                                            // defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
 
   #if defined(FEATURE_BEACON_SETTING)
     service_beacon();
