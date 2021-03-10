@@ -15652,7 +15652,20 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
     }  
   #endif
 
+  port_to_use->print(F("Tx"));                                                  // show the ptt lead time for the current tx
+  port_to_use->print(configuration.current_tx);
+  port_to_use->print(F(" lead time: "));
+  port_to_use->println(configuration.ptt_lead_time[configuration.current_tx - 1]);
+  port_to_use->print(F("Tx"));                                                  // show the ptt tail time for the current tx
+  port_to_use->print(configuration.current_tx);
+  port_to_use->print(F(" tail time: "));
+  port_to_use->println(configuration.ptt_tail_time[configuration.current_tx - 1]);
 
+  port_to_use->print(F("PTT hang time: "));                                     // show the hang time
+  port_to_use->print(ptt_hang_time_wordspace_units);
+  port_to_use->println(F(" wordspace units"));
+  port_to_use->print(F("Memory repeat time: "));                                // show the memory repeat time
+  port_to_use->println(configuration.memory_repeat_time);
 
   #ifdef FEATURE_MEMORIES
     serial_status_memories(port_to_use);
