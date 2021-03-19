@@ -1721,6 +1721,10 @@ uint16_t memory_area_end = 0;
   unsigned long last_activity_time = 0;
 #endif
 
+#ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+  unsigned long last_active_time = 0;
+#endif
+
 
 #ifdef FEATURE_DISPLAY
   enum lcd_statuses {LCD_CLEAR, LCD_REVERT, LCD_TIMED_MESSAGE, LCD_SCROLL_MSG};
@@ -2388,6 +2392,10 @@ void loop()
       check_sleep();
     #endif
 
+    #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+      check_backlight();
+    #endif
+
     #ifdef FEATURE_PTT_INTERLOCK
       service_ptt_interlock();
     #endif
@@ -2733,7 +2741,10 @@ void service_keypad(){
         #ifdef FEATURE_SLEEP
           last_activity_time = millis(); 
         #endif //FEATURE_SLEEP
-        
+        #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+          last_active_time = millis(); 
+        #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
+
       } else {
         
           if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))) { // should we send a space?
@@ -3403,7 +3414,10 @@ void check_sleep(){
       digitalWrite(keyer_awake,KEYER_AWAKE_PIN_AWAKE_STATE);
     }
 
-    last_activity_time = millis();    
+    last_activity_time = millis();
+    #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+      last_active_time = millis(); 
+    #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
     #ifdef DEBUG_SLEEP
       debug_serial_port->println(F("check_sleep: I'm awake!"));
@@ -3413,6 +3427,44 @@ void check_sleep(){
 
 }
 #endif //FEATURE_SLEEP
+
+//-------------------------------------------------------------------------------------------------------
+
+#ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+void check_backlight() {
+
+  static unsigned long last_bl_check = 0 ;
+
+  if (millis() - last_bl_check < 1000) return;   // not time-critical
+
+  last_bl_check = millis();
+  
+  if ((last_bl_check - last_active_time) > ((unsigned long)dim_backlight_inactive_time*60000)){
+    
+    #ifdef DEBUG_BACKLIGHT
+      debug_serial_port->println(F("check_backlight: I'm asleep!"));
+    #endif //DEBUG_BACKLIGHT
+
+    if (keyer_power_led){
+      analogWrite(keyer_power_led,keyer_power_led_asleep_duty);
+    }      
+    lcd.noBacklight();
+    
+  } else {
+    
+    #ifdef DEBUG_BACKLIGHT
+      debug_serial_port->println(F("check_backlight: I'm awake!"));
+    #endif //DEBUG_BACKLIGHT
+
+    if (keyer_power_led){
+      analogWrite(keyer_power_led,keyer_power_led_awake_duty);
+    }
+    lcd.backlight();
+  }
+
+
+}
+#endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -3453,6 +3505,9 @@ void service_display() {
       }
     } else {
       if (lcd_scroll_buffer[y].charAt(x) > 0){
+        #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+          lcd.backlight();
+        #endif  // FEATURE_LCD_BACKLIGHT_AUTO_DIM
         lcd.print(lcd_scroll_buffer[y].charAt(x));
       }
       x++;
@@ -3603,6 +3658,9 @@ void lcd_clear() {
 #ifdef FEATURE_DISPLAY
 void lcd_center_print_timed(String lcd_print_string, byte row_number, unsigned int duration)
 {
+  #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+    lcd.backlight();
+  #endif  //FEATURE_LCD_BACKLIGHT_AUTO_DIM
   lcd.noCursor();//sp5iou 20180328
   if (lcd_status != LCD_TIMED_MESSAGE) {
     lcd_previous_status = lcd_status;
@@ -3622,6 +3680,9 @@ void lcd_center_print_timed(String lcd_print_string, byte row_number, unsigned i
 #ifdef FEATURE_DISPLAY
 void clear_display_row(byte row_number)
 {
+  #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+    lcd.backlight();
+  #endif  //FEATURE_LCD_BACKLIGHT_AUTO_DIM
   lcd.noCursor();//sp5iou 20180328
   for (byte x = 0; x < LCD_COLUMNS; x++) {
     lcd.setCursor(x,row_number);
@@ -3743,6 +3804,9 @@ void check_ps2_keyboard()
     #ifdef FEATURE_SLEEP
       last_activity_time = millis(); 
     #endif //FEATURE_SLEEP
+    #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+      last_active_time = millis(); 
+    #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
     if (ps2_keyboard_mode == PS2_KEYBOARD_NORMAL) {
       switch (keystroke) {
@@ -4313,6 +4377,9 @@ void check_ps2_keyboard()
     #ifdef FEATURE_SLEEP
     last_activity_time = millis(); 
     #endif //FEATURE_SLEEP
+    #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+    last_active_time = millis(); 
+    #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
     if (ps2_keyboard_mode == PS2_KEYBOARD_NORMAL) {
       switch (keystroke) {
@@ -5197,7 +5264,11 @@ void check_rotary_encoder(){
   if (step != 0) {
     if (keyer_machine_mode == KEYER_COMMAND_MODE) speed_change_command_mode(step);
     else speed_change(step);
-     
+    
+    #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+      last_active_time = millis(); 
+    #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
+    
     // Start of Winkey Speed change mod for Rotary Encoder -- VE2EVN
     #ifdef FEATURE_WINKEY_EMULATION
       if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
@@ -5235,6 +5306,9 @@ void check_sidetone_switch()
     #ifdef FEATURE_SLEEP
      last_activity_time = millis(); 
     #endif //FEATURE_SLEEP
+    #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+     last_active_time = millis(); 
+    #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
     if ( ss_read == HIGH ) {
         configuration.sidetone_mode = SIDETONE_ON;
@@ -5291,6 +5365,9 @@ void check_potentiometer()
       #ifdef FEATURE_SLEEP
         last_activity_time = millis(); 
       #endif //FEATURE_SLEEP
+      #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+        last_active_time = millis(); 
+      #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM  
     }
   }
 }
@@ -6261,6 +6338,9 @@ void check_dit_paddle()
     #ifdef FEATURE_SLEEP
       last_activity_time = millis(); 
     #endif //FEATURE_SLEEP
+    #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+      last_active_time = millis(); 
+    #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
     manual_ptt_invoke = 0;
     #ifdef FEATURE_MEMORIES
       if (repeat_memory < 255) {
@@ -6320,7 +6400,10 @@ void check_dah_paddle()
 
     #ifdef FEATURE_SLEEP
       last_activity_time = millis(); 
-    #endif //FEATURE_SLEEP    
+    #endif //FEATURE_SLEEP
+    #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+      last_active_time = millis(); 
+    #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
     #ifdef FEATURE_MEMORIES
       repeat_memory = 255;
     #endif
@@ -8993,6 +9076,9 @@ void check_buttons() {
   #ifdef FEATURE_SLEEP
     last_activity_time = millis(); 
   #endif //FEATURE_SLEEP
+  #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+    last_active_time = millis(); 
+  #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
   
 }
 #endif                                    // FEATURE_BUTTONS
@@ -9285,6 +9371,9 @@ void send_char(byte cw_char, byte omit_letterspace)
   #ifdef FEATURE_SLEEP
     last_activity_time = millis(); 
   #endif //FEATURE_SLEEP
+  #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+    last_active_time = millis(); 
+  #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
   if ((cw_char == 10) || (cw_char == 13)) { return; }  // don't attempt to send carriage return or line feed
 
@@ -9706,6 +9795,9 @@ void service_send_buffer(byte no_print)
       #ifdef FEATURE_SLEEP
         last_activity_time = millis(); 
       #endif //FEATURE_SLEEP
+      #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+        last_active_time = millis(); 
+      #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
       if ((send_buffer_array[0] > SERIAL_SEND_BUFFER_SPECIAL_START) && (send_buffer_array[0] < SERIAL_SEND_BUFFER_SPECIAL_END)) {
 
@@ -12203,7 +12295,10 @@ void check_serial(){
     incoming_serial_byte = primary_serial_port->read();
     #ifdef FEATURE_SLEEP
       last_activity_time = millis(); 
-    #endif //FEATURE_SLEEP    
+    #endif //FEATURE_SLEEP
+    #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+      last_active_time = millis(); 
+    #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
     #ifdef DEBUG_SERIAL_SEND_CW_CALLOUT
       debug_serial_send_cw[0] = (incoming_serial_byte & 0xf0)>>4;
       debug_serial_send_cw[1] = incoming_serial_byte & 0x0f;
@@ -12250,7 +12345,10 @@ void check_serial(){
       incoming_serial_byte = secondary_serial_port->read();     
       #ifdef FEATURE_SLEEP
         last_activity_time = millis(); 
-      #endif //FEATURE_SLEEP    
+      #endif //FEATURE_SLEEP
+      #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+        last_active_time = millis(); 
+      #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
       #ifdef DEBUG_SERIAL_SEND_CW_CALLOUT
         debug_serial_send_cw[0] = (incoming_serial_byte & 0xf0)>>4;
         debug_serial_send_cw[1] = incoming_serial_byte & 0x0f;
@@ -17313,6 +17411,13 @@ void initialize_pins() {
       digitalWrite(keyer_awake,KEYER_AWAKE_PIN_AWAKE_STATE);
     }
   #endif //FEATURE_SLEEP
+  
+  #if defined(FEATURE_LCD_BACKLIGHT_AUTO_DIM)
+    if (keyer_power_led){
+      pinMode(keyer_power_led,OUTPUT);
+      analogWrite(keyer_power_led,keyer_power_led_awake_duty);
+    }
+  #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
   #ifdef FEATURE_SIDETONE_SWITCH
     pinMode(SIDETONE_SWITCH,INPUT_PULLUP);
@@ -17574,6 +17679,9 @@ void service_cw_decoder() {
       #ifdef FEATURE_SLEEP
         last_activity_time = millis(); 
       #endif //FEATURE_SLEEP
+      #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+        last_active_time = millis();
+      #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
       
     } else {
       if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))) { // should we send a space?

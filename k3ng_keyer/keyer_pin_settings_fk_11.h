@@ -114,6 +114,10 @@ FEATURE_SIDETONE_SWITCH
   #define keyer_awake 0
 #endif
 
+#if defined(FEATURE_LCD_BACKLIGHT_AUTO_DIM)
+  #define keyer_power_led 0   // must be a PWM-capable pin
+#endif
+
 #if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
   #define capactive_paddle_pin_inhibit_pin 0     // if this pin is defined and is set high, the capacitive paddle pins will switch to normal (non-capacitive) sensing mode
 #endif

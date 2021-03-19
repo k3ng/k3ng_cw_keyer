@@ -64,6 +64,7 @@
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
 #define serial_cut_numbers 0              // set to 1 to activate cut numbers in serial numbers (i.e. #10 = 1T, #19 = 1N)
 #define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
+#define dim_backlight_inactive_time 5     // minutes - FEATURE_LCD_BACKLIGHT_AUTO_DIM
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
 #define default_cw_echo_timing_factor 1.75 // "factory default" setting
 #define default_autospace_timing_factor 2.0 // "factory default" setting
@@ -197,6 +198,11 @@
   #define KEYER_AWAKE_PIN_AWAKE_STATE HIGH
   #define KEYER_AWAKE_PIN_ASLEEP_STATE LOW
 #endif 
+
+#if defined(FEATURE_LCD_BACKLIGHT_AUTO_DIM)
+  #define keyer_power_led_awake_duty 255   // PWM duty cycle. 0 is 0%, 255 is 100%
+  #define keyer_power_led_asleep_duty 25   // 25 is quite dim. Use 0 for off
+#endif
 
 #if defined(FEATURE_ETHERNET)
   // #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
