@@ -1330,6 +1330,10 @@ Recent Update History
         Adds the option of a memory repeat time between repeated playing of memory 1 when in beacon mode.
         Adds the option of having the PTT tail time added to the PTT at the end of each playing of memory 1 when in beacon mode.
 
+    2021.03.20.01
+      Updated version number for merging of Pull Request 110 https://github.com/k3ng/k3ng_cw_keyer/pull/110 from FrugalGuy (Ron, KO4RON)
+        Adds FEATURE_LCD_BACKLIGHT_AUTO_DIM
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1357,7 +1361,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2021.03.10.01"
+#define CODE_VERSION "2021.03.20.01"
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
