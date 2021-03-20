@@ -23,6 +23,7 @@
 // #define DEBUG_CW_DECODER_WPM
 // #define DEBUG_SERIAL_SEND_CW_CALLOUT
 // #define DEBUG_SLEEP
+// #define DEBUG_BACKLIGHT
 // #define DEBUG_BUTTON_ARRAY
 // #define DEBUG_USB
 // #define DEBUG_USB_KEYBOARD

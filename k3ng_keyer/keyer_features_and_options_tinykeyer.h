@@ -19,6 +19,7 @@
 //#define FEATURE_FARNSWORTH
 //#define FEATURE_DL2SBA_BANKSWITCH       // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
 //#define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power
+//#define FEATURE_LCD_BACKLIGHT_AUTO_DIM  // turn off LCD backlight and/or dim Power Indicator LED after x minutes (LED requires a PWM pin)
 #define FEATURE_ROTARY_ENCODER            // rotary encoder speed control
 //#define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 //#define FEATURE_DIT_DAH_BUFFER_CONTROL

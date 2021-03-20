@@ -31,6 +31,7 @@
 //#define FEATURE_LCD_FABO_PCF8574  // https://github.com/FaBoPlatform/FaBoLCD-PCF8574-Library
 #define FEATURE_CW_DECODER
 //#define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power
+//#define FEATURE_LCD_BACKLIGHT_AUTO_DIM  // turn off LCD backlight and/or dim Power Indicator LED after x minutes (LED requires a PWM pin)
 //#define FEATURE_ROTARY_ENCODER          // rotary encoder speed control
 //#define FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
 //#define FEATURE_USB_MOUSE                // Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
