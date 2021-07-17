@@ -135,6 +135,9 @@ FEATURE_SIDETONE_SWITCH
 #define tx_inhibit_pin 0
 #define tx_pause_pin 0   
 
+#define pin_sending_mode_automatic 0  // goes HIGH when keyer is sending code automatically
+#define pin_sending_mode_manual 0     // goes HIGH when keyer is sending code manually (i.e. the paddle or straight key)
+
 #else
 
   #error "Multiple pin_settings.h files included somehow..."

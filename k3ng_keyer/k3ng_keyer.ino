@@ -1334,6 +1334,9 @@ Recent Update History
       Updated version number for merging of Pull Request 110 https://github.com/k3ng/k3ng_cw_keyer/pull/110 from FrugalGuy (Ron, KO4RON)
         Adds FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
+    2021.07.17.01
+      Added pins pin_sending_mode_automatic and pin_sending_mode_manual which go HIGH for automatica and manual sending modes    
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1361,7 +1364,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2021.03.20.01"
+#define CODE_VERSION "2021.07.17.01"
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -2456,6 +2459,8 @@ void loop()
     
   }
 
+  service_sending_pins();
+
   service_millis_rollover();
 
   
@@ -2465,6 +2470,37 @@ void loop()
 
 
 // Are you a radio artisan ?
+
+void service_sending_pins(){
+
+  static byte last_sending_mode = 255;
+
+  if ((sending_mode == AUTOMATIC_SENDING) || (sending_mode == AUTOMATIC_SENDING_INTERRUPTED)){
+    if (last_sending_mode != AUTOMATIC_SENDING){
+      if (pin_sending_mode_automatic){
+        digitalWrite(pin_sending_mode_automatic,HIGH);
+      }
+      if (pin_sending_mode_manual){
+        digitalWrite(pin_sending_mode_manual,LOW);
+      }
+    }
+  }
+  if ((sending_mode == MANUAL_SENDING) || (sending_mode == UNDEFINED_SENDING)){
+    if (last_sending_mode != MANUAL_SENDING){
+      if (pin_sending_mode_automatic){
+        digitalWrite(pin_sending_mode_automatic,LOW);
+      }
+      if (pin_sending_mode_manual){
+        digitalWrite(pin_sending_mode_manual,HIGH);
+      }
+    }
+  }
+
+}
+
+
+
+//-------------------------------------------------------------------------------------------------------
 
 
 byte service_tx_inhibit_and_pause(){
@@ -17526,6 +17562,16 @@ void initialize_pins() {
   if (potentiometer_enable_pin){
     pinMode(potentiometer_enable_pin,INPUT_PULLUP);
   }
+
+  if (pin_sending_mode_automatic){
+    pinMode(pin_sending_mode_automatic,OUTPUT);
+    digitalWrite(pin_sending_mode_automatic,LOW);
+  }
+
+  if (pin_sending_mode_manual){
+    pinMode(pin_sending_mode_manual,OUTPUT);
+    digitalWrite(pin_sending_mode_manual,LOW);
+  }  
   
 } //initialize_pins()
 
