@@ -1545,6 +1545,11 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <LiquidCrystal_I2C.h>
 #endif
 
+#if defined(FEATURE_LCD_TWILIQUIDCRYSTAL)
+  #include <TwiLiquidCrystal.h>
+  #include <Wire.h>
+#endif
+
 #if defined(FEATURE_LCD_ADAFRUIT_I2C)
   #include <Adafruit_MCP23017.h>
   #include <Adafruit_RGBLCDShield.h>
@@ -1993,6 +1998,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 #if defined(FEATURE_LCD_YDv1)
   //LiquidCrystal_I2C lcd(0x38);
   LiquidCrystal_I2C lcd(lcd_i2c_address_ydv1_lcd, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
+#endif
+
+#if defined(FEATURE_LCD_TWILIQUIDCRYSTAL)
+  TwiLiquidCrystal lcd(lcd_i2c_address_twiliquidcrystal_lcd);
 #endif
 
 #if defined(FEATURE_LCD_FABO_PCF8574)
@@ -18270,7 +18279,9 @@ void initialize_display(){
     #ifdef FEATURE_LCD_ADAFRUIT_I2C
       lcd.setBacklight(lcdcolor);
     #endif //FEATURE_LCD_ADAFRUIT_I2C
-
+    #ifdef FEATURE_LCD_TWILIQUIDCRYSTAL
+      lcd.backlight();
+    #endif
     #ifdef FEATURE_LCD_ADAFRUIT_BACKPACK 
       lcd.setBacklight(HIGH);
     #endif
