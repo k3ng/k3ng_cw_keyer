@@ -1338,8 +1338,7 @@ Recent Update History
     2021.07.17.01
       Added pins pin_sending_mode_automatic and pin_sending_mode_manual which go HIGH for automatica and manual sending modes 
       
-    2021.11.17.01
-      Added OLED SDD1306 display. Use 11 COLUMS vs 4 ROWS. Connected via I2C (Nico, F5MDY)
+
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
