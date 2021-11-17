@@ -4,7 +4,7 @@
 
  K3NG Arduino CW Keyer
 
- Copyright 2010 - 2020 Anthony Good, K3NG
+ Copyright 2011 - 2021 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
     
     This program is free software: you can redistribute it and/or modify
@@ -1336,7 +1336,10 @@ Recent Update History
         Adds FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
     2021.07.17.01
-      Added pins pin_sending_mode_automatic and pin_sending_mode_manual which go HIGH for automatica and manual sending modes    
+      Added pins pin_sending_mode_automatic and pin_sending_mode_manual which go HIGH for automatica and manual sending modes 
+      
+    2021.11.17.01
+      Added OLED SDD1306 display. Use 11 COLUMS vs 4 ROWS. Connected via I2C (Nico, F5MDY)
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
