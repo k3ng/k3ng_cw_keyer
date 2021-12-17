@@ -1335,7 +1335,13 @@ Recent Update History
         Adds FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
     2021.07.17.01
-      Added pins pin_sending_mode_automatic and pin_sending_mode_manual which go HIGH for automatica and manual sending modes    
+      Added pins pin_sending_mode_automatic and pin_sending_mode_manual which go HIGH for automatica and manual sending modes 
+
+    2021.12.16.01
+      Merged pull request 114 https://github.com/k3ng/k3ng_cw_keyer/pull/114 Support for STM32F1 boards - Thanks, 7m4mon
+      Merged pull request 107 https://github.com/k3ng/k3ng_cw_keyer/pull/107 Conditional section for LGT8FX8P EEPROM handling - Thanks, Jindřich Vavruška
+      Merged pull request 115 https://github.com/k3ng/k3ng_cw_keyer/pull/115 Redraw screen when exiting command mode - Thanks, VK2EFL
+      Merged pull request 117 https://github.com/k3ng/k3ng_cw_keyer/pull/117 Support for LCD type: I2C 1602 with backlight using TwiLiquidCrystal library - Thanks, billyf
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
@@ -1364,7 +1370,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2021.07.17.01"
+#define CODE_VERSION "2021.12.16.01"
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
