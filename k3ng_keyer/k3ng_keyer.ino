@@ -1,10 +1,11 @@
+
+
 /*
 
  K3NG Arduino CW Keyer
 
- Copyright 2010 - 2020 Anthony Good, K3NG
+ Copyright 2011 - 2021 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
-
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -1335,10 +1336,19 @@ Recent Update History
         Adds FEATURE_LCD_BACKLIGHT_AUTO_DIM
 
     2021.07.17.01
-      Added pins pin_sending_mode_automatic and pin_sending_mode_manual which go HIGH for automatica and manual sending modes
+      Added pins pin_sending_mode_automatic and pin_sending_mode_manual which go HIGH for automatic and manual sending modes 
 
-    2021.11.21
-       Added HI_TEXT to keyer.h to personalize power on message
+    2021.12.16.01
+      Merged pull request 114 https://github.com/k3ng/k3ng_cw_keyer/pull/114 Support for STM32F1 boards - Thanks, 7m4mon
+      Merged pull request 107 https://github.com/k3ng/k3ng_cw_keyer/pull/107 Conditional section for LGT8FX8P EEPROM handling - Thanks, Jindřich Vavruška
+      Merged pull request 115 https://github.com/k3ng/k3ng_cw_keyer/pull/115 Redraw screen when exiting command mode - Thanks, VK2EFL
+      Merged pull request 117 https://github.com/k3ng/k3ng_cw_keyer/pull/117 Support for LCD type: I2C 1602 with backlight using TwiLiquidCrystal library - Thanks, billyf
+
+    2021.12.16.02
+      Merged pull request 86 https://github.com/k3ng/k3ng_cw_keyer/pull/86 SOS Prosign - Thanks, VK2EFL 
+
+    2021.12.16.03
+      Merged pull request 118 https://github.com/k3ng/k3ng_cw_keyer/pull/118 OLED SSD1306 Support - Thanks, F5MDY 
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
@@ -1367,7 +1377,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
-#define CODE_VERSION "2021.07.17.01"
+
+#define CODE_VERSION "2021.12.16.03"
+
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1548,6 +1560,11 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <LiquidCrystal_I2C.h>
 #endif
 
+#if defined(FEATURE_LCD_TWILIQUIDCRYSTAL)
+  #include <TwiLiquidCrystal.h>
+  #include <Wire.h>
+#endif
+
 #if defined(FEATURE_LCD_ADAFRUIT_I2C)
   #include <Adafruit_MCP23017.h>
   #include <Adafruit_RGBLCDShield.h>
@@ -1578,6 +1595,12 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <hd44780.h>
   #include <hd44780ioClass/hd44780_I2Cexp.h>
   #define WIRECLOCK 400000L
+#endif
+
+#if defined(FEATURE_OLED_SSD1306)
+  #include <Wire.h>
+  #include "SSD1306Ascii.h"
+  #include "SSD1306AsciiWire.h"
 #endif
 
 #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
@@ -1998,6 +2021,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
   LiquidCrystal_I2C lcd(lcd_i2c_address_ydv1_lcd, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // for FEATURE_LCD_YDv1; set the LCD I2C address needed for LCM1602 IC V1
 #endif
 
+#if defined(FEATURE_LCD_TWILIQUIDCRYSTAL)
+  TwiLiquidCrystal lcd(lcd_i2c_address_twiliquidcrystal_lcd);
+#endif
+
 #if defined(FEATURE_LCD_FABO_PCF8574)
   FaBoLCD_PCF8574 lcd;
 #endif
@@ -2012,6 +2039,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
 #if defined(FEATURE_LCD_HD44780)
   hd44780_I2Cexp lcd;
+#endif
+
+#if defined(FEATURE_OLED_SSD1306)
+  SSD1306AsciiWire lcd;
 #endif
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
@@ -3544,7 +3575,11 @@ void service_display() {
         return;
       } else {
          x = 0;
+         #ifndef FEATURE_OLED_SSD1306
          lcd.setCursor(0,y);
+         #else
+         lcd.setCursor(0,y*2);
+         #endif;
       }
     } else {
       if (lcd_scroll_buffer[y].charAt(x) > 0){
@@ -3692,8 +3727,10 @@ void display_scroll_print_char(char charin){
 #ifdef FEATURE_DISPLAY
 void lcd_clear() {
   lcd.clear();
+  #ifndef FEATURE_OLED_SSD1306
   lcd.noCursor();//sp5iou 20180328
- lcd_status = LCD_CLEAR;
+  #endif
+  lcd_status = LCD_CLEAR;
 
 }
 #endif
@@ -3704,7 +3741,10 @@ void lcd_center_print_timed(String lcd_print_string, byte row_number, unsigned i
   #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
     lcd.backlight();
   #endif  //FEATURE_LCD_BACKLIGHT_AUTO_DIM
+  #ifndef FEATURE_OLED_SSD1306
   lcd.noCursor();//sp5iou 20180328
+  #endif
+
   if (lcd_status != LCD_TIMED_MESSAGE) {
     lcd_previous_status = lcd_status;
     lcd_status = LCD_TIMED_MESSAGE;
@@ -3712,7 +3752,14 @@ void lcd_center_print_timed(String lcd_print_string, byte row_number, unsigned i
   } else {
     clear_display_row(row_number);
   }
-  lcd.setCursor(((LCD_COLUMNS - lcd_print_string.length())/2),row_number);
+  #ifndef FEATURE_OLED_SSD1306
+    lcd.setCursor(((LCD_COLUMNS - lcd_print_string.length())/2),row_number);
+  #else
+    if (lcd_print_string.length() <= LCD_COLUMNS ) 
+        lcd.setCursor(((LCD_COLUMNS - lcd_print_string.length())/2)*11,2*row_number);
+    else
+         lcd.setCursor(0,2*row_number);
+  #endif
   lcd.print(lcd_print_string);
   lcd_timed_message_clear_time = millis() + duration;
 }
@@ -3726,9 +3773,15 @@ void clear_display_row(byte row_number)
   #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
     lcd.backlight();
   #endif  //FEATURE_LCD_BACKLIGHT_AUTO_DIM
+  #ifndef FEATURE_OLED_SSD1306
   lcd.noCursor();//sp5iou 20180328
+  #endif
   for (byte x = 0; x < LCD_COLUMNS; x++) {
+    #ifndef FEATURE_OLED_SSD1306
     lcd.setCursor(x,row_number);
+    #else
+    lcd.setCursor(x*11,row_number*2);
+    #endif
     lcd.print(" ");
   }
 }
@@ -8062,6 +8115,14 @@ void command_mode() {
   #ifdef OPTION_WATCHDOG_TIMER
     wdt_enable(WDTO_4S);
   #endif //OPTION_WATCHDOG_TIMER
+	
+  #ifdef FEATURE_DISPLAY
+    lcd.clear();
+    for (int x = 0; x < LCD_ROWS; x++) {        // as we exit, redraw the display that we had before we went into Command Mode
+      lcd.setCursor(0, x);
+      lcd.print(lcd_scroll_buffer[x]);
+    }
+  #endif                                        // FEATURE_DISPLAY
 
 }
 #endif //FEATURE_COMMAND_MODE
@@ -9547,17 +9608,22 @@ void send_char(byte cw_char, byte omit_letterspace)
       case '\r': break;
 
       #if defined(OPTION_PROSIGN_SUPPORT)
-        case PROSIGN_AA: send_the_dits_and_dahs(".-.-");break;
-        case PROSIGN_AS: send_the_dits_and_dahs(".-...");break;
-        case PROSIGN_BK: send_the_dits_and_dahs("-...-.-");break;
-        case PROSIGN_CL: send_the_dits_and_dahs("-.-..-..");break;
-        case PROSIGN_CT: send_the_dits_and_dahs("-.-.-");break;
-        case PROSIGN_KN: send_the_dits_and_dahs("-.--.");break;
-        case PROSIGN_NJ: send_the_dits_and_dahs("-..---");break;
-        case PROSIGN_SK: send_the_dits_and_dahs("...-.-");break;
-        case PROSIGN_SN: send_the_dits_and_dahs("...-.");break;
-        case PROSIGN_HH: send_the_dits_and_dahs("........");break;  // iz0rus
-      #endif
+        case PROSIGN_AA: send_the_dits_and_dahs(".-.-");       break;
+        case PROSIGN_AS: send_the_dits_and_dahs(".-...");      break;
+        case PROSIGN_BK: send_the_dits_and_dahs("-...-.-");    break;
+        case PROSIGN_CL: send_the_dits_and_dahs("-.-..-..");   break;
+        case PROSIGN_CT: send_the_dits_and_dahs("-.-.-");      break;
+        case PROSIGN_KN: send_the_dits_and_dahs("-.--.");      break;
+        case PROSIGN_NJ: send_the_dits_and_dahs("-..---");     break;
+        case PROSIGN_SK: send_the_dits_and_dahs("...-.-");     break;
+        case PROSIGN_SN: send_the_dits_and_dahs("...-.");      break;
+        case PROSIGN_HH: send_the_dits_and_dahs("........");   break;  // iz0rus
+        case PROSIGN_SOS: send_the_dits_and_dahs("...---..."); break;
+        case PROSIGN_SO: send_the_dits_and_dahs("...---");     break;
+        #if !defined(OPTION_CW_KEYBOARD_GERMAN) && !defined(OPTION_CW_KEYBOARD_ITALIAN) && !defined(OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT)
+          case PROSIGN_OS: send_the_dits_and_dahs("---...");   break;
+        #endif                                                                           // !defined(OPTION_CW_KEYBOARD_GERMAN) ....
+      #endif 
 
       #ifdef OPTION_NON_ENGLISH_EXTENSIONS
       case 192: send_the_dits_and_dahs(".--.-");break;// 'À'
@@ -13597,6 +13663,7 @@ void service_paddle_echo()
               prosign_temp = convert_prosign(byte_temp);
               display_scroll_print_char(prosign_temp[0]);
               display_scroll_print_char(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) display_scroll_print_char(prosign_temp[2]);
             } else {
               display_scroll_print_char(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
             }
@@ -13606,6 +13673,7 @@ void service_paddle_echo()
               prosign_temp = convert_prosign(ascii_temp);
               display_scroll_print_char(prosign_temp[0]);
               display_scroll_print_char(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) display_scroll_print_char(prosign_temp[2]);
             } else {
               switch (ascii_temp){
                 case 220: ascii_temp = 0;break; // U_umlaut  (D, ...)
@@ -13648,10 +13716,12 @@ void service_paddle_echo()
           if ((byte_temp > PROSIGN_START) && (byte_temp < PROSIGN_END)){
             primary_serial_port->print(prosign_temp[0]);
             primary_serial_port->print(prosign_temp[1]);
-            #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+            if(strlen(prosign_temp) == 3) primary_serial_port->print(prosign_temp[2]);
+           #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
               secondary_serial_port->print(prosign_temp[0]);
               secondary_serial_port->print(prosign_temp[1]);
-            #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+              if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
+            #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
           } else {
             if (configuration.cli_mode == CLI_MILL_MODE_KEYBOARD_RECEIVE){
               primary_serial_port->println();
@@ -15881,12 +15951,8 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
 
 //---------------------------------------------------------------------
 
-
-
 #if defined(OPTION_PROSIGN_SUPPORT)
-char * convert_prosign(byte prosign_code)
-{
-
+char * convert_prosign(byte prosign_code) {
   switch(prosign_code){
     case PROSIGN_AA: return((char*)"AA"); break;
     case PROSIGN_AS: return((char*)"AS"); break;
@@ -15897,18 +15963,20 @@ char * convert_prosign(byte prosign_code)
     case PROSIGN_NJ: return((char*)"NJ"); break;
     case PROSIGN_SK: return((char*)"SK"); break;
     case PROSIGN_SN: return((char*)"SN"); break;
-    case PROSIGN_HH: return((char*)"HH"); break; // iz0rus
+    case PROSIGN_HH: return((char*)"HH"); break;              // iz0rus
+    case PROSIGN_SOS: send_the_dits_and_dahs("...---..."); break;
+    case PROSIGN_SO:  return((char*)"SO");  break;
+    #if !defined(OPTION_CW_KEYBOARD_GERMAN) && !defined(OPTION_CW_KEYBOARD_ITALIAN) && !defined(OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT)
+      case PROSIGN_OS: return((char*)"OS"); break;
+    #endif                                                    // !defined(OPTION_CW_KEYBOARD_GERMAN) ......
     default: return((char*)""); break;
-
   }
-
 }
 #endif //OPTION_PROSIGN_SUPPORT
 
 //---------------------------------------------------------------------
 
-int convert_cw_number_to_ascii (long number_in)
-{
+int convert_cw_number_to_ascii (long number_in) {
 
   // number_in:  1 = dit, 2 = dah, 9 = a space
 
@@ -15938,7 +16006,7 @@ int convert_cw_number_to_ascii (long number_in)
     case 122: return 87; break;
     case 2112: return 88; break;
     case 2122: return 89; break;
-    case 2211: return 90; break;    // Z
+    case 2211: return 90; break;     // Z
 
     case 22222: return 48; break;    // 0
     case 12222: return 49; break;
@@ -15951,11 +16019,12 @@ int convert_cw_number_to_ascii (long number_in)
     case 22211: return 56; break;
     case 22221: return 57; break;
     case 112211: return '?'; break;  // ?
-    case 21121: return 47; break;   // /
+    case 21121: return 47; break;    // /
     #if !defined(OPTION_PROSIGN_SUPPORT)
-      case 2111212: return '*'; break; // BK
-    #endif
-//    case 221122: return '!'; break;  // ! sp5iou 20180328
+      case 2111212: return '*'; break; // BK 
+    #endif 
+    //case 221122: return 44; break;   // ,
+    //case 221122: return '!'; break;  // ! sp5iou 20180328
     case 221122: return ','; break;
     case 121212: return '.'; break;
     case 122121: return '@'; break;
@@ -15986,21 +16055,25 @@ int convert_cw_number_to_ascii (long number_in)
       case 12121: return 60; break; // AR (store as ascii < ) // sp5iou
     #endif //OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
 
-
     #if defined(OPTION_PROSIGN_SUPPORT)
       #if !defined(OPTION_NON_ENGLISH_EXTENSIONS)
         case 1212:   return PROSIGN_AA; break;
       #endif
-      case 12111:    return PROSIGN_AS; break;
-      case 2111212:  return PROSIGN_BK; break;
-      case 21211211: return PROSIGN_CL; break;
-      case 21212:    return PROSIGN_CT; break;
-      case 21221:    return PROSIGN_KN; break;
-      case 211222:   return PROSIGN_NJ; break;
-      case 111212:   return PROSIGN_SK; break;
-      case 11121:    return PROSIGN_SN; break;
-      case 11111111: return PROSIGN_HH; break;  // iz0rus
-    #else //OPTION_PROSIGN_SUPPORT
+      case 12111:     return PROSIGN_AS;  break;
+      case 2111212:   return PROSIGN_BK;  break;
+      case 21211211:  return PROSIGN_CL;  break;
+      case 21212:     return PROSIGN_CT;  break;
+      case 21221:     return PROSIGN_KN;  break;
+      case 211222:    return PROSIGN_NJ;  break;
+      case 111212:    return PROSIGN_SK;  break;
+      case 11121:     return PROSIGN_SN;  break;
+      case 11111111:  return PROSIGN_HH;  break;  // iz0rus
+      case 111222111: return PROSIGN_SOS; break;
+      case 111222:    return PROSIGN_SO;  break;
+      #if !defined(OPTION_CW_KEYBOARD_GERMAN) && !defined(OPTION_CW_KEYBOARD_ITALIAN) && !defined(OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT)
+	case 222111:  return PROSIGN_OS;  break;
+      #endif                                                          // OPTION_CW_KEYBOARD_GERMAN || OPTION_CW_KEYBOARD_ITALIAN || OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT)
+    #else                                                             // OPTION_PROSIGN_SUPPORT
       case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou //aaaaaaa
     #endif //OPTION_PROSIGN_SUPPORT
 
@@ -16024,22 +16097,19 @@ int convert_cw_number_to_ascii (long number_in)
       case 221121: return 142; break;    // Ž
     #endif //OPTION_NON_ENGLISH_EXTENSIONS
 
+    default: 
 
-    default:
       #ifdef OPTION_UNKNOWN_CHARACTER_ERROR_TONE
         boop();
       #endif  //OPTION_UNKNOWN_CHARACTER_ERROR_TONE
       return unknown_cw_character;
       break;
-
   }
-
 }
 
 //---------------------------------------------------------------------
 #ifdef DEBUG_MEMORYCHECK
-void memorycheck()
-{
+void memorycheck() {
   void* HP = malloc(4);
   if (HP)
     free (HP);
@@ -16104,6 +16174,7 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
               prosign_temp = convert_prosign(eeprom_temp);
               port_to_use->print(prosign_temp[0]);
               port_to_use->print(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) port_to_use->print(prosign_temp[2]);
             } else {
               port_to_use->write(eeprom_temp);
             }
@@ -16582,10 +16653,12 @@ byte play_memory(byte memory_number) {
                     if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
                       primary_serial_port->print(prosign_temp[0]);
                       primary_serial_port->print(prosign_temp[1]);
-                      #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                      if(strlen(prosign_temp) == 3) primary_serial_port->print(prosign_temp[2]);
+                       #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                         secondary_serial_port->print(prosign_temp[0]);
                         secondary_serial_port->print(prosign_temp[1]);
-                      #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                        if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
+                      #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
                     } else {
                       primary_serial_port->write(eeprom_byte_read);
                       #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
@@ -17954,7 +18027,14 @@ void initialize_keyer_state(){
     switch_to_tx_silent(1);
   #endif
 
-  #if (!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))) && !defined(HARDWARE_GENERIC_STM32F103C)
+  #ifdef __LGT8FX8P__
+    /* LGT chip emulates EEPROM at the cost of giving up twice the space in program flash memory.
+     * Unortunately, the last 4 bytes of every 1KB block are read-only. Therefore 
+     * EEPROM.length() would return 1024 (readable EEPROM size), while EEPROM.size() returns 1020
+     * (writable EEPROM size). The following line will give the right figure for LGT.
+     */
+    memory_area_end = EEPROM.size() - 1; 
+  #elif (!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))) && !defined(HARDWARE_GENERIC_STM32F103C)
     memory_area_end = EEPROM.length() - 1;
   #else
     #if defined(HARDWARE_GENERIC_STM32F103C)
@@ -18263,24 +18343,37 @@ void ps2int_write() {
 
 void initialize_display(){
 
-  #ifdef FEATURE_DISPLAY
-    #if defined(FEATURE_LCD_SAINSMART_I2C) || defined(FEATURE_LCD_I2C_FDEBRABANDER)
-      lcd.begin();
-      lcd.home();
+
+  #ifdef FEATURE_DISPLAY  
+
+    #ifdef FEATURE_OLED_SSD1306 
+      Wire.begin();
+      Wire.setClock(400000L);
+      lcd.begin(&Adafruit128x64, oled_i2c_address_ssd1306);
+      lcd.setFont(fixed_bold10x15);
     #else
-      lcd.begin(LCD_COLUMNS, LCD_ROWS);
+      #if defined(FEATURE_LCD_SAINSMART_I2C) || defined(FEATURE_LCD_I2C_FDEBRABANDER)
+        lcd.begin();
+        lcd.home();
+     #else
+        lcd.begin(LCD_COLUMNS, LCD_ROWS);
+     #endif
     #endif
+    
     #ifdef FEATURE_LCD_ADAFRUIT_I2C
       lcd.setBacklight(lcdcolor);
     #endif //FEATURE_LCD_ADAFRUIT_I2C
 
-    #ifdef FEATURE_LCD_ADAFRUIT_BACKPACK
+    #ifdef FEATURE_LCD_TWILIQUIDCRYSTAL
+      lcd.backlight();
+    #endif
+    #ifdef FEATURE_LCD_ADAFRUIT_BACKPACK 
       lcd.setBacklight(HIGH);
     #endif
     #ifdef FEATURE_LCD_MATHERTEL_PCF8574
       lcd.setBacklight(HIGH);
     #endif
-
+    
     #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
       // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/
 
@@ -20680,6 +20773,7 @@ void web_print_page_memories(EthernetClient client){
               prosign_temp = convert_prosign(eeprom_temp);
               web_client_write(client,prosign_temp[0]);
               web_client_write(client,prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) web_client_write(client,prosign_temp[2]);
             } else {
               web_client_write(client,eeprom_temp);
             }
