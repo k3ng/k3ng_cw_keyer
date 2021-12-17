@@ -108,9 +108,16 @@ int8_t ButtonArray::ReadButtons(){
     }
     return -1;
 }
+// returns true if analog reading indicate a pressed button
+bool ButtonArray::AnyPressed() {
+  if (analogRead(pin_) <= high_limit_) {
+    return true;
+  }
+  return false;
+}
 // returns the index of the pressed button or -1 if none pressed
 int8_t ButtonArray::Pressed() {
-    if ((analogRead(pin_) <= high_limit_) && ((millis() - last_pressed_ms) > DEBOUNCE_MS )){
+    if (AnyPressed() && ((millis() - last_pressed_ms) > DEBOUNCE_MS )){
         return ReadButtons();
     }
     return -1;
@@ -127,7 +134,7 @@ bool ButtonArray::Pressed(uint8_t index) {
 }
 // Return true as long as the indicated button is held and the deadline not reached.
 bool ButtonArray::Held(uint8_t index, uint32_t deadline) {
-    if ((analogRead(pin_) <= high_limit_) && 
+    if (AnyPressed() && 
     (millis() < deadline) && 
     (ReadButtons() == index)) {
         return true;
@@ -137,7 +144,7 @@ bool ButtonArray::Held(uint8_t index, uint32_t deadline) {
 
 // Return true as long as the indicated button is held
 bool ButtonArray::Held(uint8_t index) {
-    if ((analogRead(pin_) <= high_limit_) && (ReadButtons() == index)) {
+    if (AnyPressed() && (ReadButtons() == index)) {
         return true;
     }
     return false;

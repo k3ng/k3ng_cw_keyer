@@ -14,20 +14,15 @@
 #define paddle_left 2
 #define paddle_right 5
 #define tx_key_line_1 11       // (high = key down/tx on)
-#define tx_key_line_2 0
+#define tx_key_line_2 13
 #define tx_key_line_3 0
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-#if !defined(FEATURE_ETHERNET) && !defined(FEATURE_SINEWAVE_SIDETONE)
+#if !defined(FEATURE_ETHERNET)
   #define sidetone_line 4      // connect a speaker for sidetone (pin 4 is used by the Ethernet shield!)
 #else
-  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1)
-    #define sidetone_line 12   // Arduino Uno: sidetone_line = 9 or 10 ; Mega: sidetone_line = 11, 12, or 13 (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html )
-  #endif
-  #if defined(FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3)
-    #define sidetone_line 3    // Arduino Mega: sidetone_line = 2, 3, or 5  (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html)
-  #endif
+  #define sidetone_line 12
 #endif
 #define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
 #define ptt_tx_1 13              // PTT ("push to talk") lines
@@ -41,10 +36,10 @@
 
 #define potentiometer_enable_pin 0  // if defined, the potentiometer will be enabled only when this pin is held low; set to 0 to ignore this pin
 
-#ifdef FEATURE_COMMAND_BUTTONS
+#ifdef FEATURE_BUTTONS
   #define analog_buttons_pin A1
   #define command_mode_active_led 0
-#endif //FEATURE_COMMAND_BUTTONS
+#endif //FEATURE_BUTTONS
 
 
 //lcd pins
@@ -104,13 +99,11 @@
   #define pin_straight_key A5 //52   // pin 52 doesn't work right when FEATURE_WEB_SERVER is active.  don't know why 2016-04-26
 #endif //FEATURE_STRAIGHT_KEY
 
-#ifdef FEATURE_CW_DECODER
-  #define cw_decoder_pin A3//A11 //A5 //A3  
-  #ifdef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-    #define cw_decoder_audio_input_pin 0 // this must be an analog pin!
-  #endif //OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-  #define cw_decoder_indicator 24
-#endif //FEATURE_CW_DECODER
+// FEATURE_CW_DECODER & OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+// See https://github.com/k3ng/k3ng_cw_keyer/wiki/385-Feature:-CW-Decoder for details
+#define cw_decoder_pin 0             // This is for use with external decoding hardware
+#define cw_decoder_audio_input_pin 0 // This is for audio detection decoding using OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR; this must be an analog pin!
+#define cw_decoder_indicator 0       // Output - goes HIGH when cw tone is detected by OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
 
 
 #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
@@ -119,6 +112,10 @@
 
 #if defined(FEATURE_SLEEP)
   #define keyer_awake 13       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
+#endif
+
+#if defined(FEATURE_LCD_BACKLIGHT_AUTO_DIM)
+  #define keyer_power_led 0   // must be a PWM-capable pin
 #endif
 
 #if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
@@ -167,9 +164,11 @@ FEATURE_SIDETONE_SWITCH
 
 #define ptt_input_pin 0  
 
-#define tx_inhibit_pin 50
-#define tx_pause_pin 48 
+#define tx_inhibit_pin 0
+#define tx_pause_pin 0
 
+#define pin_sending_mode_automatic 0  // goes HIGH when keyer is sending code automatically
+#define pin_sending_mode_manual 0     // goes HIGH when keyer is sending code manually (i.e. the paddle or straight key)
 
 #else
 

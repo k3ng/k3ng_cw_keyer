@@ -25,10 +25,10 @@
 
 #define potentiometer_enable_pin 0  // if defined, the potentiometer will be enabled only when this pin is held low; set to 0 to ignore this pin
 
-#ifdef FEATURE_COMMAND_BUTTONS
+#ifdef FEATURE_BUTTONS
 	#define analog_buttons_pin A1
 	#define command_mode_active_led 0
-#endif //FEATURE_COMMAND_BUTTONS
+#endif //FEATURE_BUTTONS
 
 //lcd pins
 #ifdef FEATURE_LCD_4BIT
@@ -68,13 +68,11 @@
 #endif //FEATURE_PTT_INTERLOCK
 
 
-#ifdef FEATURE_CW_DECODER
-  #define cw_decoder_pin A11 //A5 //A3  
-  #ifdef OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-    #define cw_decoder_audio_input_pin 0 // this must be an analog pin!
-  #endif //OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
-  #define cw_decoder_indicator 24
-#endif //FEATURE_CW_DECODER
+// FEATURE_CW_DECODER & OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
+// See https://github.com/k3ng/k3ng_cw_keyer/wiki/385-Feature:-CW-Decoder for details
+#define cw_decoder_pin 0             // This is for use with external decoding hardware
+#define cw_decoder_audio_input_pin 0 // This is for audio detection decoding using OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR; this must be an analog pin!
+#define cw_decoder_indicator 0       // Output - goes HIGH when cw tone is detected by OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR
 
 #if defined(FEATURE_COMPETITION_COMPRESSION_DETECTION)
   #define compression_detection_pin 0
@@ -82,6 +80,10 @@
 
 #if defined(FEATURE_SLEEP)
   #define keyer_awake 13       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
+#endif
+
+#if defined(FEATURE_LCD_BACKLIGHT_AUTO_DIM)
+  #define keyer_power_led 0   // must be a PWM-capable pin
 #endif
 
 #if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
@@ -132,6 +134,9 @@ FEATURE_SIDETONE_SWITCH
 
 #define tx_inhibit_pin 0
 #define tx_pause_pin 0   
+
+#define pin_sending_mode_automatic 0  // goes HIGH when keyer is sending code automatically
+#define pin_sending_mode_manual 0     // goes HIGH when keyer is sending code manually (i.e. the paddle or straight key)
 
 #else
 

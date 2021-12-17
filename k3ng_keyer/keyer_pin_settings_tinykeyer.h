@@ -37,6 +37,10 @@
   #define keyer_awake 8       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
 #endif
 
+#if defined(FEATURE_LCD_BACKLIGHT_AUTO_DIM)
+  #define keyer_power_led 0   // must be a PWM-capable pin
+#endif
+
 /*
 FEATURE_SIDETONE_SWITCH
   Enabling this feature and an external toggle switch  adds switch control for playing cw sidetone.
@@ -82,6 +86,9 @@ FEATURE_SIDETONE_SWITCH
 
 #define tx_inhibit_pin 0
 #define tx_pause_pin 0   
+
+#define pin_sending_mode_automatic 0  // goes HIGH when keyer is sending code automatically
+#define pin_sending_mode_manual 0     // goes HIGH when keyer is sending code manually (i.e. the paddle or straight key)
 
 #else
 

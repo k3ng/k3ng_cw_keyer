@@ -36,6 +36,10 @@
   #define keyer_awake 13       // Goes active when keyer is awake, inactive when in sleep mode; change active and inactive states in keyer_settings file
 #endif
 
+#if defined(FEATURE_LCD_BACKLIGHT_AUTO_DIM)
+  #define keyer_power_led 0   // must be a PWM-capable pin
+#endif
+
 #if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
   #define capactive_paddle_pin_inhibit_pin 0     // if this pin is defined and is set high, the capacitive paddle pins will switch to normal (non-capacitive) sensing mode
 #endif
@@ -84,6 +88,9 @@ FEATURE_SIDETONE_SWITCH
 
 #define tx_inhibit_pin 0
 #define tx_pause_pin 0   
+
+#define pin_sending_mode_automatic 0  // goes HIGH when keyer is sending code automatically
+#define pin_sending_mode_manual 0     // goes HIGH when keyer is sending code manually (i.e. the paddle or straight key)
 
 #else
 

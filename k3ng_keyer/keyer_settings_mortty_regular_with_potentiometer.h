@@ -33,8 +33,6 @@
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
-//#define memory_area_start 60             // the eeprom location where memory space starts - this is now in main ino file
-#define memory_area_end 1023             // the eeprom location where memory space ends
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
 #define winkey_command_timeout_ms 5000
 #define winkey_discard_bytes_startup 3   // this is used if OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP is enabled above
@@ -43,13 +41,20 @@
 #define default_memory_repeat_time 3000  // time in milliseconds
 #define LCD_COLUMNS 16
 #define LCD_ROWS 2
+#define lcd_i2c_address_mathertel_PCF8574 0x27             // I2C address of display for FEATURE_LCD_MATHERTEL_PCF8574
+#define lcd_i2c_address_fdebrander_lcd 0x27                // I2C address of display for FEATURE_LCD_I2C_FDEBRABANDER
+#define lcd_i2c_address_ydv1_lcd 0x27                      // I2C address of display for FEATURE_LCD_YDv1
+//#define lcd_i2c_address_ydv1_lcd 0x38                    // I2C address of display for FEATURE_LCD_YDv1
+#define lcd_i2c_address_sainsmart_lcd 0x27                // I2C address of display for FEATURE_LCD_SAINSMART_I2C 
 #define hell_pixel_microseconds 4025
 #define program_memory_limit_consec_spaces 1
 #define serial_leading_zeros 1            // set to 1 to activate leading zeros in serial numbers (i.e. #1 = 001)
 #define serial_cut_numbers 0              // set to 1 to activate cut numbers in serial numbers (i.e. #10 = 1T, #19 = 1N)
 #define go_to_sleep_inactivity_time 10    // minutes - FEATURE_SLEEP
+#define dim_backlight_inactive_time 5     // minutes - FEATURE_LCD_BACKLIGHT_AUTO_DIM
 #define default_cmos_super_keyer_iambic_b_timing_percent 33 // use with FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING; should be between 0 to 99 % (0% = true iambic b;100% = iambic a behavior)
-#define cw_echo_timing_factor 0.25
+#define default_cw_echo_timing_factor 1.75 // "factory default" setting
+#define default_autospace_timing_factor 2.0 // "factory default" setting
 #define winkey_paddle_echo_buffer_decode_timing_factor 0.25
 #define potentiometer_always_on 0
 #define ptt_interlock_check_every_ms 100
@@ -67,14 +72,14 @@
 #define serial_program_memory_buffer_size 500
 #define eeprom_write_time_ms 30000
 
-#ifdef FEATURE_COMMAND_BUTTONS
+#ifdef FEATURE_BUTTONS
   #define analog_buttons_number_of_buttons 4
   #define analog_buttons_r1 10
   #define analog_buttons_r2 1
 #endif
 
 
-#if defined(FEATURE_COMMAND_BUTTONS) &&  !defined(FEATURE_PS2_KEYBOARD) && !defined(FEATURE_USB_KEYBOARD) && !defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(FEATURE_WINKEY_EMULATION)
+#if defined(FEATURE_BUTTONS) &&  !defined(FEATURE_PS2_KEYBOARD) && !defined(FEATURE_USB_KEYBOARD) && !defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(FEATURE_WINKEY_EMULATION)
   #define number_of_memories byte(analog_buttons_number_of_buttons-1)
 #else
   #define number_of_memories byte(12)
@@ -181,11 +186,17 @@
   #define KEYER_AWAKE_PIN_ASLEEP_STATE LOW
 #endif 
 
+#if defined(FEATURE_LCD_BACKLIGHT_AUTO_DIM)
+  #define keyer_power_led_awake_duty 255   // PWM duty cycle. 0 is 0%, 255 is 100%
+  #define keyer_power_led_asleep_duty 25   // 25 is quite dim. Use 0 for off
+#endif
+
 #if defined(FEATURE_ETHERNET)
   // #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
   // #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
   #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.179")
   #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
+  #define FEATURE_ETHERNET_DNS {8,8,8,8} 
 
   #define FEATURE_ETHERNET_GATEWAY {192,168,1,1}                   // default gateway
   #define FEATURE_ETHERNET_SUBNET_MASK {255,255,255,0}                  // default subnet mask
@@ -265,6 +276,8 @@
 #define tx_inhibit_pin_inactive_state HIGH
 #define tx_pause_pin_active_state LOW
 #define tx_pause_pin_inactive_state HIGH
+#define sidetone_line_active_state HIGH
+#define sidetone_line_inactive_state LOW
 
 #if defined(ARDUINO_MAPLE_MINI)
   #define button_value_factor 4095
@@ -279,4 +292,27 @@
 
 #define custom_startup_field "your custom text here"   // an example could be callsign and name, eg. "AB1XYZ Bob", (or "Worlds best operator" which requires a 20 column display), string length shouldo be no more than the number of columns on the display
 
+#define command_mode_acknowledgement_character 'E'
 
+#if defined(FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT)
+  #define command_a_iambic_a "A"
+  #define command_b_iambic_b "B"
+  #define command_c_single_paddle "SINGLE"
+  #define command_d_ultimatic "ULT"
+  #define command_h_weight_dit_dah_ratio_default "R"
+  #define command_i_tx_on  "TX ON"
+  #define command_i_tx_off "TX OFF"
+  #define command_k_dit_dah_buffers_on "ON"
+  #define command_k_dit_dah_buffers_off "OFF"
+  #define command_n_paddle_reverse "REV"
+  #define command_n_paddle_normal "NORM"
+  #define command_o_sidetone_off "ST OFF"
+  #define command_o_sidetone_paddle_only "ST PD ONLY"
+  #define command_o_sidetone_on "ST ON"
+  #define command_t_tune_mode "TUNE"
+  #define command_v_potentiometer_on "POT ON"
+  #define command_v_potentiometer_off "POT OFF"
+
+  #define command_error "ERR"
+
+#endif //FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT

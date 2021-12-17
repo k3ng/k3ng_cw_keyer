@@ -7,7 +7,7 @@
 #define DEBOUNCE_MS 200
 #define NUMBER_OF_BUTTON_READS_TO_AVERAGE 19
 
-#if defined(ARDUINO_ARCH_ESP32)
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_GENERIC_STM32F103C)
     #define max_value 4095
 #else
     #define max_value 1023
@@ -40,6 +40,7 @@ class ButtonArray {
         int32_t high_limit_;
         bool   reversed_;
         int8_t ReadButtons();
+        bool AnyPressed();
 
     public:
         uint32_t last_pressed_ms;

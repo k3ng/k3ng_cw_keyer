@@ -46,7 +46,7 @@
 
 // K3NG Version 2017.05.12.01 
 
-#if !defined(ARDUINO_SAM_DUE)
+#if !defined(ARDUINO_SAM_DUE) && !defined (__STM32F1__)
   #include <avr/io.h>
   #include <avr/interrupt.h>
   #include <avr/pgmspace.h>
@@ -64,6 +64,10 @@ static volatile uint8_t head, tail;
 static uint8_t ps2Keyboard_DataPin;
 static char ps2Keyboard_CharBuffer=0;
 
+#if defined (__STM32F1__) // < 2017/01/14 modified by Tamakichi
+  #define gpio_read(pin) gpio_read_bit(PIN_MAP[pin].gpio_device, PIN_MAP[pin].gpio_bit)?HIGH:LOW
+#endif
+
 // The ISR for the external interrupt
 void k3ng_ps2interrupt(void)
 {
@@ -72,8 +76,13 @@ void k3ng_ps2interrupt(void)
 	static uint32_t prev_ms=0;
 	uint32_t now_ms;
 	uint8_t n, val;
-
+    
+#if defined (__STM32F1__) 
+	val = gpio_read(ps2Keyboard_DataPin);
+#else	
 	val = digitalRead(ps2Keyboard_DataPin);
+#endif
+    
 	now_ms = millis();
 	if (now_ms - prev_ms > 250) {
 		bitcount = 0;
@@ -475,6 +484,13 @@ void K3NG_PS2Keyboard::begin(uint8_t dataPin, uint8_t irq_pin) {
   ps2Keyboard_DataPin = dataPin;
 
   // initialize the pins
+#if defined (__STM32F1__) // < 2017/01/14 modified by Tamakichi
+  irq_num = irq_pin;
+  pinMode(irq_pin, INPUT);
+  pinMode(ps2Keyboard_DataPin, INPUT);
+#else // end>	
+    
+  // initialize the pins
 #ifdef INPUT_PULLUP
   pinMode(irq_pin, INPUT_PULLUP);
   pinMode(dataPin, INPUT_PULLUP);
@@ -530,6 +546,7 @@ void K3NG_PS2Keyboard::begin(uint8_t dataPin, uint8_t irq_pin) {
       irq_num = 0;
       break;
   }
+#endif // __STM32F1__  2017/01/14 modified by Tamakichi
   head = 0;
   tail = 0;
   attachInterrupt(irq_num, k3ng_ps2interrupt, FALLING);
