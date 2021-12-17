@@ -1,10 +1,11 @@
+
+
 /*
 
  K3NG Arduino CW Keyer
 
- Copyright 2010 - 2020 Anthony Good, K3NG
+ Copyright 2011 - 2021 Anthony Good, K3NG
  All trademarks referred to in source code and documentation are copyright their respective owners.
-
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -1373,7 +1374,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 */
 
+
 #define CODE_VERSION "2021.12.16.01"
+
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
@@ -1589,6 +1592,12 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <hd44780.h>
   #include <hd44780ioClass/hd44780_I2Cexp.h>
   #define WIRECLOCK 400000L
+#endif
+
+#if defined(FEATURE_OLED_SSD1306)
+  #include <Wire.h>
+  #include "SSD1306Ascii.h"
+  #include "SSD1306AsciiWire.h"
 #endif
 
 #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
@@ -2027,6 +2036,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
 #if defined(FEATURE_LCD_HD44780)
   hd44780_I2Cexp lcd;
+#endif
+
+#if defined(FEATURE_OLED_SSD1306)
+  SSD1306AsciiWire lcd;
 #endif
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
@@ -3559,7 +3572,11 @@ void service_display() {
         return;
       } else {
          x = 0;
+         #ifndef FEATURE_OLED_SSD1306
          lcd.setCursor(0,y);
+         #else
+         lcd.setCursor(0,y*2);
+         #endif;
       }
     } else {
       if (lcd_scroll_buffer[y].charAt(x) > 0){
@@ -3707,8 +3724,10 @@ void display_scroll_print_char(char charin){
 #ifdef FEATURE_DISPLAY
 void lcd_clear() {
   lcd.clear();
+  #ifndef FEATURE_OLED_SSD1306
   lcd.noCursor();//sp5iou 20180328
- lcd_status = LCD_CLEAR;
+  #endif
+  lcd_status = LCD_CLEAR;
 
 }
 #endif
@@ -3719,7 +3738,10 @@ void lcd_center_print_timed(String lcd_print_string, byte row_number, unsigned i
   #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
     lcd.backlight();
   #endif  //FEATURE_LCD_BACKLIGHT_AUTO_DIM
+  #ifndef FEATURE_OLED_SSD1306
   lcd.noCursor();//sp5iou 20180328
+  #endif
+
   if (lcd_status != LCD_TIMED_MESSAGE) {
     lcd_previous_status = lcd_status;
     lcd_status = LCD_TIMED_MESSAGE;
@@ -3727,7 +3749,14 @@ void lcd_center_print_timed(String lcd_print_string, byte row_number, unsigned i
   } else {
     clear_display_row(row_number);
   }
-  lcd.setCursor(((LCD_COLUMNS - lcd_print_string.length())/2),row_number);
+  #ifndef FEATURE_OLED_SSD1306
+    lcd.setCursor(((LCD_COLUMNS - lcd_print_string.length())/2),row_number);
+  #else
+    if (lcd_print_string.length() <= LCD_COLUMNS ) 
+        lcd.setCursor(((LCD_COLUMNS - lcd_print_string.length())/2)*11,2*row_number);
+    else
+         lcd.setCursor(0,2*row_number);
+  #endif
   lcd.print(lcd_print_string);
   lcd_timed_message_clear_time = millis() + duration;
 }
@@ -3741,9 +3770,15 @@ void clear_display_row(byte row_number)
   #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
     lcd.backlight();
   #endif  //FEATURE_LCD_BACKLIGHT_AUTO_DIM
+  #ifndef FEATURE_OLED_SSD1306
   lcd.noCursor();//sp5iou 20180328
+  #endif
   for (byte x = 0; x < LCD_COLUMNS; x++) {
+    #ifndef FEATURE_OLED_SSD1306
     lcd.setCursor(x,row_number);
+    #else
+    lcd.setCursor(x*11,row_number*2);
+    #endif
     lcd.print(" ");
   }
 }
@@ -18304,13 +18339,22 @@ void ps2int_write() {
 
 void initialize_display(){
 
-  #ifdef FEATURE_DISPLAY    
-    #if defined(FEATURE_LCD_SAINSMART_I2C) || defined(FEATURE_LCD_I2C_FDEBRABANDER)
-      lcd.begin();
-      lcd.home();
+  #ifdef FEATURE_DISPLAY  
+
+    #ifdef FEATURE_OLED_SSD1306 
+    Wire.begin();
+    Wire.setClock(400000L);
+    lcd.begin(&Adafruit128x64, oled_i2c_address_ssd1306);
+    lcd.setFont(fixed_bold10x15);
     #else
-      lcd.begin(LCD_COLUMNS, LCD_ROWS);
+      #if defined(FEATURE_LCD_SAINSMART_I2C) || defined(FEATURE_LCD_I2C_FDEBRABANDER)
+        lcd.begin();
+        lcd.home();
+     #else
+        lcd.begin(LCD_COLUMNS, LCD_ROWS);
+     #endif
     #endif
+    
     #ifdef FEATURE_LCD_ADAFRUIT_I2C
       lcd.setBacklight(lcdcolor);
     #endif //FEATURE_LCD_ADAFRUIT_I2C
@@ -18323,7 +18367,7 @@ void initialize_display(){
     #ifdef FEATURE_LCD_MATHERTEL_PCF8574 
       lcd.setBacklight(HIGH);
     #endif
-
+    
     #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
       // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/
 
