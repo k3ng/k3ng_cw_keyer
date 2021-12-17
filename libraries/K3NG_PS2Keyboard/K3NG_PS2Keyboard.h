@@ -34,6 +34,9 @@ K3NG Updates
   2015101401
     Fixed issues with CTRL and ALT key combinations with German and French keyboards
 
+7M4MON Updates
+  20210215
+    Add support for STM32F1 boards. (Marged from "https://github.com/Tamakichi/Arduino_PS2Keyboard" by Tamakichi. Tested with STM32F103C Boads).
 
 */
 
@@ -41,7 +44,7 @@ K3NG Updates
 
 
 
-// K3NG Version 2017.05.12.01
+// K3NG Version 2021.12.16.01
 
 #ifndef K3NG_PS2Keyboard_h
 #define K3NG_PS2Keyboard_h
@@ -50,10 +53,16 @@ K3NG Updates
 // #define OPTION_PS2_KEYBOARD_GERMAN
 // #define OPTION_PS2_KEYBOARD_FRENCH
 
-#if !defined(ARDUINO_SAM_DUE)
+#if !defined(ARDUINO_SAM_DUE) && !defined (__STM32F1__)
   #include <avr/io.h>
   #include <avr/interrupt.h>
   #include <avr/pgmspace.h>
+#endif
+
+#if defined(ARDUINO) && ARDUINO >= 100
+#include "Arduino.h" // for attachInterrupt, FALLING
+#else
+#include "WProgram.h"
 #endif
 
 // Every call to read() returns a single byte for each
