@@ -17951,7 +17951,14 @@ void initialize_keyer_state(){
     switch_to_tx_silent(1);
   #endif
 
-  #if (!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))) && !defined(HARDWARE_GENERIC_STM32F103C)
+  #ifdef __LGT8FX8P__
+    /* LGT chip emulates EEPROM at the cost of giving up twice the space in program flash memory.
+     * Unortunately, the last 4 bytes of every 1KB block are read-only. Therefore 
+     * EEPROM.length() would return 1024 (readable EEPROM size), while EEPROM.size() returns 1020
+     * (writable EEPROM size). The following line will give the right figure for LGT.
+     */
+    memory_area_end = EEPROM.size() - 1; 
+  #elif (!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))) && !defined(HARDWARE_GENERIC_STM32F103C)
     memory_area_end = EEPROM.length() - 1;
   #else
     #if defined(HARDWARE_GENERIC_STM32F103C)
