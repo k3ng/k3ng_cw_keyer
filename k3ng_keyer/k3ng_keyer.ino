@@ -8059,6 +8059,14 @@ void command_mode() {
   #ifdef OPTION_WATCHDOG_TIMER
     wdt_enable(WDTO_4S);
   #endif //OPTION_WATCHDOG_TIMER
+	
+  #ifdef FEATURE_DISPLAY
+    lcd.clear();
+    for (int x = 0; x < LCD_ROWS; x++) {        // as we exit, redraw the display that we had before we went into Command Mode
+      lcd.setCursor(0, x);
+      lcd.print(lcd_scroll_buffer[x]);
+    }
+  #endif                                        // FEATURE_DISPLAY
 
 }
 #endif //FEATURE_COMMAND_MODE
