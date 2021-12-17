@@ -9567,16 +9567,21 @@ void send_char(byte cw_char, byte omit_letterspace)
       case '\r': break;
   
       #if defined(OPTION_PROSIGN_SUPPORT)
-        case PROSIGN_AA: send_the_dits_and_dahs(".-.-");break;
-        case PROSIGN_AS: send_the_dits_and_dahs(".-...");break;
-        case PROSIGN_BK: send_the_dits_and_dahs("-...-.-");break;
-        case PROSIGN_CL: send_the_dits_and_dahs("-.-..-..");break;
-        case PROSIGN_CT: send_the_dits_and_dahs("-.-.-");break;
-        case PROSIGN_KN: send_the_dits_and_dahs("-.--.");break;
-        case PROSIGN_NJ: send_the_dits_and_dahs("-..---");break;
-        case PROSIGN_SK: send_the_dits_and_dahs("...-.-");break;
-        case PROSIGN_SN: send_the_dits_and_dahs("...-.");break;
-        case PROSIGN_HH: send_the_dits_and_dahs("........");break;  // iz0rus
+        case PROSIGN_AA: send_the_dits_and_dahs(".-.-");       break;
+        case PROSIGN_AS: send_the_dits_and_dahs(".-...");      break;
+        case PROSIGN_BK: send_the_dits_and_dahs("-...-.-");    break;
+        case PROSIGN_CL: send_the_dits_and_dahs("-.-..-..");   break;
+        case PROSIGN_CT: send_the_dits_and_dahs("-.-.-");      break;
+        case PROSIGN_KN: send_the_dits_and_dahs("-.--.");      break;
+        case PROSIGN_NJ: send_the_dits_and_dahs("-..---");     break;
+        case PROSIGN_SK: send_the_dits_and_dahs("...-.-");     break;
+        case PROSIGN_SN: send_the_dits_and_dahs("...-.");      break;
+        case PROSIGN_HH: send_the_dits_and_dahs("........");   break;  // iz0rus
+        case PROSIGN_SOS: send_the_dits_and_dahs("...---..."); break;
+        case PROSIGN_SO: send_the_dits_and_dahs("...---");     break;
+        #if !defined(OPTION_CW_KEYBOARD_GERMAN) && !defined(OPTION_CW_KEYBOARD_ITALIAN) && !defined(OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT)
+          case PROSIGN_OS: send_the_dits_and_dahs("---...");   break;
+        #endif                                                                           // !defined(OPTION_CW_KEYBOARD_GERMAN) ....
       #endif 
 
       #ifdef OPTION_NON_ENGLISH_EXTENSIONS
@@ -13617,6 +13622,7 @@ void service_paddle_echo()
               prosign_temp = convert_prosign(byte_temp);
               display_scroll_print_char(prosign_temp[0]);
               display_scroll_print_char(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) display_scroll_print_char(prosign_temp[2]);
             } else {
               display_scroll_print_char(byte(convert_cw_number_to_ascii(paddle_echo_buffer)));
             }
@@ -13626,6 +13632,7 @@ void service_paddle_echo()
               prosign_temp = convert_prosign(ascii_temp);
               display_scroll_print_char(prosign_temp[0]);
               display_scroll_print_char(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) display_scroll_print_char(prosign_temp[2]);
             } else {
               switch (ascii_temp){
                 case 220: ascii_temp = 0;break; // U_umlaut  (D, ...)
@@ -13668,9 +13675,11 @@ void service_paddle_echo()
           if ((byte_temp > PROSIGN_START) && (byte_temp < PROSIGN_END)){
             primary_serial_port->print(prosign_temp[0]);
             primary_serial_port->print(prosign_temp[1]);
-            #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+            if(strlen(prosign_temp) == 3) primary_serial_port->print(prosign_temp[2]);
+           #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
               secondary_serial_port->print(prosign_temp[0]);
               secondary_serial_port->print(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
             #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
           } else {
             if (configuration.cli_mode == CLI_MILL_MODE_KEYBOARD_RECEIVE){
@@ -15901,12 +15910,8 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
 
 //---------------------------------------------------------------------
 
-
-
 #if defined(OPTION_PROSIGN_SUPPORT)
-char * convert_prosign(byte prosign_code)
-{
-
+char * convert_prosign(byte prosign_code) {
   switch(prosign_code){
     case PROSIGN_AA: return((char*)"AA"); break;
     case PROSIGN_AS: return((char*)"AS"); break;
@@ -15917,18 +15922,20 @@ char * convert_prosign(byte prosign_code)
     case PROSIGN_NJ: return((char*)"NJ"); break;
     case PROSIGN_SK: return((char*)"SK"); break;
     case PROSIGN_SN: return((char*)"SN"); break;
-    case PROSIGN_HH: return((char*)"HH"); break; // iz0rus
+    case PROSIGN_HH: return((char*)"HH"); break;              // iz0rus
+    case PROSIGN_SOS: send_the_dits_and_dahs("...---..."); break;
+    case PROSIGN_SO:  return((char*)"SO");  break;
+    #if !defined(OPTION_CW_KEYBOARD_GERMAN) && !defined(OPTION_CW_KEYBOARD_ITALIAN) && !defined(OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT)
+      case PROSIGN_OS: return((char*)"OS"); break;
+    #endif                                                    // !defined(OPTION_CW_KEYBOARD_GERMAN) ......
     default: return((char*)""); break;
-
   }
-
 }
 #endif //OPTION_PROSIGN_SUPPORT
 
 //---------------------------------------------------------------------
 
-int convert_cw_number_to_ascii (long number_in)
-{
+int convert_cw_number_to_ascii (long number_in) {
 
   // number_in:  1 = dit, 2 = dah, 9 = a space
 
@@ -15958,7 +15965,7 @@ int convert_cw_number_to_ascii (long number_in)
     case 122: return 87; break;
     case 2112: return 88; break;
     case 2122: return 89; break;
-    case 2211: return 90; break;    // Z
+    case 2211: return 90; break;     // Z
 
     case 22222: return 48; break;    // 0
     case 12222: return 49; break;
@@ -15971,10 +15978,11 @@ int convert_cw_number_to_ascii (long number_in)
     case 22211: return 56; break;
     case 22221: return 57; break;
     case 112211: return '?'; break;  // ?
-    case 21121: return 47; break;   // /
+    case 21121: return 47; break;    // /
     #if !defined(OPTION_PROSIGN_SUPPORT)
       case 2111212: return '*'; break; // BK 
     #endif 
+//    case 221122: return 44; break;   // ,
 //    case 221122: return '!'; break;  // ! sp5iou 20180328
     case 221122: return ','; break; 
     case 121212: return '.'; break;
@@ -16006,21 +16014,25 @@ int convert_cw_number_to_ascii (long number_in)
       case 12121: return 60; break; // AR (store as ascii < ) // sp5iou
     #endif //OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT
 
-
     #if defined(OPTION_PROSIGN_SUPPORT)
       #if !defined(OPTION_NON_ENGLISH_EXTENSIONS)
         case 1212:   return PROSIGN_AA; break;
       #endif
-      case 12111:    return PROSIGN_AS; break;
-      case 2111212:  return PROSIGN_BK; break;
-      case 21211211: return PROSIGN_CL; break;
-      case 21212:    return PROSIGN_CT; break;
-      case 21221:    return PROSIGN_KN; break;
-      case 211222:   return PROSIGN_NJ; break;
-      case 111212:   return PROSIGN_SK; break;
-      case 11121:    return PROSIGN_SN; break;
-      case 11111111: return PROSIGN_HH; break;  // iz0rus
-    #else //OPTION_PROSIGN_SUPPORT
+      case 12111:     return PROSIGN_AS;  break;
+      case 2111212:   return PROSIGN_BK;  break;
+      case 21211211:  return PROSIGN_CL;  break;
+      case 21212:     return PROSIGN_CT;  break;
+      case 21221:     return PROSIGN_KN;  break;
+      case 211222:    return PROSIGN_NJ;  break;
+      case 111212:    return PROSIGN_SK;  break;
+      case 11121:     return PROSIGN_SN;  break;
+      case 11111111:  return PROSIGN_HH;  break;  // iz0rus
+      case 111222111: return PROSIGN_SOS; break;
+      case 111222:    return PROSIGN_SO;  break;
+      #if !defined(OPTION_CW_KEYBOARD_GERMAN) && !defined(OPTION_CW_KEYBOARD_ITALIAN) && !defined(OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT)
+	case 222111:  return PROSIGN_OS;  break;
+      #endif                                                          // OPTION_CW_KEYBOARD_GERMAN || OPTION_CW_KEYBOARD_ITALIAN || OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT)
+    #else                                                             // OPTION_PROSIGN_SUPPORT
       case 21221: return 40; break; // (KN store as ascii ( ) //sp5iou //aaaaaaa
     #endif //OPTION_PROSIGN_SUPPORT
 
@@ -16044,22 +16056,18 @@ int convert_cw_number_to_ascii (long number_in)
       case 221121: return 142; break;    // Ž
     #endif //OPTION_NON_ENGLISH_EXTENSIONS
 
-
     default: 
       #ifdef OPTION_UNKNOWN_CHARACTER_ERROR_TONE
         boop();
       #endif  //OPTION_UNKNOWN_CHARACTER_ERROR_TONE
       return unknown_cw_character; 
       break;
-
   }
-
 }
 
 //---------------------------------------------------------------------
 #ifdef DEBUG_MEMORYCHECK
-void memorycheck()
-{
+void memorycheck() {
   void* HP = malloc(4);
   if (HP)
     free (HP);
@@ -16124,6 +16132,7 @@ void serial_status_memories(PRIMARY_SERIAL_CLS * port_to_use)
               prosign_temp = convert_prosign(eeprom_temp);
               port_to_use->print(prosign_temp[0]);
               port_to_use->print(prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) port_to_use->print(prosign_temp[2]);
             } else {
               port_to_use->write(eeprom_temp);
             }
@@ -16602,9 +16611,11 @@ byte play_memory(byte memory_number) {
                     if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
                       primary_serial_port->print(prosign_temp[0]);
                       primary_serial_port->print(prosign_temp[1]);
-                      #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                      if(strlen(prosign_temp) == 3) primary_serial_port->print(prosign_temp[2]);
+                       #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                         secondary_serial_port->print(prosign_temp[0]);
                         secondary_serial_port->print(prosign_temp[1]);
+                        if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
                       #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
                     } else {
                       primary_serial_port->write(eeprom_byte_read);
@@ -20707,6 +20718,7 @@ void web_print_page_memories(EthernetClient client){
               prosign_temp = convert_prosign(eeprom_temp);
               web_client_write(client,prosign_temp[0]);
               web_client_write(client,prosign_temp[1]);
+              if(strlen(prosign_temp) == 3) web_client_write(client,prosign_temp[2]);
             } else {
               web_client_write(client,eeprom_temp);
             }

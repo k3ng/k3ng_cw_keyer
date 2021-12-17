@@ -59,17 +59,20 @@
 
 #if defined(OPTION_PROSIGN_SUPPORT)
   #define PROSIGN_START 127
-  #define PROSIGN_AA 128
-  #define PROSIGN_AS 129
-  #define PROSIGN_BK 130
-  #define PROSIGN_CL 131
-  #define PROSIGN_CT 132
-  #define PROSIGN_KN 133
-  #define PROSIGN_NJ 134
-  #define PROSIGN_SK 135
-  #define PROSIGN_SN 136
-  #define PROSIGN_HH 137    // iz0rus
-  #define PROSIGN_END 138  // iz0rus
+  #define PROSIGN_AA    128
+  #define PROSIGN_AS    129
+  #define PROSIGN_BK    130
+  #define PROSIGN_CL    131
+  #define PROSIGN_CT    132
+  #define PROSIGN_KN    133
+  #define PROSIGN_NJ    134
+  #define PROSIGN_SK    135
+  #define PROSIGN_SN    136
+  #define PROSIGN_HH    137        // iz0rus
+  #define PROSIGN_SOS   138
+  #define PROSIGN_SO    139
+  #define PROSIGN_OS    140
+  #define PROSIGN_END   141
 #endif
 
 #define SERIAL_SEND_BUFFER_NORMAL 0
