@@ -1343,6 +1343,9 @@ Recent Update History
       Merged pull request 115 https://github.com/k3ng/k3ng_cw_keyer/pull/115 Redraw screen when exiting command mode - Thanks, VK2EFL
       Merged pull request 117 https://github.com/k3ng/k3ng_cw_keyer/pull/117 Support for LCD type: I2C 1602 with backlight using TwiLiquidCrystal library - Thanks, billyf
 
+    2021.12.16.02
+      Merged pull request 86 https://github.com/k3ng/k3ng_cw_keyer/pull/86 SOS Prosign - Thanks, VK2EFL 
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
