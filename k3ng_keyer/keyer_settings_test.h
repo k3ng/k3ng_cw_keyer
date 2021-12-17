@@ -329,6 +329,8 @@
 
 #endif //FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
 
+#define HI_TEXT "K3NG"  // Must be in UPPER case
+
 #endif //TEST_SETTINGS_1
 
 //*********************************************************************************************************************
@@ -640,6 +642,8 @@
   #define command_error "ERR"
 
 #endif //FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
+
+#define HI_TEXT "HI"  // Must be in UPPER case
 
 #endif //TEST_SETTINGS_2
 

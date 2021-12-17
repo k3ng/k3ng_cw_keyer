@@ -1350,6 +1350,9 @@ Recent Update History
     2021.12.16.03
       Merged pull request 118 https://github.com/k3ng/k3ng_cw_keyer/pull/118 OLED SSD1306 Support - Thanks, F5MDY 
 
+    2021.12.17.01
+      Merged pull request 119 https://github.com/k3ng/k3ng_cw_keyer/pull/119/ Definable startup text (define HI_TEXT) - Thanks, ON6ZQ
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1378,7 +1381,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2021.12.16.03"
+#define CODE_VERSION "2021.12.17.01"
 
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 

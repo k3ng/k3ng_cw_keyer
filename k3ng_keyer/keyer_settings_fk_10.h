@@ -336,3 +336,4 @@
 
 #endif //FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
 
+#define HI_TEXT "HI"  // Must be in UPPER case

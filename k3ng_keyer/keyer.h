@@ -29,8 +29,6 @@
 #define SENDING_DIT 1
 #define SENDING_DAH 2
 
-#define HI_TEXT "HI"  // UPPPER case
-
 #define SPEED_NORMAL 0
 #define SPEED_QRSS 1
 
