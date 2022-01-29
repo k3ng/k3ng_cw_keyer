@@ -1532,6 +1532,10 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include "keyer_settings.h"
 #endif
 
+#if (paddle_left == 0) || (paddle_right == 0)
+  #error "You cannot define paddle_left or paddle_right as 0 to disable"
+#endif
+
 #if defined(FEATURE_BUTTONS)
   #include "src/buttonarray/buttonarray.h"
 #endif

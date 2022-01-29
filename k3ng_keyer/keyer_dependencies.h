@@ -48,3 +48,4 @@
 #if defined(FEATURE_COMMAND_MODE) && !defined(FEATURE_BUTTONS)
   #error "FEATURE_COMMAND_MODE requires FEATURE_BUTTONS"
 #endif
+
