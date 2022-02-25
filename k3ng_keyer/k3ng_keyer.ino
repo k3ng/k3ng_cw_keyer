@@ -19597,20 +19597,30 @@ int paddle_pin_read(int pin_to_read){
 
   #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
     #ifndef OPTION_INVERT_PADDLE_PIN_LOGIC
-      #ifdef OPTION_DIRECT_PADDLE_PIN_READS_MEGA              // after April 2019, if this option is not defined then a direct read of the pins can never occur
+      #ifdef OPTION_DIRECT_PADDLE_PIN_READS_MEGA
         switch(pin_to_read) {
-          case 2: return(bitRead(PINE, 4)); break;
-          case 5: return(bitRead(PINE, 3)); break;
-        }                                                     // end switch
+          case 2:  return(bitRead(PINE, 4)); break;           // pins 2 and 5 are the default paddle pins and are placed at the top 
+          case 5:  return(bitRead(PINE, 3)); break;           // as the greatest liklihood is that they will be examined first and then we exit
+          case 3:  return(bitRead(PINE, 5)); break;           // this should cover cases where board makers are not using the generic pins 2 and 5 for paddle connections
+          case 4:  return(bitRead(PING, 5)); break;           // additional case statements are here to provide responses for testing pins other than 2 or 5, in the range 2-13
+          case 6:  return(bitRead(PINH, 3)); break;           // this adds a few bytes of code, but a MEGA2560 is not constrained by available flash memory
+          case 7:  return(bitRead(PINH, 4)); break;
+          case 8:  return(bitRead(PINH, 5)); break;
+          case 9:  return(bitRead(PINH, 6)); break;
+          case 10: return(bitRead(PINB, 4)); break;
+          case 11: return(bitRead(PINB, 5)); break;
+          case 12: return(bitRead(PINB, 6)); break;
+          case 13: return(bitRead(PINB, 7)); break;
+        }                                                     // end switch(pin_to_read)
       #endif                                                  // OPTION_DIRECT_PADDLE_READS_MEGA
-      #ifdef OPTION_DIRECT_PADDLE_PIN_READS_UNO               // since with this verion, April 2019, this option is not defined then a direct read of the pins can never occur
+      #ifdef OPTION_DIRECT_PADDLE_PIN_READS_UNO
         return (bitRead(PIND, pin_to_read));                  // use this line on Unos and Nanos
       #endif                                                  // OPTION_DIRECT_PADDLE_PIN_READS_UNO
       #ifdef OPTION_SAVE_MEMORY_NANOKEYER                     //
         switch(pin_to_read) {
-          case 2: return(bitRead(PIND, 2)); break;
-          case 5: return(bitRead(PIND, 5)); break;
-          case 8: return(bitRead(PINB, 0)); break;
+          case 2: return(bitRead(PIND, 2)); break;            // code here just in case the nanoKeyer uses pin 2
+          case 5: return(bitRead(PIND, 5)); break;            // the nanoKeyer uses pin 5 for the dah paddle
+          case 8: return(bitRead(PINB, 0)); break;            // the nanoKeyer uses pin 8 for the dit paddle
         }                                                     // end switch
       #endif                                                  // OPTION_SAVE_MEMORY_NANOKEYER
       #if !defined(OPTION_DIRECT_PADDLE_PIN_READS_UNO) && !defined(OPTION_DIRECT_PADDLE_PIN_READS_MEGA) && !defined(OPTION_SAVE_MEMORY_NANOKEYER)
