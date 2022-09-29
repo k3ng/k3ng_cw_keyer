@@ -2328,6 +2328,10 @@ void setup()
   initialize_sd_card();
   initialize_debug_startup();
 
+  #if defined(FEATURE_MIDI)
+    midi_setup();
+  #endif
+
 }
 
 // --------------------------------------------------------------------------------------------
@@ -5897,6 +5901,7 @@ void ptt_key(){
           #ifdef FEATURE_SEQUENCER
             sequencer_ptt_inactive_time = 0;
           #endif
+
         }
     #else
       if (configuration.current_ptt_line) {
@@ -5924,6 +5929,10 @@ void ptt_key(){
         #endif
       }
     #endif //FEATURE_SO2R_BASE
+
+    #ifdef FEATURE_MIDI
+      midi_key_ptt(1);
+    #endif
 
     ptt_line_activated = 1;
 
@@ -6063,6 +6072,11 @@ void ptt_unkey(){
         #endif
       #endif //FEATURE_SO2R_BASE
     }
+
+    #ifdef FEATURE_MIDI
+      midi_key_ptt(0);
+    #endif
+
     ptt_line_activated = 0;
     #ifdef FEATURE_SEQUENCER
       sequencer_ptt_inactive_time = millis();
@@ -7213,6 +7227,10 @@ void speed_set(int wpm_set){
     #ifdef FEATURE_LED_RING
       update_led_ring();
     #endif //FEATURE_LED_RING
+
+    #ifdef FEATURE_MIDI
+      midi_send_wpm_response();
+    #endif
 
     #ifdef FEATURE_DISPLAY
       lcd_center_print_timed_wpm();
@@ -22264,6 +22282,127 @@ void so2r_command() {
 #endif // FEATURE_SO2R_SWITCHES
 #endif //FEATURE_SO2R_BASE
 
+//-------------------------------------------------------------------------------------------------------
+
+#ifdef FEATURE_MIDI
+
+void midi_setup() {
+  // set callback for commands
+  usbMIDI.setHandleControlChange(myControlChange);
+}
+
+void midi_key_tx(int state) {
+  if (state) {
+    usbMIDI.sendNoteOn(OPTION_MIDI_BASE_NOTE+1, 99, OPTION_MIDI_KEYER_CHANNEL);
+  } else {
+    usbMIDI.sendNoteOff(OPTION_MIDI_BASE_NOTE+1, 0, OPTION_MIDI_KEYER_CHANNEL);
+  }
+}
+
+void midi_key_ptt(int state) {
+  if (state) {
+    usbMIDI.sendNoteOn(OPTION_MIDI_BASE_NOTE+0, 99, OPTION_MIDI_KEYER_CHANNEL);
+  } else {
+    usbMIDI.sendNoteOff(OPTION_MIDI_BASE_NOTE+0, 0, OPTION_MIDI_KEYER_CHANNEL);
+  }
+}
+
+// MIDI callback
+void myControlChange(byte channel, byte control, byte value) {
+  // debug
+  //usbMIDI.sendNoteOn(OPTION_MIDI_BASE_NOTE+1, 99, OPTION_MIDI_KEYER_CHANNEL);
+  //delay(100);
+  //usbMIDI.sendNoteOff(OPTION_MIDI_BASE_NOTE+1, 0, OPTION_MIDI_KEYER_CHANNEL);
+  // end debug
+
+  int ok = 1;
+
+  if (channel != OPTION_MIDI_INPUT_CHANNEL) {
+    // error, unexpected channel
+    sendMidiResponseOk(0);
+    return;
+  }
+
+  switch (control) {
+    case OPTION_MIDI_IS_KEYER_CONTROL:
+      // no switching in this Sketch
+      sendMidiResponseOk(0);
+//      if (value > 0) {
+//        setupIambic(1);
+//      } else {
+//        setupIambic(0);
+//      }
+      break;
+    case OPTION_MIDI_IAMBIC_CONTROL:
+      if (value > 0) {
+        setupIambicMode(1);
+      } else {
+        setupIambicMode(0);
+      }
+      break;
+    case OPTION_MIDI_WPM_CONTROL:
+      speed_set(value);
+      #ifdef FEATURE_WINKEY_EMULATION
+        winkey_port_write(((value - pot_wpm_low_value)|128),0);
+      #endif
+      break;
+    case OPTION_MIDI_REVERSE_CONTROL:
+      if (value > 0) {
+        configuration.paddle_mode = PADDLE_REVERSE;
+      } else {
+        configuration.paddle_mode = PADDLE_NORMAL;
+      }
+      break;
+    case OPTION_MIDI_GET_KEYER_STATE_CONTROL:
+      sendKeyerStateResponse();
+      break;
+    default:
+      // unknown command
+      sendMidiResponseOk(0);
+  }
+  if (ok == 1) {
+    sendMidiResponseOk(1);
+  } else {
+    sendMidiResponseOk(0);
+  }
+}
+
+void setupIambicMode(int modeB) {
+  if (modeB == 1) {
+    configuration.keyer_mode = IAMBIC_B;
+  } else {
+    configuration.keyer_mode = IAMBIC_A;
+  }
+  config_dirty = 1;
+}
+
+void sendMidiResponseOk(int ok) {
+  if (ok == 1) {
+    // ok
+    usbMIDI.sendControlChange(OPTION_MIDI_RESPONSE_OK, 99, OPTION_MIDI_RESPONSE_CHANNEL);
+  } else {
+    // error
+    usbMIDI.sendControlChange(OPTION_MIDI_RESPONSE_FAIL, 0, OPTION_MIDI_RESPONSE_CHANNEL);
+  }
+}
+
+void sendKeyerStateResponse() {
+  usbMIDI.sendControlChange(OPTION_MIDI_RESPONSE_IS_KEYER, 2, OPTION_MIDI_RESPONSE_CHANNEL);
+  usbMIDI.sendControlChange(OPTION_MIDI_RESPONSE_WPM, configuration.wpm, OPTION_MIDI_RESPONSE_CHANNEL);
+  usbMIDI.sendControlChange(OPTION_MIDI_RESPONSE_REVERSE, ( configuration.paddle_mode == PADDLE_REVERSE ? 1 : 0 ), OPTION_MIDI_RESPONSE_CHANNEL);
+  if (configuration.keyer_mode == IAMBIC_B) {
+    usbMIDI.sendControlChange(OPTION_MIDI_RESPONSE_IAMBIC, 1, OPTION_MIDI_RESPONSE_CHANNEL);
+  } else if (configuration.keyer_mode == IAMBIC_A) {
+    usbMIDI.sendControlChange(OPTION_MIDI_RESPONSE_IAMBIC, 0, OPTION_MIDI_RESPONSE_CHANNEL);
+  }
+}
+
+void midi_send_wpm_response() {
+  usbMIDI.sendControlChange(OPTION_MIDI_RESPONSE_WPM, configuration.wpm, OPTION_MIDI_RESPONSE_CHANNEL);
+}
+
+
+#endif // FEATURE_MIDI
 //-------------------------------------------------------------------------------------------------------
 
 
