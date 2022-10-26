@@ -1425,7 +1425,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #elif defined(HARDWARE_MAPLE_MINI)//sp5iou 20180328
   #include "maple_mini_keyer_features_and_options.h"
 #elif defined(HARDWARE_GENERIC_STM32F103C)//sp5iou 20180329
-  #include "keyer_features_and_options_generic_STM32F103C.h"
+  #include "generic_STM32F103C_keyer_features_and_options.h"
 #elif defined(HARDWARE_MORTTY)
   #include "mortty_keyer_features_and_options.h"
 #elif defined(HARDWARE_MORTTY_REGULAR)
@@ -1489,8 +1489,8 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include "maple_mini_keyer_pin_settings.h"
   #include "maple_mini_keyer_settings.h"
 #elif defined(HARDWARE_GENERIC_STM32F103C)
-  #include "keyer_pin_settings_generic_STM32F103C.h"
-  #include "keyer_settings_generic_STM32F103C.h"
+  #include "generic_STM32F103C_keyer_pin_settings.h"
+  #include "generic_STM32F103C_keyer_settings.h"
 #elif defined(HARDWARE_MORTTY)
   #include "mortty_keyer_pin_settings.h"
   #include "mortty_keyer_settings.h"
