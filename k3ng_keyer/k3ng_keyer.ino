@@ -642,7 +642,7 @@ Recent Update History
       Fixed bug in command mode when OPTION_WATCHDOG_TIMER is enabled.  Thanks, disneysw.
 
     2.2.2016121001
-      Support for FUNtronics FK-10 contributed by disneysw. HARDWARE_FK_10 in keyer_hardware.h; files: keyer_pin_settings_fk_10.h, keyer_features_and_options_fk_10.h, keyer_settings_fk_10.h
+      Support for FUNtronics FK-10 contributed by disneysw. HARDWARE_FK_10 in keyer_hardware.h; files: fk_10_keyer_pin_settings.h, fk_10_keyer_features_and_options.h, fk_10_keyer_settings.h
 
     2.2.2016121201
       Additional work on web interface
@@ -915,7 +915,7 @@ Recent Update History
 
     2018.04.22.01
       Added OPTION_BLINK_HI_ON_PTT - on units that lack a sidetone speaker, this will blink HI on the PTT line on boot up
-      Fixed issue in keyer_pin_settings_mortty.h
+      Fixed issue in mortty_keyer_pin_settings.h
       Added TX Inhibit and TX Pause status in Command Line Interface Status \S command
 
     2018.04.23.01
@@ -1008,7 +1008,7 @@ Recent Update History
 
     2019.02.05.01
       Fixed bug in command mode K command when in ultimatic mode (Thanks, Rich)
-      Under Development: FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1 and FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3 in keyer_features_and_options_test.h
+      Under Development: FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1 and FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3 in test_keyer_features_and_options.h
 
     2019.02.05.02
       Improvement in how K1EL Winkey emulation buffered speed command speed changing and clearing is handled
@@ -1188,7 +1188,7 @@ Recent Update History
 
     2020.03.07.01
       Added OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_LINE - K1EL Winkeyer PTT setting activates/deactivates PTT line rather than controls buffered character PTT hold
-      TinyKeyer - OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW enabled by default for TinyKeyer (keyer_features_and_options_tinykeyer.h)
+      TinyKeyer - OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW enabled by default for TinyKeyer (tinykeyer_keyer_features_and_options.h)
 
     2020.03.07.02
       Command Line Interface - Added \] to disable and enable PTT
@@ -1386,7 +1386,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
-#include "keyer_hardware.h"
+#include "config_hardware.h"
 
 #if defined(ARDUINO_SAM_DUE)
   #include <SPI.h>
@@ -1409,49 +1409,49 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #endif //ARDUINO_SAM_DUE
 
 #if defined(HARDWARE_OPENCWKEYER_MK2)
-  #include "keyer_features_and_options_opencwkeyer_mk2.h"
+  #include "opencwkeyer_mk2_keyer_features_and_options.h"
 #elif defined(HARDWARE_NANOKEYER_REV_B)
-  #include "keyer_features_and_options_nanokeyer_rev_b.h"
+  #include "nanokeyer_rev_b_keyer_features_and_options.h"
 #elif defined(HARDWARE_NANOKEYER_REV_D)
-  #include "keyer_features_and_options_nanokeyer_rev_d.h"
+  #include "nanokeyer_rev_d_keyer_features_and_options.h"
 #elif defined(HARDWARE_OPEN_INTERFACE)
-  #include "keyer_features_and_options_open_interface.h"
+  #include "open_interface_keyer_features_and_options.h"
 #elif defined(HARDWARE_TINYKEYER)
-  #include "keyer_features_and_options_tinykeyer.h"
+  #include "tinykeyer_keyer_features_and_options.h"
 #elif defined(HARDWARE_FK_10)
-  #include "keyer_features_and_options_fk_10.h"
+  #include "fk_10_keyer_features_and_options.h"
 #elif defined(HARDWARE_FK_11)
-  #include "keyer_features_and_options_fk_11.h"
+  #include "fk_11_keyer_features_and_options.h"
 #elif defined(HARDWARE_MAPLE_MINI)//sp5iou 20180328
-  #include "keyer_features_and_options_maple_mini.h"
+  #include "maple_mini_keyer_features_and_options.h"
 #elif defined(HARDWARE_GENERIC_STM32F103C)//sp5iou 20180329
   #include "keyer_features_and_options_generic_STM32F103C.h"
 #elif defined(HARDWARE_MORTTY)
-  #include "keyer_features_and_options_mortty.h"
+  #include "mortty_keyer_features_and_options.h"
 #elif defined(HARDWARE_MORTTY_REGULAR)
-  #include "keyer_features_and_options_mortty_regular.h"
+  #include "mortty_regular_keyer_features_and_options.h"
 #elif defined(HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER)
-  #include "keyer_features_and_options_mortty_regular_with_potentiometer.h"
+  #include "mortty_regular_with_potentiometer_keyer_features_and_options.h"
 #elif defined(HARDWARE_MORTTY_SO2R)
-  #include "keyer_features_and_options_mortty_so2r.h"
+  #include "mortty_so2r_keyer_features_and_options.h"
 #elif defined(HARDWARE_MORTTY_SO2R_WITH_POTENTIOMETER)
-  #include "keyer_features_and_options_mortty_so2r_with_potentiometer.h"
+  #include "mortty_so2r_with_potentiometer_keyer_features_and_options.h"
 #elif defined(HARDWARE_K5BCQ)
-  #include "keyer_features_and_options_k5bcq.h"
+  #include "k5bcq_keyer_features_and_options.h"
 #elif defined(HARDWARE_MEGAKEYER)
-  #include "keyer_features_and_options_megakeyer.h"
+  #include "megakeyer_keyer_features_and_options.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
-  #include "keyer_features_and_options_test_everything.h"
+  #include "test_everything_keyer_features_and_options.h"
 #elif defined(HARDWARE_YAACWK)
-  #include "keyer_features_and_options_yaacwk.h"
+  #include "yaacwk_keyer_features_and_options.h"
 #elif defined(HARDWARE_TEST)
-  #include "keyer_features_and_options_test.h"
+  #include "test_keyer_features_and_options.h"
 #elif defined(HARDWARE_IZ3GME)
-  #include "keyer_features_and_options_iz3gme.h"
+  #include "iz3gme_keyer_features_and_options.h"
 #elif defined(HARDWARE_YCCC_SO2R_MINI)
-  #include "keyer_features_and_options_yccc_so2r_mini.h"
+  #include "yccc_so2r_mini_keyer_features_and_options.h"
 #else
-  #include "keyer_features_and_options.h"
+  #include "config_features_and_options.h"
 #endif
 
 #include "keyer.h"
@@ -1465,71 +1465,71 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #include "keyer_debug.h"
 
 #if defined(HARDWARE_OPENCWKEYER_MK2)
-  #include "keyer_pin_settings_opencwkeyer_mk2.h"
-  #include "keyer_settings_opencwkeyer_mk2.h"
+  #include "opencwkeyer_mk2_keyer_pin_settings.h"
+  #include "opencwkeyer_mk2_keyer_settings.h"
 #elif defined(HARDWARE_NANOKEYER_REV_B)
-  #include "keyer_pin_settings_nanokeyer_rev_b.h"
-  #include "keyer_settings_nanokeyer_rev_b.h"
+  #include "nanokeyer_rev_b_keyer_pin_settings.h"
+  #include "nanokeyer_rev_b_keyer_settings.h"
 #elif defined(HARDWARE_NANOKEYER_REV_D)
-  #include "keyer_pin_settings_nanokeyer_rev_d.h"
-  #include "keyer_settings_nanokeyer_rev_d.h"
+  #include "nanokeyer_rev_d_keyer_pin_settings.h"
+  #include "nanokeyer_rev_d_keyer_settings.h"
 #elif defined(HARDWARE_OPEN_INTERFACE)
-  #include "keyer_pin_settings_open_interface.h"
-  #include "keyer_settings_open_interface.h"
+  #include "open_interface_keyer_pin_settings.h"
+  #include "open_interface_keyer_settings.h"
 #elif defined(HARDWARE_TINYKEYER)
-  #include "keyer_pin_settings_tinykeyer.h"
-  #include "keyer_settings_tinykeyer.h"
+  #include "tinykeyer_keyer_pin_settings.h"
+  #include "tinykeyer_keyer_settings.h"
 #elif defined(HARDWARE_FK_10)
-  #include "keyer_pin_settings_fk_10.h"
-  #include "keyer_settings_fk_10.h"
+  #include "fk_10_keyer_pin_settings.h"
+  #include "fk_10_keyer_settings.h"
 #elif defined(HARDWARE_FK_11)
-  #include "keyer_pin_settings_fk_11.h"
-  #include "keyer_settings_fk_11.h"
+  #include "fk_11_keyer_pin_settings.h"
+  #include "fk_11_keyer_settings.h"
 #elif defined(HARDWARE_MAPLE_MINI)
-  #include "keyer_pin_settings_maple_mini.h"
-  #include "keyer_settings_maple_mini.h"
+  #include "maple_mini_keyer_pin_settings.h"
+  #include "maple_mini_keyer_settings.h"
 #elif defined(HARDWARE_GENERIC_STM32F103C)
   #include "keyer_pin_settings_generic_STM32F103C.h"
   #include "keyer_settings_generic_STM32F103C.h"
 #elif defined(HARDWARE_MORTTY)
-  #include "keyer_pin_settings_mortty.h"
-  #include "keyer_settings_mortty.h"
+  #include "mortty_keyer_pin_settings.h"
+  #include "mortty_keyer_settings.h"
 #elif defined(HARDWARE_MORTTY_REGULAR)
-  #include "keyer_pin_settings_mortty_regular.h"
-  #include "keyer_settings_mortty_regular.h"
+  #include "mortty_regular_keyer_pin_settings.h"
+  #include "mortty_regular_keyer_settings.h"
 #elif defined(HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER)
-  #include "keyer_pin_settings_mortty_regular_with_potentiometer.h"
-  #include "keyer_settings_mortty_regular_with_potentiometer.h"
+  #include "mortty_regular_with_potentiometer_keyer_pin_settings.h"
+  #include "mortty_regular_with_potentiometer_keyer_settings.h"
 #elif defined(HARDWARE_MORTTY_SO2R)
-  #include "keyer_pin_settings_mortty_so2r.h"
-  #include "keyer_settings_mortty_so2r.h"
+  #include "mortty_so2r_keyer_pin_settings.h"
+  #include "mortty_so2r_keyer_settings.h"
 #elif defined(HARDWARE_MORTTY_SO2R_WITH_POTENTIOMETER)
-  #include "keyer_pin_settings_mortty_so2r_with_potentiometer.h"
-  #include "keyer_settings_mortty_so2r_with_potentiometer.h"
+  #include "mortty_so2r_with_potentiometer_keyer_pin_settings.h"
+  #include "mortty_so2r_with_potentiometer_keyer_settings.h"
 #elif defined(HARDWARE_K5BCQ)
-  #include "keyer_pin_settings_k5bcq.h"
-  #include "keyer_settings_k5bcq.h"
+  #include "k5bcq_keyer_pin_settings.h"
+  #include "k5bcq_keyer_settings.h"
 #elif defined(HARDWARE_MEGAKEYER)
-  #include "keyer_pin_settings_megakeyer.h"
-  #include "keyer_settings_megakeyer.h"
+  #include "megakeyer_keyer_pin_settings.h"
+  #include "megakeyer_keyer_settings.h"
 #elif defined(HARDWARE_TEST_EVERYTHING)
-  #include "keyer_pin_settings_test_everything.h"
-  #include "keyer_settings_test_everything.h"
+  #include "test_everything_keyer_pin_settings.h"
+  #include "test_everything_keyer_settings.h"
 #elif defined(HARDWARE_YAACWK)
-  #include "keyer_pin_settings_yaacwk.h"
-  #include "keyer_settings_yaacwk.h"
+  #include "yaacwk_keyer_pin_settings.h"
+  #include "yaacwk_keyer_settings.h"
 #elif defined(HARDWARE_TEST)
-  #include "keyer_pin_settings_test.h"
-  #include "keyer_settings_test.h"
+  #include "test_keyer_pin_settings.h"
+  #include "test_keyer_settings.h"
 #elif defined(HARDWARE_IZ3GME)
-  #include "keyer_pin_settings_iz3gme.h"
-  #include "keyer_settings_iz3gme.h"
+  #include "iz3gme_keyer_pin_settings.h"
+  #include "iz3gme_keyer_settings.h"
 #elif defined(HARDWARE_YCCC_SO2R_MINI)
-  #include "keyer_pin_settings_yccc_so2r_mini.h"
-  #include "keyer_settings_yccc_so2r_mini.h"
+  #include "yccc_so2r_mini_keyer_pin_settings.h"
+  #include "yccc_so2r_mini_keyer_settings.h"
 #else
-  #include "keyer_pin_settings.h"
-  #include "keyer_settings.h"
+  #include "config_pin_settings.h"
+  #include "config_settings.h"
 #endif
 
 #if (paddle_left == 0) || (paddle_right == 0)
