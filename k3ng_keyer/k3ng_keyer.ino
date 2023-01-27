@@ -1404,11 +1404,15 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <FlashAsEEPROM.h>
 #else
   #include <avr/pgmspace.h>
-  #include <avr/wdt.h>
+//  #include <avr/wdt.h> zmena
   #include <EEPROM.h>
 #endif //ARDUINO_SAM_DUE
 
-#if defined(HARDWARE_OPENCWKEYER_MK2)
+
+
+#if defined(HARDWARE_OPENCWKEYER_MK3)
+  #include "keyer_features_and_options_opencwkeyer_mk3.h"
+#elif defined(HARDWARE_OPENCWKEYER_MK2)  
   #include "keyer_features_and_options_opencwkeyer_mk2.h"
 #elif defined(HARDWARE_NANOKEYER_REV_B)
   #include "keyer_features_and_options_nanokeyer_rev_b.h"
@@ -1464,7 +1468,11 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #include "keyer_dependencies.h"
 #include "keyer_debug.h"
 
-#if defined(HARDWARE_OPENCWKEYER_MK2)
+
+#if defined(HARDWARE_OPENCWKEYER_MK3)
+  #include "keyer_pin_settings_opencwkeyer_mk3.h"
+  #include "keyer_settings_opencwkeyer_mk3.h"
+#elif defined(HARDWARE_OPENCWKEYER_MK2)
   #include "keyer_pin_settings_opencwkeyer_mk2.h"
   #include "keyer_settings_opencwkeyer_mk2.h"
 #elif defined(HARDWARE_NANOKEYER_REV_B)
@@ -1532,10 +1540,11 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include "keyer_settings.h"
 #endif
 
-#if (paddle_left == 0) || (paddle_right == 0)
-  #error "You cannot define paddle_left or paddle_right as 0 to disable"
+#if !defined ARDUINO_RP2040
+  #if (paddle_left == 0) || (paddle_right == 0)
+    #error "You cannot define paddle_left or paddle_right as 0 to disable"
+  #endif
 #endif
-
 #if defined(FEATURE_BUTTONS)
   #include "src/buttonarray/buttonarray.h"
 #endif
@@ -2302,6 +2311,9 @@ void setup()
   // initialize_serial_ports();        // Goody - this is available for testing startup issues
   // initialize_debug_startup();       // Goody - this is available for testing startup issues
   // debug_blink();                    // Goody - this is available for testing startup issues
+  #if defined(ARDUINO_RP2040)
+  EEPROM.begin(1024);
+  #endif
   initialize_keyer_state();
   initialize_potentiometer();
   initialize_rotary_encoder();
@@ -6291,7 +6303,7 @@ void service_async_eeprom_write(){
       } else { // we're done
         async_eeprom_write = 0;
         last_async_eeprom_write_status = 0;
-        #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
+        #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE) || defined(ARDUINO_RP2040)
           EEPROM.commit();
         #endif
 
@@ -16342,7 +16354,7 @@ void serial_program_memory(PRIMARY_SERIAL_CLS * port_to_use)
     port_to_use->println(F("\n\rError"));
   }
 
-  #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
+  #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)|| defined(ARDUINO_RP2040)
     EEPROM.commit();
   #endif
 
@@ -17154,7 +17166,7 @@ byte play_memory(byte memory_number) {
 
 
   } //for (int y = (memory_start(memory_number)); (y < (memory_end(memory_number)+1)); y++)
-
+return 0;
 }
 #endif
 
@@ -18050,7 +18062,6 @@ void initialize_keyer_state(){
       memory_area_end = 1024; // not sure if this is a valid assumption
     #endif
   #endif
-
 }
 
 //---------------------------------------------------------------------
