@@ -12030,11 +12030,15 @@ void service_winkey(byte action) {
             #endif //DEBUG_WINKEY
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
-          case 0x09: // get cal
+          case 0x09: // get cal on WK1, unimplemented on WK2, getMajorVersion on WK3
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey:ADMIN_CMDgetcal");
             #endif //DEBUG_WINKEY
-            winkey_port_write(WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL,0);
+            #if defined(OPTION_WINKEY_2_SUPPORT)
+              winkey_port_write(WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL_WK2, 1); // Docs say this should be 0, but this is a hack for compatibility
+            #else
+              winkey_port_write(WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL_WK1, 1);
+            #endif
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
           #ifdef OPTION_WINKEY_2_SUPPORT
