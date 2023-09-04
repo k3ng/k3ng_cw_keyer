@@ -161,4 +161,3 @@ FEATURE_SIDETONE_SWITCH
   #error "Multiple pin_settings.h files included somehow..."
 
 #endif //keyer_pin_settings_h
-
