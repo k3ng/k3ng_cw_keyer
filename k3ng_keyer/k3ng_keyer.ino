@@ -1353,6 +1353,8 @@ Recent Update History
     2021.12.17.01
       Merged pull request 119 https://github.com/k3ng/k3ng_cw_keyer/pull/119/ Definable startup text (define HI_TEXT) - Thanks, ON6ZQ
 
+    2022.03.07 GM0HYY version to add St7032 LCD via I2C
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1608,6 +1610,10 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <Wire.h>
   #include "SSD1306Ascii.h"
   #include "SSD1306AsciiWire.h"
+#endif
+
+#if defined(FEATURE_LCD_ST7032)
+  #include <ST7032_asukiaaa.h>
 #endif
 
 #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
@@ -2051,6 +2057,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 #if defined(FEATURE_OLED_SSD1306)
   SSD1306AsciiWire lcd;
 #endif
+
+#if defined(FEATURE_LCD_ST7032)
+  ST7032_asukiaaa lcd;
+#endif 
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
   USB Usb;
@@ -18369,6 +18379,11 @@ void initialize_display(){
      #else
         lcd.begin(LCD_COLUMNS, LCD_ROWS);
      #endif
+    #endif
+
+    #ifdef FEATURE_LCD_ST7032
+      lcd.begin(LCD_COLUMNS, LCD_ROWS); // columns and rows
+      lcd.setContrast(30);
     #endif
     
     #ifdef FEATURE_LCD_ADAFRUIT_I2C
