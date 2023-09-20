@@ -1353,6 +1353,13 @@ Recent Update History
     2021.12.17.01
       Merged pull request 119 https://github.com/k3ng/k3ng_cw_keyer/pull/119/ Definable startup text (define HI_TEXT) - Thanks, ON6ZQ
 
+    2022.01.28.01
+      Added compiler macro to error out if paddle_left or paddle_right is defined as 0 (disabled)
+
+    2023.09.20.2100
+      Updates to allow compilation for Raspberry Pi Pico
+      Reports of my death have been greatly exagerrated  
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1381,7 +1388,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2021.12.17.01"
+#define CODE_VERSION "2022.01.28.01"
 
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
@@ -1402,6 +1409,8 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <EEPROM.h>
 #elif defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
   #include <FlashAsEEPROM.h>
+#elif defined(ARDUINO_ARCH_MBED)
+  #include <avr/pgmspace.h>
 #else
   #include <avr/pgmspace.h>
   #include <avr/wdt.h>
@@ -6231,7 +6240,7 @@ void check_ptt_tail()
 //-------------------------------------------------------------------------------------------------------
 void write_settings_to_eeprom(int initialize_eeprom) {
 
-  #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
     if (initialize_eeprom) {
       //configuration.magic_number = eeprom_magic_number;
@@ -6262,6 +6271,8 @@ void write_settings_to_eeprom(int initialize_eeprom) {
 void service_async_eeprom_write(){
 
   // This writes one byte out to EEPROM each time it is called
+
+  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
   static byte last_async_eeprom_write_status = 0;
   static int ee = 0;
@@ -6312,6 +6323,8 @@ void service_async_eeprom_write(){
     }
   }
 
+  #endif //#if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -6326,7 +6339,7 @@ int read_settings_from_eeprom() {
 
 
 
-  #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
     #if defined(DEBUG_EEPROM_READ_SETTINGS)
       debug_serial_port->println(F("read_settings_from_eeprom: start"));
@@ -6365,13 +6378,14 @@ int read_settings_from_eeprom() {
       return 1;
     }
 
-  #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #endif //#if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
   #if defined(DEBUG_EEPROM_READ_SETTINGS)
     debug_serial_port->println(F("read_settings_from_eeprom: bypassed read - no eeprom"));
   #endif
 
   return 1;
+
 
 }
 
@@ -12030,15 +12044,11 @@ void service_winkey(byte action) {
             #endif //DEBUG_WINKEY
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
-          case 0x09: // get cal on WK1, unimplemented on WK2, getMajorVersion on WK3
+          case 0x09: // get cal
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey:ADMIN_CMDgetcal");
             #endif //DEBUG_WINKEY
-            #if defined(OPTION_WINKEY_2_SUPPORT)
-              winkey_port_write(WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL_WK2, 1); // Docs say this should be 0, but this is a hack for compatibility
-            #else
-              winkey_port_write(WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL_WK1, 1);
-            #endif
+            winkey_port_write(WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL,0);
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
           #ifdef OPTION_WINKEY_2_SUPPORT
@@ -13073,8 +13083,9 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
       }
     }
   } //while (looping)
-
+  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
   if (userinput.startsWith("EEPROMDUMP")){cli_eeprom_dump(port_to_use);return;}
+  #endif //#if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
   if (userinput.startsWith("TIMING")){cli_timing_print(port_to_use);return;}
   if (userinput.startsWith("PL ")){cli_timing_command(port_to_use,userinput.substring(3),COMMAND_PL);return;}
   if (userinput.startsWith("PT ")){cli_timing_command(port_to_use,userinput.substring(3),COMMAND_PT);return;}
@@ -13383,6 +13394,7 @@ void sd_card_save_eeprom_to_file(PRIMARY_SERIAL_CLS * port_to_use,String filenam
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+#if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 void cli_eeprom_dump(PRIMARY_SERIAL_CLS * port_to_use){
 
   byte eeprom_byte_in;
@@ -13443,6 +13455,7 @@ void cli_eeprom_dump(PRIMARY_SERIAL_CLS * port_to_use){
   }
 
 }
+#endif //#if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
 //---------------------------------------------------------------------
 #ifdef FEATURE_PADDLE_ECHO
@@ -18045,7 +18058,7 @@ void initialize_keyer_state(){
      * (writable EEPROM size). The following line will give the right figure for LGT.
      */
     memory_area_end = EEPROM.size() - 1; 
-  #elif (!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))) && !defined(HARDWARE_GENERIC_STM32F103C)
+  #elif (!defined(ARDUINO_SAM_DUE) && (!defined(ARDUINO_ARCH_MBED)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))) && !defined(HARDWARE_GENERIC_STM32F103C)
     memory_area_end = EEPROM.length() - 1;
   #else
     #if defined(HARDWARE_GENERIC_STM32F103C)
