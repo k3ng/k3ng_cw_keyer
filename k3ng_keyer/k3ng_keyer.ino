@@ -1360,6 +1360,9 @@ Recent Update History
       Updates to allow compilation for Raspberry Pi Pico
       Reports of my death have been greatly exagerrated  
 
+    2023.09.21.0033
+      Additional updates for Raspberry Pi Pico compilation
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1388,7 +1391,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2022.01.28.01"
+#define CODE_VERSION "2023.09.21.0033"
 
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
@@ -1409,7 +1412,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <EEPROM.h>
 #elif defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
   #include <FlashAsEEPROM.h>
-#elif defined(ARDUINO_ARCH_MBED)
+#elif defined(ARDUINO_ARCH_MBED) || defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
   #include <avr/pgmspace.h>
 #else
   #include <avr/pgmspace.h>
@@ -6240,7 +6243,7 @@ void check_ptt_tail()
 //-------------------------------------------------------------------------------------------------------
 void write_settings_to_eeprom(int initialize_eeprom) {
 
-  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ARDUINO_RASPBERRY_PI_PICO)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
     if (initialize_eeprom) {
       //configuration.magic_number = eeprom_magic_number;
@@ -6272,7 +6275,7 @@ void service_async_eeprom_write(){
 
   // This writes one byte out to EEPROM each time it is called
 
-  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
   static byte last_async_eeprom_write_status = 0;
   static int ee = 0;
@@ -6339,7 +6342,7 @@ int read_settings_from_eeprom() {
 
 
 
-  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
     #if defined(DEBUG_EEPROM_READ_SETTINGS)
       debug_serial_port->println(F("read_settings_from_eeprom: start"));
@@ -18058,7 +18061,7 @@ void initialize_keyer_state(){
      * (writable EEPROM size). The following line will give the right figure for LGT.
      */
     memory_area_end = EEPROM.size() - 1; 
-  #elif (!defined(ARDUINO_SAM_DUE) && (!defined(ARDUINO_ARCH_MBED)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))) && !defined(HARDWARE_GENERIC_STM32F103C)
+  #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
     memory_area_end = EEPROM.length() - 1;
   #else
     #if defined(HARDWARE_GENERIC_STM32F103C)
