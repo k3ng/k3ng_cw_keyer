@@ -1363,6 +1363,9 @@ Recent Update History
     2023.09.21.0033
       Additional updates for Raspberry Pi Pico compilation
 
+    2023.09.25.2346
+      Fixed HI_TEXT compilation warning  
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -13086,7 +13089,7 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
       }
     }
   } //while (looping)
-  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
   if (userinput.startsWith("EEPROMDUMP")){cli_eeprom_dump(port_to_use);return;}
   #endif //#if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
   if (userinput.startsWith("TIMING")){cli_timing_print(port_to_use);return;}
@@ -13396,8 +13399,7 @@ void sd_card_save_eeprom_to_file(PRIMARY_SERIAL_CLS * port_to_use,String filenam
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && d!defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
 //---------------------------------------------------------------------
 
-#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
-#if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && ((!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024)))
 void cli_eeprom_dump(PRIMARY_SERIAL_CLS * port_to_use){
 
   byte eeprom_byte_in;
@@ -13458,8 +13460,7 @@ void cli_eeprom_dump(PRIMARY_SERIAL_CLS * port_to_use){
   }
 
 }
-#endif //#if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
-#endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+#endif 
 //---------------------------------------------------------------------
 #ifdef FEATURE_PADDLE_ECHO
 void service_paddle_echo()
@@ -17403,15 +17404,8 @@ int memory_end(byte memory_number) {
 
 void initialize_pins() {
 
-#if defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
   pinMode (paddle_left, INPUT_PULLUP);
   pinMode (paddle_right, INPUT_PULLUP);
-#else
-  pinMode (paddle_left, INPUT);
-  digitalWrite (paddle_left, HIGH);
-  pinMode (paddle_right, INPUT);
-  digitalWrite (paddle_right, HIGH);
-#endif //defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) sp5iou 20180329
 
   #if defined(FEATURE_CAPACITIVE_PADDLE_PINS)
     if (capactive_paddle_pin_inhibit_pin){
@@ -18454,10 +18448,13 @@ void initialize_display(){
       byte oldSideTone = configuration.sidetone_mode;
       key_tx = 0;
       configuration.sidetone_mode = SIDETONE_ON;
-      char* hi_text = HI_TEXT;
-      for (int x = 0;x < strlen(hi_text);x++){
+  
+      char hi_text[16];
+      strcpy(hi_text,HI_TEXT);
+      for (int x = 0;hi_text[x] != 0;x++){
         send_char(hi_text[x],KEYER_NORMAL);
       }
+
       configuration.sidetone_mode = oldSideTone;
       key_tx = oldKey;
     #endif //OPTION_DO_NOT_SAY_HI
@@ -22424,9 +22421,9 @@ void so2r_command() {
 
 void debug_blink(){
   #if defined(DEBUG_STARTUP_BLINKS)
-    digitalWrite(13,HIGH);
+    digitalWrite(PIN_LED,HIGH);
     delay(250);
-    digitalWrite(13,LOW);
+    digitalWrite(PIN_LED,LOW);
     delay(1000);
   #endif //DEBUG_STARTUP
 }
