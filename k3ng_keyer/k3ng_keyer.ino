@@ -1366,6 +1366,9 @@ Recent Update History
     2023.09.25.2346
       Fixed HI_TEXT compilation warning  
 
+    2023.09.27.2146
+      Experimenting with FEATURE_DUAL_MODE_KEYER_AND_TINYFSK  
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1549,6 +1552,11 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 #if (paddle_left == 0) || (paddle_right == 0)
   #error "You cannot define paddle_left or paddle_right as 0 to disable"
+#endif
+
+#if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
+  #include "TinyFSK.h"
+  uint8_t runTinyFSK = 0;
 #endif
 
 #if defined(FEATURE_BUTTONS)
@@ -2313,6 +2321,15 @@ byte async_eeprom_write = 0;
 void setup()
 {
 
+
+  #if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
+  check_run_tinyfsk_pin();
+  if (runTinyFSK){
+    TinyFSKsetup();
+  } else {
+  #endif
+
+
   initialize_pins();
   // initialize_serial_ports();        // Goody - this is available for testing startup issues
   // initialize_debug_startup();       // Goody - this is available for testing startup issues
@@ -2343,6 +2360,10 @@ void setup()
   initialize_sd_card();
   initialize_debug_startup();
 
+  #if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
+  } //if (runTinyFSK)
+  #endif
+
 }
 
 // --------------------------------------------------------------------------------------------
@@ -2351,6 +2372,13 @@ void loop()
 {
 
   // this is where the magic happens
+
+  #if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
+  if (runTinyFSK){
+    TinyFSKloop();
+  } else {
+  #endif
+
 
 
   #ifdef OPTION_WATCHDOG_TIMER
@@ -2519,6 +2547,9 @@ void loop()
 
   service_millis_rollover();
 
+  #if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
+  } //if (runTinyFSK){
+  #endif
 
 }
 
@@ -2526,6 +2557,24 @@ void loop()
 
 
 // Are you a radio artisan ?
+
+#if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
+void check_run_tinyfsk_pin(){
+
+  
+  if (pin_run_tinyfsk){
+    pinMode(pin_run_tinyfsk,INPUT_PULLUP);
+    if (digitalRead(pin_run_tinyfsk) == LOW){
+      runTinyFSK = 1;
+    }
+  }
+
+}
+#endif
+
+//-------------------------------------------------------------------------------------------------------
+
+
 
 void service_sending_pins(){
 
@@ -17657,7 +17706,7 @@ void initialize_pins() {
   }
 
   if (potentiometer_enable_pin){
-    pinMode(potentiometer_enable_pin,INPUT_PULLUP);
+    pinMode(potentiometer_enable_pin,INPUT);
   }
 
   if (pin_sending_mode_automatic){
