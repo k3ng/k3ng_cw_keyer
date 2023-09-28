@@ -74,7 +74,7 @@
 // #define OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
 #define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
 #define OPTION_WINKEY_2_SUPPORT                      // comment out to revert to Winkey version 1 emulation
-//this is removed from other features files - may depricate totally - 2016-09-28 - #define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE       // additional code to check_dit_paddle() and check_dah_paddle() to send 0xC2 status byte when paddles are hit
+#define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
 #define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
 #define OPTION_WINKEY_UCXLOG_9600_BAUD          // use this only with UCXLog configured for Winkey 9600 baud mode
 #define OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE  // use this only with UCXlog if having issues with function key macros

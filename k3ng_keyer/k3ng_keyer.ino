@@ -1369,6 +1369,9 @@ Recent Update History
     2023.09.27.2146
       Experimenting with FEATURE_DUAL_MODE_KEYER_AND_TINYFSK  
 
+    2023.09.28.1624
+      Put OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE back into all hardware profiles and enabling by default.  Not having it activated makes N1MM CQ Repeat paddle sending deactivation not work.
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1419,6 +1422,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #elif defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
   #include <FlashAsEEPROM.h>
 #elif defined(ARDUINO_ARCH_MBED) || defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+  #include <EEPROM.h>
   #include <avr/pgmspace.h>
 #else
   #include <avr/pgmspace.h>
@@ -5544,16 +5548,16 @@ void check_potentiometer()
 #ifdef FEATURE_POTENTIOMETER
 byte pot_value_wpm()
 {
-  // int pot_read = analogRead(potentiometer);
-  // byte return_value = map(pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
-  // return return_value;
-
 
   static int last_pot_read = 0;
   static byte return_value = 0;
   int pot_read = analogRead(potentiometer);
   if (abs(pot_read - last_pot_read) > potentiometer_reading_threshold ) {
-    return_value = map(pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+    #if defined(default_pot_full_ccw_reading)
+      return_value = map(pot_read, default_pot_full_ccw_reading, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+    #else
+      return_value = map(pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+    #endif
     last_pot_read = pot_read;
   }
   return return_value;
@@ -6295,7 +6299,7 @@ void check_ptt_tail()
 //-------------------------------------------------------------------------------------------------------
 void write_settings_to_eeprom(int initialize_eeprom) {
 
-  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ARDUINO_RASPBERRY_PI_PICO)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
     if (initialize_eeprom) {
       //configuration.magic_number = eeprom_magic_number;
@@ -6310,12 +6314,21 @@ void write_settings_to_eeprom(int initialize_eeprom) {
         EEPROM.write(ee++, *p++);
       }
     } else {
-
       async_eeprom_write = 1;  // initiate an asyncrhonous eeprom write
-
     }
 
   #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+
+
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(DEBUG_EEPROM)
+      debug_serial_port->println(F("write_settings_to_eeprom: ARDUINO_RASPBERRY_PI_PICO"));
+    #endif
+    EEPROM.write(0,eeprom_magic_number);
+    EEPROM.commit();
+    EEPROM.put(1, configuration);
+    EEPROM.commit();
+  #endif
 
   config_dirty = 0;
 
@@ -6394,7 +6407,7 @@ int read_settings_from_eeprom() {
 
 
 
-  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if !defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
     #if defined(DEBUG_EEPROM_READ_SETTINGS)
       debug_serial_port->println(F("read_settings_from_eeprom: start"));
@@ -6402,19 +6415,26 @@ int read_settings_from_eeprom() {
 
     if (EEPROM.read(0) == eeprom_magic_number){
 
-      byte* p = (byte*)(void*)&configuration;
-      unsigned int i;
-      int ee = 1; // starting point of configuration struct
-      for (i = 0; i < sizeof(configuration); i++){
+      #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
         #if defined(DEBUG_EEPROM_READ_SETTINGS)
-          debug_serial_port->print(F("read_settings_from_eeprom: read: i:"));
-          debug_serial_port->print(i);
-          debug_serial_port->print(F(":"));
-          debug_serial_port->print(EEPROM.read(ee));
-          debug_serial_port->println();
+          debug_serial_port->println(F("read_settings_from_eeprom: ARDUINO_RASPBERRY_PI_PICO"));
         #endif
-        *p++ = EEPROM.read(ee++);
-      }
+        EEPROM.get(1, configuration);
+      #else
+        byte* p = (byte*)(void*)&configuration;
+        unsigned int i;
+        int ee = 1; // starting point of configuration struct
+        for (i = 0; i < sizeof(configuration); i++){
+          #if defined(DEBUG_EEPROM_READ_SETTINGS)
+            debug_serial_port->print(F("read_settings_from_eeprom: read: i:"));
+            debug_serial_port->print(i);
+            debug_serial_port->print(F(":"));
+            debug_serial_port->print(EEPROM.read(ee));
+            debug_serial_port->println();
+          #endif
+          *p++ = EEPROM.read(ee++);
+        }
+      #endif
 
       #ifndef FEATURE_SO2R_BASE
         switch_to_tx_silent(configuration.current_tx);
@@ -6434,6 +6454,11 @@ int read_settings_from_eeprom() {
     }
 
   #endif //#if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+
+
+  
+
+
 
   #if defined(DEBUG_EEPROM_READ_SETTINGS)
     debug_serial_port->println(F("read_settings_from_eeprom: bypassed read - no eeprom"));
@@ -18185,6 +18210,10 @@ void initialize_watchdog(){
 //---------------------------------------------------------------------
 
 void check_eeprom_for_initialization(){
+
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO) 
+    EEPROM.begin(4096);
+  #endif
 
   // do an eeprom reset to defaults if paddles are squeezed
   if (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {

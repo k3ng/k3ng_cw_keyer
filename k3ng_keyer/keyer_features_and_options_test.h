@@ -15,7 +15,7 @@
 
 // #define FEATURE_BUTTONS
 // #define FEATURE_COMMAND_MODE
-// #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
+#define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
 // #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
 // #define FEATURE_MEMORY_MACROS
 #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
@@ -25,7 +25,7 @@
 #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 // #define FEATURE_SIDETONE_SWITCH   // adds switch control for the sidetone output. requires an external toggle switch (assigned to an arduino pin - see keyer_pin_settings.h). 
 // #define FEATURE_SIDETONE_NEWTONE      // Use the NewTone library, ~1k smaller code size than the standard tone library. Uses timer1 (pins 9 or 10)  https://bitbucket.org/teckel12/arduino-new-tone/wiki/Home
-// #define FEATURE_SERIAL_HELP
+#define FEATURE_SERIAL_HELP
 // #define FEATURE_HELL
 // #define FEATURE_PS2_KEYBOARD        // Use a PS2 keyboard to send code - Change keyboard layout (non-US) in K3NG_PS2Keyboard.h.  Additional options below.
 // #define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code - Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
@@ -75,15 +75,15 @@
 // #define FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
 // #define FEATURE_WEB_SERVER      // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
 // #define FEATURE_INTERNET_LINK   // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
-#define FEATURE_DUAL_MODE_KEYER_AND_TINYFSK
+// #define FEATURE_DUAL_MODE_KEYER_AND_TINYFSK
 
 // UNDER DEVELOPMENT
 // #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1  // Arduino Uno: sidetone_line = 9 or 10 ; Mega: sidetone_line = 11, 12, or 13 (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html )
 // #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_3  // Arduino Mega: sidetone_line = 2, 3, or 5  (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html)
 
 
-// #define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
-// #define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 
+#define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
+#define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 
                                                              //    simultaneously.  This will make Winkey emulation be the default at boot up; 
                                                              //    hold command button down at boot up to activate CLI mode
 
@@ -95,7 +95,9 @@
 // #define OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
 // #define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
 #define OPTION_WINKEY_2_SUPPORT                      // comment out to revert to Winkey version 1 emulation
-//this is removed from other features files - may depricate totally - 2016-09-28 - #define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE       // additional code to check_dit_paddle() and check_dah_paddle() to send 0xC2 status byte when paddles are hit
+#define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
+// 2016-09-28 this is removed from other features files - may depricate totally - #define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE       // additional code to check_dit_paddle() and check_dah_paddle() to send 0xC2 status byte when paddles are hit
+// 2023-09-28 re-adding as a default to all hardware profiles.  if you don't have it activated paddle interuption of CQ repeat in N1MM doesn't work
 #define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
 // #define OPTION_WINKEY_UCXLOG_9600_BAUD          // use this only with UCXLog configured for Winkey 9600 baud mode
 // #define OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE  // use this only with UCXlog if having issues with function key macros
