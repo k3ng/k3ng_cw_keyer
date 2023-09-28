@@ -492,7 +492,7 @@
 #define PRIMARY_SERIAL_PORT_BAUD 115200     // This applies only when the port is in Command Line Interface mode.  In Winkey mode it will default to 1200.
 
 #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-  #define SECONDARY_SERIAL_PORT &Serial1
+  #define SECONDARY_SERIAL_PORT &Serial1 // ARDUINO_RASPBERRY_PI_PICO_W & ARDUINO_RASPBERRY_PI_PICO is hardcoded in .ino for Serial2 (UART1) pins TX: 8 RX: 9
   #define SECONDARY_SERIAL_PORT_BAUD 115200
 #endif
 

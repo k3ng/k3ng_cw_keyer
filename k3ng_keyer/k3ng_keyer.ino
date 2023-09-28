@@ -1372,6 +1372,9 @@ Recent Update History
     2023.09.28.1624
       Put OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE back into all hardware profiles and enabling by default.  Not having it activated makes N1MM CQ Repeat paddle sending deactivation not work.
 
+    2023.09.28.2326
+      Added HARDWARE_MORTTY_PICO_OVER_USB
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1450,6 +1453,8 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include "keyer_features_and_options_generic_STM32F103C.h"
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_features_and_options_mortty.h"
+#elif defined(HARDWARE_MORTTY_PICO_OVER_USB)
+  #include "keyer_features_and_options_mortty_pico_over_usb.h"  
 #elif defined(HARDWARE_MORTTY_REGULAR)
   #include "keyer_features_and_options_mortty_regular.h"
 #elif defined(HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER)
@@ -1516,6 +1521,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #elif defined(HARDWARE_MORTTY)
   #include "keyer_pin_settings_mortty.h"
   #include "keyer_settings_mortty.h"
+#elif defined(HARDWARE_MORTTY_PICO_OVER_USB)
+  #include "keyer_pin_settings_mortty_pico_over_usb.h"
+  #include "keyer_settings_mortty_pico_over_usb.h"  
 #elif defined(HARDWARE_MORTTY_REGULAR)
   #include "keyer_pin_settings_mortty_regular.h"
   #include "keyer_settings_mortty_regular.h"
@@ -2312,6 +2320,8 @@ unsigned long millis_rollover = 0;
 
 byte async_eeprom_write = 0;
 
+
+
 /*---------------------------------------------------------------------------------------------------------
 
 
@@ -2326,6 +2336,7 @@ void setup()
 {
 
 
+
   #if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
   check_run_tinyfsk_pin();
   if (runTinyFSK){
@@ -2337,7 +2348,6 @@ void setup()
   initialize_pins();
   // initialize_serial_ports();        // Goody - this is available for testing startup issues
   // initialize_debug_startup();       // Goody - this is available for testing startup issues
-  // debug_blink();                    // Goody - this is available for testing startup issues
   initialize_keyer_state();
   initialize_potentiometer();
   initialize_rotary_encoder();
@@ -18358,8 +18368,17 @@ void initialize_serial_ports(){
     #endif //DEBUG_AUX_SERIAL_PORT
 
     #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-      secondary_serial_port = SECONDARY_SERIAL_PORT;
-      secondary_serial_port->begin(SECONDARY_SERIAL_PORT_BAUD);
+      #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+        Serial2.setRX(9);
+        Serial2.setTX(8);
+        Serial2.begin(SECONDARY_SERIAL_PORT_BAUD);
+        // Serial2.println("Hello I'm Serial2");
+        secondary_serial_port = &Serial2;
+        // secondary_serial_port = SECONDARY_SERIAL_PORT;  // this does not work, not sure why
+      #else
+        secondary_serial_port = SECONDARY_SERIAL_PORT;
+        secondary_serial_port->begin(SECONDARY_SERIAL_PORT_BAUD);
+      #endif
       #if !defined(OPTION_SUPPRESS_SERIAL_BOOT_MSG)
         secondary_serial_port->print(F("\n\rK3NG Keyer Version "));
         secondary_serial_port->write(CODE_VERSION);
