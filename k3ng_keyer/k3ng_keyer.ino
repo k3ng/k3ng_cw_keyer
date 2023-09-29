@@ -1375,6 +1375,9 @@ Recent Update History
     2023.09.28.2326
       Added HARDWARE_MORTTY_PICO_OVER_USB
 
+    2023.09.29.1326
+      HARDWARE_MORTTY_PICO_OVER_USB pins file correction
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -11322,7 +11325,7 @@ void service_winkey(byte action) {
   #endif //OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP
 
   #ifdef DEBUG_WINKEY_SEND_ERRANT_BYTE
-  byte i_sent_it = 0;
+  static byte i_sent_it = 0;
 
   if ((millis() > 30000) && (!i_sent_it)){
     winkey_port_write(30,1);
