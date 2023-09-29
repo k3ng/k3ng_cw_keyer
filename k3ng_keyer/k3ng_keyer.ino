@@ -1378,6 +1378,9 @@ Recent Update History
     2023.09.29.1326
       HARDWARE_MORTTY_PICO_OVER_USB pins file correction
 
+    2023.09.29.2043
+      FEATURE_WINKEY_EMULATION: corrected pot_full_scale_reading  
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -10643,7 +10646,7 @@ void winkey_set_pot_parm3_command (byte incoming_serial_byte) {
 
   #ifdef FEATURE_POTENTIOMETER
     #ifdef OPTION_WINKEY_2_SUPPORT
-      pot_full_scale_reading = 1031;
+      pot_full_scale_reading = 1022;
     #else //OPTION_WINKEY_2_SUPPORT
       if (incoming_serial_byte == 255) {
         pot_full_scale_reading = 1031;
