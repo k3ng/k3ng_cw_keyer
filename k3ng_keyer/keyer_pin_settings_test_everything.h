@@ -43,15 +43,25 @@
 #define so2r_rx_s 10            // Stereo receive selected (optional, set to zero if not used)
 
 #ifdef FEATURE_SO2R_SWITCHES
-  #define so2r_tx_switch A5     // TX switch, low if TX1, high if TX2
-  #define so2r_rx1_switch A4    // RX 1 switch, low if RX1, high if RX2 or stereo
-  #define so2r_rx2_switch A3    // RX 2 switch, low if RX2, high if RX1 or stereo
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+    #define so2r_tx_switch 20     // TX switch, low if TX1, high if TX2
+    #define so2r_rx1_switch 21    // RX 1 switch, low if RX1, high if RX2 or stereo
+    #define so2r_rx2_switch 22    // RX 2 switch, low if RX2, high if RX1 or stereo
+  #else
+    #define so2r_tx_switch A5     // TX switch, low if TX1, high if TX2
+    #define so2r_rx1_switch A4    // RX 1 switch, low if RX1, high if RX2 or stereo
+    #define so2r_rx2_switch A3    // RX 2 switch, low if RX2, high if RX1 or stereo
+  #endif
 #endif
 
 #define potentiometer_enable_pin 0  // if defined, the potentiometer will be enabled only when this pin is held low; set to 0 to ignore this pin
 
 #ifdef FEATURE_BUTTONS
-  #define analog_buttons_pin A1
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+    #define analog_buttons_pin 28
+  #else
+    #define analog_buttons_pin A1
+  #endif  
   #define command_mode_active_led 0
 #endif //FEATURE_BUTTONS
 
@@ -97,9 +107,15 @@
 #endif //FEATURE_ROTARY_ENCODER
 
 #ifdef FEATURE_LED_RING
-  #define led_ring_sdi    A10 //2    //Data
-  #define led_ring_clk    A9 //3    //Clock
-  #define led_ring_le     A8 //4    //Latch
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+    #define led_ring_sdi    24    //Data
+    #define led_ring_clk    25    //Clock
+    #define led_ring_le     26    //Latch
+  #else
+    #define led_ring_sdi    A10 //2    //Data
+    #define led_ring_clk    A9 //3    //Clock
+    #define led_ring_le     A8 //4    //Latch
+  #endif      
 #endif //FEATURE_LED_RING
 
 #define correct_answer_led 0
@@ -109,8 +125,12 @@
   #define ptt_interlock 0  // this pin disables PTT and TX KEY
 #endif //FEATURE_PTT_INTERLOCK
 
-#ifdef FEATURE_STRAIGHT_KEY
-  #define pin_straight_key A5 //52   // pin 52 doesn't work right when FEATURE_WEB_SERVER is active.  don't know why 2016-04-26
+#if defined(FEATURE_STRAIGHT_KEY)
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+    #define pin_straight_key 15
+  #else
+    #define pin_straight_key A5 //52   // pin 52 doesn't work right when FEATURE_WEB_SERVER is active.  don't know why 2016-04-26
+  #endif
 #endif //FEATURE_STRAIGHT_KEY
 
 // FEATURE_CW_DECODER & OPTION_CW_DECODER_GOERTZEL_AUDIO_DETECTOR

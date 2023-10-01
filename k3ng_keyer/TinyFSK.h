@@ -80,9 +80,8 @@ RPI_PICO_Timer FSKTimer(0);
 #define R2_FSK_PIN 6
 #define R2_PTT_PIN 8
 
-//EEPROM addresses to persist configuration
-#define EE_SPEED_ADDR 0
-#define EE_POLARITY_ADDR 1
+
+
 
 //Special Baudot symbols for shift
 #define LTRS_SHIFT 0x1F  //baudot letter shift byte
@@ -167,6 +166,12 @@ void echo(byte b);
 /******************************************************
      Variable declarations
 *******************************************************/
+
+//EEPROM addresses to persist configuration
+int ee_speed_addr;
+int ee_polarity_addr;
+
+
 // Mapping of ascii to baudot symbols.  This is the
 // translation table that maps an incoming ASCII byte
 // on the serial interface to a equivalent (or reasonable
@@ -380,14 +385,14 @@ void handleConfigurationCommand(byte oneByte) {
       {
         mark = HIGH;
         space = LOW;
-        //=====        EEPROM.write(EE_POLARITY_ADDR, b);
+        EEPROM.write(ee_polarity_addr, COMMAND_POLARITY_MARK_HIGH);
         break;
       }
     case (COMMAND_POLARITY_MARK_LOW):
       {
         mark = LOW;
         space = HIGH;
-        //=====        EEPROM.write(EE_POLARITY_ADDR, b);
+        EEPROM.write(ee_polarity_addr, COMMAND_POLARITY_MARK_LOW);
         break;
       }
     case (COMMAND_45BAUD):
@@ -395,7 +400,7 @@ void handleConfigurationCommand(byte oneByte) {
         baudrate = 45.45;
         FSKTIMER_INTERVAL_US = 11001;
         initTimer();
-        //=====        EEPROM.write(EE_SPEED_ADDR, b);
+        EEPROM.write(ee_speed_addr, COMMAND_45BAUD);
         break;
       }
     case (COMMAND_50BAUD):
@@ -403,7 +408,7 @@ void handleConfigurationCommand(byte oneByte) {
         baudrate = 50.0;
         FSKTIMER_INTERVAL_US = 10000L;
         initTimer();
-        //=====        EEPROM.write(EE_SPEED_ADDR, b);
+        EEPROM.write(ee_speed_addr, COMMAND_50BAUD);
         break;
       }
     case (COMMAND_75BAUD):
@@ -411,7 +416,7 @@ void handleConfigurationCommand(byte oneByte) {
         baudrate = 75.0;
         FSKTIMER_INTERVAL_US = 6666L;
         initTimer();
-        //=====        EEPROM.write(EE_SPEED_ADDR, b);
+        EEPROM.write(ee_speed_addr, COMMAND_75BAUD);
         break;
       }
     case (COMMAND_DUMP_CONFIG):
@@ -432,10 +437,9 @@ void handleConfigurationCommand(byte oneByte) {
 * Loads speed and polarity from EEPROM 
 */
 void eeLoad() {
-  //  byte speedChar = EEPROM.read(EE_SPEED_ADDR);
-  byte speedChar = COMMAND_45BAUD;
-  //  byte polarity  = EEPROM.read(EE_POLARITY_ADDR);
-  byte polarity = COMMAND_POLARITY_MARK_LOW;
+
+  byte speedChar = EEPROM.read(ee_speed_addr);
+  byte polarity  = EEPROM.read(ee_polarity_addr);
 
   if (polarity == COMMAND_POLARITY_MARK_LOW) {
     mark = LOW;
@@ -779,6 +783,34 @@ Main execution
 * configuration from EEPROM.
 */
 void TinyFSKsetup() {  // ==============================================================================================
+  
+
+
+
+  #ifdef __LGT8FX8P__
+    /* LGT chip emulates EEPROM at the cost of giving up twice the space in program flash memory.
+     * Unortunately, the last 4 bytes of every 1KB block are read-only. Therefore 
+     * EEPROM.length() would return 1024 (readable EEPROM size), while EEPROM.size() returns 1020
+     * (writable EEPROM size). The following line will give the right figure for LGT.
+     */
+    ee_speed_addr = EEPROM.size() - 1; 
+    ee_polarity_addr = EEPROM.size() - 2; 
+  #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+    ee_speed_addr = EEPROM.length() - 1; 
+    ee_polarity_addr = EEPROM.length() - 2; 
+  #elif defined(HARDWARE_GENERIC_STM32F103C)
+    ee_speed_addr = 252; 
+    ee_polarity_addr = 253;   
+  #elif defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+    ee_speed_addr = 4094; 
+    ee_polarity_addr = 4095;     
+  #else
+    // assume eeprom size of 1024 and hope for the best
+    ee_speed_addr = 1022; 
+    ee_polarity_addr = 1023;  
+  #endif
+
+
   Serial.begin(serialSpeed);
   while (!Serial) {
     ;  // wait for serial port to connect. Needed for Leonardo only

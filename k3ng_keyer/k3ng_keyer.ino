@@ -1381,6 +1381,10 @@ Recent Update History
     2023.09.29.2043
       FEATURE_WINKEY_EMULATION: corrected pot_full_scale_reading  
 
+    2023.10.01.1410
+      FEATURE_DUAL_MODE_KEYER_AND_TINYFSK: eeprom should be working now
+      Raspberry Pi Pico now supported for everything except PS2 keyboard and sleep
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -1587,7 +1591,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #define noTone noNewTone
 #endif //FEATURE_SIDETONE_NEWTONE
 
-#if defined(FEATURE_SLEEP)
+#if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
   #include <avr/sleep.h>  // It should be different library for ARM sp5iou
 #endif
 
@@ -2394,14 +2398,12 @@ void loop()
   // this is where the magic happens
 
   #if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
-  if (runTinyFSK){
-    TinyFSKloop();
-  } else {
+    if (runTinyFSK){
+      TinyFSKloop();
+    } else {
   #endif
 
-
-
-  #ifdef OPTION_WATCHDOG_TIMER
+  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
     wdt_reset();
   #endif  //OPTION_WATCHDOG_TIMER
 
@@ -2428,7 +2430,7 @@ void loop()
           check_serial();
         #endif
 
-        #ifdef OPTION_WATCHDOG_TIMER
+        #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
           wdt_reset();
         #endif                                                                      // OPTION_WATCHDOG_TIMER
 
@@ -2499,7 +2501,7 @@ void loop()
       update_led_ring();
     #endif
 
-    #ifdef FEATURE_SLEEP
+    #if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
       check_sleep();
     #endif
 
@@ -3457,7 +3459,7 @@ void wakeup() {
 #endif //FEATURE_SLEEP
 */
 
-#ifdef FEATURE_SLEEP     // Code contributed by Graeme, ZL2APV 2016-01-18
+#if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)     // Code contributed by Graeme, ZL2APV 2016-01-18
 void wakeup() {
   sleep_disable();
   detachInterrupt (0);
@@ -3514,7 +3516,7 @@ void check_sleep(){
 */
 
 
-#ifdef FEATURE_SLEEP   // Code contributed by Graeme, ZL2APV  2016-01-18
+#if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)   // Code contributed by Graeme, ZL2APV  2016-01-18
 void check_sleep(){
 
   if ((millis() - last_activity_time) > ((unsigned long)go_to_sleep_inactivity_time*60000)){
@@ -7119,7 +7121,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
         }
       #endif //FEATURE_INTERNET_LINK
 
-      #if defined(OPTION_WATCHDOG_TIMER)
+      #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
         wdt_reset();
       #endif  //OPTION_WATCHDOG_TIMER
 
@@ -7370,7 +7372,7 @@ long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 
   while (looping) {
 
-    #ifdef OPTION_WATCHDOG_TIMER
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -7468,7 +7470,7 @@ void command_mode() {
     debug_serial_port->println(F("command_mode: entering"));
   #endif
 
-  #ifdef OPTION_WATCHDOG_TIMER
+  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
     wdt_disable();
   #endif //OPTION_WATCHDOG_TIMER
 
@@ -8229,7 +8231,7 @@ void command_mode() {
     paddle_echo_buffer = 0;
   #endif
 
-  #ifdef OPTION_WATCHDOG_TIMER
+  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
     wdt_enable(WDTO_4S);
   #endif //OPTION_WATCHDOG_TIMER
 	
@@ -8645,7 +8647,7 @@ void command_keying_compensation_adjust() {
     }
 
 
-    #ifdef OPTION_WATCHDOG_TIMER
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -8687,7 +8689,7 @@ void command_dah_to_dit_ratio_adjust() {
     }
 
 
-    #ifdef OPTION_WATCHDOG_TIMER
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -8728,7 +8730,7 @@ void command_weighting_adjust() {
       looping = 0;
     }
 
-    #ifdef OPTION_WATCHDOG_TIMER
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -8766,7 +8768,7 @@ void command_tuning_mode() {
   key_tx = 1;
   while (looping) {
 
-    #ifdef OPTION_WATCHDOG_TIMER
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -8898,7 +8900,7 @@ void command_sidetone_freq_adj() {
       looping = 0;
     }
 
-    #ifdef OPTION_WATCHDOG_TIMER
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -8974,7 +8976,7 @@ void command_speed_mode(byte mode) {
       looping = 0;
     }
 
-    #ifdef OPTION_WATCHDOG_TIMER
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -9566,7 +9568,7 @@ void send_the_dits_and_dahs(char const * cw_to_send){
       #endif
     #endif
 
-    #ifdef OPTION_WATCHDOG_TIMER
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -13388,7 +13390,7 @@ void sd_card_clear_log_file(PRIMARY_SERIAL_CLS * port_to_use,String filename) {
   sd_card_log_state = SD_CARD_LOG_NOT_OPEN;
   if (!sdfile){
     port_to_use->println(F("Unable to open file "));
-    sd_card_state = SD_CARD_ERROR;
+    sd_card_state = SD_CARD_ERROR_;
     sd_card_log_state = SD_CARD_LOG_ERROR;
   }
   sdlogfile.close();
@@ -17632,7 +17634,7 @@ void initialize_pins() {
     digitalWrite(compression_detection_pin,LOW);
   #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
 
-  #if defined(FEATURE_SLEEP)
+  #if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
     if (keyer_awake){
       pinMode(keyer_awake,OUTPUT);
       digitalWrite(keyer_awake,KEYER_AWAKE_PIN_AWAKE_STATE);
@@ -18138,20 +18140,39 @@ void initialize_keyer_state(){
     switch_to_tx_silent(1);
   #endif
 
-  #ifdef __LGT8FX8P__
-    /* LGT chip emulates EEPROM at the cost of giving up twice the space in program flash memory.
-     * Unortunately, the last 4 bytes of every 1KB block are read-only. Therefore 
-     * EEPROM.length() would return 1024 (readable EEPROM size), while EEPROM.size() returns 1020
-     * (writable EEPROM size). The following line will give the right figure for LGT.
-     */
-    memory_area_end = EEPROM.size() - 1; 
-  #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
-    memory_area_end = EEPROM.length() - 1;
-  #else
-    #if defined(HARDWARE_GENERIC_STM32F103C)
-      memory_area_end = 254;
+  #if !defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
+    #ifdef __LGT8FX8P__
+      /* LGT chip emulates EEPROM at the cost of giving up twice the space in program flash memory.
+      * Unortunately, the last 4 bytes of every 1KB block are read-only. Therefore 
+      * EEPROM.length() would return 1024 (readable EEPROM size), while EEPROM.size() returns 1020
+      * (writable EEPROM size). The following line will give the right figure for LGT.
+      */
+      memory_area_end = EEPROM.size() - 1; 
+    #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+      memory_area_end = EEPROM.length() - 1;
     #else
-      memory_area_end = 1024; // not sure if this is a valid assumption
+      #if defined(HARDWARE_GENERIC_STM32F103C)
+        memory_area_end = 254;
+      #else
+        memory_area_end = 1024; // not sure if this is a valid assumption
+      #endif
+    #endif
+  #else
+    #ifdef __LGT8FX8P__
+      /* LGT chip emulates EEPROM at the cost of giving up twice the space in program flash memory.
+      * Unortunately, the last 4 bytes of every 1KB block are read-only. Therefore 
+      * EEPROM.length() would return 1024 (readable EEPROM size), while EEPROM.size() returns 1020
+      * (writable EEPROM size). The following line will give the right figure for LGT.
+      */
+      memory_area_end = EEPROM.size() - 1 - 2; 
+    #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+      memory_area_end = EEPROM.length() - 1 - 2;
+    #else
+      #if defined(HARDWARE_GENERIC_STM32F103C)
+        memory_area_end = 254 - 2;
+      #else
+        memory_area_end = 1024 - 2; // not sure if 1024 is a valid assumption
+      #endif
     #endif
   #endif
 
@@ -18217,7 +18238,7 @@ void initialize_default_modes(){
 
 void initialize_watchdog(){
 
-  #ifdef OPTION_WATCHDOG_TIMER
+  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
     wdt_enable(WDTO_4S);
   #endif //OPTION_WATCHDOG_TIMER
 
@@ -18594,7 +18615,7 @@ void blink_ptt_dits_and_dahs(char const * cw_to_send){
     }
 
 
-    #ifdef OPTION_WATCHDOG_TIMER
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -20332,7 +20353,7 @@ void web_print_page_about(EthernetClient client){
   web_client_println(client,CODE_VERSION);
   web_client_println(client,"<br>");
 
-  #if !defined(HARDWARE_GENERIC_STM32F103C)
+  #if !defined(HARDWARE_GENERIC_STM32F103C) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
     void* HP = malloc(4);
     if (HP){
       free (HP);
@@ -22044,7 +22065,7 @@ void service_sd_card(){
     if (sdfile){
       sd_card_state = SD_CARD_AVAILABLE_BEACON_FILE_RUNNING;
     } else {
-      sd_card_state = SD_CARD_ERROR;
+      sd_card_state = SD_CARD_ERROR_;
     }
   }
 
