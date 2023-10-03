@@ -385,7 +385,7 @@ void handleConfigurationCommand(byte oneByte) {
       {
         mark = HIGH;
         space = LOW;
-        EEPROM.write(ee_polarity_addr, COMMAND_POLARITY_MARK_HIGH);
+        EEPROM.write(ee_polarity_addr, COMMAND_POLARITY_MARK_HIGH);        
         break;
       }
     case (COMMAND_POLARITY_MARK_LOW):
@@ -429,6 +429,9 @@ void handleConfigurationCommand(byte oneByte) {
         Serial.write("\nNot a recognized command. Exiting configuration mode.\n");
       }
   }
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO) 
+    EEPROM.commit();
+  #endif
   displayConfiguration();
   configurationMode = false;
 }
@@ -803,7 +806,8 @@ void TinyFSKsetup() {  // ======================================================
     ee_polarity_addr = 253;   
   #elif defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
     ee_speed_addr = 4094; 
-    ee_polarity_addr = 4095;     
+    ee_polarity_addr = 4095;   
+    EEPROM.begin(4096);  
   #else
     // assume eeprom size of 1024 and hope for the best
     ee_speed_addr = 1022; 

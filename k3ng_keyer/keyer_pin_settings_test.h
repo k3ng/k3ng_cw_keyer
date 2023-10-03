@@ -184,7 +184,10 @@ FEATURE_SIDETONE_SWITCH
 #define pin_sending_mode_automatic 0  // goes HIGH when keyer is sending code automatically
 #define pin_sending_mode_manual 0     // goes HIGH when keyer is sending code manually (i.e. the paddle or straight key)
 
-#define pin_run_tinyfsk 0  // assert this pin HIGH at boot up to go into TinyFSK mode
+//FEATURE_DUAL_MODE_KEYER_AND_TINYFSK
+#define pin_run_tinyfsk 0  // assert this pin HIGH at boot up to go into TinyFSK mode, LOW to go into keyer mode
+#define pin_rtty_running 0 // output - goes HIGH when TinyFSK is running
+#define pin_keyer_running 0  // output - goes HIGH when Keyer is running
 
 #else
 

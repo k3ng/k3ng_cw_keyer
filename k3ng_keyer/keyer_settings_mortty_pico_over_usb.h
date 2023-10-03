@@ -30,7 +30,7 @@
 #define default_length_wordspace 7
 #define default_keying_compensation 0    // number of milliseconds to extend all dits and dahs - for QSK on boatanchors
 #define default_first_extension_time 0   // number of milliseconds to extend first sent dit or dah
-#define default_pot_full_scale_reading 1031 //===== 1023
+#define default_pot_full_scale_reading 1022
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
@@ -64,13 +64,18 @@
 #define cli_straight_key_echo_on_at_boot 1
 #define tx_key_dit_and_dah_pins_active_state HIGH
 #define tx_key_dit_and_dah_pins_inactive_state LOW
-#define potentiometer_check_interval_ms 0	//=====150
+#define potentiometer_check_interval_ms 150
 #define potentiometer_reading_threshold 1 
 #define default_paddle_interruption_quiet_time_element_lengths 0
 #define default_wordsworth_wordspace 6
 #define default_wordsworth_repetition 1
 #define serial_program_memory_buffer_size 500
 #define eeprom_write_time_ms 30000
+
+//FEATURE_DUAL_MODE_KEYER_AND_TINYFSK
+#define pin_run_tinyfsk 0  // assert this pin HIGH at boot up to go into TinyFSK mode, LOW to go into keyer mode
+#define pin_rtty_running 0 // output - goes HIGH when TinyFSK is running
+#define pin_keyer_running 0  // output - goes HIGH when Keyer is running
 
 #ifdef FEATURE_BUTTONS
   #define analog_buttons_number_of_buttons 4

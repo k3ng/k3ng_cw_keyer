@@ -1385,6 +1385,11 @@ Recent Update History
       FEATURE_DUAL_MODE_KEYER_AND_TINYFSK: eeprom should be working now
       Raspberry Pi Pico now supported for everything except PS2 keyboard and sleep
 
+    2023.10.03.2351
+      More work on FEATURE_DUAL_MODE_KEYER_AND_TINYFSK
+
+  qwerty
+
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
 
   Support: https://groups.io/g/radioartisan  ( Please do not email K3NG directly for support.  Thanks )
@@ -2585,9 +2590,29 @@ void check_run_tinyfsk_pin(){
 
   
   if (pin_run_tinyfsk){
+    if (pin_rtty_running){
+      pinMode(pin_rtty_running,OUTPUT);
+    }
+    if (pin_keyer_running){
+      pinMode(pin_keyer_running,OUTPUT);
+    }    
     pinMode(pin_run_tinyfsk,INPUT_PULLUP);
     if (digitalRead(pin_run_tinyfsk) == LOW){
       runTinyFSK = 1;
+      if (pin_rtty_running){
+        digitalWrite(pin_rtty_running,HIGH);
+      }
+      if (pin_keyer_running){
+        digitalWrite(pin_keyer_running,LOW);
+      }   
+    } else {
+      runTinyFSK = 0;
+      if (pin_rtty_running){
+        digitalWrite(pin_rtty_running,LOW);
+      }
+      if (pin_keyer_running){
+        digitalWrite(pin_keyer_running,HIGH);
+      }   
     }
   }
 
