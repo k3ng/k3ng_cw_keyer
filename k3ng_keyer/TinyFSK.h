@@ -522,7 +522,7 @@ void displayConfigurationPrompt() {
 void displayConfiguration() {
   Serial.write("\nBased on TinyFSK by K0SM v");
   Serial.write(VERSION);
-Serial.write("\nPorted to Pico-W by K8UT v");
+  Serial.write("\nPorted to Pico-W by K8UT v");
   Serial.write(VERSION_pico);
 
   Serial.write("\nCurrent configuration:\n");
@@ -826,7 +826,7 @@ void TinyFSKsetup() {  // ======================================================
   pinMode(R2_FSK_PIN, OUTPUT);
   pinMode(R2_PTT_PIN, OUTPUT);
 
-  //=====  eeLoad();
+  eeLoad();
   displayConfiguration();
 
   // start the half-bit timer.
