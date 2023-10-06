@@ -1391,6 +1391,9 @@ Recent Update History
     2023.10.04.2255
       FEATURE_DUAL_MODE_KEYER_AND_TINYFSK: fixed issue with eeprom config load
 
+    2023.10.06.1053
+      FEATURE_INTERNET_LINK: Fix lock up related to initialization order (Thanks, SM3GSJ Roger)
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1421,7 +1424,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2023.10.04.2255"
+#define CODE_VERSION "2023.10.06.1053"
 
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
@@ -2385,10 +2388,10 @@ void setup()
   initialize_ps2_keyboard();
   initialize_usb();
   initialize_cw_keyboard();
-  initialize_display();
   initialize_ethernet();
   initialize_udp();
   initialize_web_server();
+  initialize_display();
   initialize_sd_card();
   initialize_debug_startup();
 
