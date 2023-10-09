@@ -1393,6 +1393,9 @@ Recent Update History
 
     2023.10.06.1053
       FEATURE_INTERNET_LINK: Fix lock up related to initialization order (Thanks, SM3GSJ Roger)
+    
+    2023.10.09.2308
+      FEATURE_WINKEY_EMULATION: Now expect three parameters from deprecated Paddle A2D command
 
   qwerty
 
@@ -12133,7 +12136,11 @@ void service_winkey(byte action) {
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey:ADMIN_CMD hostclose");
             #endif //DEBUG_WINKEY
-            beep_boop();
+            #if defined(OPTION_WINKEY_BLINK_PTT_ON_HOST_OPEN)
+              blink_ptt_dits_and_dahs("--");
+            #else
+              boop_beep();
+            #endif
             config_dirty = 1;
             #if defined(OPTION_WINKEY_2_SUPPORT) && !defined(OPTION_WINKEY_2_HOST_CLOSE_NO_SERIAL_PORT_RESET)
               primary_serial_port->end();
@@ -12148,7 +12155,8 @@ void service_winkey(byte action) {
             break;
           case 0x05: // paddle A2D
             winkey_port_write(WINKEY_RETURN_THIS_FOR_ADMIN_PADDLE_A2D,0);
-            winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+            // winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+            winkey_status = WINKEY_ADMIN_PADDLE_A2D_PARM_1;
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey:ADMIN_CMD paddleA2D");
             #endif //DEBUG_WINKEY
@@ -12402,6 +12410,26 @@ void service_winkey(byte action) {
         winkey_sidetone_freq_command(incoming_serial_byte);
         winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
       }
+
+      if (winkey_status ==  WINKEY_ADMIN_PADDLE_A2D_PARM_3) {
+        #ifdef DEBUG_WINKEY
+          debug_serial_port->println("service_winkey:ADMIN_COMMAND WINKEY_ADMIN_PADDLE_A2D_PARM_3 byte");
+        #endif //DEBUG_WINKEY         
+        winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
+      }    
+
+      if (winkey_status ==  WINKEY_ADMIN_PADDLE_A2D_PARM_2) {
+        #ifdef DEBUG_WINKEY
+          debug_serial_port->println("service_winkey:ADMIN_COMMAND WINKEY_ADMIN_PADDLE_A2D_PARM_2 byte");
+        #endif //DEBUG_WINKEY                
+        winkey_status = WINKEY_ADMIN_PADDLE_A2D_PARM_3;
+      }      
+      if (winkey_status ==  WINKEY_ADMIN_PADDLE_A2D_PARM_1) {
+        winkey_status = WINKEY_ADMIN_PADDLE_A2D_PARM_2;
+        #ifdef DEBUG_WINKEY
+          debug_serial_port->println("service_winkey:ADMIN_COMMAND WINKEY_ADMIN_PADDLE_A2D_PARM_1 byte");
+        #endif //DEBUG_WINKEY        
+      }      
 
     } // else (winkey_status == WINKEY_NO_COMMAND_IN_PROGRESS)
   }  // if (action == SERVICE_SERIAL_BYTE
