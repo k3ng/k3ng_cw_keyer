@@ -1427,7 +1427,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2023.10.06.1053"
+#define CODE_VERSION "2023.10.09.2308"
 
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
