@@ -76,6 +76,7 @@
 // #define FEATURE_WEB_SERVER      // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
 // #define FEATURE_INTERNET_LINK   // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
 // #define FEATURE_DUAL_MODE_KEYER_AND_TINYFSK // Runs on Raspberry Pi Pico
+// #define FEATURE_AUDIOPWMSINEWAVE // Raspberry Pi Pico hardware only
 
 // UNDER DEVELOPMENT
 // #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1  // Arduino Uno: sidetone_line = 9 or 10 ; Mega: sidetone_line = 11, 12, or 13 (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html )

@@ -1,5 +1,3 @@
-
-
 /*
 
  K3NG Arduino CW Keyer
@@ -1397,6 +1395,9 @@ Recent Update History
     2023.10.09.2308
       FEATURE_WINKEY_EMULATION: Now expect three parameters from deprecated Paddle A2D command
 
+    2023.10.28.2304
+      FEATURE_AUDIOPWMSINEWAVE for Raspberry Pi Pico 
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1427,7 +1428,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2023.10.09.2308"
+#define CODE_VERSION "2023.10.28.2304"
 
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
@@ -1706,6 +1707,14 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <SPI.h>
   #include <SD.h>
 #endif //FEATURE_SD_CARD_SUPPORT
+
+#if defined(FEATURE_AUDIOPWMSINEWAVE)
+  #include "AudioPWMSineWave.h"
+  #define tone   PWMTone
+  #define noTone noPWMTone
+#endif
+
+
 
 #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
   extern uint32_t __get_MSP(void);
@@ -7910,7 +7919,6 @@ void command_mode() {
           config_dirty = 1;
           break;
         case 2212: // Q - set keying compensation
-//zzzzzz
           command_keying_compensation_adjust();
           break;
 
@@ -9451,11 +9459,11 @@ void beep()
 {
   #if !defined(OPTION_SIDETONE_DIGITAL_OUTPUT_NO_SQUARE_WAVE)
     // #if defined(FEATURE_SINEWAVE_SIDETONE)
-    //   tone(sidetone_line, hz_high_beep);
-    //   delay(200);
-    //   noTone(sidetone_line);
+      tone(sidetone_line, hz_high_beep);
+      delay(200);
+      noTone(sidetone_line);
     // #else
-      tone(sidetone_line, hz_high_beep, 200);
+    //  tone(sidetone_line, hz_high_beep, 200);
     // #endif
   #else
     if (sidetone_line) {
