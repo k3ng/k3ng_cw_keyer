@@ -1396,7 +1396,10 @@ Recent Update History
       FEATURE_WINKEY_EMULATION: Now expect three parameters from deprecated Paddle A2D command
 
     2023.10.28.2304
-      FEATURE_AUDIOPWMSINEWAVE for Raspberry Pi Pico 
+      FEATURE_AUDIOPWMSINEWAVE for Raspberry Pi Pico
+      
+    2024.02.17.1400
+      Fixed issues found by swalberg ( https://github.com/k3ng/k3ng_cw_keyer/commit/e79277672f4c04dfeeef5bfb9c82e384b59f32c4#r134909644 ).  Thanks!
 
   qwerty
 
@@ -1428,7 +1431,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2023.10.28.2304"
+#define CODE_VERSION "2024.02.17.1400"
 
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
@@ -12189,11 +12192,15 @@ void service_winkey(byte action) {
             #endif //DEBUG_WINKEY
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
-          case 0x09: // get cal
+          case 0x09: // get cal on WK1, unimplemented on WK2, getMajorVersion on WK3
             #ifdef DEBUG_WINKEY
               debug_serial_port->println("service_winkey:ADMIN_CMDgetcal");
             #endif //DEBUG_WINKEY
-            winkey_port_write(WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL,0);
+            #if defined(OPTION_WINKEY_2_SUPPORT)
+              winkey_port_write(WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL_WK2, 1); // Docs say this should be 0, but this is a hack for compatibility
+            #else
+              winkey_port_write(WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL_WK1, 1);
+            #endif
             winkey_status = WINKEY_NO_COMMAND_IN_PROGRESS;
             break;
           #ifdef OPTION_WINKEY_2_SUPPORT
