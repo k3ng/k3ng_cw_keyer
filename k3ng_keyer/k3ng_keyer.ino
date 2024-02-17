@@ -1401,6 +1401,10 @@ Recent Update History
     2024.02.17.1400
       Fixed issues found by swalberg ( https://github.com/k3ng/k3ng_cw_keyer/commit/e79277672f4c04dfeeef5bfb9c82e384b59f32c4#r134909644 ).  Thanks!
 
+    2024.02.17.1600
+      OPTION_WORDSWORTH_POLISH - Polish CW training text from Piotr, SP2BPD.  Thanks!
+      Straight key capability for CW training Piotr, SP2BPD.  Thanks!
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1431,7 +1435,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2024.02.17.1400"
+#define CODE_VERSION "2024.02.17.1600"
 
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
@@ -2284,10 +2288,12 @@ unsigned long millis_rollover = 0;
   byte check_serial_override = 0;
   #if defined(OPTION_WORDSWORTH_CZECH)
     #include "keyer_training_text_czech.h"
-  #elif defined(OPTION_WORDSWORTH_DEUTCSH)
+  #elif defined(OPTION_WORDSWORTH_DEUTSCH)
     #include "keyer_training_text_deutsch.h"
   #elif defined(OPTION_WORDSWORTH_NORSK)
     #include "keyer_training_text_norsk.h"
+  #elif defined(OPTION_WORDSWORTH_POLISH)
+    #include "keyer_training_text_polish.h"    
   #else
     #include "keyer_training_text_english.h"
   #endif
@@ -14925,6 +14931,17 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use, byte pract
           paddle_hit = 0;
           // TODO - print it to serial and lcd
         }
+
+        // code from Piotr, SP2BPD
+        #if defined(FEATURE_STRAIGHT_KEY)
+          long ext_key = service_straight_key();
+          if (ext_key != 0){
+            incoming_char = convert_cw_number_to_ascii(ext_key);
+            user_sent_cw.concat(incoming_char);
+            cw_char = 0;
+          }
+        #endif
+        // ------
 
         // do we have all the characters from the user? - if so, get out of user_send_loop
         if ((user_sent_cw.length() >= cw_to_send_to_user.length()) || ((progressive_step_counter < 255) && (user_sent_cw.length() == progressive_step_counter))) {

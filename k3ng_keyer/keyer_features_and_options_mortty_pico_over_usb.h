@@ -108,6 +108,7 @@
 // #define OPTION_WORDSWORTH_CZECH
 // #define OPTION_WORDSWORTH_DEUTSCH
 // #define OPTION_WORDSWORTH_NORSK
+// #define OPTION_WORDSWORTH_POLISH
 
 #define OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
 // #define OPTION_NO_ULTIMATIC // reduce memory usage by removing ultimatic code.
