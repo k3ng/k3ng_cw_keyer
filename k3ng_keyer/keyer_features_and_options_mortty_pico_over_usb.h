@@ -121,3 +121,4 @@
 // #define OPTION_BEACON_MODE_PTT_TAIL_TIME             // adds the ptt tail time to each playing of memory 1 in beacon mode
 
 // #define OPTION_WINKEY_PROSIGN_COMPATIBILITY  // Additional character mappings to support K1EL Winkey emulation prosigns
+#define FEATURE_DUAL_MODE_KEYER_AND_TINYFSK // Mortty_v5 dual mode (CW Keyer, TinyFSK RTTY) support

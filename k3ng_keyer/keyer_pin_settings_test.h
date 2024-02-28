@@ -14,18 +14,18 @@
 // Raspbery Pi Pico: paddle_right = 3    sidetone_line = 6
 
 //Mega test Jig / Standard Pins
-// #define paddle_left 2
-// #define paddle_right 5
-// #define sidetone_line 4
-// #define potentiometer A0 
-// #define ptt_tx_1 13              // PTT ("push to talk") lines
+#define paddle_left 2
+#define paddle_right 5
+#define sidetone_line 4
+#define potentiometer A0 
+#define ptt_tx_1 13              // PTT ("push to talk") lines
 
 //Raspberry Pi Pico Test Jig
-#define paddle_left 2
-#define paddle_right 3
-#define sidetone_line 15
-#define potentiometer 26
-#define ptt_tx_1 0              // PTT ("push to talk") lines
+// #define paddle_left 2
+// #define paddle_right 3
+// #define sidetone_line 15
+// #define potentiometer 26
+// #define ptt_tx_1 0              // PTT ("push to talk") lines
 
 #define tx_key_line_1 11       // (high = key down/tx on)
 #define tx_key_line_2 0

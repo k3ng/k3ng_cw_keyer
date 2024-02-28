@@ -1405,6 +1405,9 @@ Recent Update History
       OPTION_WORDSWORTH_POLISH - Polish CW training text from Piotr, SP2BPD.  Thanks!
       Straight key capability for CW training Piotr, SP2BPD.  Thanks!
 
+    2024.02.27.2314
+      HARDWARE_MORTTY_PICO_OVER_USB - Updated for Mortty v5
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1435,7 +1438,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2024.02.17.1600"
+#define CODE_VERSION "2024.02.27.2314"
 
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
@@ -2380,7 +2383,7 @@ void setup()
 
 
   #if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
-  check_run_tinyfsk_pin();
+  check_run_tinyfsk_pin(); // read Mortty+v5 CW<->RTTY slide switch
   if (runTinyFSK){
     TinyFSKsetup();
   } else {
@@ -2419,6 +2422,9 @@ void setup()
   #if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
   } //if (runTinyFSK)
   #endif
+
+  initialize_audiopwmsinewave();
+
 
 }
 
@@ -2609,8 +2615,31 @@ void loop()
 
 // Subroutines --------------------------------------------------------------------------------------------
 
-
 // Are you a radio artisan ?
+
+void initialize_audiopwmsinewave(){
+
+  #if defined(FEATURE_AUDIOPWMSINEWAVE) // Raspberry Pi Pico hardware only
+    // // SIDETONE -  define the PWM ouput pin, frequency and dutyCycle
+    RPI_PICO_Timer timerSidetone(0);
+    sidetoneCarrierHz = 40000;  // frequency in Hz - 1000 = 1 kilohertz. even multiple of 20 slices
+    sidetoneDutyCycle = 50000;  // dutyCycle = real_dutyCycle * 1000, dutyCycle 50% = 50000;  USE 5?4? DIGITS: "0000" == zero
+    PWM_Sidetone = new RP2040_PWM(pin_Sidetone, sidetoneCarrierHz, false);
+    if (PWM_Sidetone) {
+      //   Serial.print("Defining PWM_Sidetone OK, = ");
+      //   Serial.print(sidetoneCarrierHz);
+      //   Serial.println(" slices per each Sidetone audio cycle");
+      PWM_Sidetone->setPWM_Int(pin_Sidetone, sidetoneCarrierHz, sidetoneDutyCycle);    
+      isSidetoneON = false; // launch with sideTone == OFF
+    } else {
+      Serial.println("Defining PWM_Sidetone instance FAIL");
+    }  // end of Sidetone definition ---------------
+  #endif
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
 
 #if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
 void check_run_tinyfsk_pin(){
@@ -2896,9 +2925,10 @@ void service_keypad(){
 
 //-------------------------------------------------------------------------------------------------------
 
-#ifdef FEATURE_STRAIGHT_KEY
+#if defined(FEATURE_STRAIGHT_KEY)
   long service_straight_key(){
 
+    long decode_character = 0;
     static byte last_straight_key_state = 0;
 
     if (digitalRead(pin_straight_key) == STRAIGHT_KEY_ACTIVE_STATE){
@@ -2906,13 +2936,10 @@ void service_keypad(){
         sending_mode = MANUAL_SENDING;
         tx_and_sidetone_key(1);
         last_straight_key_state = 1;
-
-
         #ifdef FEATURE_MEMORIES
           clear_send_buffer();
           repeat_memory = 255;
         #endif
-
       }
     } else {
       if (last_straight_key_state){
@@ -2922,9 +2949,7 @@ void service_keypad(){
       }
     }
 
-
   #if defined(FEATURE_STRAIGHT_KEY_DECODE)
-
     static unsigned long last_transition_time = 0;
     static unsigned long last_decode_time = 0;
     static byte last_state = 0;
@@ -2935,10 +2960,8 @@ void service_keypad(){
     static int no_tone_count = 0;
     static int tone_count = 0;
     byte decode_it_flag = 0;
-
     int element_duration = 0;
     static float decoder_wpm = configuration.wpm;
-    long decode_character = 0;
     static byte space_sent = 0;
     #if defined(FEATURE_COMMAND_LINE_INTERFACE) && defined(FEATURE_STRAIGHT_KEY_ECHO)
       static byte screen_column = 0;
@@ -2951,12 +2974,10 @@ void service_keypad(){
       static byte cw_keyboard_backspace_flag = 0;
     #endif //defined(FEATURE_CW_COMPUTER_KEYBOARD)
 
-
-    if  (last_transition_time == 0) {
+    if (last_transition_time == 0){
       if (last_straight_key_state == 1) {  // is this our first tone?
         last_transition_time = millis();
         last_state = 1;
-
         #ifdef FEATURE_SLEEP
           last_activity_time = millis();
         #endif //FEATURE_SLEEP
@@ -2966,7 +2987,7 @@ void service_keypad(){
 
       } else {
 
-          if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))) { // should we send a space?
+          if ((last_decode_time > 0) && (!space_sent) && ((millis() - last_decode_time) > ((1200/decoder_wpm)*CW_DECODER_SPACE_PRINT_THRESH))){ //should we send a space?
              #if defined(FEATURE_SERIAL) && defined(FEATURE_STRAIGHT_KEY_ECHO)
                #ifdef FEATURE_COMMAND_LINE_INTERFACE
                  primary_serial_port->write(32);
@@ -2991,7 +3012,7 @@ void service_keypad(){
           }// should we send a space?
       }
     } else {
-      if (last_straight_key_state != last_state) {
+      if (last_straight_key_state != last_state){
         // we have a transition
         element_duration = millis() - last_transition_time;
         if (element_duration > CW_DECODER_NOISE_FILTER) {                                    // filter out noise
@@ -3019,8 +3040,6 @@ void service_keypad(){
           last_transition_time = millis();
           if (decode_element_pointer == 16) { decode_it_flag = 1; }  // if we've filled up the array, go ahead and decode it
         }
-
-
       } else {
         // no transition
         element_duration = millis() - last_transition_time;
@@ -3034,16 +3053,15 @@ void service_keypad(){
           // have we had tone for an outrageous amount of time?
         }
       }
-     }
+    }
 
 
 
-    if (decode_it_flag) {                      // are we ready to decode the element array?
+    if (decode_it_flag){                  // are we ready to decode the element array?
 
       // adjust the decoder wpm based on what we got
 
-      if ((no_tone_count > 0) && (tone_count > 1)){ // NEW
-
+      if ((no_tone_count > 0) && (tone_count > 1)){
         if (decode_element_no_tone_average > 0) {
           if (abs((1200/decode_element_no_tone_average) - decoder_wpm) < 5) {
             decoder_wpm = (decoder_wpm + (1200/decode_element_no_tone_average))/2;
@@ -3057,12 +3075,10 @@ void service_keypad(){
             }
           }
         }
-
-
-      } // NEW
+      }
 
       #ifdef DEBUG_FEATURE_STRAIGHT_KEY_ECHO
-        if (abs(decoder_wpm - last_printed_decoder_wpm) > 0.9) {
+        if (abs(decoder_wpm - last_printed_decoder_wpm) > 0.9){
           debug_serial_port->print("<");
           debug_serial_port->print(int(decoder_wpm));
           debug_serial_port->print(">");
@@ -3308,15 +3324,11 @@ void service_keypad(){
       #endif //FEATURE_COMMAND_LINE_INTERFACE
     #endif //FEATURE_SERIAL
 
-  return(decode_character);
+    
 
   #endif //FEATURE_STRAIGHT_KEY_DECODE
 
-
-
-
-
-
+  return(decode_character);
 
   }
 #endif //FEATURE_STRAIGHT_KEY
@@ -17714,9 +17726,9 @@ void initialize_pins() {
   #ifdef FEATURE_STRAIGHT_KEY
     pinMode(pin_straight_key,INPUT);
     if (STRAIGHT_KEY_ACTIVE_STATE == HIGH){
-      digitalWrite (pin_straight_key, LOW);
+      digitalWrite(pin_straight_key, LOW);
     } else {
-      digitalWrite (pin_straight_key, HIGH);
+      digitalWrite(pin_straight_key, HIGH);
     }
   #endif //FEATURE_STRAIGHT_KEY
 

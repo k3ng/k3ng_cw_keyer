@@ -2,26 +2,31 @@
 #ifndef keyer_pin_settings_h
 #define keyer_pin_settings_h
 
-#define paddle_left 2
-#define paddle_right 5
-#define tx_key_line_1 11       // (high = key down/tx on)
-#define tx_key_line_2 12
+#define paddle_left 18
+#define paddle_right 19
+#define tx_key_line_1 12      // (high = key down/tx on)
+#define tx_key_line_2 3
 #define tx_key_line_3 0
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-#define sidetone_line 4         // connect a speaker for sidetone
-#define potentiometer 28       // Speed potentiometer (0 to 3.3 V) Use pot from 1k to 10k
-#define ptt_tx_1 13              // PTT ("push to talk") lines
-#define ptt_tx_2 14              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
-#define ptt_tx_3 0              //   These are optional - set to 0 if unused
+#define sidetone_line 16      // connect a speaker for sidetone. Mortty_v5 PWM output to AudioBoard
+#define potentiometer 28      // Speed potentiometer (0 to 3.3 V) Use pot from 1k to 10k
+#define ptt_tx_1 13           // PTT ("push to talk") lines
+#define ptt_tx_2 4            //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
+#define ptt_tx_3 0            //   These are optional - set to 0 if unused
 #define ptt_tx_4 0
 #define ptt_tx_5 0
 #define ptt_tx_6 0
-#define tx_key_dit 0            // if defined, goes active for dit (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
-#define tx_key_dah 0            // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
+#define tx_key_dit 0          // if defined, goes active for dit (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
+#define tx_key_dah 0          // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 #define potentiometer_enable_pin 0  // if defined, the potentiometer will be enabled only when this pin is held low; set to 0 to ignore this pin
 
+#define jackSwitch_paddle 17  // Paddle plug insert detect - Mortty_v5. (pullup input)
+#define jackSwitch_R1 15      // Radio1 plug insert detect - Mortty_v5. (pullup input)
+#define jackSwitch_R2  6      // Paddle plug insert detect - Mortty_v5. (pullup input)
+//NOTE: rtty_tx_1 14          // Radio1 RTTY FSK - used in Mortty_v5 DUAL MODE TinyFSK sketch (output)
+//NOTE: rtty_tx_2 5           // Radio2 RTTY FSK - used in MOrtty_v5 DUAL MODE TinyFSK sketch (output)
 
 #ifdef FEATURE_BUTTONS
   #define analog_buttons_pin A1
@@ -156,4 +161,3 @@ FEATURE_SIDETONE_SWITCH
   #error "Multiple pin_settings.h files included somehow..."
 
 #endif //keyer_pin_settings_h
-
