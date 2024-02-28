@@ -122,3 +122,5 @@
 
 // #define OPTION_WINKEY_PROSIGN_COMPATIBILITY  // Additional character mappings to support K1EL Winkey emulation prosigns
 #define FEATURE_DUAL_MODE_KEYER_AND_TINYFSK // Mortty_v5 dual mode (CW Keyer, TinyFSK RTTY) support
+
+#define FEATURE_MORTTY_SPEEDPOT_BOOT_FUNCTION

@@ -1408,6 +1408,9 @@ Recent Update History
     2024.02.27.2314
       HARDWARE_MORTTY_PICO_OVER_USB - Updated for Mortty v5
 
+    2024.02.28.0239
+      FEATURE_MORTTY_SPEEDPOT_BOOT_FUNCTION
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1438,7 +1441,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2024.02.27.2314"
+#define CODE_VERSION "2024.02.28.0239"
 
 #define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
 
@@ -2389,6 +2392,9 @@ void setup()
   } else {
   #endif
 
+  #if defined(FEATURE_MORTTY_SPEEDPOT_BOOT_FUNCTION)
+    mortty_speedpot_boot_function();
+  #endif
 
   initialize_pins();
   // initialize_serial_ports();        // Goody - this is available for testing startup issues
@@ -2616,6 +2622,54 @@ void loop()
 // Subroutines --------------------------------------------------------------------------------------------
 
 // Are you a radio artisan ?
+
+#if defined(FEATURE_MORTTY_SPEEDPOT_BOOT_FUNCTION)
+  void mortty_speedpot_boot_function(){
+
+    int releaseLevel = 1;  // Mortty_v5 feature: releaseLevel display blink
+
+    check_run_tinyfsk_pin();               // set which mode to run
+    digitalWrite(pin_keyer_running, LOW);  // both LEDs off
+    digitalWrite(pin_rtty_running, LOW);   // both LEDs off
+    if (analogRead(potentiometer) < 33) {  // Speed Pot at or near MIN of 0
+                                          // Mortty_v5 feature: blinking LEDs represent releaseLevel
+                                          // blink both CW&RTTY LEDs simultaneously - user counts releaseLevel
+      delay(1000);
+      for (int loopCount = 1; loopCount <= releaseLevel; loopCount++) {
+        digitalWrite(pin_keyer_running, HIGH);
+        digitalWrite(pin_rtty_running, HIGH);
+        delay(500);
+        digitalWrite(pin_keyer_running, LOW);
+        digitalWrite(pin_rtty_running, LOW);
+        delay(500);
+      }
+    } else {
+      if (analogRead(potentiometer) > 984) {  // Speed Pot at or near MAX of 1023
+                                              // Mortty_v5 feature: update firmware without disassembly
+                                              // bootLoader mounts Mortty storage in File I/O mode
+        delay(1000);
+        digitalWrite(pin_keyer_running, HIGH);
+        digitalWrite(pin_rtty_running, LOW);
+        for (int loopCount = 1; loopCount < 50; loopCount++) {
+          // notify the user - blink the rear=panel CW & RTTY LEDs
+          digitalWrite(pin_keyer_running, (!digitalRead(pin_keyer_running)));  // toggle
+          digitalWrite(pin_rtty_running, (!digitalRead(pin_rtty_running)));    // toggle
+          delay(100);
+          if (analogRead(potentiometer) < 200) {  // user turned speed pot - Speed Pot at or near MIN of 0
+            rp2040.rebootToBootloader();          // reboot the RP2040 as File I/O mounted drive
+          }
+        }
+      }
+    }
+    digitalWrite(pin_keyer_running, LOW);  // both LEDs off
+    digitalWrite(pin_rtty_running, LOW);   // both LEDs off
+    delay(1000);
+
+  }
+#endif
+
+//-------------------------------------------------------------------------------------------------------
+
 
 void initialize_audiopwmsinewave(){
 
