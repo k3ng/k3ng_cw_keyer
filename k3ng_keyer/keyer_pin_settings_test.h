@@ -17,7 +17,7 @@
 #define paddle_left 2
 #define paddle_right 5
 #define sidetone_line 4
-#define potentiometer A0 
+#define potentiometer 28 //A0 // Pico test jig: 28 (GP28)
 #define ptt_tx_1 13              // PTT ("push to talk") lines
 
 //Raspberry Pi Pico Test Jig

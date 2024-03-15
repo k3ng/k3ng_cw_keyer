@@ -1411,6 +1411,9 @@ Recent Update History
     2024.02.28.0239
       FEATURE_MORTTY_SPEEDPOT_BOOT_FUNCTION
 
+    2024.03.15.1354
+      FEATURE_WINKEY_EMULATION: Changed potentiometer behavior to work correctly with N1MM+ pot settings
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -5660,15 +5663,26 @@ void check_potentiometer()
         debug_serial_port->print(F(" analog read: "));
         debug_serial_port->println(analogRead(potentiometer));
       #endif
-      if (keyer_machine_mode == KEYER_COMMAND_MODE) command_speed_set(pot_value_wpm_read);
-      else speed_set(pot_value_wpm_read);
-      last_pot_wpm_read = pot_value_wpm_read;
       #ifdef FEATURE_WINKEY_EMULATION
+        if (keyer_machine_mode == KEYER_COMMAND_MODE) {
+          command_speed_set(pot_value_wpm_read);
+        } else {
+          if (!winkey_host_open){
+            speed_set(pot_value_wpm_read);
+          }
+        }
         if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
           winkey_port_write(((pot_value_wpm_read-pot_wpm_low_value)|128),0);
           winkey_last_unbuffered_speed_wpm = configuration.wpm;
+        }        
+      #else
+        if (keyer_machine_mode == KEYER_COMMAND_MODE) {
+          command_speed_set(pot_value_wpm_read);
+        } else {
+          speed_set(pot_value_wpm_read);
         }
       #endif
+      last_pot_wpm_read = pot_value_wpm_read;
       #ifdef FEATURE_SLEEP
         last_activity_time = millis();
       #endif //FEATURE_SLEEP
@@ -10744,6 +10758,7 @@ void winkey_ptt_times_parm2_command(byte incoming_serial_byte) {
 #ifdef FEATURE_WINKEY_EMULATION
 void winkey_set_pot_parm1_command(byte incoming_serial_byte) {
 
+  
   pot_wpm_low_value = incoming_serial_byte;
 
 }
