@@ -13395,6 +13395,65 @@ void cli_keying_compensation(PRIMARY_SERIAL_CLS * port_to_use,String command_arg
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_AUTOSPACE)
 
 
+/*
+
+Chapter Three
+
+ 
+The next day Colin did some research on Walter.   An Internet search yielded his address, not far from the coffee shop where they had met.  On satellite photography the house was visible, and luckily there was street photography which revealed a modest brick house, probably built in the late 50s.  He decided to take a ride to drive by the house, not knowing what purpose it would serve, but he had little else to do to get more information about Walter and this world he had stumbled upon.
+ 
+Colin made the trek to the area near the coffee house that he had made before, and found his way to the neighborhood of nicely kept homes and tree-lined streets.  Passing by Walter's house slowly he saw the house he had seen in satellite photography.  There was nothing special or noteworthy, except for a sign in the front yard, taped to a maple tree between the sidewalk and street.  "YARD SALE - SATURDAY + SUNDAY 8 AM to 3 PM".  "Perfect" Colin said to himself.  Perhaps he could garner some information from relatives or perhaps even buy some of his old equipment he thought.
+ 
+Saturday morning he woke up bright and early and drove to the home, arriving about 7:30.  There were now several tables in the driveway with items on them, with two women and several children bringing out items from the house.  Colin parked up the street and verified with a quick glance he had cash in his wallet.  He walked up the short driveway and started browsing at items on the table, trying to look like a normal yard sale person and not a spy on a reconnaissance mission.
+ 
+"Hello"  Colin looked up from the table and saw a woman greeting him.  "I'm Nicole."
+ 
+He could see familiar facial features and Walter's eyes which let him know immediately that this was his daughter.   "Hi", he replied.
+ 
+"Looking for anything in particular?"
+ 
+"Oh, just radio stuff."  Colin said somewhat nervously.
+ 
+"Did you know Walter?" she asked.
+ 
+"I met him once, but I didn't really know him." Colin replied, careful not to reveal too much information.
+ 
+"There are some of his big radios inside, and we have many books about radio over in that box." pointing to a cardboard box by the garage.  "You're the second person to ask about radio items.  We had someone stop in here yesterday while we were setting up.  He bought all of Walter's homemade electronic boxes and gave us a lot of money."
+ 
+"Homemade electronics?" Colin asked.
+ 
+"Yes, he would make a lot of stuff in his workshop.  We used to joke that he was a mad scientist.  We never quite knew what he was making.  He had many silver boxes that he used to hook up to his radios."
+ 
+"Was the man buying the boxes a ham radio guy?"
+ 
+"I'm not sure.  He came here with a big wad of cash in his pocket.  He wasn't interested in all at the big radios in the house…. the good stuff that I think is worth a lot of money, or maybe not.  When we saw the cash he had, we though that's really what he was here for.  He was very insistent, almost rude, that we sell him all the silver boxes."
+ 
+"Hmmm.  Interesting."
+ 
+"Well, we have a lot of stuff to sell here.  It all has to go.  I'm driving back to Florida next week.  Feel free to go inside and look around.  The door's open."  she said.
+ 
+"Thanks" Colin said, making a small smile briefly as he walked away and towards the garage.  Glancing towards the backyard he saw a wire antenna strung between the chimney and a maple tree in the backyard.  The box of books had numerous hardcover electronics and communications books from the 60s and 70s, and two cryptography books.  He picked up several books and paged through them, looking for material that could be of use.  One particular book was an entry level college electronics text that, looking at the cover, he had no interest in, however the inside had pencil-written notes of codes and block diagrams in the margins.  Colin kept this book under his arm as he continued to look through the books.
+
+He makes his way inside the house, noticing everything in various states of disarray with furniture obviously missing and boxes everywhere.  He walks freely around the first floor and sees a stairway leading to the attic.  At the one end of the semi-finished attic Colin comes to what was obviously Walter's ham shack.  There are several radios, mostly from the late 70s and early 80s, each well cared for.  Nothing interested Colin as he had plenty of equipment at home and didn't have the need for yet another radio. Colin heard someone coming up the stairs.  It was Nicole, holding a cardboard box.  The box appeared to have been sealed with duct tape but was opened.
+
+"I just found this in the basement.  I'm not sure what it is, but it's some radio stuff I think.  Looks like junk.  I don't know how we missed this box yesterday, but you can have it if you want." said Nicole.  "We'll probably just throw it out as we have so much junk."
+
+Colin glanced at the box and had to withhold a gasp.  His identity string, now committed to memory, was written on the top of the box in big letters in black marker.  Colin could hardly contain himself but knew he had to keep a straight face and not display any signs of surprise or excitement.
+
+"OK" replied Colin.  "I'll go through it and see if there's anything I can put to use."  Colin paid Nicole a dollar for the book and made his way to his car, and placed the box in the trunk.
+ 
+As Colin leaves the yard sale and drives home, he notices a car following him. At first, he dismisses it as a coincidence, but as he turns onto different streets, the car continues to tail him, never falling behind.  Feeling a growing sense of unease, Colin tries to shake off the pursuing vehicle by taking sudden turns and doubling back on his route, but the car remains hot on his trail.
+
+Realizing that he's being followed intentionally, Colin's heart pounds in his chest as he navigates the streets, searching for a way to lose his pursuer. He knows he can't lead them back to his home, where his family might be at risk.  With adrenaline pumping through his veins, Colin makes a daring move, speeding down narrow alleys and darting through red lights, desperate to evade his unknown assailants. The tension mounts as the chase intensifies, with Colin's every maneuver met by the relentless pursuit of the car behind him.
+
+Finally, with a burst of ingenuity, Colin spots an opportunity to outmaneuver his pursuer. With nerves of steel, he executes a risky maneuver, swerving down a deserted side street and slamming on the brakes, sending the pursuing car careening past him.
+
+Breathless and shaken, Colin watches in relief as the car speeds off. With a shaky sigh of relief, he takes a moment to collect himself before cautiously continuing on his way home, acutely aware of the danger lurking.
+
+As Colin arrives home, he resolves to uncover the truth behind the mysterious car chase and its connection to the secrets he's stumbled upon. Little does he know that his journey is far from over, and the dangers he faces are only just beginning.
+
+*/
+
 
 //---------------------------------------------------------------------
 
