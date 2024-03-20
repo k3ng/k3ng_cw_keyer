@@ -1414,6 +1414,9 @@ Recent Update History
     2024.03.15.1354
       FEATURE_WINKEY_EMULATION: Changed potentiometer behavior to work correctly with N1MM+ pot settings
 
+    2024.03.20.2239
+      tx_inhibit: unkey PTT when tx_inhibit goes active
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -2792,6 +2795,7 @@ byte service_tx_inhibit_and_pause(){
           }
         #endif
       }
+      ptt_unkey();
     }
   }
 
