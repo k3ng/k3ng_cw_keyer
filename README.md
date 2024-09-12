@@ -5,3 +5,5 @@ The K3NG Keyer is an open source Arduino based CW (Morse Code) keyer with a lot 
 
 Documentation is located here:
 https://github.com/k3ng/k3ng_cw_keyer/wiki
+
+HB9TXB pressure paddles
