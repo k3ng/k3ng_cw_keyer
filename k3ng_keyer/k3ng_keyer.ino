@@ -1454,6 +1454,13 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #include <stdio.h>
 #include "keyer_hardware.h"
 
+#include <iarduino_ADC_CS1237.h>
+iarduino_ADC_CS1237 adc1(10, 9); //  DOT      // Declare an object to work with the functions of the library iarduino_ADC_CS1237, specifying the pins ( SCLK , DATA ). You can specify any Arduino pins.
+iarduino_ADC_CS1237 adc2(7, 6);  // DASH   //All functions of the library (except begin) are optional if the default values are suitable for you.
+
+int32_t read01;  // initial  first sensor
+int32_t read02;  // initial   second sensor
+
 #if defined(ARDUINO_SAM_DUE)
   #include <SPI.h>
   #include <Wire.h>
@@ -1782,7 +1789,10 @@ struct config_t {  // 120 bytes total
   unsigned int wpm_winkey;
   unsigned int cw_echo_timing_factor;
   unsigned int autospace_timing_factor;
-    // 24 bytes
+  int32_t pressure_threshold_dot = 250000;   // hardcoded (TODO how to take from config)
+  int32_t pressure_threshold_dash = 200000;  // hardcoded (TODO how to take from config)
+  bool pressure_paddle_inhibit_pin;
+  // 24 bytes + 2 bytes pressure
 
   uint8_t ip[4];
   uint8_t gateway[4];
@@ -2436,6 +2446,33 @@ void setup()
   #endif
 
   initialize_audiopwmsinewave();
+
+ #if defined (FEATURE_PRESSURE_PADDLES)   //FEATURE_PRESSURE_PADDLES
+
+  adc1.setPulseWidth(30);
+  adc1.begin();
+  adc1.setPinVrefOut(true);
+  adc1.setVrefIn(5.0);
+  adc1.setSpeed(640);
+  adc1.setPGA(2);
+  adc1.setChannel(0);
+
+  adc2.setPulseWidth(30);
+  adc2.begin();
+  adc2.setPinVrefOut(true);
+  adc2.setVrefIn(5.0);
+  adc2.setSpeed(640);
+  adc2.setPGA(2);
+  adc2.setChannel(0);
+
+
+read01 = adc1.analogRead();
+read02 = adc2.analogRead();
+primary_serial_port->print(F("\n\r adc1 idle: "));
+primary_serial_port->print(read01);
+primary_serial_port->print(F("\n\r adc2 idle: "));
+primary_serial_port->println(read02);
+#endif   //FEATURE_PRESSURE_PADDLES
 
 
 }
@@ -12906,6 +12943,9 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
     port_to_use->println(F("\t\tpl <transmitter> <mS>\t- Set PTT lead time"));
     port_to_use->println(F("\t\tpt <transmitter> <mS> \t- Set PTT tail time"));
     port_to_use->println(F("\t\tcomp <mS> \t- Set keying compensation time"));
+    port_to_use->println(F("\t\tspl #####\t- Sensor pressure left sensitivity")) ;
+    port_to_use->println(F("\t\tspr #####\t- Sensor pressure right sensitivity")) ;
+    port_to_use->println(F("\t\tspi [0|1]\t- Pressure paddle inhibit"));
   #endif //OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
 
 
@@ -13369,6 +13409,24 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
     if (userinput.startsWith("PF ")){cli_paddle_echo_factor(port_to_use,userinput.substring(3));return;}
   #endif // defined(FEATURE_PADDLE_ECHO)
 
+#if defined(FEATURE_PRESSURE_PADDLES)
+  if (userinput.startsWith("SPL "))
+  {
+    cli_sensor_left(port_to_use, userinput.substring(3));
+    return;
+  } // sensor pressure left
+  if (userinput.startsWith("SPR "))
+  {
+    cli_sensor_right(port_to_use, userinput.substring(3));
+    return;
+  } // sensor pressure right
+  if (userinput.startsWith("SPI "))
+  {
+    cli_sensor_inhibit(port_to_use, userinput.substring(3));
+    return;
+  }    //  if set to 1 then physical paddles take precedence, pressure paddles ignored
+#endif // defined(FEATURE_PRESSURE_PADDLES)
+
   #if defined(FEATURE_AUTOSPACE)
     if (userinput.startsWith("AF ")){cli_autospace_timing_factor(port_to_use,userinput.substring(3));return;}
   #endif // defined(FEATURE_AUTOSPACE)
@@ -13536,6 +13594,41 @@ void cli_timing_command(PRIMARY_SERIAL_CLS * port_to_use,String command_argument
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
 //---------------------------------------------------------------------
 
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+void cli_sensor_left(PRIMARY_SERIAL_CLS *port_to_use, String command_arguments)
+{
+
+  configuration.pressure_threshold_dot = command_arguments.toInt();
+  config_dirty = 1;
+  port_to_use->print(F("\r\nSensor Pressure Left to: "));
+  port_to_use->println(configuration.pressure_threshold_dot);
+}
+#endif // defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+
+//---------------------------------------------------------------------
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+void cli_sensor_right(PRIMARY_SERIAL_CLS *port_to_use, String command_arguments)
+{
+
+  configuration.pressure_threshold_dash = command_arguments.toInt();
+  config_dirty = 1;
+  port_to_use->print(F("\r\nSensor Pressure Right to: "));
+  port_to_use->println(configuration.pressure_threshold_dash);
+}
+#endif // defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+void cli_sensor_inhibit(PRIMARY_SERIAL_CLS *port_to_use, String command_arguments)
+{
+
+  configuration.pressure_paddle_inhibit_pin = command_arguments.toInt();
+  config_dirty = 1;
+  port_to_use->print(F("\r\nPressure Paddle Inhibit: "));
+  port_to_use->println(configuration.pressure_paddle_inhibit_pin);
+}
+#endif // defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+
+//---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
 void cli_timing_print(PRIMARY_SERIAL_CLS * port_to_use){
 
@@ -16254,6 +16347,12 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   port_to_use->println(F(" wordspace units"));
   port_to_use->print(F("Memory repeat time: "));                                // show the memory repeat time
   port_to_use->println(configuration.memory_repeat_time);
+  port_to_use->print(F("Sensor Pressure Left: ")); //
+  port_to_use->println(configuration.pressure_threshold_dot);
+  port_to_use->print(F("Sensor Pressure Right: ")); //
+  port_to_use->println(configuration.pressure_threshold_dash);
+  port_to_use->print(F("Pressure Paddle Inhibit:  ")); //  "1" indicates physical paddles are used
+  port_to_use->println(configuration.pressure_paddle_inhibit_pin);
 
   #ifdef FEATURE_MEMORIES
     serial_status_memories(port_to_use);
@@ -19755,6 +19854,31 @@ void MouseRptParser::OnMiddleButtonDown(MOUSEINFO *mi){
 #endif //FEATURE_USB_MOUSE
 //---------------------------------------------------------------------
 
+
+
+#ifdef FEATURE_PRESSURE_PADDLES
+int32_t pressure;   //
+int32_t read_pressure_pin(int pinToMeasure){
+  switch (pinToMeasure) {
+  case 2:
+    pressure = 2*adc1.analogRead(); // values from adc1 are lower
+    // Serial.println(pressure);
+    return pressure;
+    break;
+  case 5:
+    pressure = adc2.analogRead();
+    // Serial.println(pressure);
+    return pressure;
+    break;
+  }
+        pressure = 0 ;
+  }
+
+ #endif //FEATURE_PRESSURE_PADDLES
+//---------------------------------------------------------------------
+
+
+
 #ifdef FEATURE_CAPACITIVE_PADDLE_PINS
 uint8_t read_capacitive_pin(int pinToMeasure) {
 
@@ -19970,8 +20094,8 @@ int paddle_pin_read(int pin_to_read){
   // For Mega2560 and Uno/Nano speed up paddle pin reads by direct read of the register
   // it saves about 340 bytes of code too
 
-
-  #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
+#ifndef FEATURE_PRESSURE_PADDLES
+  // #ifndef FEATURE_CAPACITIVE_PADDLE_PINS
     #ifndef OPTION_INVERT_PADDLE_PIN_LOGIC
       #ifdef OPTION_DIRECT_PADDLE_PIN_READS_MEGA              // after April 2019, if this option is not defined then a direct read of the pins can never occur
         switch(pin_to_read) {
@@ -19996,14 +20120,49 @@ int paddle_pin_read(int pin_to_read){
       return !digitalRead(pin_to_read);                       // we do the regular digitalRead() if none of the direct register read options are valid
     #endif                                                    // !OPTION_INVERT_PADDLE_PIN_LOGIC
   #else                                                       // !FEATURE_CAPACITIVE_PADDLE_PINS
-    if (capactive_paddle_pin_inhibit_pin) {
-      if (digitalRead(capactive_paddle_pin_inhibit_pin) == HIGH) {
-        return digitalRead(pin_to_read);
-      }                                                       // end if
-    }                                                         // end if (capactive_paddle_pin_inhibit_pin)
-    if (read_capacitive_pin(pin_to_read) > capacitance_threshold) return LOW;
-    else return HIGH;
-  #endif                                                      // !FEATURE_CAPACITIVE_PADDLE_PINS
+
+
+
+  //   if (capactive_paddle_pin_inhibit_pin) {
+  //     if (digitalRead(capactive_paddle_pin_inhibit_pin) == HIGH) {
+  //       return digitalRead(pin_to_read);
+  //     }                                                       // end if
+  //   }                                                         // end if (capactive_paddle_pin_inhibit_pin)
+  //   if (read_capacitive_pin(pin_to_read) > capacitance_threshold) return LOW;
+  //   else return HIGH;
+  // #endif                                                      // !FEATURE_CAPACITIVE_PADDLE_PINS
+  // #else                                                       // !FEATURE_CAPACITIVE_PADDLE_PINS
+
+
+  if (configuration.pressure_paddle_inhibit_pin)
+  { //  if set to 1 then physical paddles take precedence, pressure paddles ignored
+    if (digitalRead(configuration.pressure_paddle_inhibit_pin) == HIGH)
+    {
+           return digitalRead(pin_to_read);    // 
+    } // end if
+  } // end if (pressure_paddle_inhibit_pin)
+
+  //  if (read_pressure_pin(pin_to_read) > pressure_threshold) return LOW;
+  //       else
+  //       return HIGH;
+
+  pressure = read_pressure_pin(pin_to_read);
+   if ((pressure > configuration.pressure_threshold_dot) && (pin_to_read == 2))
+   {
+     return LOW;
+   }
+   else if ((pressure > configuration.pressure_threshold_dash) && (pin_to_read == 5))
+   {
+     return LOW;
+   }
+   else
+   {
+     return HIGH;
+   } //
+
+
+  #endif                                                      // !FEATURE_CAPACITIVE_PADDLE_PINS   FEATURE_PRESSURE_PADDLES
+
 
 
 
