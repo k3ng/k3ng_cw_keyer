@@ -45,5 +45,5 @@ Powerful and flexible keyer with reliable iambic paddle, easily built without an
   - optocouplers and 3.5 mm jacks for PPT and TX line
  - RFI/EMI shielding
   
-
-
+&nbsp; &nbsp; &nbsp;
+![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/images/IMG_1329.JPG?raw=true)
