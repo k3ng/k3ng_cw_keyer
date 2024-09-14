@@ -1454,7 +1454,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #include <stdio.h>
 #include "keyer_hardware.h"
 
-#include <iarduino_ADC_CS1237.h>
+#include <iarduino_ADC_CS1237.h>   // this include and initialization should be covered by "if defined feature_pressure_sensor"
 iarduino_ADC_CS1237 adc1(10, 9); //  DOT      // Declare an object to work with the functions of the library iarduino_ADC_CS1237, specifying the pins ( SCLK , DATA ). You can specify any Arduino pins.
 iarduino_ADC_CS1237 adc2(7, 6);  // DASH   //All functions of the library (except begin) are optional if the default values are suitable for you.
 

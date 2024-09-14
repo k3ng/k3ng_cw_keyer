@@ -2,7 +2,7 @@
   (by HB9TXB)
 
 #### Goal: 
-Powerful and flexible keyer with reliable iambic paddle, easily built without any mechanical (machining) skills.
+Powerful and flexible keyer with built-in reliable iambic paddle, easily built without specialised mechanical (machining) skills.
 
 
 #### Why load sensor:
@@ -11,7 +11,7 @@ Powerful and flexible keyer with reliable iambic paddle, easily built without an
 - Mechanical contacts prone to bouncing.
 - Minimal contact distance (0.1 mm) and minimal force (10 grams) difficult to maintain with mechanical paddles.
 - More reliable compared to capacitive touch paddle, behaves like usual mechanical paddle.
-- Sensor paddle cost orders of magnitude cheaper than mechanical paddles.
+- Sensor paddle is an order of magnitude cheaper than mechanical paddles.
  
 
 #### Features:
@@ -25,13 +25,15 @@ Powerful and flexible keyer with reliable iambic paddle, easily built without an
 #### Two Prototypes:
 1) Implementation [based on ESP32 based k3ng keyer - SP5IOU](https://github.com/djbr1/K3NG-Arduino-Keyer-ESP32_PlatformIO)  has OLED SSD1306 display and command line interface over Bluetooth, allowing parameter change from [Android Bluetooth Seria Terminal ](https://play.google.com/store/apps/details?id=de.kai_morich.serial_bluetooth_terminal). Uses Hx711 ADC.
   
-2. [Arduino nano implementation](https://github.com/djbr1/k3ng_cw_keyer), allows parameter change through USB interface using [Android Serial Terminal app](https://play.google.com/store/apps/details?id=de.kai_morich.serial_usb_terminal)  . CS1237 ADC is used.
+2. [Arduino nano implementation](https://github.com/djbr1/k3ng_cw_keyer), allows parameter change through USB interface using [Android Serial Terminal app](https://play.google.com/store/apps/details?id=de.kai_morich.serial_usb_terminal)  . [CS1237 ADC](https://github.com/tremaru/iarduino_ADC_CS1237) is used.
 
 
 #### TODO:    
+ - Web Serial API for settings (as additional alternative to Bluetooth or USB Cable)
  - PCB design
  - BoM for additional components
  - physical buttons as required
   - optocouplers and 3.5 mm jacks for PPT and TX line
  - RFI/EMI shielding
+ - "paddle only" output if transceiver builtin keyer is preferred
   
