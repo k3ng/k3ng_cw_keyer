@@ -36,6 +36,14 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
   - optocouplers and 3.5 mm jacks for PPT and TX line
  - RFI/EMI shielding
  - "paddle only" output if transceiver builtin keyer is preferred
-  
+
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;
+
+[![Sensitivity demo](https://img.youtube.com/vi/UNnNl10UAn8/0.jpg)](https://www.youtube.com/watch?v=UNnNl10UAn8)
+
+[//]: 
+  https://www.youtube.com/watch?v=UNnNl10UAn8
+
 ![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/IMG_1330.JPG?raw=true)
 ![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/IMG_1329.JPG?raw=true)
