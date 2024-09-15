@@ -39,7 +39,7 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
 
 &nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp;
-
+[Youtube video](https://www.youtube.com/watch?v=UNnNl10UAn8)
 [![Sensitivity demo](https://img.youtube.com/vi/UNnNl10UAn8/0.jpg)](https://www.youtube.com/watch?v=UNnNl10UAn8)
 
 [//]: 
