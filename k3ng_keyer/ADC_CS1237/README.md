@@ -23,9 +23,9 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
 - Can be developed as add-on to existing K3NG kits.
 
 #### Two Prototypes:
-1) Implementation [based on ESP32 based k3ng keyer - SP5IOU](https://github.com/djbr1/K3NG-Arduino-Keyer-ESP32_PlatformIO)  has OLED SSD1306 display and command line interface over Bluetooth, allowing parameter change from [Android Bluetooth Seria Terminal ](https://play.google.com/store/apps/details?id=de.kai_morich.serial_bluetooth_terminal) or  Web Serial API (from Chrome) . Uses Hx711 ADC.
+1) Implementation [based on ESP32 based k3ng keyer - SP5IOU](https://github.com/djbr1/K3NG-Arduino-Keyer-ESP32_PlatformIO)  has OLED SSD1306 display and command line interface over Bluetooth, allowing parameter change from [Android Bluetooth Seria Terminal ](https://play.google.com/store/apps/details?id=de.kai_morich.serial_bluetooth_terminal) or  Web Serial API (using Chrome) . Uses Hx711 ADC.
   
-2. [Arduino nano implementation](https://github.com/djbr1/k3ng_cw_keyer), allows parameter change through USB interface using [Android Serial Terminal app](https://play.google.com/store/apps/details?id=de.kai_morich.serial_usb_terminal) or  Web Serial API (from Chrome) . [CS1237 ADC](https://github.com/tremaru/iarduino_ADC_CS1237) is used.
+2. [Arduino nano implementation](https://github.com/djbr1/k3ng_cw_keyer), allows parameter change through USB interface using [Android Serial Terminal app](https://play.google.com/store/apps/details?id=de.kai_morich.serial_usb_terminal) or  Web Serial API (using Chrome) . [CS1237 ADC](https://github.com/tremaru/iarduino_ADC_CS1237) is used.
 
 
 #### TODO:    
@@ -47,5 +47,6 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
 ![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/IMG_1330.JPG?raw=true)
 ![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/IMG_1329.JPG?raw=true)
 ![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/IMG_1344.JPG?raw=true)
+![](k3ng_keyer/ADC_CS1237/Screenshot 2024-09-17 at 18.34.58.jpg?raw=true)
 
 
