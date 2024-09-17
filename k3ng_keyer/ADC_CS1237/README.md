@@ -12,7 +12,7 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
 - Minimal contact distance (0.1 mm) and minimal force (10 grams) difficult to maintain with mechanical paddles.
 - More reliable compared to capacitive touch paddle, behaves like usual mechanical paddle.
 - Sensor paddle is an order of magnitude cheaper than mechanical paddles.
- 
+
 
 #### Features:
 - All [K3NG capabilities](https://github.com/k3ng/k3ng_cw_keyer/wiki) available.
@@ -25,7 +25,8 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
 #### Two Prototypes:
 1) Implementation [based on ESP32 based k3ng keyer - SP5IOU](https://github.com/djbr1/K3NG-Arduino-Keyer-ESP32_PlatformIO)  has OLED SSD1306 display and command line interface over Bluetooth, allowing parameter change from [Android Bluetooth Seria Terminal ](https://play.google.com/store/apps/details?id=de.kai_morich.serial_bluetooth_terminal) or  [Web Serial ](https://github.com/ok1cdj/K3NG-keyer-serial-terminal) (using Chrome) . Uses Hx711 ADC.
   
-2. [Arduino nano implementation](https://github.com/djbr1/k3ng_cw_keyer), allows parameter change through USB interface using [Android Serial Terminal app](https://play.google.com/store/apps/details?id=de.kai_morich.serial_usb_terminal) or  [Web Serial ](https://github.com/ok1cdj/K3NG-keyer-serial-terminal) (using Chrome) . [CS1237 ADC](https://github.com/tremaru/iarduino_ADC_CS1237) is used.
+2. [Arduino nano implementation](https://github.com/djbr1/k3ng_cw_keyer), allows parameter change through USB interface using [Android Serial Terminal app](https://play.google.com/store/apps/details?id=de.kai_morich.serial_usb_terminal) or  [Web Serial ](https://github.com/ok1cdj/K3NG-keyer-serial-terminal) (using Chrome) . [CS1237 ADC](https://github.com/tremaru/iarduino_ADC_CS1237) is used.   [Schematic diagram](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/k3ng_keyer_nano_cs1237.sch_2024-09-17.pdf) (based on OK1CDJ nano keyer implementation)
+   
 
 
 #### TODO:    
@@ -48,5 +49,6 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
 ![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/IMG_1329.JPG?raw=true)
 ![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/IMG_1344.JPG?raw=true)
 ![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/Screenshot_2024-09-17_at_18.34.58.jpg?raw=true)
+![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/k3ng_keyer_nano_cs1237.sch_2024-09-17.pdf)
 
 
