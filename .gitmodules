@@ -1,0 +1,3 @@
+[submodule "k3ng_keyer/ADC_CS1237/k3ng_keyer/ADC_CS1237/K3NG-keyer-serial-terminal"]
+	path = k3ng_keyer/ADC_CS1237/k3ng_keyer/ADC_CS1237/K3NG-keyer-serial-terminal
+	url = https://github.com/ok1cdj/K3NG-keyer-serial-terminal
