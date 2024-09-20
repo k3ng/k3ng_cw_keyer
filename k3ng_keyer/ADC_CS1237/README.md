@@ -1,5 +1,5 @@
 ### Proof Of Concept Pressure Sensor Paddles using strain sensor and ADC - Arduino Nano / CS1237 ADC implementation
-  (by HB9TXB)
+  (by [HB9TXB](https://www.qrz.com/db/hb9txb))
 
 #### Goal: 
 Powerful and flexible keyer with built-in reliable iambic paddle, easily built without specialised mechanical (machining) skills.
