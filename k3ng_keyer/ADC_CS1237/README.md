@@ -15,7 +15,7 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
 
 
 #### Features:
-- All [K3NG capabilities](https://github.com/k3ng/k3ng_cw_keyer/wiki) available.
+- All [K3NG capabilities (k3ng wiki) ](https://github.com/k3ng/k3ng_cw_keyer/wiki) available.
 - Equally suitable for beginners and experts.
 - Affordable, off the shelf, load sensor and ADC components.  
   ( total approx. 10 USD CHF for two ADC and two sensors ( ADC 2x1.3 USD, sensor 2 x 2~3 USD   ))
