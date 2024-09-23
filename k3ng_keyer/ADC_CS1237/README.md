@@ -21,6 +21,7 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
   ( total approx. 10 USD CHF for two ADC and two sensors ( ADC 2x1.3 USD, sensor 2 x 2~3 USD   ))
 - Boards: "compatible"  Nano board  1.8 CHF  ;   "compatible" ESP32 approx. 3-4 USD 
 - Can be developed as add-on to existing K3NG kits.
+- Configurable "single lever" mode: Tip from right paddle can be unscrewed and only left paddle is used in as classic single paddle, as if it would have two sets of contacts for dot and dash.  (this is not "single mode" where iambic is inhibited however both paddles are used) 
 
 #### Two Prototypes:
 1) Implementation [based on ESP32 based k3ng keyer - SP5IOU](https://github.com/djbr1/K3NG-Arduino-Keyer-ESP32_PlatformIO)  has OLED SSD1306 display and command line interface over Bluetooth, allowing parameter change from [Android Bluetooth Seria Terminal ](https://play.google.com/store/apps/details?id=de.kai_morich.serial_bluetooth_terminal) or  [Web Serial ](https://github.com/ok1cdj/K3NG-keyer-serial-terminal) (using Chrome) . Uses Hx711 ADC.
@@ -31,7 +32,6 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
 
 
 #### TODO:    
-- single sensor implementation (configurable)
 - PCB design
 - BoM for additional components
 - physical buttons as required
