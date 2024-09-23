@@ -31,12 +31,13 @@ Powerful and flexible keyer with built-in reliable iambic paddle, easily built w
 
 
 #### TODO:    
- - PCB design
- - BoM for additional components
- - physical buttons as required
-  - optocouplers and 3.5 mm jacks for PPT and TX line
- - RFI/EMI shielding
- - "paddle only" output if transceiver builtin keyer is preferred
+- single sensor implementation (configurable)
+- PCB design
+- BoM for additional components
+- physical buttons as required
+- optocouplers and 3.5 mm jacks for PPT and TX line
+- RFI/EMI shielding
+- "paddle only" output if transceiver builtin keyer is preferred
 
  <br/><br/>
  #### Pictures and videos

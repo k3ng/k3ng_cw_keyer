@@ -1791,7 +1791,8 @@ struct config_t {  // 120 bytes total
   unsigned int autospace_timing_factor;
   int32_t pressure_threshold_dot = 250000;   // hardcoded (TODO how to take from config)
   int32_t pressure_threshold_dash = 200000;  // hardcoded (TODO how to take from config)
-  bool pressure_paddle_inhibit_pin;
+  bool pressure_paddle_inhibit_pin = 0;
+  bool single_lever_paddle = 0;
   // 24 bytes + 2 bytes pressure
 
   uint8_t ip[4];
@@ -2448,7 +2449,7 @@ void setup()
   initialize_audiopwmsinewave();
 
  #if defined (FEATURE_PRESSURE_PADDLES)   //FEATURE_PRESSURE_PADDLES
-
+  pinMode(LED_BUILTIN, OUTPUT);
   adc1.setPulseWidth(30);
   adc1.begin();
   adc1.setPinVrefOut(true);
@@ -2472,6 +2473,11 @@ primary_serial_port->print(F("\n\r adc1 idle: "));
 primary_serial_port->print(read01);
 primary_serial_port->print(F("\n\r adc2 idle: "));
 primary_serial_port->println(read02);
+
+digitalWrite(LED_BUILTIN, HIGH); delay(300);digitalWrite(LED_BUILTIN, LOW); delay(300);
+digitalWrite(LED_BUILTIN, HIGH); delay(300);digitalWrite(LED_BUILTIN, LOW); delay(300);
+digitalWrite(LED_BUILTIN, HIGH); delay(300);digitalWrite(LED_BUILTIN, LOW); 
+
 #endif   //FEATURE_PRESSURE_PADDLES
 
 
@@ -12946,6 +12952,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
     port_to_use->println(F("\t\tspl #####\t- Sensor pressure left sensitivity")) ;
     port_to_use->println(F("\t\tspr #####\t- Sensor pressure right sensitivity")) ;
     port_to_use->println(F("\t\tspi [0|1]\t- Pressure paddle inhibit"));
+    port_to_use->println(F("\t\tslp [0|1]\t- Single Lever Paddle "));
   #endif //OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS
 
 
@@ -13425,6 +13432,11 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
     cli_sensor_inhibit(port_to_use, userinput.substring(3));
     return;
   }    //  if set to 1 then physical paddles take precedence, pressure paddles ignored
+  if (userinput.startsWith("SLP "))
+  {
+    cli_single_lever(port_to_use, userinput.substring(3));
+    return;
+  }    //  if set to 1 then single lever paddle, dot paddle acts as single lever keyer
 #endif // defined(FEATURE_PRESSURE_PADDLES)
 
   #if defined(FEATURE_AUTOSPACE)
@@ -13628,6 +13640,20 @@ void cli_sensor_inhibit(PRIMARY_SERIAL_CLS *port_to_use, String command_argument
 }
 #endif // defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
 
+
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+void cli_single_lever(PRIMARY_SERIAL_CLS *port_to_use, String command_arguments)
+{
+
+  configuration.single_lever_paddle = command_arguments.toInt();
+  config_dirty = 1;
+  port_to_use->print(F("\r\nSingle Leverl Paddle: "));
+  port_to_use->println(configuration.single_lever_paddle);
+}
+#endif // defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
+
+
+//single_lever_paddle
 //---------------------------------------------------------------------
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
 void cli_timing_print(PRIMARY_SERIAL_CLS * port_to_use){
@@ -16353,6 +16379,9 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   port_to_use->println(configuration.pressure_threshold_dash);
   port_to_use->print(F("Pressure Paddle Inhibit:  ")); //  "1" indicates physical paddles are used
   port_to_use->println(configuration.pressure_paddle_inhibit_pin);
+port_to_use->print(F("Single Lever Paddle:  ")); //  "1" indicates single lever used
+  port_to_use->println(configuration.single_lever_paddle);
+
 
   #ifdef FEATURE_MEMORIES
     serial_status_memories(port_to_use);
@@ -19859,20 +19888,28 @@ void MouseRptParser::OnMiddleButtonDown(MOUSEINFO *mi){
 #ifdef FEATURE_PRESSURE_PADDLES
 int32_t pressure;   //
 int32_t read_pressure_pin(int pinToMeasure){
+if(!configuration.single_lever_paddle) {
   switch (pinToMeasure) {
   case 2:
     pressure = 2*adc1.analogRead(); // values from adc1 are lower
-    // Serial.println(pressure);
     return pressure;
     break;
   case 5:
     pressure = adc2.analogRead();
-    // Serial.println(pressure);
     return pressure;
     break;
-  }
-        pressure = 0 ;
-  }
+    }
+   pressure = 0 ;
+  }  // end if single_lever_paddle
+else {
+pressure = 2*adc1.analogRead(); // values from adc1 are lower
+    return pressure;
+}
+pressure = 0 ;
+
+}  // end read_pressure_pin
+
+
 
  #endif //FEATURE_PRESSURE_PADDLES
 //---------------------------------------------------------------------
@@ -20142,19 +20179,21 @@ int paddle_pin_read(int pin_to_read){
     } // end if
   } // end if (pressure_paddle_inhibit_pin)
 
-  //  if (read_pressure_pin(pin_to_read) > pressure_threshold) return LOW;
-  //       else
-  //       return HIGH;
 
   pressure = read_pressure_pin(pin_to_read);
    if ((pressure > configuration.pressure_threshold_dot) && (pin_to_read == 2))
    {
      return LOW;
    }
-   else if ((pressure > configuration.pressure_threshold_dash) && (pin_to_read == 5))
+    else if ((pressure > configuration.pressure_threshold_dash) && (pin_to_read == 5) && !(configuration.single_lever_paddle) )  // iambic mode               
    {
      return LOW;
    }
+   else if ((pressure*-1 > configuration.pressure_threshold_dash) && (pin_to_read == 5) && (configuration.single_lever_paddle) )  // single_lever_paddle mode
+   {
+     return LOW;
+   }
+   
    else
    {
      return HIGH;
