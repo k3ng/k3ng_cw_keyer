@@ -92,7 +92,7 @@
 // #define OPTION_NON_ENGLISH_EXTENSIONS  // add support for additional CW characters (i.e. À, Å, Þ, etc.)
 // #define OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // LCD display suport for non-English (NO/DK/DE) characters - Courtesy of OZ1JHM
 // #define OPTION_UNKNOWN_CHARACTER_ERROR_TONE
-// #define OPTION_DO_NOT_SAY_HI
+ #define OPTION_DO_NOT_SAY_HI
 // #define OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT // makes some non-English characters from the PS2 keyboard display correctly in the LCD display (donated by Marcin sp5iou)
 // #define OPTION_PS2_KEYBOARD_RESET // reset the PS2 keyboard upon startup with 0xFF (contributed by Bill, W9BEL)
 // #define OPTION_SAVE_MEMORY_NANOKEYER

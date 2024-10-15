@@ -1460,6 +1460,9 @@ iarduino_ADC_CS1237 adc2(7, 6);  // DASH   //All functions of the library (excep
 
 int32_t read01;  // initial  first sensor
 int32_t read02;  // initial   second sensor
+int32_t calc_pressure_threshold_dot;  // 
+int32_t calc_pressure_threshold_dash;  // 
+
 
 #if defined(ARDUINO_SAM_DUE)
   #include <SPI.h>
@@ -1789,8 +1792,8 @@ struct config_t {  // 120 bytes total
   unsigned int wpm_winkey;
   unsigned int cw_echo_timing_factor;
   unsigned int autospace_timing_factor;
-  int32_t pressure_threshold_dot = 250000;   // hardcoded (TODO how to take from config)
-  int32_t pressure_threshold_dash = 200000;  // hardcoded (TODO how to take from config)
+  int32_t pressure_threshold_dot = 25;   // hardcoded (TODO how to take from config)
+  int32_t pressure_threshold_dash = 25;  // hardcoded (TODO how to take from config)
   bool pressure_paddle_inhibit_pin = 0;
   bool single_lever_paddle = 0;
   // 24 bytes + 2 bytes pressure
@@ -2310,7 +2313,7 @@ unsigned long millis_rollover = 0;
 #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
   byte check_serial_override = 0;
   #if defined(OPTION_WORDSWORTH_CZECH)
-    #include "keyer_training_text_czech.h"
+    // #include "keyer_training_text_czech.h"
   #elif defined(OPTION_WORDSWORTH_DEUTSCH)
     #include "keyer_training_text_deutsch.h"
   #elif defined(OPTION_WORDSWORTH_NORSK)
@@ -2449,9 +2452,11 @@ void setup()
   initialize_audiopwmsinewave();
 
  #if defined (FEATURE_PRESSURE_PADDLES)   //FEATURE_PRESSURE_PADDLES
+    bool i; 
   pinMode(LED_BUILTIN, OUTPUT);
   adc1.setPulseWidth(30);
-  adc1.begin();
+  // adc1.begin();  
+  i=adc1.begin();              if( !i ){ primary_serial_port->print(F("\n\r adc1 not present ")); } 
   adc1.setPinVrefOut(true);
   adc1.setVrefIn(5.0);
   adc1.setSpeed(640);
@@ -2459,7 +2464,8 @@ void setup()
   adc1.setChannel(0);
 
   adc2.setPulseWidth(30);
-  adc2.begin();
+  //adc2.begin();
+  i=adc2.begin();              if( !i ){ primary_serial_port->print(F("\n\r adc2 not present ")); } 
   adc2.setPinVrefOut(true);
   adc2.setVrefIn(5.0);
   adc2.setSpeed(640);
@@ -2473,6 +2479,28 @@ primary_serial_port->print(F("\n\r adc1 idle: "));
 primary_serial_port->print(read01);
 primary_serial_port->print(F("\n\r adc2 idle: "));
 primary_serial_port->println(read02);
+
+calc_pressure_threshold_dot =  read01 + (abs(read01) * configuration.pressure_threshold_dot)/100    ; 
+primary_serial_port->println(calc_pressure_threshold_dot);
+
+calc_pressure_threshold_dash =  read02 + (abs(read02) * configuration.pressure_threshold_dash)/100    ; 
+primary_serial_port->println(calc_pressure_threshold_dash);
+
+
+// playing "ADC_TEXT"
+      byte oldKey = key_tx;
+      byte oldSideTone = configuration.sidetone_mode;
+      key_tx = 0;
+      configuration.sidetone_mode = SIDETONE_ON;
+  
+      char hi_text[16];
+      strcpy(hi_text,ADC_TEXT);
+      for (int x = 0;hi_text[x] != 0;x++){
+        send_char(hi_text[x],KEYER_NORMAL);
+      }
+
+      configuration.sidetone_mode = oldSideTone;
+      key_tx = oldKey;
 
 digitalWrite(LED_BUILTIN, HIGH); delay(300);digitalWrite(LED_BUILTIN, LOW); delay(300);
 digitalWrite(LED_BUILTIN, HIGH); delay(300);digitalWrite(LED_BUILTIN, LOW); delay(300);
@@ -18615,11 +18643,13 @@ void check_eeprom_for_initialization(){
     EEPROM.begin(4096);
   #endif
 
+#if !defined(FEATURE_PRESSURE_PADDLES)
   // do an eeprom reset to defaults if paddles are squeezed
   if (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {
     while (paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) {}
     initialize_eeprom();
   }
+#endif // FEATURE_PRESSURE_PADDLES
 
   // read settings from eeprom and initialize eeprom if it has never been written to
   if (read_settings_from_eeprom()) {
@@ -18648,7 +18678,7 @@ void initialize_eeprom(){
 //---------------------------------------------------------------------
 
 void check_for_beacon_mode(){
-
+#if !defined(FEATURE_PRESSURE_PADDLES)
   #ifndef OPTION_SAVE_MEMORY_NANOKEYER
   // check for beacon mode (paddle_left == low) or straight key mode (paddle_right == low)
   if (paddle_pin_read(paddle_left) == LOW) {
@@ -18661,7 +18691,7 @@ void check_for_beacon_mode(){
     }
   }
   #endif //OPTION_SAVE_MEMORY_NANOKEYER
-
+#endif // FEATURE_PRESSURE_PADDLES
 }
 
 //---------------------------------------------------------------------
@@ -19891,7 +19921,7 @@ int32_t read_pressure_pin(int pinToMeasure){
 if(!configuration.single_lever_paddle) {
   switch (pinToMeasure) {
   case 2:
-    pressure = 2*adc1.analogRead(); // values from adc1 are lower
+    pressure = adc1.analogRead(); // values from adc1 are lower
     return pressure;
     break;
   case 5:
@@ -19902,7 +19932,7 @@ if(!configuration.single_lever_paddle) {
    pressure = 0 ;
   }  // end if single_lever_paddle
 else {
-pressure = 2*adc1.analogRead(); // values from adc1 are lower
+pressure = adc1.analogRead(); // values from adc1 are lower
     return pressure;
 }
 pressure = 0 ;
@@ -20179,17 +20209,24 @@ int paddle_pin_read(int pin_to_read){
     } // end if
   } // end if (pressure_paddle_inhibit_pin)
 
+   pressure = read_pressure_pin(pin_to_read);
+   
+calc_pressure_threshold_dot =  read01 + (abs(read01) * configuration.pressure_threshold_dot)/100    ; 
+calc_pressure_threshold_dash =  read02 + (abs(read02) * configuration.pressure_threshold_dash)/100    ;
 
-  pressure = read_pressure_pin(pin_to_read);
-   if ((pressure > configuration.pressure_threshold_dot) && (pin_to_read == 2))
+
+   if ((pressure >  calc_pressure_threshold_dot) && (pin_to_read == 2))
    {
+    //  primary_serial_port->println(calc_pressure_threshold_dot);
+    //  primary_serial_port->println(pressure);
      return LOW;
    }
-    else if ((pressure > configuration.pressure_threshold_dash) && (pin_to_read == 5) && !(configuration.single_lever_paddle) )  // iambic mode               
+    else if ((pressure > calc_pressure_threshold_dash) && (pin_to_read == 5) && !(configuration.single_lever_paddle) )  // iambic mode               
    {
+    //  primary_serial_port->println(pressure);
      return LOW;
-   }
-   else if ((pressure*-1 > configuration.pressure_threshold_dash) && (pin_to_read == 5) && (configuration.single_lever_paddle) )  // single_lever_paddle mode
+   }\
+   else if ((pressure*-1 > calc_pressure_threshold_dash) && (pin_to_read == 5) && (configuration.single_lever_paddle) )  // single_lever_paddle mode
    {
      return LOW;
    }
