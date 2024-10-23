@@ -22,7 +22,7 @@ Affordable, powerful and flexible keyer with built-in reliable iambic paddle, ea
   ( total approx. 10 USD for two ADC and two sensors ( ADC 2x1.3 USD, sensor 2 x 2~3 USD   ))
 - Boards: "compatible"  Nano board  2 USD  
 - Can be developed as add-on to existing K3NG kits.
-- Configurable "single lever" mode: Tip from right paddle can be unscrewed and only left paddle is used in as classic single paddle, as if it would have two sets of contacts for dot and dash.  (this is not "single mode" where iambic is inhibited however both paddles are used) 
+- Configurable "single lever" mode: Tip from right paddle can be unscrewed and only left paddle is used as classic single paddle, as if it would have two sets of contacts for dot and dash.  (not to be confused with "single mode" where iambic mode is inhibited however both paddles are used) 
 
 #### Prototype:
  
