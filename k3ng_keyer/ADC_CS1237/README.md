@@ -1,4 +1,6 @@
-### Proof Of Concept Load Sensor Paddles using strain sensor and ADC - Arduino Nano / CS1237 ADC 
+### Proof Of Concept 
+## Electronic Keyer with Integrated Load Sensor Paddles 
+### Arduino Nano / CS1237 ADC 
   (by [HB9TXB](https://www.qrz.com/db/hb9txb))
 
 #### Goal: 
