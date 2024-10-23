@@ -50,7 +50,9 @@ Affordable, powerful and flexible keyer with built-in reliable iambic paddle, ea
 
 <br/><br/>
 [Youtube video showing paddle sensitivity](https://www.youtube.com/watch?v=UNnNl10UAn8)
+<br/>
 [![Sensitivity demo](https://img.youtube.com/vi/UNnNl10UAn8/0.jpg)](https://www.youtube.com/watch?v=UNnNl10UAn8)
+<br/>
 [//]:   https://www.youtube.com/watch?v=UNnNl10UAn8
 
 
