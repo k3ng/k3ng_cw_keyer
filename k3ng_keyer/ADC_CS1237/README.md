@@ -47,6 +47,8 @@ Affordable, powerful and flexible keyer with built-in reliable iambic paddle, ea
 <!--    ![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/IMG_1344.JPG?raw=true)  -->
 
 ![](https://github.com/djbr1/k3ng_cw_keyer/blob/master/k3ng_keyer/ADC_CS1237/Screenshot_2024-09-17_at_18.34.58.jpg?raw=true)
+
+<br/><br/>
 [Youtube video showing paddle sensitivity](https://www.youtube.com/watch?v=UNnNl10UAn8)
 [![Sensitivity demo](https://img.youtube.com/vi/UNnNl10UAn8/0.jpg)](https://www.youtube.com/watch?v=UNnNl10UAn8)
 [//]:   https://www.youtube.com/watch?v=UNnNl10UAn8
