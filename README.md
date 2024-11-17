@@ -1,3 +1,8 @@
+# k3ng_cw_keyer with Load Sensor Paddles
+This is a **fork** of k3ng_cw_keyer 
+### added load sensor (weight sensor) using CS1237 ADC. ###
+Motivation and details about this project described on https://blog.hb9txb.ch 
+
 # k3ng_cw_keyer
 K3NG Arduino CW Keyer
 
