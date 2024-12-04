@@ -91,6 +91,13 @@
   #define capacitance_threshold 2
 #endif //FEATURE_CAPACITIVE_PADDLE_PINS
 
+#ifdef FEATURE_PRESSURE_PADDLES
+	  #define pressure_threshold 250000  // 
+	  #define default_pressure_threshold_dot 250000   //   defined here but hardcoded in INO file
+	  #define default_pressure_threshold_dash 200000   //  defined here but hardcoded in INO file
+#endif //FEATURE_PRESSURE_PADDLES
+
+
 #ifdef FEATURE_LED_RING
   #define led_ring_low_limit 10
   #define led_ring_high_limit 50
@@ -319,3 +326,4 @@
 #endif //FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
 
 #define HI_TEXT "HI"  // Must be in UPPER case
+#define ADC_TEXT "ADC"  // Must be in UPPER case
