@@ -13,16 +13,16 @@
 #if defined(TEST_CONFIG_1)
 
 
-#define FEATURE_BUTTONS
-#define FEATURE_COMMAND_MODE
-// #define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
-#define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
-#define FEATURE_MEMORY_MACROS
+// #define FEATURE_BUTTONS
+// #define FEATURE_COMMAND_MODE
+#define FEATURE_COMMAND_LINE_INTERFACE  // Command Line Interface functionality
+// #define FEATURE_MEMORIES             // on the Arduino Due, you must have FEATURE_EEPROM_E24C1024 and E24C1024 EEPROM hardware in order to compile this
+// #define FEATURE_MEMORY_MACROS
 #define FEATURE_WINKEY_EMULATION    // disabling Automatic Software Reset is highly recommended (see documentation)
 // #define FEATURE_BEACON                // Go into beacon mode if paddle_left pin is LOW at boot up
 // #define FEATURE_BEACON_SETTING        // Go into beacon mode at boot up if EEPROM setting is enabled (\_ CLI Command)
 // #define FEATURE_TRAINING_COMMAND_LINE_INTERFACE
-// #define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
+#define FEATURE_POTENTIOMETER         // do not enable unless you have a potentiometer connected, otherwise noise will falsely trigger wpm changes
 // #define FEATURE_SIDETONE_SWITCH   // adds switch control for the sidetone output. requires an external toggle switch (assigned to an arduino pin - see keyer_pin_settings.h). 
 // #define FEATURE_SIDETONE_NEWTONE      // Use the NewTone library, ~1k smaller code size than the standard tone library. Uses timer1 (pins 9 or 10)  https://bitbucket.org/teckel12/arduino-new-tone/wiki/Home
 // #define FEATURE_SERIAL_HELP
@@ -31,7 +31,7 @@
 // #define FEATURE_USB_KEYBOARD          // Use a USB keyboard to send code - Uncomment three lines in k3ng_keyer.ino (search for note_usb_uncomment_lines)
 // #define FEATURE_CW_COMPUTER_KEYBOARD  // Have an Arduino Due or Leonardo act as a USB HID (Human Interface Device) keyboard and use the paddle to "type" characters on the computer
 // #define FEATURE_DEAD_OP_WATCHDOG
-#define FEATURE_AUTOSPACE
+// #define FEATURE_AUTOSPACE
 // #define FEATURE_FARNSWORTH
 // #define FEATURE_DL2SBA_BANKSWITCH       // Switch memory banks feature as described here: http://dl2sba.com/index.php?option=com_content&view=article&id=131:nanokeyer&catid=15:shack&Itemid=27#english
 // #define FEATURE_LCD_4BIT                // classic LCD display using 4 I/O lines
@@ -72,9 +72,11 @@
 // #define FEATURE_SO2R_BASE           // SO2R Box base protocol extensions
 // #define FEATURE_SO2R_SWITCHES       // SO2R Box TX and RX switches
 // #define FEATURE_SO2R_ANTENNA        // SO2R Box antenna selection (not fully implemented)
-#define FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
+// #define FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
 // #define FEATURE_WEB_SERVER      // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
 // #define FEATURE_INTERNET_LINK   // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
+// #define FEATURE_DUAL_MODE_KEYER_AND_TINYFSK // Runs on Raspberry Pi Pico
+// #define FEATURE_AUDIOPWMSINEWAVE // Raspberry Pi Pico hardware only
 
 // UNDER DEVELOPMENT
 // #define FEATURE_SINEWAVE_SIDETONE_USING_TIMER_1  // Arduino Uno: sidetone_line = 9 or 10 ; Mega: sidetone_line = 11, 12, or 13 (Further info: https://www.pjrc.com/teensy/td_libs_TimerOne.html )
@@ -92,9 +94,11 @@
 // #define OPTION_WINKEY_DISCARD_BYTES_AT_STARTUP     // if ASR is not disabled, you may need this to discard errant serial port bytes at startup
 // #define OPTION_WINKEY_STRICT_EEPROM_WRITES_MAY_WEAR_OUT_EEPROM // with this activated the unit will write non-volatile settings to EEPROM when set by Winkey commands
 // #define OPTION_WINKEY_SEND_WORDSPACE_AT_END_OF_BUFFER
-#define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
+// #define OPTION_WINKEY_STRICT_HOST_OPEN               // require an admin host open Winkey command before doing any other commands
 #define OPTION_WINKEY_2_SUPPORT                      // comment out to revert to Winkey version 1 emulation
-//this is removed from other features files - may depricate totally - 2016-09-28 - #define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE       // additional code to check_dit_paddle() and check_dah_paddle() to send 0xC2 status byte when paddles are hit
+#define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE
+// 2016-09-28 this is removed from other features files - may depricate totally - #define OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE       // additional code to check_dit_paddle() and check_dah_paddle() to send 0xC2 status byte when paddles are hit
+// 2023-09-28 re-adding as a default to all hardware profiles.  if you don't have it activated paddle interuption of CQ repeat in N1MM doesn't work
 #define OPTION_WINKEY_INTERRUPTS_MEMORY_REPEAT
 // #define OPTION_WINKEY_UCXLOG_9600_BAUD          // use this only with UCXLog configured for Winkey 9600 baud mode
 // #define OPTION_WINKEY_UCXLOG_SUPRESS_C4_STATUS_BYTE  // use this only with UCXlog if having issues with function key macros
@@ -137,6 +141,7 @@
 // #define OPTION_WORDSWORTH_CZECH
 // #define OPTION_WORDSWORTH_DEUTSCH
 // #define OPTION_WORDSWORTH_NORSK
+// #define OPTION_WORDSWORTH_POLISH
 
 // #define FEATURE_COMPETITION_COMPRESSION_DETECTION //(Experimental)
 
@@ -148,10 +153,10 @@
 // #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
 
 #define OPTION_EXCLUDE_MILL_MODE
-// #define OPTION_NO_ULTIMATIC // reduce memory usage by removing ultimatic code.
+#define OPTION_NO_ULTIMATIC // reduce memory usage by removing ultimatic code.
 
 
-// #define OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW
+#define OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW
 // #define OPTION_PERSONALIZED_STARTUP_SCREEN        // displays a user defined string of characters on the second or fourth row of the screen during startup. 1602 display requires OPTION_DO_NOT_SAY_HI
 // #define OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION        // reverses the up/down direction when using the paddles to change the wpm or sidetone frequency
 // #define OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
@@ -161,6 +166,11 @@
 
 //  #define OPTION_WINKEY_PROSIGN_COMPATIBILITY  // Additional character mappings to support K1EL Winkey emulation prosigns
 
+
+// #define OPTION_WORDSWORTH_CZECH
+// #define OPTION_WORDSWORTH_DEUTSCH
+// #define OPTION_WORDSWORTH_NORSK
+// #define OPTION_WORDSWORTH_POLISH
 
 #endif
 

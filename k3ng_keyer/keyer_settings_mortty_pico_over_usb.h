@@ -1,25 +1,4 @@
 // Initial and hardcoded settings
-
-
-// ######## ##     ## ##    ## ##    ## ######## ##    ## ######## ########  
-// ##       ##     ## ###   ## ##   ##  ##        ##  ##  ##       ##     ## 
-// ##       ##     ## ####  ## ##  ##   ##         ####   ##       ##     ## 
-// ######   ##     ## ## ## ## #####    ######      ##    ######   ########  
-// ##       ##     ## ##  #### ##  ##   ##          ##    ##       ##   ##   
-// ##       ##     ## ##   ### ##   ##  ##          ##    ##       ##    ##  
-// ##        #######  ##    ## ##    ## ########    ##    ######## ##     ## 
-
-
-// ######## ##    ##    ##     #####   
-// ##       ##   ##   ####    ##   ##  
-// ##       ##  ##      ##   ##     ## 
-// ######   #####       ##   ##     ## 
-// ##       ##  ##      ##   ##     ## 
-// ##       ##   ##     ##    ##   ##  
-// ##       ##    ##  ######   #####  
-
-
-
 #define initial_speed_wpm 26             // "factory default" keyer speed setting
 #define initial_command_mode_speed_wpm 20 // "factory default" command mode speed setting 
 #define initial_sidetone_freq 600        // "factory default" sidetone frequency setting
@@ -51,7 +30,7 @@
 #define default_length_wordspace 7
 #define default_keying_compensation 0    // number of milliseconds to extend all dits and dahs - for QSK on boatanchors
 #define default_first_extension_time 0   // number of milliseconds to extend first sent dit or dah
-#define default_pot_full_scale_reading 1023
+#define default_pot_full_scale_reading 1022
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
 #define winkey_c0_wait_time 1            // the number of milliseconds to wait to send 0xc0 byte after send buffer has been sent
@@ -92,6 +71,12 @@
 #define default_wordsworth_repetition 1
 #define serial_program_memory_buffer_size 500
 #define eeprom_write_time_ms 30000
+
+// CW<->RTTY DUAL MODE control - rear-panel slide switch: pin HIGH default = CW mode, LOW = TinyFSK mode
+// The "pin_run_tinyfsk" is only queried at boot, selecting the CW Keyer or TinyFSK RTTY sketch to launch
+#define pin_run_tinyfsk 20   // HIGH=CW, LOW=RTTY rear-panel mode slide switch (pullup input)
+#define pin_keyer_running 1  // HIGH when CW Keyer is running. rear-panel green status LED (output)
+#define pin_rtty_running 2   // HIGH when TinyFSK is running. rear-panel yellow status LED (output)
 
 #ifdef FEATURE_BUTTONS
   #define analog_buttons_number_of_buttons 4
@@ -216,7 +201,7 @@
 #if defined(FEATURE_ETHERNET)
   // #define FEATURE_ETHERNET_IP {192,168,1,178}                      // default IP address ("192.168.1.178")
   // #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}
-  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.178")
+  #define FEATURE_ETHERNET_IP {192,168,1,179}                      // default IP address ("192.168.1.179")
   #define FEATURE_ETHERNET_MAC {0xDE,0xAD,0xBE,0xEF,0xFE,0xEE}
   #define FEATURE_ETHERNET_DNS {8,8,8,8} 
 
@@ -258,6 +243,7 @@
 
 #define sd_card_spi_ss_line 4
 
+
 #if defined(OPTION_DFROBOT_LCD_COMMAND_BUTTONS)
 
   // For V1.1 board use these values
@@ -284,6 +270,7 @@
 
 #endif
 
+
 #define sequencer_pins_active_state HIGH
 #define sequencer_pins_inactive_state LOW
 #define ptt_line_active_state HIGH
@@ -300,7 +287,7 @@
 #define sidetone_line_inactive_state LOW
 
 #if defined(ARDUINO_MAPLE_MINI)
-  #define button_value_factor 4095  //sp5iou contributed
+  #define button_value_factor 4095
 #else
   #define button_value_factor 1023
 #endif

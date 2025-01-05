@@ -2,27 +2,31 @@
 #ifndef keyer_pin_settings_h
 #define keyer_pin_settings_h
 
-
-#define paddle_left 2
-#define paddle_right 6
-#define tx_key_line_1 11      // (high = key down/tx on)
-#define tx_key_line_2 0
+#define paddle_left 18
+#define paddle_right 19
+#define tx_key_line_1 12      // (high = key down/tx on)
+#define tx_key_line_2 3
 #define tx_key_line_3 0
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-#define sidetone_line 4         // connect a speaker for sidetone
-#define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
-#define ptt_tx_1 12              // PTT ("push to talk") lines
-#define ptt_tx_2 0              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
-#define ptt_tx_3 0              //   These are optional - set to 0 if unused
+#define sidetone_line 16      // connect a speaker for sidetone. Mortty_v5 PWM output to AudioBoard
+#define potentiometer 28      // Speed potentiometer (0 to 3.3 V) Use pot from 1k to 10k
+#define ptt_tx_1 13           // PTT ("push to talk") lines
+#define ptt_tx_2 4            //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
+#define ptt_tx_3 0            //   These are optional - set to 0 if unused
 #define ptt_tx_4 0
 #define ptt_tx_5 0
 #define ptt_tx_6 0
-#define tx_key_dit 0            // if defined, goes active for dit (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
-#define tx_key_dah 0            // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
-
+#define tx_key_dit 0          // if defined, goes active for dit (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
+#define tx_key_dah 0          // if defined, goes active for dah (any transmitter) - customized with tx_key_dit_and_dah_pins_active_state and tx_key_dit_and_dah_pins_inactive_state
 #define potentiometer_enable_pin 0  // if defined, the potentiometer will be enabled only when this pin is held low; set to 0 to ignore this pin
+
+#define jackSwitch_paddle 17  // Paddle plug insert detect - Mortty_v5. (pullup input)
+#define jackSwitch_R1 15      // Radio1 plug insert detect - Mortty_v5. (pullup input)
+#define jackSwitch_R2  6      // Paddle plug insert detect - Mortty_v5. (pullup input)
+//NOTE: rtty_tx_1 14          // Radio1 RTTY FSK - used in Mortty_v5 DUAL MODE TinyFSK sketch (output)
+//NOTE: rtty_tx_2 5           // Radio2 RTTY FSK - used in MOrtty_v5 DUAL MODE TinyFSK sketch (output)
 
 #ifdef FEATURE_BUTTONS
   #define analog_buttons_pin A1
@@ -42,21 +46,14 @@ FEATURE_SIDETONE_SWITCH
 
 
 //lcd pins
-#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD_8BIT)
+#ifdef FEATURE_LCD_4BIT
   #define lcd_rs A2
-  #define lcd_enable 10  // pin 10 is used by Ethernet shield and will conflict with that
+  #define lcd_enable 10
   #define lcd_d4 6
   #define lcd_d5 7
   #define lcd_d6 8
   #define lcd_d7 9
-#endif //FEATURE_LCD_4BIT || defined(FEATURE_LCD_8BIT)
-
-#if defined(FEATURE_LCD_8BIT) // addition four data lines for 8 bit LCD control
-  #define lcd_d0 20
-  #define lcd_d1 21
-  #define lcd_d2 22
-  #define lcd_d3 23
-#endif //FEATURE_LCD_4BIT || defined(FEATURE_LCD_8BIT)
+#endif //FEATURE_LCD_4BIT
 
 #ifdef FEATURE_LCD1602_N07DH
   #define lcd_rs 8
@@ -143,18 +140,19 @@ FEATURE_SIDETONE_SWITCH
 #endif
 
 #ifdef FEATURE_SEQUENCER
-  #define sequencer_1_pin 0
-  #define sequencer_2_pin 0
-  #define sequencer_3_pin 0
-  #define sequencer_4_pin 0
-  #define sequencer_5_pin 0
+  #define sequencer_1_pin 40
+  #define sequencer_2_pin 41
+  #define sequencer_3_pin 42
+  #define sequencer_4_pin 43
+  #define sequencer_5_pin 44
 #endif //FEATURE_SEQUENCER
 
-#define ptt_input_pin 0
+#define ptt_input_pin 0  
 
 #define tx_inhibit_pin 0
-#define tx_pause_pin 0   
+#define tx_pause_pin 0 
 
+//FEATURE_DUAL_MODE_KEYER_AND_TINYFSK
 #define pin_sending_mode_automatic 0  // goes HIGH when keyer is sending code automatically
 #define pin_sending_mode_manual 0     // goes HIGH when keyer is sending code manually (i.e. the paddle or straight key)
 
@@ -163,4 +161,3 @@ FEATURE_SIDETONE_SWITCH
   #error "Multiple pin_settings.h files included somehow..."
 
 #endif //keyer_pin_settings_h
-

@@ -11,21 +11,35 @@
 #ifndef keyer_pin_settings_h
 #define keyer_pin_settings_h
 
+// Raspbery Pi Pico: paddle_right = 3    sidetone_line = 6
+
+//Mega test Jig / Standard Pins
 #define paddle_left 2
 #define paddle_right 5
+#define sidetone_line 4
+#define potentiometer 28 //A0 // Pico test jig: 28 (GP28)
+#define ptt_tx_1 13              // PTT ("push to talk") lines
+
+//Raspberry Pi Pico Test Jig
+// #define paddle_left 2
+// #define paddle_right 3
+// #define sidetone_line 15
+// #define potentiometer 26
+// #define ptt_tx_1 0              // PTT ("push to talk") lines
+
 #define tx_key_line_1 11       // (high = key down/tx on)
-#define tx_key_line_2 13
+#define tx_key_line_2 0
 #define tx_key_line_3 0
 #define tx_key_line_4 0
 #define tx_key_line_5 0
 #define tx_key_line_6 0
-#if !defined(FEATURE_ETHERNET)
-  #define sidetone_line 4      // connect a speaker for sidetone (pin 4 is used by the Ethernet shield!)
-#else
-  #define sidetone_line 12
-#endif
-#define potentiometer A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
-#define ptt_tx_1 13              // PTT ("push to talk") lines
+// #if !defined(FEATURE_ETHERNET)
+//   #define sidetone_line 4      // connect a speaker for sidetone (pin 4 is used by the Ethernet shield!)
+// #else
+//   #define sidetone_line 12
+// #endif
+// #define potentiometer 28 //A0        // Speed potentiometer (0 to 5 V) Use pot from 1k to 10k
+// #define ptt_tx_1 0              // PTT ("push to talk") lines
 #define ptt_tx_2 0              //   Can be used for keying fox transmitter, T/R switch, or keying slow boatanchors
 #define ptt_tx_3 0              //   These are optional - set to 0 if unused
 #define ptt_tx_4 0
@@ -169,6 +183,11 @@ FEATURE_SIDETONE_SWITCH
 
 #define pin_sending_mode_automatic 0  // goes HIGH when keyer is sending code automatically
 #define pin_sending_mode_manual 0     // goes HIGH when keyer is sending code manually (i.e. the paddle or straight key)
+
+//FEATURE_DUAL_MODE_KEYER_AND_TINYFSK
+#define pin_run_tinyfsk 0  // assert this pin HIGH at boot up to go into TinyFSK mode, LOW to go into keyer mode
+#define pin_rtty_running 0 // output - goes HIGH when TinyFSK is running
+#define pin_keyer_running 0  // output - goes HIGH when Keyer is running
 
 #else
 

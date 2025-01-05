@@ -35,7 +35,7 @@
 #define initial_qrss_dit_length 1        // QRSS dit length in seconds
 #define initial_pot_wpm_low_value 13     // Potentiometer WPM fully CCW
 #define initial_pot_wpm_high_value 35    // Potentiometer WPM fully CW
-#define wpm_limit_low 5
+#define wpm_limit_low 10
 #define wpm_limit_high 60
 #define potentiometer_change_threshold 0.9 // don't change the keyer speed until pot wpm has changed more than this
 #define send_buffer_size 150
@@ -43,6 +43,7 @@
 #define default_length_wordspace 7
 #define default_keying_compensation 0    // number of milliseconds to extend all dits and dahs - for QSK on boatanchors
 #define default_first_extension_time 0   // number of milliseconds to extend first sent dit or dah
+// #define default_pot_full_ccw_reading 50
 #define default_pot_full_scale_reading 1023
 #define default_weighting 50             // 50 = weighting factor of 1 (normal)
 #define default_ptt_hang_time_wordspace_units 0.0
@@ -156,7 +157,8 @@
 #define WINKEY_HANG_TIME_1_66 1.66
 #define WINKEY_HANG_TIME_2_0 2.0
 
-#define WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL 0x16
+#define WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL_WK1 0x0a
+#define WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL_WK2 0x18
 #define WINKEY_RETURN_THIS_FOR_ADMIN_PADDLE_A2D 0xEE
 #define WINKEY_RETURN_THIS_FOR_ADMIN_SPEED_A2D 0x00
 
@@ -329,7 +331,7 @@
 
 #endif //FEATURE_COMMAND_MODE_ENHANCED_CMD_ACKNOWLEDGEMENT
 
-#define HI_TEXT "K3NG"  // Must be in UPPER case
+#define HI_TEXT "TEST"  // Must be in UPPER case
 
 #endif //TEST_SETTINGS_1
 
@@ -479,7 +481,8 @@
 #define WINKEY_HANG_TIME_1_66 1.66
 #define WINKEY_HANG_TIME_2_0 2.0
 
-#define WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL 0x16
+#define WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL_WK1 0x0a
+#define WINKEY_RETURN_THIS_FOR_ADMIN_GET_CAL_WK2 0x18
 #define WINKEY_RETURN_THIS_FOR_ADMIN_PADDLE_A2D 0xEE
 #define WINKEY_RETURN_THIS_FOR_ADMIN_SPEED_A2D 0x00
 
@@ -491,7 +494,7 @@
 #define PRIMARY_SERIAL_PORT_BAUD 115200     // This applies only when the port is in Command Line Interface mode.  In Winkey mode it will default to 1200.
 
 #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-  #define SECONDARY_SERIAL_PORT &Serial1
+  #define SECONDARY_SERIAL_PORT &Serial1 // ARDUINO_RASPBERRY_PI_PICO_W & ARDUINO_RASPBERRY_PI_PICO is hardcoded in .ino for Serial2 (UART1) pins TX: 8 RX: 9
   #define SECONDARY_SERIAL_PORT_BAUD 115200
 #endif
 

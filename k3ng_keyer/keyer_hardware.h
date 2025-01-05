@@ -21,6 +21,7 @@
 // #define HARDWARE_MORTTY_REGULAR  // edit these files: keyer_pin_settings_mortty_regular.h, keyer_settings_mortty_regular.h, keyer_features_and_options_mortty_regular.h
 // #define HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER  // edit these files: keyer_pin_settings_mortty_regular_with_potentiometer.h, keyer_settings_mortty_regular_with_potentiometer.h, keyer_features_and_options_mortty_regular_with_potentiometer.h
 // #define HARDWARE_MORTTY_SO2R  // edit these files: keyer_pin_settings_mortty_so2r.h, keyer_settings_mortty_so2r.h, keyer_features_and_options_mortty_so2r.h
+// #define HARDWARE_MORTTY_PICO_OVER_USB   // edit these files: keyer_pin_settings_mortty_pico_over_usb.h, keyer_settings_mortty_mortty_pico_over_usb.h, keyer_features_and_options_mortty_mortty_pico_over_usb.h
 // #define HARDWARE_MORTTY_SO2R_WITH_POTENTIOMETER  // edit these files: keyer_pin_settings_mortty_so2r_with_potentiometer.h, keyer_settings_mortty_so2r_with_potentiometer.h, keyer_features_and_options_mortty_so2r_with_potentiometer.h
 // #define HARDWARE_YAACWK   // http://i1cra.briata.org/yaacwk/  files: keyer_pin_settings_yaacwk.h, keyer_features_and_options_yaacwk.h, keyer_settings_yaacwk.h
 // #define HARDWARE_K5BCQ   // edit these files: keyer_pin_settings_k5bcq.h, keyer_features_and_options_k5bcq.h, keyer_settings_k5bcq.h 
