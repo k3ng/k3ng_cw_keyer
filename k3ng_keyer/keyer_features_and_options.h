@@ -61,6 +61,8 @@
 // #define FEATURE_INTERNET_LINK   // Details: https://github.com/k3ng/k3ng_cw_keyer/wiki/390-Feature:-Ethernet,-Web-Server,-and-Internet-Linking
 
 // #define FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT     // Activate the Command Line interface on the secondary serial port
+// #define FEATURE_MIDI                     // sends MIDI notes on supported hardware (teensy 3.x). Can be used e.g. with quisk SDR software
+
 #define OPTION_PRIMARY_SERIAL_PORT_DEFAULT_WINKEY_EMULATION  // Use when activating both FEATURE_WINKEY_EMULATION and FEATURE_COMMAND_LINE_INTERFACE 
                                                              //    simultaneously.  This will make Winkey emulation be the default at boot up; 
                                                              //    hold command button down at boot up to activate CLI mode
@@ -136,3 +138,32 @@
 // #define OPTION_BEACON_MODE_PTT_TAIL_TIME             // adds the ptt tail time to each playing of memory 1 in beacon mode
 
 //  #define OPTION_WINKEY_PROSIGN_COMPATIBILITY  // Additional character mappings to support K1EL Winkey emulation prosigns
+
+// MIDI definitions
+#define OPTION_MIDI_BASE_NOTE 0 // the base midi note
+#define OPTION_MIDI_KEYER_CHANNEL 1 // the MIDI channel number to send messages
+// commands and queries from the computer
+#define OPTION_MIDI_INPUT_CHANNEL 2 // the MIDI channel to receive commands as notes
+#define OPTION_MIDI_WPM_CONTROL 0      //    for WPM command, value is wpm value
+#define OPTION_MIDI_IS_KEYER_CONTROL 1    // set behavior as keyer or dumb interface: value > 0 -> Iambic Keyer, = 0 -> Interface
+#define OPTION_MIDI_REVERSE_CONTROL 2  // value > 0 -> Paddle Reverse
+#define OPTION_MIDI_IAMBIC_CONTROL 3   // value > 0 -> Iambic B, = 0 -> Iambic A
+
+//
+// query for keyer state
+// Resonses:
+//    response_is_keyer: value = 1 - yes, value 0 - no, value = 2 - Winkeyer (not in this Sketch)
+//  when keyer then more responses:
+//    response_wpm: value = wpm
+//    response_reverse: Paddle reverse: value > 0 - yes, value 0 - no
+//    response_iambic: Iambic Mode: value > 0 -> Iambic B, = 0 -> Iambic A
+#define OPTION_MIDI_GET_KEYER_STATE_CONTROL 4
+
+// responses to the computer
+#define OPTION_MIDI_RESPONSE_CHANNEL 3      // the channel to send response messages
+#define OPTION_MIDI_RESPONSE_FAIL 0
+#define OPTION_MIDI_RESPONSE_OK 1
+#define OPTION_MIDI_RESPONSE_IS_KEYER 2    // value = 1 - yes, value 0 - no, value = 2 - Winkeyer (not in this Sketch)
+#define OPTION_MIDI_RESPONSE_WPM 3        // value = wpm
+#define OPTION_MIDI_RESPONSE_REVERSE 4    // Paddle reverse: value > 0 - yes, value 0 - no
+#define OPTION_MIDI_RESPONSE_IAMBIC 5     // Iambic Mode: value > 0 -> Iambic B, = 0 -> Iambic A
