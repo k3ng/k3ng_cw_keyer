@@ -41,7 +41,7 @@ FEATURE_SIDETONE_SWITCH
 
 
 //lcd pins
-#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD_8BIT)
+#if defined(FEATURE_LCD_4BIT) || defined(FEATURE_LCD_8BIT) || defined(FEATURE_LCD_HD44780_PINIO)
   #define lcd_rs A2
   #define lcd_enable 10  // pin 10 is used by Ethernet shield and will conflict with that
   #define lcd_d4 6
