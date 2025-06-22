@@ -18767,7 +18767,7 @@ void initialize_display(){
     	  // default is setExecTimes(HD44780_CHEXECTIME, HD44780_INSEXECTIME);
     	  // Values in useconds
     	  // lcd.setExecTimes(2000,38);// default
-          lcd.setExecTimes(2000, 1200);// very slow whilst init screen is being printed
+          lcd.setExecTimes(2000, 1200);// has to be slow or lcd_centre_print_timed() causes corruption
         #endif
         lcd.begin(LCD_COLUMNS, LCD_ROWS);
      #endif
