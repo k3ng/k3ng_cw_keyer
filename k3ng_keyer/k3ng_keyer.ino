@@ -1524,6 +1524,8 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include "keyer_features_and_options_iz3gme.h"
 #elif defined(HARDWARE_YCCC_SO2R_MINI)
   #include "keyer_features_and_options_yccc_so2r_mini.h"
+#elif defined(HARDWARE_ESP32_WROOM_KEYER)
+  #include "keyer_features_and_options_esp32wroom.h"
 #else
   #include "keyer_features_and_options.h"
 #endif
@@ -1604,6 +1606,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #elif defined(HARDWARE_YCCC_SO2R_MINI)
   #include "keyer_pin_settings_yccc_so2r_mini.h"
   #include "keyer_settings_yccc_so2r_mini.h"
+#elif defined(HARDWARE_ESP32_WROOM_KEYER)
+  #include "keyer_pin_settings_esp32wroom.h"
+  #include "keyer_settings_esp32wroom.h"
 #else
   #include "keyer_pin_settings.h"
   #include "keyer_settings.h"
