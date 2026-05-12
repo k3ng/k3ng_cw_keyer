@@ -1471,6 +1471,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #elif defined(ARDUINO_ARCH_MBED) || defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
   #include <EEPROM.h>
   #include <avr/pgmspace.h>
+#elif defined(ESP32)
+  #include <EEPROM.h>
+  #include <pgmspace.h>
 #else
   #include <avr/pgmspace.h>
   #include <avr/wdt.h>
