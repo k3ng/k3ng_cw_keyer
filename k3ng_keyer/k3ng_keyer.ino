@@ -6468,7 +6468,7 @@ void check_ptt_tail()
 //-------------------------------------------------------------------------------------------------------
 void write_settings_to_eeprom(int initialize_eeprom) {
 
-  #if (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if (!defined(ESP32) && !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
     if (initialize_eeprom) {
       //configuration.magic_number = eeprom_magic_number;
@@ -6489,7 +6489,7 @@ void write_settings_to_eeprom(int initialize_eeprom) {
   #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
 
-  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO) || defined(ESP32)
     #if defined(DEBUG_EEPROM)
       debug_serial_port->println(F("write_settings_to_eeprom: ARDUINO_RASPBERRY_PI_PICO"));
     #endif
@@ -6520,7 +6520,7 @@ void service_async_eeprom_write(){
     if (last_async_eeprom_write_status){ // we have an ansynchronous write to eeprom in progress
 
 
-      #if defined(_BOARD_PIC32_PINGUINO_) || defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
+      #if defined(_BOARD_PIC32_PINGUINO_) || defined(ARDUINO_SAMD_VARIANT_COMPLIANCE) || defined(ESP32)
         if (EEPROM.read(ee) != *p) {
           EEPROM.write(ee, *p);
         }
@@ -6539,11 +6539,11 @@ void service_async_eeprom_write(){
       } else { // we're done
         async_eeprom_write = 0;
         last_async_eeprom_write_status = 0;
-        #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
+        #if defined(ARDUINO_SAMD_VARIANT_COMPLIANCE) || defined(ESP32)
           EEPROM.commit();
         #endif
 
-        #if defined(DEBUG_ASYNC_EEPROM_WRITE)
+        #if defined(DEBUG_ASYNC_EEPROM_WRITE) || defined(ESP32)
           debug_serial_port->println(F("service_async_eeprom_write: complete"));
         #endif
       }
