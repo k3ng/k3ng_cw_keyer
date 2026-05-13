@@ -18628,7 +18628,7 @@ void initialize_serial_ports(){
     primary_serial_port->begin(primary_serial_port_baud_rate);
 
     #ifdef DEBUG_STARTUP
-      debug_serial_port->println(F("setup: serial port opened"));
+      primary_serial_port->println(F("setup: serial port opened"));
     #endif //DEBUG_STARTUP
 
     #if !defined(OPTION_SUPPRESS_SERIAL_BOOT_MSG) && defined(FEATURE_COMMAND_LINE_INTERFACE)
