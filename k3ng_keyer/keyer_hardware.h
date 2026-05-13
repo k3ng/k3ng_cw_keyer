@@ -92,6 +92,9 @@
 #elif defined(_BOARD_PIC32_PINGUINO_) // || defined(_BOARD_PIC32_PINGUINO_OTG_)
   #define PRIMARY_SERIAL_CLS USBSerial
   #define SECONDARY_SERIAL_CLS HardwareSerial
+#elif defined(ESP32)
+  #define PRIMARY_SERIAL_CLS HardwareSerial
+  #define SECONDARY_SERIAL_CLS HardwareSerial
 #else
   #define PRIMARY_SERIAL_CLS HardwareSerial
   #define SECONDARY_SERIAL_CLS HardwareSerial 
