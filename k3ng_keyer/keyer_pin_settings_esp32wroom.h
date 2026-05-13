@@ -25,7 +25,7 @@
 
 #ifdef FEATURE_BUTTONS
   #define analog_buttons_pin 35
-  #define command_mode_active_led 0
+  #define command_mode_active_led 13
 #endif //FEATURE_BUTTONS
 
 /*
