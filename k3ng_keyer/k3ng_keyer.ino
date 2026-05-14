@@ -2256,8 +2256,9 @@ PRIMARY_SERIAL_CLS * debug_serial_port;
   uint8_t default_subnet[] = FEATURE_ETHERNET_SUBNET_MASK;                  // default subnet mask
   uint8_t dns_server[] = FEATURE_ETHERNET_DNS;
   uint8_t mac[] = FEATURE_ETHERNET_MAC;   // default physical mac address
-  uint8_t restart_networking = 0;
   #endif
+
+  uint8_t restart_networking = 0;
 
   #if defined(FEATURE_WEB_SERVER)
     #define MAX_WEB_REQUEST 512
@@ -2454,6 +2455,7 @@ void setup()
   initialize_ps2_keyboard();
   initialize_usb();
   initialize_cw_keyboard();
+  initialize_wifi();
   initialize_ethernet();
   initialize_udp();
   initialize_web_server();
@@ -2470,7 +2472,6 @@ void setup()
   #endif
   
   initialize_audiopwmsinewave();
-  initialize_wifi();
 }
 
 // --------------------------------------------------------------------------------------------
@@ -20398,6 +20399,11 @@ void initialize_udp(){
   #endif //FEATURE_UDP
 }
 
+#if defined(ENABLE_WIFI)
+bool check_wifi_connected() {
+  return WiFi.status() == WL_CONNECTED;
+}
+#endif 
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -20405,7 +20411,15 @@ void initialize_udp(){
 void initialize_web_server(){
   #if defined(FEATURE_WEB_SERVER)
 
-  server.begin();
+primary_serial_port->println(F("start web server"));
+#if defined(ENABLE_WIFI)
+   if (check_wifi_connected()) {
+#endif
+    server.begin();
+#if defined(ENABLE_WIFI)
+   }
+#endif
+primary_serial_port->println(F("start web server done"));
 
     #ifdef DEBUG_WEB_SERVER
       debug_serial_port->print(F("initialize_web_server: server is at "));
