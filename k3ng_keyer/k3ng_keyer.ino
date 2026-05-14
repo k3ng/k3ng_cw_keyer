@@ -1750,6 +1750,16 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 #if defined(ESP32) && defined(ENABLE_WIFI)
   #include <WiFi.h>
+  #ifndef WIFI_SSID
+    #define WIFI_SSID ""
+  #endif
+
+  #ifndef WIFI_PASSWORD
+    #define WIFI_PASSWORD ""
+  #endif
+
+  char wifi_ssid[33] = WIFI_SSID;
+  char wifi_password[65] = WIFI_PASSWORD;
 #endif
 
 #define memory_area_start (sizeof(configuration)+5)
@@ -12861,7 +12871,14 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
     port_to_use->println(F("\\Z\t\t: Autospace on/off"));
   #endif //FEATURE_AUTOSPACE
   port_to_use->println(F("\\+\t\t: Create prosign")); //Changed description to match change log at top (WD9DMP)
+#if defined(ESP32) && defined(ENABLE_WIFI)
+  port_to_use->println(F("\\!c\t\t: WiFi connect"));
+  port_to_use->println(F("\\!d\t\t: WiFi disconnect"));
+  port_to_use->println(F("\\!s<ssid>\t: Set WiFi SSID"));
+  port_to_use->println(F("\\!p<pass>\t: Set WiFi password"));
+#else
   port_to_use->println(F("\\!##\t\t: Repeat play memory")); //Added missing command(WD9DMP)
+#endif
   port_to_use->println(F("\\|####\t\t: Set memory repeat (milliseconds)")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\*\t\t: Toggle paddle echo")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\`\t\t: Toggle straight key echo")); //Added missing command(WD9DMP)
@@ -13143,6 +13160,9 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     case 'W': serial_wpm_set(port_to_use);break;                                        // W - set WPM
     case 'X': serial_switch_tx(port_to_use);break;                                      // X - switch transmitter
     case 'Y': serial_change_wordspace(port_to_use); break;
+    #ifdef ENABLE_WIFI
+    case '!': serial_wifi_command(port_to_use); break;
+    #endif
     #ifdef FEATURE_AUTOSPACE
       case 'Z':
         port_to_use->print(F("\r\nAutospace O"));
@@ -14319,6 +14339,85 @@ void serial_change_wordspace(PRIMARY_SERIAL_CLS * port_to_use)
     port_to_use->println(set_wordspace_to,DEC);
   }
 }
+#endif
+
+//---------------------------------------------------------------------
+#if defined(ESP32) && defined(ENABLE_WIFI)
+
+void serial_wifi_command(PRIMARY_SERIAL_CLS * port_to_use) {
+  unsigned long start = millis();
+
+  while (!port_to_use->available()) {
+    if ((millis() - start) > 3000) {
+      port_to_use->println(F("\r\nWiFi command timeout"));
+      return;
+    }
+    delay(1);
+  }
+
+  char subcommand = port_to_use->read();
+
+  switch (subcommand) {
+    case 'c':
+    case 'C':
+      initialize_wifi();
+      break;
+
+    case 'd':
+    case 'D':
+      WiFi.disconnect(true);
+      WiFi.mode(WIFI_OFF);
+      port_to_use->println(F("\r\n[WiFi] disconnected"));
+      break;
+
+    case 's':
+    case 'S':
+      serial_read_rest_of_line(port_to_use, wifi_ssid, sizeof(wifi_ssid));
+      port_to_use->print(F("\r\n[WiFi] SSID set to: "));
+      port_to_use->println(wifi_ssid);
+      break;
+
+    case 'p':
+    case 'P':
+      serial_read_rest_of_line(port_to_use, wifi_password, sizeof(wifi_password));
+      port_to_use->println(F("\r\n[WiFi] password set"));
+      break;
+
+    default:
+      port_to_use->println(F("\r\n[WiFi] commands:"));
+      port_to_use->println(F("\\!c          connect"));
+      port_to_use->println(F("\\!d          disconnect"));
+      port_to_use->println(F("\\!s<ssid>    set SSID"));
+      port_to_use->println(F("\\!p<pass>    set password"));
+      break;
+  }
+}
+
+void serial_read_rest_of_line(PRIMARY_SERIAL_CLS * port_to_use, char *buffer, size_t buffer_len) {
+  size_t pos = 0;
+  unsigned long start = millis();
+
+  while ((millis() - start) < 3000) {
+    while (port_to_use->available()) {
+      char c = port_to_use->read();
+
+      if ((c == '\r') || (c == '\n')) {
+        buffer[pos] = 0;
+        return;
+      }
+
+      if (pos < (buffer_len - 1)) {
+        buffer[pos++] = c;
+      }
+
+      start = millis();
+    }
+    delay(1);
+  }
+
+  buffer[pos] = 0;
+}
+
 #endif
 
 //---------------------------------------------------------------------
@@ -20200,16 +20299,23 @@ void initialize_wifi() {
 
 #if defined(ESP32) && defined(ENABLE_WIFI)
 
-  if (!primary_serial_port) {
-    return;
-  }
-
   primary_serial_port->println();
-  primary_serial_port->println(F("WiFi: starting"));
+  primary_serial_port->print(F("WiFi: starting "));
+  primary_serial_port->println(wifi_ssid);
   primary_serial_port->println();
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(wifi_ssid, wifi_password);
+
+  #ifdef FEATURE_DISPLAY
+    lcd_clear();
+//    if (LCD_COLUMNS < 9){
+//      lcd_center_print_timed("Cmd Mode", 0, default_display_msg_delay);
+//    } else {
+    lcd_center_print_timed("Initialize", 1, default_display_msg_delay);
+    lcd_center_print_timed("WiFi", 2, default_display_msg_delay);
+//    }
+  #endif
 
   const unsigned long timeout_ms = 15000;
   int numberOfTries = 20;
@@ -20241,7 +20347,11 @@ void initialize_wifi() {
       delay(500);
       if (numberOfTries <= 0) {
         primary_serial_port->println("[WiFi] Failed to connect to WiFi!");
-      // Use disconnect function to force stop trying to connect
+  #ifdef FEATURE_DISPLAY
+        lcd_center_print_timed("Wifi", 1, default_display_msg_delay);
+        lcd_center_print_timed("failed", 2, default_display_msg_delay);
+  #endif
+     // Use disconnect function to force stop trying to connect
        WiFi.disconnect();
        break;
       } else {
