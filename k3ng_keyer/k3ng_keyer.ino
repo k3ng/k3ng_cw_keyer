@@ -2425,10 +2425,10 @@ void setup()
   check_eeprom_for_initialization();
   check_for_beacon_mode();
   check_for_debug_modes();
-  initialize_analog_button_array();
   #if !defined(DEBUG_EEPROM_READ_SETTINGS)
     initialize_serial_ports();
   #endif
+  initialize_analog_button_array();
   initialize_ps2_keyboard();
   initialize_usb();
   initialize_cw_keyboard();
