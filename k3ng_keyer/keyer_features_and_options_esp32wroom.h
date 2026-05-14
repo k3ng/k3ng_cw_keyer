@@ -167,3 +167,9 @@
 #define OPTION_MIDI_RESPONSE_WPM 3        // value = wpm
 #define OPTION_MIDI_RESPONSE_REVERSE 4    // Paddle reverse: value > 0 - yes, value 0 - no
 #define OPTION_MIDI_RESPONSE_IAMBIC 5     // Iambic Mode: value > 0 -> Iambic B, = 0 -> Iambic A
+
+
+#define ENABLE_WIFI
+#define WIFI_SSID "0xdeadbeef"
+#define WIFI_PASSWORD "0xdeadbeef"
+

@@ -1748,6 +1748,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #define SP __get_MSP()
 #endif
 
+#if defined(ESP32) && defined(ENABLE_WIFI)
+  #include <WiFi.h>
+#endif
 
 #define memory_area_start (sizeof(configuration)+5)
 
@@ -2448,6 +2451,7 @@ void setup()
   #endif
   
   initialize_audiopwmsinewave();
+  initialize_wifi();
 }
 
 // --------------------------------------------------------------------------------------------
@@ -20192,6 +20196,65 @@ void initialize_ethernet(){
 
 }
 
+void initialize_wifi() {
+
+#if defined(ESP32) && defined(ENABLE_WIFI)
+
+  if (!primary_serial_port) {
+    return;
+  }
+
+  primary_serial_port->println();
+  primary_serial_port->println(F("WiFi: starting"));
+  primary_serial_port->println();
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  const unsigned long timeout_ms = 15000;
+  int numberOfTries = 20;
+  unsigned long start = millis();
+  bool is_connected = false;
+  while (true) {
+    switch(WiFi.status()) {
+      case WL_NO_SSID_AVAIL: primary_serial_port->println("[WiFi] SSID not found"); break;
+      case WL_CONNECT_FAILED:
+        primary_serial_port->println("[WiFi] Failed - WiFi not connected! Reason: ");
+        break;
+      case WL_CONNECTION_LOST: primary_serial_port->println("[WiFi] Connection was lost"); break;
+      case WL_SCAN_COMPLETED:  primary_serial_port->println("[WiFi] Scan is completed"); break;
+      case WL_DISCONNECTED:    primary_serial_port->println("[WiFi] WiFi is disconnected"); break;
+      case WL_CONNECTED:
+        primary_serial_port->println("[WiFi] WiFi is connected!");
+        primary_serial_port->println("[WiFi] IP address: ");
+        primary_serial_port->println(WiFi.localIP());
+        is_connected = true;
+        break;
+      default:
+        primary_serial_port->println("[WiFi] WiFi Status: ");
+        primary_serial_port->println(WiFi.status());
+        break;
+    }
+    if (is_connected) {
+      break;
+    } else {
+      delay(500);
+      if (numberOfTries <= 0) {
+        primary_serial_port->println("[WiFi] Failed to connect to WiFi!");
+      // Use disconnect function to force stop trying to connect
+       WiFi.disconnect();
+       break;
+      } else {
+        numberOfTries--;
+      }
+    }
+  }
+
+  primary_serial_port->println();
+
+#endif
+
+}
 
 
 //-------------------------------------------------------------------------------------------------------
