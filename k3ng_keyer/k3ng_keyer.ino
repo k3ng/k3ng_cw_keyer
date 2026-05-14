@@ -16605,8 +16605,11 @@ void memorycheck() {
   if (HP)
     free (HP);
 
+#ifndef (ESP32)
   unsigned long free = (unsigned long)SP - (unsigned long)HP;
-
+#else
+  unsigned long free = ESP.getFreeHeap()-(unsigned long)HP
+#endif
 //  port_to_use->print("Heap=");
 //  port_to_use->println((unsigned long)HP,HEX);
 //  port_to_use->print("Stack=");
@@ -20406,7 +20409,7 @@ void initialize_web_server(){
 
     #ifdef DEBUG_WEB_SERVER
       debug_serial_port->print(F("initialize_web_server: server is at "));
-      debug_serial_port->println(Ethernet.localIP());
+      debug_serial_port->println(NETWORK_LOCAL_IP);
     #endif
 
   #endif //FEATURE_WEB_SERVER
@@ -20803,7 +20806,11 @@ void web_print_page_about(NETWORK_CLIENT_CLS client){
     if (HP){
       free (HP);
     }
+    #if defined(ESP32)
+    unsigned long free = (ESP.getFreeHeap() - (unsigned long)HP);
+    #else
     unsigned long free = (unsigned long)SP - (unsigned long)HP;
+    #endif
 
     // web_client_print(client,"Heap = 0x");
     // web_client_println(client,(unsigned long)HP,HEX);
