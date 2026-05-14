@@ -1712,6 +1712,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
     #include <EthernetUdp.h>
   #endif //FEATURE_INTERNET_LINK
 #endif //!defined(ARDUINO_MAPLE_MINI) && !defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
+  #define NETWORK_SERVER_CLS EthernetServer
+  #define NETWORK_CLIENT_CLS EthernetClient
+  #define NETWORK_LOCAL_IP Ethernet.localIP()
 #endif //FEATURE_ETHERNET
 
 
@@ -1760,6 +1763,10 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
   char wifi_ssid[33] = WIFI_SSID;
   char wifi_password[65] = WIFI_PASSWORD;
+
+  #define NETWORK_SERVER_CLS WiFiServer
+  #define NETWORK_CLIENT_CLS WiFiClient
+  #define NETWORK_LOCAL_IP WiFi.localIP()
 #endif
 
 #define memory_area_start (sizeof(configuration)+5)
@@ -2242,19 +2249,21 @@ PRIMARY_SERIAL_CLS * debug_serial_port;
   byte send_winkey_breakin_byte_flag = 0;
 #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
 
-#if defined(FEATURE_ETHERNET)
+#if defined(FEATURE_ETHERNET) || defined(ENABLE_WIFI)
+  #if defined(FEATURE_ETHERNET)
   uint8_t default_ip[] = FEATURE_ETHERNET_IP;                      // default IP address ("192.168.1.178")
   uint8_t default_gateway[] = FEATURE_ETHERNET_GATEWAY;                   // default gateway
   uint8_t default_subnet[] = FEATURE_ETHERNET_SUBNET_MASK;                  // default subnet mask
   uint8_t dns_server[] = FEATURE_ETHERNET_DNS;
   uint8_t mac[] = FEATURE_ETHERNET_MAC;   // default physical mac address
   uint8_t restart_networking = 0;
+  #endif
 
   #if defined(FEATURE_WEB_SERVER)
     #define MAX_WEB_REQUEST 512
     String web_server_incoming_string;
     uint8_t valid_request = 0;
-    EthernetServer server(FEATURE_ETHERNET_WEB_LISTENER_PORT);                             // default server port
+    NETWORK_SERVER_CLS server(FEATURE_ETHERNET_WEB_LISTENER_PORT);                             // default server port
     #define MAX_PARSE_RESULTS 32
     struct parse_get_result_t{
       String parameter;
@@ -20430,7 +20439,7 @@ void service_web_server() {
   }
 
   // Create a client connection
-  EthernetClient client = server.available();
+  NETWORK_CLIENT_CLS client = server.available();
   if (client) {
 
     valid_request = 0;
@@ -20533,7 +20542,7 @@ void service_web_server() {
 #endif //FEATURE_WEB_SERVER
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
-void web_print_200OK(EthernetClient client){
+void web_print_200OK(NETWORK_CLIENT_CLS client){
 
   web_client_print(client,F("HTTP/1.1 200 OK\nContent-Type: text/html\n\n"));
 
@@ -20541,7 +20550,7 @@ void web_print_200OK(EthernetClient client){
 #endif //FEATURE_WEB_SERVER
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
-void web_print_header(EthernetClient client){
+void web_print_header(NETWORK_CLIENT_CLS client){
 
   web_print_200OK(client);
   web_client_println(client,F("<HTML><HEAD><meta name='apple-mobile-web-app-capable' content='yes' /><meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />"));
@@ -20550,7 +20559,7 @@ void web_print_header(EthernetClient client){
 #endif //FEATURE_WEB_SERVER
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
-void web_print_style_sheet(EthernetClient client){
+void web_print_style_sheet(NETWORK_CLIENT_CLS client){
 
   web_client_print(client,F("<style>body{margin:60px 0px; padding:0px;text-align:center;font-family:\"Trebuchet MS\", Arial, Helvetica, sans-serif;}h1{text-align: center;font-family:Arial, \"Trebuchet MS\", Helvetica,"));
   web_client_print(client,F("sans-serif;}h2{text-align: center;font-family:\"Trebuchet MS\", Arial, Helvetica, sans-serif;}"));
@@ -20594,7 +20603,7 @@ void web_print_style_sheet(EthernetClient client){
 #endif //FEATURE_WEB_SERVER
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
-void web_print_home_link(EthernetClient client){
+void web_print_home_link(NETWORK_CLIENT_CLS client){
 
   web_client_println(client,F("<br><a href=\"\x2F\" class=\"internal\">Home</a><br />"));
 
@@ -20602,7 +20611,7 @@ void web_print_home_link(EthernetClient client){
 #endif //FEATURE_WEB_SERVER
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
-void web_print_footer(EthernetClient client){
+void web_print_footer(NETWORK_CLIENT_CLS client){
 
 
   web_client_println(client,F("<br></BODY></HTML>"));
@@ -20612,7 +20621,7 @@ void web_print_footer(EthernetClient client){
 #endif //FEATURE_WEB_SERVER
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
-void web_print_title(EthernetClient client){
+void web_print_title(NETWORK_CLIENT_CLS client){
 
 
   web_client_println(client,F("<TITLE>K3NG CW Keyer</TITLE></HEAD><BODY>"));
@@ -20623,7 +20632,7 @@ void web_print_title(EthernetClient client){
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_page_network_settings(EthernetClient client){
+void web_print_page_network_settings(NETWORK_CLIENT_CLS client){
 
   web_print_header(client);
 
@@ -20678,7 +20687,7 @@ void web_print_page_network_settings(EthernetClient client){
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER) && defined(FEATURE_INTERNET_LINK)
 
-void web_print_page_link_settings(EthernetClient client){
+void web_print_page_link_settings(NETWORK_CLIENT_CLS client){
 
   web_print_header(client);
 
@@ -20760,7 +20769,7 @@ void web_print_page_link_settings(EthernetClient client){
 
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_page_404(EthernetClient client){
+void web_print_page_404(NETWORK_CLIENT_CLS client){
 
   web_client_println(client,F("HTTP/1.1 404 NOT FOUND"));
   web_client_println(client,F("Content-Type: text/html\n"));
@@ -20775,7 +20784,7 @@ void web_print_page_404(EthernetClient client){
 
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_page_about(EthernetClient client){
+void web_print_page_about(NETWORK_CLIENT_CLS client){
 
   web_print_header(client);
 
@@ -20912,7 +20921,7 @@ void parse_get(String str){
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_page_main_menu(EthernetClient client){
+void web_print_page_main_menu(NETWORK_CLIENT_CLS client){
 
 
   web_print_header(client);
@@ -20941,7 +20950,7 @@ void web_print_page_main_menu(EthernetClient client){
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_control_radio(EthernetClient client,const char *name,int value,uint8_t checked,const char *caption){
+void web_print_control_radio(NETWORK_CLIENT_CLS client,const char *name,int value,uint8_t checked,const char *caption){
 
   web_client_print(client,F("<label><input type=\"radio\" name=\""));
   web_client_print(client,name);
@@ -20959,7 +20968,7 @@ void web_print_control_radio(EthernetClient client,const char *name,int value,ui
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_control_checkbox(EthernetClient client,const char *name,uint8_t checked,const char *caption){
+void web_print_control_checkbox(NETWORK_CLIENT_CLS client,const char *name,uint8_t checked,const char *caption){
 
     web_client_print(client,F("<label><input type=\"checkbox\" id=\"cbox"));
     web_client_print(client,name);
@@ -20977,7 +20986,7 @@ void web_print_control_checkbox(EthernetClient client,const char *name,uint8_t c
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_control_textbox(EthernetClient client,const char *name,const char *textbox_class,int textbox_value,const char *front_caption,const char *back_caption){
+void web_print_control_textbox(NETWORK_CLIENT_CLS client,const char *name,const char *textbox_class,int textbox_value,const char *front_caption,const char *back_caption){
 
   web_client_print(client,F("<label>"));
   web_client_print(client,front_caption);
@@ -20997,7 +21006,7 @@ void web_print_control_textbox(EthernetClient client,const char *name,const char
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_control_textbox(EthernetClient client,const char *name,const char *textbox_class,float textbox_value,const char *front_caption,const char *back_caption){
+void web_print_control_textbox(NETWORK_CLIENT_CLS client,const char *name,const char *textbox_class,float textbox_value,const char *front_caption,const char *back_caption){
 
   web_client_print(client,F("<label>"));
   web_client_print(client,front_caption);
@@ -21017,7 +21026,7 @@ void web_print_control_textbox(EthernetClient client,const char *name,const char
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_page_keyer_settings(EthernetClient client){
+void web_print_page_keyer_settings(NETWORK_CLIENT_CLS client){
 
   uint8_t pin_read = 0;
 
@@ -21142,7 +21151,7 @@ void web_print_page_keyer_settings(EthernetClient client){
 
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_page_keyer_settings_process(EthernetClient client){
+void web_print_page_keyer_settings_process(NETWORK_CLIENT_CLS client){
 
 
   uint8_t invalid_data = 0;
@@ -21286,7 +21295,7 @@ void web_print_page_keyer_settings_process(EthernetClient client){
 
 #if defined(FEATURE_WEB_SERVER) && defined(FEATURE_MEMORIES)
 
-void web_print_page_memories(EthernetClient client){
+void web_print_page_memories(NETWORK_CLIENT_CLS client){
 
 
 
@@ -21396,7 +21405,7 @@ void web_print_page_memories(EthernetClient client){
 
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_page_control(EthernetClient client){
+void web_print_page_control(NETWORK_CLIENT_CLS client){
 
   /*
 
@@ -21523,7 +21532,7 @@ void web_print_page_control(EthernetClient client){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_println(EthernetClient client,const __FlashStringHelper *str){
+void web_client_println(NETWORK_CLIENT_CLS client,const __FlashStringHelper *str){
 
   web_client_print(client,str);
   client.println();
@@ -21535,7 +21544,7 @@ void web_client_println(EthernetClient client,const __FlashStringHelper *str){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_print(EthernetClient client,const __FlashStringHelper *str){
+void web_client_print(NETWORK_CLIENT_CLS client,const __FlashStringHelper *str){
 
   char c;
   if(!str) return;
@@ -21564,7 +21573,7 @@ void web_client_print(EthernetClient client,const __FlashStringHelper *str){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_print(EthernetClient client,String str){
+void web_client_print(NETWORK_CLIENT_CLS client,String str){
 
   client.print(str);
 
@@ -21575,7 +21584,7 @@ void web_client_print(EthernetClient client,String str){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_print(EthernetClient client,const char *str){
+void web_client_print(NETWORK_CLIENT_CLS client,const char *str){
 
   client.print(str);
 
@@ -21586,7 +21595,7 @@ void web_client_print(EthernetClient client,const char *str){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_println(EthernetClient client,const char *str){
+void web_client_println(NETWORK_CLIENT_CLS client,const char *str){
 
   client.println(str);
 
@@ -21597,7 +21606,7 @@ void web_client_println(EthernetClient client,const char *str){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_print(EthernetClient client,int i){
+void web_client_print(NETWORK_CLIENT_CLS client,int i){
 
   client.print(i);
 
@@ -21609,7 +21618,7 @@ void web_client_print(EthernetClient client,int i){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_print(EthernetClient client,float f){
+void web_client_print(NETWORK_CLIENT_CLS client,float f){
 
   client.print(f);
 
@@ -21619,7 +21628,7 @@ void web_client_print(EthernetClient client,float f){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_print(EthernetClient client,unsigned long i){
+void web_client_print(NETWORK_CLIENT_CLS client,unsigned long i){
 
   client.print(i);
 
@@ -21629,7 +21638,7 @@ void web_client_print(EthernetClient client,unsigned long i){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_print(EthernetClient client,unsigned int i){
+void web_client_print(NETWORK_CLIENT_CLS client,unsigned int i){
 
   client.print(i);
 
@@ -21639,7 +21648,7 @@ void web_client_print(EthernetClient client,unsigned int i){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_println(EthernetClient client,unsigned long i){
+void web_client_println(NETWORK_CLIENT_CLS client,unsigned long i){
 
   client.println(i);
 
@@ -21648,7 +21657,7 @@ void web_client_println(EthernetClient client,unsigned long i){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_println(EthernetClient client,unsigned long i,int something){
+void web_client_println(NETWORK_CLIENT_CLS client,unsigned long i,int something){
 
   client.println(i,something);
 
@@ -21657,7 +21666,7 @@ void web_client_println(EthernetClient client,unsigned long i,int something){
 //-------------------------------------------------------------------------------------------------------
 
 #if defined(FEATURE_WEB_SERVER)
-void web_client_write(EthernetClient client,uint8_t i){
+void web_client_write(NETWORK_CLIENT_CLS client,uint8_t i){
 
   client.write(i);
 
@@ -21667,7 +21676,7 @@ void web_client_write(EthernetClient client,uint8_t i){
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_page_link_settings_process(EthernetClient client){
+void web_print_page_link_settings_process(NETWORK_CLIENT_CLS client){
 
   uint8_t parsed_link_ip[4][FEATURE_INTERNET_LINK_MAX_LINKS];
   uint8_t parsed_link_enabled[FEATURE_INTERNET_LINK_MAX_LINKS];
@@ -21780,7 +21789,7 @@ void web_print_page_link_settings_process(EthernetClient client){
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_page_network_settings_process(EthernetClient client){
+void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
 
   uint8_t ip0 = 0;
   uint8_t ip1 = 0;
@@ -21875,7 +21884,7 @@ void web_print_page_network_settings_process(EthernetClient client){
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
 
-void web_print_meta_refresh(EthernetClient client,uint8_t ip0,uint8_t ip1,uint8_t ip2,uint8_t ip3,uint8_t refresh_time){
+void web_print_meta_refresh(NETWORK_CLIENT_CLS client,uint8_t ip0,uint8_t ip1,uint8_t ip2,uint8_t ip3,uint8_t refresh_time){
 
   web_client_print(client,F("<meta http-equiv=\"refresh\" content=\""));
   web_client_print(client,refresh_time);
