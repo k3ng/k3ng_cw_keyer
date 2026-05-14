@@ -2625,6 +2625,10 @@ void loop()
       #endif
     #endif
 
+    #if defined(ENABLE_WIFI) 
+    service_web_server();
+    #endif
+
     #ifdef FEATURE_SIDETONE_SWITCH
       check_sidetone_switch();
     #endif
@@ -14371,6 +14375,9 @@ void serial_wifi_command(PRIMARY_SERIAL_CLS * port_to_use) {
     case 'c':
     case 'C':
       initialize_wifi();
+      #if defined(FEATURE_WEB_SERVER)
+      initialize_web_server();
+      #endif
       break;
 
     case 'd':
@@ -20417,13 +20424,19 @@ primary_serial_port->println(F("start web server"));
 #endif
     server.begin();
 #if defined(ENABLE_WIFI)
+   } else {
+    primary_serial_port->println(F("start web server not possible"));
    }
 #endif
 primary_serial_port->println(F("start web server done"));
 
-    #ifdef DEBUG_WEB_SERVER
+    #ifdef DEBUG_WEB_SERVER 
       debug_serial_port->print(F("initialize_web_server: server is at "));
+      #ifndef ENABLE_WEBSERVER
       debug_serial_port->println(NETWORK_LOCAL_IP);
+      #else
+      debug_serial_port->printlnWiFi.localIP());
+      #endif
     #endif
 
   #endif //FEATURE_WEB_SERVER
@@ -20449,6 +20462,15 @@ void check_for_network_restart(){
 #if defined(FEATURE_WEB_SERVER)
 void service_web_server() {
 
+  #ifdef DEBUG_WEB_SERVER_READS
+  debug_serial_port->println(F("loop: entering service_web_server"));
+  #endif
+
+#if defined(ENALBLE_WIFI)
+  if (!check_wifi_connected()) {
+    return;
+  }
+#endif
 
   if ((web_control_tx_key_time > 0) && ((millis()-web_control_tx_key_time) > (WEB_SERVER_CONTROL_TX_KEY_TIME_LIMIT_SECS*1000))){
     tx_and_sidetone_key(0);
@@ -20484,7 +20506,7 @@ void service_web_server() {
             debug_serial_port->println(web_server_incoming_string); //print to serial monitor for debuging
           #endif //DEBUG_WEB_SERVER_READS
 
-          if (web_server_incoming_string.startsWith("GET / ")){
+          if (web_server_incoming_string.startsWith("GET /")){
             valid_request = 1;
             web_print_page_main_menu(client);
           }
@@ -20554,7 +20576,6 @@ void service_web_server() {
        }
     }
   }
-
 }
 #endif //FEATURE_WEB_SERVER
 //-------------------------------------------------------------------------------------------------------
