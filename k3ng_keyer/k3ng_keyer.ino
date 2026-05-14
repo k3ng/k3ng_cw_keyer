@@ -20300,6 +20300,10 @@ void initialize_wifi() {
 #if defined(ESP32) && defined(ENABLE_WIFI)
 
   primary_serial_port->println();
+  if (wifi_ssid[0] == '\0') {
+    primary_serial_port->println("No valid SSID set");
+    return;
+  }
   primary_serial_port->print(F("WiFi: starting "));
   primary_serial_port->println(wifi_ssid);
   primary_serial_port->println();
