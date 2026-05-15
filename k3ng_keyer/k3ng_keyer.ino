@@ -20500,7 +20500,9 @@ void service_web_server() {
   if (client) {
 
     valid_request = 0;
-
+  #ifdef command_mode_active_led
+    if (command_mode_active_led) {digitalWrite(command_mode_active_led,HIGH);}
+  #endif
     while (client.connected()){
       if (client.available()){
         char c = client.read();
@@ -20593,6 +20595,9 @@ void service_web_server() {
          }
        }
     }
+#ifdef command_mode_active_led
+    if (command_mode_active_led) {digitalWrite(command_mode_active_led,LOW);}
+#endif
   }
 }
 #endif //FEATURE_WEB_SERVER
