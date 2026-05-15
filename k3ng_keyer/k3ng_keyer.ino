@@ -14382,13 +14382,17 @@ void serial_wifi_command(PRIMARY_SERIAL_CLS * port_to_use) {
     case 'D':
       WiFi.disconnect(true);
       WiFi.mode(WIFI_OFF);
+#if defined(DEBUG_WIFI)
       port_to_use->println(F("\r\n[WiFi] disconnected"));
+#endif
       break;
 
     case 's':
     case 'S':
       serial_read_rest_of_line(port_to_use, configuration.wifi_ssid, sizeof(configuration.wifi_ssid));
+#if defined(DEBUG_WIFI)
       port_to_use->print(F("\r\n[WiFi] SSID set to: "));
+#endif
       port_to_use->println(configuration.wifi_ssid);
       config_dirty = 1;
       break;
@@ -14396,7 +14400,9 @@ void serial_wifi_command(PRIMARY_SERIAL_CLS * port_to_use) {
     case 'p':
     case 'P':
       serial_read_rest_of_line(port_to_use, configuration.wifi_password, sizeof(configuration.wifi_password));
+#if defined(DEBUG_WIFI)
       port_to_use->println(F("\r\n[WiFi] password set"));
+#endif
       config_dirty = 1;
       break;
 
@@ -20329,12 +20335,12 @@ void initialize_wifi() {
 #if defined(ESP32) && defined(ENABLE_WIFI)
   primary_serial_port->println();
   if (configuration.wifi_ssid[0] == '\0') {
-    primary_serial_port->println("No SSID set");
+    debug_serial_port->println("No SSID set");
     return;
   }
-  primary_serial_port->print(F("WiFi: starting "));
-  primary_serial_port->println(configuration.wifi_ssid);
-  primary_serial_port->println();
+  debug_serial_port->print(F("WiFi: starting "));
+  debug_serial_port->println(configuration.wifi_ssid);
+  debug_serial_port->println();
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(configuration.wifi_ssid, configuration.wifi_password);
@@ -20345,22 +20351,42 @@ void initialize_wifi() {
   bool is_connected = false;
   while (true) {
     switch(WiFi.status()) {
-      case WL_NO_SSID_AVAIL: primary_serial_port->println("[WiFi] SSID not found"); break;
-      case WL_CONNECT_FAILED:
-        primary_serial_port->println("[WiFi] Failed - WiFi not connected! Reason: ");
+      case WL_NO_SSID_AVAIL: 
+        debug_serial_port->println("[WiFi] SSID not found"); 
         break;
-      case WL_CONNECTION_LOST: primary_serial_port->println("[WiFi] Connection was lost"); break;
-      case WL_SCAN_COMPLETED:  primary_serial_port->println("[WiFi] Scan is completed"); break;
-      case WL_DISCONNECTED:    primary_serial_port->println("[WiFi] WiFi is disconnected"); break;
+      case WL_CONNECT_FAILED:
+#if defined(DEBUG_WIFI)
+        debug_serial_port->println("[WiFi] Failed - WiFi not connected! Reason: ");
+#endif
+        break;
+      case WL_CONNECTION_LOST: 
+#if defined(DEBUG_WIFI)
+        debug_serial_port->println("[WiFi] Connection was lost"); 
+#endif
+        break;
+      case WL_SCAN_COMPLETED:  
+#if defined(DEBUG_WIFI)
+        debug_serial_port->println("[WiFi] Scan is completed"); 
+#endif
+        break;
+      case WL_DISCONNECTED:
+#if defined(DEBUG_WIFI)
+        debug_serial_port->println("[WiFi] WiFi is disconnected"); 
+#endif
+        break;
       case WL_CONNECTED:
-        primary_serial_port->println("[WiFi] WiFi is connected!");
-        primary_serial_port->println("[WiFi] IP address: ");
-        primary_serial_port->println(WiFi.localIP());
+#if defined(DEBUG_WIFI)
+        debug_serial_port->println("[WiFi] WiFi is connected!");
+        debug_serial_port->println("[WiFi] IP address: ");
+        debug_serial_port->println(WiFi.localIP());
+#endif
         is_connected = true;
         break;
       default:
-        primary_serial_port->println("[WiFi] WiFi Status: ");
-        primary_serial_port->println(WiFi.status());
+#if defined(DEBUG_WIFI)
+        debug_serial_port->println("[WiFi] WiFi Status: ");
+        debug_serial_port->println(WiFi.status());
+#endif
         break;
     }
     if (is_connected) {
@@ -20368,7 +20394,9 @@ void initialize_wifi() {
     } else {
       delay(500);
       if (numberOfTries <= 0) {
-        primary_serial_port->println("[WiFi] Failed to connect to WiFi!");
+#if defined(DEBUG_WIFI)
+        debug_serial_port->println("[WiFi] Failed to connect to WiFi!");
+#endif
      // Use disconnect function to force stop trying to connect
        WiFi.disconnect();
        break;
@@ -20412,17 +20440,13 @@ bool check_wifi_connected() {
 void initialize_web_server(){
   #if defined(FEATURE_WEB_SERVER)
 
-primary_serial_port->println(F("start web server"));
 #if defined(ENABLE_WIFI)
    if (check_wifi_connected()) {
 #endif
     server.begin();
 #if defined(ENABLE_WIFI)
-   } else {
-    primary_serial_port->println(F("start web server not possible"));
    }
 #endif
-primary_serial_port->println(F("start web server done"));
 
     #ifdef DEBUG_WEB_SERVER 
       debug_serial_port->print(F("initialize_web_server: server is at "));
