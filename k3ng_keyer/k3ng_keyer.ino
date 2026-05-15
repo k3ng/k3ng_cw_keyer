@@ -20961,6 +20961,38 @@ void web_print_page_about(NETWORK_CLIENT_CLS client){
 
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
+int web_hex_to_int(char c) {
+  if ((c >= '0') && (c <= '9')) return c - '0';
+  if ((c >= 'a') && (c <= 'f')) return c - 'a' + 10;
+  if ((c >= 'A') && (c <= 'F')) return c - 'A' + 10;
+  return -1;
+}
+
+String web_url_decode(String input) {
+  String output = "";
+
+  for (unsigned int i = 0; i < input.length(); i++) {
+    char c = input.charAt(i);
+
+    if (c == '+') {
+      output += ' ';
+    } else if ((c == '%') && ((i + 2) < input.length())) {
+      int hi = web_hex_to_int(input.charAt(i + 1));
+      int lo = web_hex_to_int(input.charAt(i + 2));
+
+      if ((hi >= 0) && (lo >= 0)) {
+        output += (char)((hi << 4) | lo);
+        i += 2;
+      } else {
+        output += c;
+      }
+    } else {
+      output += c;
+    }
+  }
+  return output;
+}
+
 void parse_get(String str){
 
   String workstring = "";
