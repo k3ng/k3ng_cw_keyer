@@ -21091,25 +21091,6 @@ void web_print_control_textbox(NETWORK_CLIENT_CLS client,const char *name,const 
 }
 #endif //FEATURE_WEB_SERVER
 
-//-------------------------------------------------------------------------------------------------------
-#if defined(FEATURE_WEB_SERVER)
-
-void web_print_control_textbox(NETWORK_CLIENT_CLS client,const char *name,const char *textbox_class,float textbox_value,const char *front_caption,const char *back_caption){
-
-  web_client_print(client,F("<label>"));
-  web_client_print(client,front_caption);
-  web_client_print(client,F("<input type=\"text\" name=\""));
-  web_client_print(client,name);
-  web_client_print(client,F("\" class=\""));
-  web_client_print(client,textbox_class);
-  web_client_print(client,F("\" value=\""));
-  web_client_print(client,textbox_value);
-  web_client_print(client,F("\">"));
-  web_client_print(client,back_caption);
-  web_client_print(client,F("</label>"));
-
-}
-#endif //FEATURE_WEB_SERVER
 
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_WEB_SERVER)
