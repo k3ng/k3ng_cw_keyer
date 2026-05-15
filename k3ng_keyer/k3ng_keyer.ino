@@ -20546,7 +20546,7 @@ void service_web_server() {
             debug_serial_port->println(web_server_incoming_string); //print to serial monitor for debuging
           #endif //DEBUG_WEB_SERVER_READS
 
-          if (web_server_incoming_string.startsWith("GET /")){
+          if (web_server_incoming_string.startsWith("GET / ")){
             valid_request = 1;
             web_print_page_main_menu(client);
           }
@@ -20771,7 +20771,7 @@ void web_print_page_network_settings(NETWORK_CLIENT_CLS client){
   web_client_print(client,F("<br><br><form><span class=\"txt\">WiFi SSID: </span><input type=\"text\" class=\"txt\" name=\"wifi_ssid\" value=\""));
   web_client_print(client,configuration.wifi_ssid);
   web_client_print(client,F("\">"));
-  web_client_print(client,F("<br><br><span class=\"txt\">WiFi password: </span><input type=\"text\" class=\"txt\" name=\"wifi_pwd\" value=\""));
+  web_client_print(client,F("<br><br><span class=\"txt\">WiFi password: </span><input type=\"password\" class=\"txt\" name=\"wifi_pwd\" value=\""));
   web_client_print(client,configuration.wifi_password);
   web_client_println(client,"\"><br><br><input type=\"submit\" value=\"Save\"></form>");
 #else
@@ -21028,6 +21028,9 @@ void parse_get(String str){
       // value = workstring.substring(workstring.indexOf("=")+1);
       workstring = "";
     }
+    parameter = web_url_decode(parameter);
+    value = web_url_decode(value);
+
     #if defined(DEBUG_WEB_PARSE_GET)
       debug_serial_port->print("parse_get: parameter: ");
       debug_serial_port->print(parameter);
@@ -22057,6 +22060,12 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
         wifi_password_buffer,
         sizeof(configuration.wifi_password)
       );
+#if defined(DEBUG_WIFI)
+      debug_serial_port->print("SSID: ");
+      debug_serial_port->println(configuration.wifi_ssid);
+      debug_serial_port->print("WIFIPW: ");
+      debug_serial_port->println(configuration.wifi_password);
+#endif
 
       web_print_header(client);
       web_print_style_sheet(client);
