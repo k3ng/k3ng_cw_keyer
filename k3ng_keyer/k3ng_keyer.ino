@@ -1812,16 +1812,25 @@ struct config_t {  // 120 bytes total
   unsigned int autospace_timing_factor;
     // 24 bytes
 
+#if defined(FEATURE_ETHERNET)
   uint8_t ip[4];
   uint8_t gateway[4];
   uint8_t subnet[4];
   uint8_t dns_server[4];
     // 16 bytes
+#endif
 
+#if defined(FEATURE_INTERNET_LINK)
   uint8_t link_send_ip[4][FEATURE_INTERNET_LINK_MAX_LINKS];   // FEATURE_INTERNET_LINK_MAX_LINKS = 2
   uint8_t link_send_enabled[FEATURE_INTERNET_LINK_MAX_LINKS];
   unsigned int link_send_udp_port[FEATURE_INTERNET_LINK_MAX_LINKS];
     // 14 bytes
+#endif
+
+#if defined(ENABLE_WIFI)
+  char wifi_ssid[33];
+  char wifi_password[65];
+#endif
 
   unsigned int ptt_lead_time[6];
   unsigned int ptt_tail_time[6];
