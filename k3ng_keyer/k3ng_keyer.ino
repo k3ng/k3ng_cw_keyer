@@ -14397,8 +14397,8 @@ void serial_wifi_command(PRIMARY_SERIAL_CLS * port_to_use) {
       serial_read_rest_of_line(port_to_use, configuration.wifi_ssid, sizeof(configuration.wifi_ssid));
 #if defined(DEBUG_WIFI)
       port_to_use->print(F("\r\n[WiFi] SSID set to: "));
-#endif
       port_to_use->println(configuration.wifi_ssid);
+#endif
       config_dirty = 1;
       break;
 
