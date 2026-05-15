@@ -20340,15 +20340,6 @@ void initialize_wifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(wifi_ssid, wifi_password);
 
-  #ifdef FEATURE_DISPLAY
-    lcd_clear();
-//    if (LCD_COLUMNS < 9){
-//      lcd_center_print_timed("Cmd Mode", 0, default_display_msg_delay);
-//    } else {
-    lcd_center_print_timed("Initialize", 1, default_display_msg_delay);
-    lcd_center_print_timed("WiFi", 2, default_display_msg_delay);
-//    }
-  #endif
 
   const unsigned long timeout_ms = 15000;
   int numberOfTries = 20;
@@ -20380,10 +20371,6 @@ void initialize_wifi() {
       delay(500);
       if (numberOfTries <= 0) {
         primary_serial_port->println("[WiFi] Failed to connect to WiFi!");
-  #ifdef FEATURE_DISPLAY
-        lcd_center_print_timed("Wifi", 1, default_display_msg_delay);
-        lcd_center_print_timed("failed", 2, default_display_msg_delay);
-  #endif
      // Use disconnect function to force stop trying to connect
        WiFi.disconnect();
        break;
