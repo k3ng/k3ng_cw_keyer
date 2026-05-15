@@ -1449,7 +1449,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 #define CODE_VERSION "2024.03.20.2239"
 
-#define eeprom_magic_number 41               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 42               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1760,9 +1760,6 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #ifndef WIFI_PASSWORD
     #define WIFI_PASSWORD ""
   #endif
-
-  char wifi_ssid[33] = WIFI_SSID;
-  char wifi_password[65] = WIFI_PASSWORD;
 
   #define NETWORK_SERVER_CLS WiFiServer
   #define NETWORK_CLIENT_CLS WiFiClient
@@ -14398,15 +14395,17 @@ void serial_wifi_command(PRIMARY_SERIAL_CLS * port_to_use) {
 
     case 's':
     case 'S':
-      serial_read_rest_of_line(port_to_use, wifi_ssid, sizeof(wifi_ssid));
+      serial_read_rest_of_line(port_to_use, configuration.wifi_ssid, sizeof(configuration.wifi_ssid));
       port_to_use->print(F("\r\n[WiFi] SSID set to: "));
-      port_to_use->println(wifi_ssid);
+      port_to_use->println(configuration.wifi_ssid);
+      config_dirty = 1;
       break;
 
     case 'p':
     case 'P':
-      serial_read_rest_of_line(port_to_use, wifi_password, sizeof(wifi_password));
+      serial_read_rest_of_line(port_to_use, configuration.wifi_password, sizeof(configuration.wifi_password));
       port_to_use->println(F("\r\n[WiFi] password set"));
+      config_dirty = 1;
       break;
 
     default:
@@ -18639,7 +18638,7 @@ void initialize_watchdog(){
 
 void check_eeprom_for_initialization(){
 
-  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO) 
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)  || defined(ESP32)
     EEPROM.begin(4096);
   #endif
 
@@ -20327,19 +20326,17 @@ void initialize_ethernet(){
 void initialize_wifi() {
 
 #if defined(ESP32) && defined(ENABLE_WIFI)
-
   primary_serial_port->println();
-  if (wifi_ssid[0] == '\0') {
-    primary_serial_port->println("No valid SSID set");
+  if (configuration.wifi_ssid[0] == '\0') {
+    primary_serial_port->println("No SSID set");
     return;
   }
   primary_serial_port->print(F("WiFi: starting "));
-  primary_serial_port->println(wifi_ssid);
+  primary_serial_port->println(configuration.wifi_ssid);
   primary_serial_port->println();
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(wifi_ssid, wifi_password);
-
+  WiFi.begin(configuration.wifi_ssid, configuration.wifi_password);
 
   const unsigned long timeout_ms = 15000;
   int numberOfTries = 20;
@@ -20676,6 +20673,7 @@ void web_print_page_network_settings(NETWORK_CLIENT_CLS client){
 
   web_client_println(client,F("<H1>Network Settings</H1><hr><br>"));
 
+#if defined(FEATURE_ETHERNET)
   // input form
   web_client_print(client,F("<br><br><form>IP: <input type=\"text\" name=\"ip0\" class=\"addr\" value=\""));
   web_client_print(client,configuration.ip[0]);
@@ -20707,7 +20705,9 @@ void web_print_page_network_settings(NETWORK_CLIENT_CLS client){
   web_client_print(client,F("\">.<input type=\"text\" name=\"sn3\" class=\"addr\" value=\""));
   web_client_print(client,configuration.subnet[3]);
   web_client_println(client,"\"><br><br><input type=\"submit\" value=\"Save\"></form>");
-
+#else
+  web_client_print(client,"<br><br>No ethernet possible here.");
+#endif
 
   web_print_home_link(client);
 
@@ -21273,7 +21273,9 @@ void web_print_page_keyer_settings_process(NETWORK_CLIENT_CLS client){
     if (invalid_data){
 
       web_print_header(client);
+  #if defined(FEATURE_ETHERNET)
       web_print_meta_refresh(client,configuration.ip[0],configuration.ip[1],configuration.ip[2],configuration.ip[3],2);
+  #endif
       web_client_println(client,F("\/KeyerSettings'\" />"));
       web_print_style_sheet(client);
       web_print_title(client);
@@ -21315,7 +21317,9 @@ void web_print_page_keyer_settings_process(NETWORK_CLIENT_CLS client){
       #endif //FEATURE_FARNSWORTH
 
       web_print_header(client);
+#if defined(FEATURE_ETHERNET)
       web_print_meta_refresh(client,configuration.ip[0],configuration.ip[1],configuration.ip[2],configuration.ip[3],2);
+#endif
       web_client_println(client,F("\/KeyerSettings'\" />"));
       web_print_style_sheet(client);
       web_print_title(client);
@@ -21716,6 +21720,7 @@ void web_client_write(NETWORK_CLIENT_CLS client,uint8_t i){
 
 void web_print_page_link_settings_process(NETWORK_CLIENT_CLS client){
 
+#if defined(FEATURE_INTERNET_LINK)
   uint8_t parsed_link_ip[4][FEATURE_INTERNET_LINK_MAX_LINKS];
   uint8_t parsed_link_enabled[FEATURE_INTERNET_LINK_MAX_LINKS];
   int parsed_link_send_udp_port[FEATURE_INTERNET_LINK_MAX_LINKS];
@@ -21784,7 +21789,9 @@ void web_print_page_link_settings_process(NETWORK_CLIENT_CLS client){
     if (invalid_data){
 
       web_print_header(client);
+#if defined(FEATURE_ETHERNET)
       web_print_meta_refresh(client,configuration.ip[0],configuration.ip[1],configuration.ip[2],configuration.ip[3],2);
+#endif
       web_client_println(client,F("\/LinkSettings'\" />"));
       web_print_style_sheet(client);
       web_print_title(client);
@@ -21821,6 +21828,12 @@ void web_print_page_link_settings_process(NETWORK_CLIENT_CLS client){
       config_dirty = 1;
     }
   }
+#else
+  web_print_header(client);
+  web_client_println(client,F("<br>Feature internet links not enabled.<br><br>"));
+  web_print_home_link(client);
+  web_print_footer(client);
+#endif //FEATURE_INTERNET_LINK
 }
 #endif //FEATURE_WEB_SERVER
 
@@ -21887,7 +21900,7 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
       web_print_footer(client);
 
     } else {
-
+#if defined(FEATURE_ETHERNET)
       configuration.ip[0] = ip0;
       configuration.ip[1] = ip1;
       configuration.ip[2] = ip2;
@@ -21914,6 +21927,14 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
       web_print_footer(client);
       restart_networking = 1;
       config_dirty = 1;
+#else
+      web_print_header(client);
+      web_print_style_sheet(client);
+      web_print_title(client);
+      web_client_println(client,F("<br>Ethernet not enabled!<br>"));
+      web_print_home_link(client);
+      web_print_footer(client);
+#endif
     }
   }
 }
