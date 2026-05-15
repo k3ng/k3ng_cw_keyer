@@ -14354,7 +14354,7 @@ void serial_change_wordspace(PRIMARY_SERIAL_CLS * port_to_use)
 #endif
 
 //---------------------------------------------------------------------
-#if defined(ESP32) && defined(ENABLE_WIFI)
+#if defined(ENABLE_WIFI)
 
 void serial_wifi_command(PRIMARY_SERIAL_CLS * port_to_use) {
   unsigned long start = millis();
