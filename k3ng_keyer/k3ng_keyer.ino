@@ -20569,7 +20569,13 @@ void service_web_server() {
           if (web_server_incoming_string.startsWith("GET /NetworkSettings")){
             valid_request = 1;
             // are there form results being posted?
+#if defined(FEATURE_ETHERNET)
             if (web_server_incoming_string.indexOf("?ip0=") > 0){
+#elif defined(ENABLE_WIFI)
+            if (web_server_incoming_string.indexOf("wifi_ssid=") > 0){      
+#else
+            if (false) {
+#endif
               web_print_page_network_settings_process(client);
             } else {
               web_print_page_network_settings(client);
@@ -20673,7 +20679,9 @@ void web_print_style_sheet(NETWORK_CLIENT_CLS client){
   web_client_println(client,F(".ipprt {width: 45px; text-align:center }"));
 
  // text inputsblocks
-  web_client_println(client,F(".txt {width: 100px; text-align:left }"));
+  web_client_println(client,F("input.txt {width: 150px; text-align:left }"));
+  web_client_println(client,F("span.txt {width: 100px; text-align:right }"));
+
 
   web_client_println(client,F(".container {display: flex;}"));
 
@@ -20760,10 +20768,10 @@ void web_print_page_network_settings(NETWORK_CLIENT_CLS client){
   web_client_println(client,"\"><br><br><input type=\"submit\" value=\"Save\"></form>");
 #elif defined(ENABLE_WIFI)
   //hier wifi html
-  web_client_print(client,F("<br><br><form>WiFi SSID: <input type=\"text\" class=\"txt\" name=\"ssid\" value=\""));
+  web_client_print(client,F("<br><br><form><span class=\"txt\">WiFi SSID: </span><input type=\"text\" class=\"txt\" name=\"wifi_ssid\" value=\""));
   web_client_print(client,configuration.wifi_ssid);
   web_client_print(client,F("\">"));
-  web_client_print(client,F("<br><br><form>WiFi password: <input type=\"text\" class=\"txt\" name=\"ssid\" value=\""));
+  web_client_print(client,F("<br><br><span class=\"txt\">WiFi password: </span><input type=\"text\" class=\"txt\" name=\"wifi_pwd\" value=\""));
   web_client_print(client,configuration.wifi_password);
   web_client_println(client,"\"><br><br><input type=\"submit\" value=\"Save\"></form>");
 #else
@@ -21884,6 +21892,14 @@ void web_print_page_link_settings_process(NETWORK_CLIENT_CLS client){
 
 void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
 
+#if defined(ENABLE_WIFI)
+  // hier wifi auswertung
+  char wifi_ssid_buffer[sizeof(configuration.wifi_ssid)];
+  char wifi_password_buffer[sizeof(configuration.wifi_password)];
+
+  memset(wifi_ssid_buffer, 0, sizeof(wifi_ssid_buffer));
+  memset(wifi_password_buffer, 0, sizeof(wifi_password_buffer));
+#else
   uint8_t ip0 = 0;
   uint8_t ip1 = 0;
   uint8_t ip2 = 0;
@@ -21896,6 +21912,7 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
   uint8_t sn1 = 0;
   uint8_t sn2 = 0;
   uint8_t sn3 = 0;
+#endif
 
   uint8_t invalid_data = 0;
 
@@ -21903,8 +21920,31 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
 
   parse_get(web_server_incoming_string);
   if (parse_get_results_index){
-
     for (int x = 0; x < parse_get_results_index; x++){
+#if defined(ENABLE_WIFI)
+
+      if (parse_get_results[x].parameter == "wifi_ssid") {
+        if (parse_get_results[x].value_string.length() >= sizeof(wifi_ssid_buffer)) {
+          invalid_data = 1;
+        } else {
+          parse_get_results[x].value_string.toCharArray(
+            wifi_ssid_buffer,
+            sizeof(wifi_ssid_buffer)
+          );
+        }
+      }
+
+      if (parse_get_results[x].parameter == "wifi_pwd") {
+        if (parse_get_results[x].value_string.length() >= sizeof(wifi_password_buffer)) {
+          invalid_data = 1;
+        } else {
+          parse_get_results[x].value_string.toCharArray(
+            wifi_password_buffer,
+            sizeof(wifi_password_buffer)
+          );
+        }
+      }
+#else
       if (parse_get_results[x].parameter == "ip0"){ip0 = parse_get_results[x].value_long;}
       if (parse_get_results[x].parameter == "ip1"){ip1 = parse_get_results[x].value_long;}
       if (parse_get_results[x].parameter == "ip2"){ip2 = parse_get_results[x].value_long;}
@@ -21919,7 +21959,7 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
       if (parse_get_results[x].parameter == "sn1"){sn1 = parse_get_results[x].value_long;}
       if (parse_get_results[x].parameter == "sn2"){sn2 = parse_get_results[x].value_long;}
       if (parse_get_results[x].parameter == "sn3"){sn3 = parse_get_results[x].value_long;}
-
+#endif
 
     }
 
@@ -21927,11 +21967,12 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
 
 
     // data validation
-
+#if defined(ENABLE_WIFI)
+#else
     if ((ip0 == 0) || (ip3 == 255) || (ip3 == 0)) {invalid_data = 1;}
     if (((ip0 & sn0) != (gw0 & sn0)) || ((ip1 & sn1) != (gw1 & sn1)) || ((ip2 & sn2) != (gw2 & sn2)) || ((ip3 & sn3) != (gw3 & sn3))) {invalid_data = 1;}
     if ((sn0 == 0) || (sn1 > sn0) || (sn2 > sn1) || (sn3 > sn2) || (sn3 > 252)) {invalid_data = 1;}
-
+#endif
     if (invalid_data){
 
       web_print_header(client);
@@ -21969,11 +22010,37 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
       web_print_footer(client);
       restart_networking = 1;
       config_dirty = 1;
+#elif defined(ENABLE_WIFI)
+      memset(configuration.wifi_ssid, 0, sizeof(configuration.wifi_ssid));
+      memset(configuration.wifi_password, 0, sizeof(configuration.wifi_password));
+
+      memcpy(
+        configuration.wifi_ssid,
+        wifi_ssid_buffer,
+        sizeof(configuration.wifi_ssid)
+      );
+
+      memcpy(
+        configuration.wifi_password,
+        wifi_password_buffer,
+        sizeof(configuration.wifi_password)
+      );
+
+      web_print_header(client);
+      web_print_style_sheet(client);
+      web_print_title(client);
+      web_client_println(client,F("<br>WiFi configuration saved<br>Restarting WiFi<br><br>"));
+      web_print_home_link(client);
+      web_print_footer(client);
+
+      config_dirty = 1;
+
+      initialize_wifi();
 #else
       web_print_header(client);
       web_print_style_sheet(client);
       web_print_title(client);
-      web_client_println(client,F("<br>Ethernet not enabled!<br>"));
+      web_client_println(client,F("<br>Ethernet or Wifi not enabled?!<br>"));
       web_print_home_link(client);
       web_print_footer(client);
 #endif
