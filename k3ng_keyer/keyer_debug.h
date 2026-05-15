@@ -1,7 +1,7 @@
 // don't touch these unless you know what the hell you are doing or you're asked to uncomment these for debug dumps
-#define DEBUG_STARTUP
+// #define DEBUG_STARTUP
 // #define DEBUG_STARTUP_BLINKS
-#define DEBUG_LOOP
+// #define DEBUG_LOOP
 // #define DEBUG_EEPROM
 // #define DEBUG_MEMORIES
 // #define DEBUG_PLAY_MEMORY
