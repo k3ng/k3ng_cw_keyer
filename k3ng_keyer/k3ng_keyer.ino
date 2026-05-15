@@ -18948,7 +18948,16 @@ void initialize_display(){
           lcd_center_print_timed(custom_startup_field, 2, 4000);    // display the custom field on the third line of the display, maximum field length is the number of columns
 	      }
       #else
+  #if defined(ENABLE_WIFI)
+        if (WiFi.status() != WL_CONNECTED) {
+          lcd_center_print_timed("Wifi enabled but not connected",1, 14000);
+        } else {
+          lcd_center_print_timed("Wifi enabled",1, 14000);
+          lcd_center_print_timed(WiFi.localIP().toString(),2, 14000);
+        }
+  #else
         lcd_center_print_timed("hi", 1, 4000);
+  #endif
       #endif                                                        // OPTION_PERSONALIZED_STARTUP_SCREEN
       if (LCD_ROWS > 3) lcd_center_print_timed("V: " + String(CODE_VERSION), 3, 4000);      // display the code version on the fourth line of the display
     }
