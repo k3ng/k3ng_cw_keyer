@@ -1752,7 +1752,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #endif
 
 #if defined(ESP32)
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI)
   #include <WiFi.h>
 #ifndef FALLBACK_AP
   #define FALLBACK_AP "k3ngkeyer_ap"
@@ -1821,7 +1821,7 @@ struct config_t {  // 120 bytes total
     // 14 bytes
 #endif
 
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI)
   char wifi_ssid[33];
   char wifi_password[65];
 #endif
@@ -2252,7 +2252,7 @@ PRIMARY_SERIAL_CLS * debug_serial_port;
   byte send_winkey_breakin_byte_flag = 0;
 #endif //defined(OPTION_WINKEY_SEND_BREAKIN_STATUS_BYTE) && defined(FEATURE_WINKEY_EMULATION)
 
-#if defined(FEATURE_ETHERNET) || defined(ENABLE_WIFI)
+#if defined(FEATURE_ETHERNET) || defined(FEATURE_WIFI)
   #if defined(FEATURE_ETHERNET)
   uint8_t default_ip[] = FEATURE_ETHERNET_IP;                      // default IP address ("192.168.1.178")
   uint8_t default_gateway[] = FEATURE_ETHERNET_GATEWAY;                   // default gateway
@@ -2628,7 +2628,7 @@ void loop()
       #endif
     #endif
 
-    #if defined(ENABLE_WIFI) 
+    #if defined(FEATURE_WIFI) 
     service_web_server();
     #endif
 
@@ -18951,7 +18951,7 @@ void initialize_display(){
           lcd_center_print_timed(custom_startup_field, 2, 4000);    // display the custom field on the third line of the display, maximum field length is the number of columns
 	      }
       #else
-  #if defined(ENABLE_WIFI)
+  #if defined(FEATURE_WIFI)
         if (WiFi.status() != WL_CONNECTED) {
           lcd_center_print_timed("Wifi enabled but not connected",1, 14000);
         } else {
@@ -20335,7 +20335,7 @@ void initialize_ethernet(){
 
 }
 
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI)
 void fallback_wifi_ap() {
   // Just to be sure
   WiFi.disconnect(true);
@@ -20350,16 +20350,18 @@ void fallback_wifi_ap() {
 
 void initialize_wifi() {
 
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI)
   primary_serial_port->println();
   if (configuration.wifi_ssid[0] == '\0') {
     debug_serial_port->println("No SSID set");
     fallback_wifi_ap();
     return;
   }
+#if defined(DEBUG_WIFI)
   debug_serial_port->print(F("WiFi: starting "));
   debug_serial_port->println(configuration.wifi_ssid);
   debug_serial_port->println();
+#endif
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(configuration.wifi_ssid, configuration.wifi_password);
@@ -20370,8 +20372,10 @@ void initialize_wifi() {
   bool is_connected = false;
   while (true) {
     switch(WiFi.status()) {
-      case WL_NO_SSID_AVAIL: 
+      case WL_NO_SSID_AVAIL:
+#if defined(DEBUG_WIFI)
         debug_serial_port->println("[WiFi] SSID not found"); 
+#endif
         break;
       case WL_CONNECT_FAILED:
 #if defined(DEBUG_WIFI)
@@ -20425,9 +20429,9 @@ void initialize_wifi() {
       }
     }
   }
-
-  primary_serial_port->println();
-
+#if defined(DEBUG_WIFI)
+  debug_serial_port->println();
+#endif
 #endif
 
 }
@@ -20448,7 +20452,7 @@ void initialize_udp(){
   #endif //FEATURE_UDP
 }
 
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI)
 bool check_wifi_connected() {
   return WiFi.status() == WL_CONNECTED;
 }
@@ -20460,11 +20464,11 @@ bool check_wifi_connected() {
 void initialize_web_server(){
   #if defined(FEATURE_WEB_SERVER)
 
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI)
    if (check_wifi_connected()) {
 #endif
     server.begin();
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI)
    }
 #endif
 
@@ -20571,7 +20575,7 @@ void service_web_server() {
             // are there form results being posted?
 #if defined(FEATURE_ETHERNET)
             if (web_server_incoming_string.indexOf("?ip0=") > 0){
-#elif defined(ENABLE_WIFI)
+#elif defined(FEATURE_WIFI)
             if (web_server_incoming_string.indexOf("wifi_ssid=") > 0){      
 #else
             if (false) {
@@ -20766,7 +20770,7 @@ void web_print_page_network_settings(NETWORK_CLIENT_CLS client){
   web_client_print(client,F("\">.<input type=\"text\" name=\"sn3\" class=\"addr\" value=\""));
   web_client_print(client,configuration.subnet[3]);
   web_client_println(client,"\"><br><br><input type=\"submit\" value=\"Save\"></form>");
-#elif defined(ENABLE_WIFI)
+#elif defined(FEATURE_WIFI)
   //hier wifi html
   web_client_print(client,F("<br><br><form><span class=\"txt\">WiFi SSID: </span><input type=\"text\" class=\"txt\" name=\"wifi_ssid\" value=\""));
   web_client_print(client,configuration.wifi_ssid);
@@ -21927,7 +21931,7 @@ void web_print_page_link_settings_process(NETWORK_CLIENT_CLS client){
 
 void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
 
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI)
   // hier wifi auswertung
   char wifi_ssid_buffer[sizeof(configuration.wifi_ssid)];
   char wifi_password_buffer[sizeof(configuration.wifi_password)];
@@ -21956,7 +21960,7 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
   parse_get(web_server_incoming_string);
   if (parse_get_results_index){
     for (int x = 0; x < parse_get_results_index; x++){
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI)
 
       if (parse_get_results[x].parameter == "wifi_ssid") {
         if (parse_get_results[x].value_string.length() >= sizeof(wifi_ssid_buffer)) {
@@ -22002,7 +22006,7 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
 
 
     // data validation
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI)
 #else
     if ((ip0 == 0) || (ip3 == 255) || (ip3 == 0)) {invalid_data = 1;}
     if (((ip0 & sn0) != (gw0 & sn0)) || ((ip1 & sn1) != (gw1 & sn1)) || ((ip2 & sn2) != (gw2 & sn2)) || ((ip3 & sn3) != (gw3 & sn3))) {invalid_data = 1;}
@@ -22045,7 +22049,7 @@ void web_print_page_network_settings_process(NETWORK_CLIENT_CLS client){
       web_print_footer(client);
       restart_networking = 1;
       config_dirty = 1;
-#elif defined(ENABLE_WIFI)
+#elif defined(FEATURE_WIFI)
       memset(configuration.wifi_ssid, 0, sizeof(configuration.wifi_ssid));
       memset(configuration.wifi_password, 0, sizeof(configuration.wifi_password));
 

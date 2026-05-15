@@ -170,5 +170,8 @@
 
 
 #if defined(ESP32)
-#define ENABLE_WIFI
+#define FEATURE_WIFI
+#if defined(FEATURE_COMMAND_LINE_INTERFACE)
+//#define FEATURE_WIFI_COMMAND_LINE
+#endif
 #endif

@@ -26,7 +26,7 @@
 #endif
 
 #if defined(FEATURE_WEB_SERVER) || defined(FEATURE_INTERNET_LINK)
-#ifndef ENABLE_WIFI
+#ifndef FEATURE_WIFI
   #define FEATURE_ETHERNET
 #endif
 #ifndef FEATURE_ETHERNET_WEB_LISTENER_PORT
