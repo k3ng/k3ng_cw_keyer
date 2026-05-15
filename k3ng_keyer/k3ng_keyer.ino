@@ -1751,11 +1751,16 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #define SP __get_MSP()
 #endif
 
-#if defined(ESP32) && defined(ENABLE_WIFI)
+#if defined(ESP32)
+#if defined(ENABLE_WIFI)
   #include <WiFi.h>
+#ifndef FALLBACK_AP
+  #define FALLBACK_AP "k3ngkeyer_ap"
+#endif
   #define NETWORK_SERVER_CLS WiFiServer
   #define NETWORK_CLIENT_CLS WiFiClient
   #define NETWORK_LOCAL_IP WiFi.localIP()
+#endif
 #endif
 
 #define memory_area_start (sizeof(configuration)+5)
@@ -20330,12 +20335,26 @@ void initialize_ethernet(){
 
 }
 
+#if defined(ENABLE_WIFI)
+void fallback_wifi_ap() {
+  // Just to be sure
+  WiFi.disconnect(true);
+  if (!WiFi.softAP(FALLBACK_AP,"")) {
+    debug_serial_port->println("Soft AP creation failed.");
+    while(1);
+  }
+  debug_serial_port->print("AP Ip: ");
+  debug_serial_port->println(WiFi.softAPIP());
+}
+#endif
+
 void initialize_wifi() {
 
-#if defined(ESP32) && defined(ENABLE_WIFI)
+#if defined(ENABLE_WIFI)
   primary_serial_port->println();
   if (configuration.wifi_ssid[0] == '\0') {
     debug_serial_port->println("No SSID set");
+    fallback_wifi_ap();
     return;
   }
   debug_serial_port->print(F("WiFi: starting "));
@@ -20398,7 +20417,8 @@ void initialize_wifi() {
         debug_serial_port->println("[WiFi] Failed to connect to WiFi!");
 #endif
      // Use disconnect function to force stop trying to connect
-       WiFi.disconnect();
+       WiFi.disconnect(true);
+       fallback_wifi_ap();
        break;
       } else {
         numberOfTries--;
