@@ -169,7 +169,6 @@
 #define OPTION_MIDI_RESPONSE_IAMBIC 5     // Iambic Mode: value > 0 -> Iambic B, = 0 -> Iambic A
 
 
+#if defined(ESP32)
 #define ENABLE_WIFI
-#define WIFI_SSID "0xdeadbeef"
-#define WIFI_PASSWORD "0xdeadbeef"
-
+#endif

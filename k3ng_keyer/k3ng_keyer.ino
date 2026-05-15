@@ -1753,14 +1753,6 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 
 #if defined(ESP32) && defined(ENABLE_WIFI)
   #include <WiFi.h>
-  #ifndef WIFI_SSID
-    #define WIFI_SSID ""
-  #endif
-
-  #ifndef WIFI_PASSWORD
-    #define WIFI_PASSWORD ""
-  #endif
-
   #define NETWORK_SERVER_CLS WiFiServer
   #define NETWORK_CLIENT_CLS WiFiClient
   #define NETWORK_LOCAL_IP WiFi.localIP()
