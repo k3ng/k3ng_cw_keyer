@@ -12888,7 +12888,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
     port_to_use->println(F("\\Z\t\t: Autospace on/off"));
   #endif //FEATURE_AUTOSPACE
   port_to_use->println(F("\\+\t\t: Create prosign")); //Changed description to match change log at top (WD9DMP)
-#if defined(ESP32) && defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI_COMMAND_LINE)
   port_to_use->println(F("\\!c\t\t: WiFi connect"));
   port_to_use->println(F("\\!d\t\t: WiFi disconnect"));
   port_to_use->println(F("\\!s<ssid>\t: Set WiFi SSID"));
@@ -13177,7 +13177,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     case 'W': serial_wpm_set(port_to_use);break;                                        // W - set WPM
     case 'X': serial_switch_tx(port_to_use);break;                                      // X - switch transmitter
     case 'Y': serial_change_wordspace(port_to_use); break;
-    #ifdef ENABLE_WIFI
+    #ifdef FEATURE_WIFI_COMMAND_LINE
     case '!': serial_wifi_command(port_to_use); break;
     #endif
     #ifdef FEATURE_AUTOSPACE
@@ -14359,7 +14359,7 @@ void serial_change_wordspace(PRIMARY_SERIAL_CLS * port_to_use)
 #endif
 
 //---------------------------------------------------------------------
-#if defined(ENABLE_WIFI)
+#if defined(FEATURE_WIFI_COMMAND_LINE)
 
 void serial_wifi_command(PRIMARY_SERIAL_CLS * port_to_use) {
   unsigned long start = millis();
@@ -20672,6 +20672,9 @@ void web_print_style_sheet(NETWORK_CLIENT_CLS client){
   // ip port text blocks
   web_client_println(client,F(".ipprt {width: 45px; text-align:center }"));
 
+ // text inputsblocks
+  web_client_println(client,F(".txt {width: 100px; text-align:left }"));
+
   web_client_println(client,F(".container {display: flex;}"));
 
  /*for demo purposes only */
@@ -20755,8 +20758,16 @@ void web_print_page_network_settings(NETWORK_CLIENT_CLS client){
   web_client_print(client,F("\">.<input type=\"text\" name=\"sn3\" class=\"addr\" value=\""));
   web_client_print(client,configuration.subnet[3]);
   web_client_println(client,"\"><br><br><input type=\"submit\" value=\"Save\"></form>");
+#elif defined(ENABLE_WIFI)
+  //hier wifi html
+  web_client_print(client,F("<br><br><form>WiFi SSID: <input type=\"text\" class=\"txt\" name=\"ssid\" value=\""));
+  web_client_print(client,configuration.wifi_ssid);
+  web_client_print(client,F("\">"));
+  web_client_print(client,F("<br><br><form>WiFi password: <input type=\"text\" class=\"txt\" name=\"ssid\" value=\""));
+  web_client_print(client,configuration.wifi_password);
+  web_client_println(client,"\"><br><br><input type=\"submit\" value=\"Save\"></form>");
 #else
-  web_client_print(client,"<br><br>No ethernet possible here.");
+  web_client_print(client,"No ethernet possible here.");
 #endif
 
   web_print_home_link(client);
