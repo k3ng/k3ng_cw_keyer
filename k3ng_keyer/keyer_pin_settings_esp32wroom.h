@@ -25,9 +25,10 @@
 
 #ifdef FEATURE_BUTTONS
   #define analog_buttons_pin 35
-  #define command_mode_active_led 13
+  #define command_mode_active_led 18
 #endif //FEATURE_BUTTONS
 
+//#define PIN_LED 27
 /*
 FEATURE_SIDETONE_SWITCH
   Enabling this feature and an external toggle switch  adds switch control for playing cw sidetone.
@@ -86,8 +87,8 @@ FEATURE_SIDETONE_SWITCH
   #define led_ring_le     A8 //4    //Latch
 #endif //FEATURE_LED_RING
 
-#define correct_answer_led 14
-#define wrong_answer_led 27
+#define correct_answer_led 16
+#define wrong_answer_led 17
 
 #ifdef FEATURE_PTT_INTERLOCK
   #define ptt_interlock 0  // this pin disables PTT and TX KEY
