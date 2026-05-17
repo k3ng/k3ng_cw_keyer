@@ -20464,21 +20464,11 @@ bool check_wifi_connected() {
 void initialize_web_server(){
   #if defined(FEATURE_WEB_SERVER)
 
-#if defined(FEATURE_WIFI)
-   if (check_wifi_connected()) {
-#endif
     server.begin();
-#if defined(FEATURE_WIFI)
-   }
-#endif
 
     #ifdef DEBUG_WEB_SERVER 
       debug_serial_port->print(F("initialize_web_server: server is at "));
-      #ifndef ENABLE_WEBSERVER
       debug_serial_port->println(NETWORK_LOCAL_IP);
-      #else
-      debug_serial_port->printlnWiFi.localIP());
-      #endif
     #endif
 
   #endif //FEATURE_WEB_SERVER
