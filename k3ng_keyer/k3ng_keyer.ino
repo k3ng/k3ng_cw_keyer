@@ -20667,7 +20667,7 @@ void web_print_style_sheet(NETWORK_CLIENT_CLS client){
   web_client_println(client,F(" a.external:hover {color:red;} a.external:active {color:green;}"));
 
   // ip address text blocks
-  web_client_println(client,F(".addr {width: 30px; text-align:center }"));
+  web_client_println(client,F(".addr {width: 3em; text-align:center }"));
 
   // ip port text blocks
   web_client_println(client,F(".ipprt {width: 45px; text-align:center }"));
@@ -21137,6 +21137,22 @@ void web_print_control_textbox(NETWORK_CLIENT_CLS client,const char *name,const 
   web_client_print(client,F("</label>"));
 
 }
+
+void web_print_control_floatbox(NETWORK_CLIENT_CLS client,const char *name,const char *textbox_class,float textbox_value,const char *front_caption,const char *back_caption){
+
+  web_client_print(client,F("<label>"));
+  web_client_print(client,front_caption);
+  web_client_print(client,F("<input type=\"text\" name=\""));
+  web_client_print(client,name);
+  web_client_print(client,F("\" class=\""));
+  web_client_print(client,textbox_class);
+  web_client_print(client,F("\" value=\""));
+  web_client_print(client,textbox_value);
+  web_client_print(client,F("\">"));
+  web_client_print(client,back_caption);
+  web_client_print(client,F("</label>"));
+
+}
 #endif //FEATURE_WEB_SERVER
 
 
@@ -21209,7 +21225,7 @@ void web_print_page_keyer_settings(NETWORK_CLIENT_CLS client){
   web_print_control_textbox(client,"hz","addr",(int)configuration.hz_sidetone,""," hz");
   web_client_println(client,F("<br>"));
 
-  web_print_control_textbox(client,"dd","addr",float(configuration.dah_to_dit_ratio/100.0),""," Dah/Dit Ratio");
+  web_print_control_floatbox(client,"dd","addr",float(configuration.dah_to_dit_ratio/100.0),""," Dah/Dit Ratio");
   web_client_println(client,F("<br>"));
 
   web_print_control_textbox(client,"wt","addr",(int)configuration.weighting,"Weighting ","");
@@ -21374,7 +21390,7 @@ void web_print_page_keyer_settings_process(NETWORK_CLIENT_CLS client){
       qrss_dit_length = temp_qrss_dit_length;
       configuration.sidetone_mode = temp_sidetone_mode;
       configuration.hz_sidetone = temp_sidetone_hz;
-      configuration.dah_to_dit_ratio =  int(temp_string_dit_dah_ratio.toFloat()*100);
+      configuration.dah_to_dit_ratio =  int(temp_string_dit_dah_ratio.toFloat()*100.0);
       if (configuration.dah_to_dit_ratio < 150 || configuration.dah_to_dit_ratio > 700) {
         configuration.dah_to_dit_ratio = 300;
       }
