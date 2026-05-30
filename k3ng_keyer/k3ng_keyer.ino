@@ -21374,8 +21374,10 @@ void web_print_page_keyer_settings_process(NETWORK_CLIENT_CLS client){
       qrss_dit_length = temp_qrss_dit_length;
       configuration.sidetone_mode = temp_sidetone_mode;
       configuration.hz_sidetone = temp_sidetone_hz;
-      temp_string_dit_dah_ratio.replace(".","");
-      configuration.dah_to_dit_ratio =  temp_string_dit_dah_ratio.toInt();
+      configuration.dah_to_dit_ratio =  int(temp_string_dit_dah_ratio.toFloat()*100);
+      if (configuration.dah_to_dit_ratio < 150 || configuration.dah_to_dit_ratio > 700) {
+        configuration.dah_to_dit_ratio = 300;
+      }
       configuration.weighting = temp_weight;
       #if defined(FEATURE_COMMAND_MODE)
         serial_number = temp_serial;
