@@ -9,6 +9,7 @@
 
 */
 
+// #define HARDWARE_ESP32_WROOM_KEYER
 // #define HARDWARE_NANOKEYER_REV_B   // https://nanokeyer.wordpress.com/nanokeyer-info/  edit these files: keyer_pin_settings_nanokeyer_rev_b.h, keyer_features_and_options_nanokeyer_rev_b.h, keyer_settings_nanokeyer_rev_b.h
 // #define HARDWARE_NANOKEYER_REV_D   // https://nanokeyer.wordpress.com/nanokeyer-info/  edit these files: keyer_pin_settings_nanokeyer_rev_d.h, keyer_features_and_options_nanokeyer_rev_d.h, keyer_settings_nanokeyer_rev_d.h  
 // #define HARDWARE_OPEN_INTERFACE   // http://remoteqth.com/open-interface.php   edit these files: keyer_pin_settings_open_interface.h, keyer_features_and_options_open_interface.h, keyer_settings_open_interface.h   
@@ -90,6 +91,9 @@
   #define SECONDARY_SERIAL_CLS usb_serial_class
 #elif defined(_BOARD_PIC32_PINGUINO_) // || defined(_BOARD_PIC32_PINGUINO_OTG_)
   #define PRIMARY_SERIAL_CLS USBSerial
+  #define SECONDARY_SERIAL_CLS HardwareSerial
+#elif defined(ESP32)
+  #define PRIMARY_SERIAL_CLS HardwareSerial
   #define SECONDARY_SERIAL_CLS HardwareSerial
 #else
   #define PRIMARY_SERIAL_CLS HardwareSerial
