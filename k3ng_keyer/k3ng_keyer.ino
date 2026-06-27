@@ -9272,7 +9272,7 @@ void initialize_analog_button_array() {
     button_array.Add(8,5);
     button_array.Add(9,4);
 
-  #elseif defined(OPTION_DFROBOT_LCD_COMMAND_BUTTONS)
+  #elif defined(OPTION_DFROBOT_LCD_COMMAND_BUTTONS)
     button_array.Add(0,dfrobot_btnSELECT, dfrobot_btnLEFT_analog, dfrobot_btnSELECT_analog);
     button_array.Add(1,dfrobot_btnLEFT, dfrobot_btnDOWN_analog, dfrobot_btnLEFT_analog);
     button_array.Add(2,dfrobot_btnDOWN, dfrobot_btnUP_analog, dfrobot_btnDOWN_analog);
