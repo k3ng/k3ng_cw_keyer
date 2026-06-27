@@ -5930,7 +5930,17 @@ void check_paddles()
             }
           } else {
             if (dah_buffer) {
-              last_closure = DAH_CLOSURE_DIT_OFF;
+              // DIT just ended; only queue DAH if paddle is still physically held.
+              // dah_buffer may have been set by check_dah_paddle() during DIT even
+              // though the operator has since released the DAH paddle.
+              { byte dah_pin = (configuration.paddle_mode == PADDLE_NORMAL) ? paddle_right : paddle_left;
+                if (paddle_pin_read(dah_pin) == LOW) {
+                  last_closure = DAH_CLOSURE_DIT_OFF;
+                } else {
+                  dah_buffer = 0;
+                  last_closure = NO_CLOSURE;
+                }
+              }
             } else {
               last_closure = NO_CLOSURE;
             }
@@ -5961,7 +5971,15 @@ void check_paddles()
             }
           } else {
             if (dit_buffer) {
-              last_closure = DIT_CLOSURE_DAH_OFF;
+              // DAH just ended; only queue DIT if paddle is still physically held.
+              { byte dit_pin = (configuration.paddle_mode == PADDLE_NORMAL) ? paddle_left : paddle_right;
+                if (paddle_pin_read(dit_pin) == LOW) {
+                  last_closure = DIT_CLOSURE_DAH_OFF;
+                } else {
+                  dit_buffer = 0;
+                  last_closure = NO_CLOSURE;
+                }
+              }
             } else {
               last_closure = NO_CLOSURE;
             }
@@ -7801,8 +7819,8 @@ void command_mode() {
         case 211: // D - Ultimatic mode
           configuration.keyer_mode = ULTIMATIC;
           keyer_mode_before = ULTIMATIC;
-          configuration.dit_buffer_off = 1;
-          configuration.dah_buffer_off = 1;
+          configuration.dit_buffer_off = 0;  // fix: buffers must stay enabled in Ultimatic
+          configuration.dah_buffer_off = 0;  // fix: buffers must stay enabled in Ultimatic
           config_dirty = 1;
           #ifdef FEATURE_DISPLAY
             if (LCD_COLUMNS < 9) {
@@ -12992,8 +13010,8 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
     #ifndef OPTION_NO_ULTIMATIC
       case 'D': // D - Ultimatic mode
         configuration.keyer_mode = ULTIMATIC;
-        configuration.dit_buffer_off = 1;
-        configuration.dah_buffer_off = 1;
+        configuration.dit_buffer_off = 0;  // fix: buffers must stay enabled in Ultimatic
+        configuration.dah_buffer_off = 0;  // fix: buffers must stay enabled in Ultimatic
         config_dirty = 1;
         port_to_use->println(F("\r\nUltimatic"));
         break;
