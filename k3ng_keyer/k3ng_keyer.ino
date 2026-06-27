@@ -1683,6 +1683,12 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #define WIRECLOCK 400000L
 #endif
 
+#if defined(FEATURE_LCD_HD44780_PINIO)
+  #include <Wire.h>
+  #include <hd44780.h>
+  #include <hd44780ioClass/hd44780_pinIO.h>
+#endif
+
 #if defined(FEATURE_OLED_SSD1306)
   #include <Wire.h>
   #include "SSD1306Ascii.h"
@@ -2133,6 +2139,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
 #if defined(FEATURE_LCD_HD44780)
   hd44780_I2Cexp lcd;
+#endif
+
+#if defined(FEATURE_LCD_HD44780_PINIO)
+  hd44780_pinIO lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
 #endif
 
 #if defined(FEATURE_OLED_SSD1306)
@@ -18770,6 +18780,13 @@ void initialize_display(){
         lcd.begin();
         lcd.home();
      #else
+        #if defined(FEATURE_LCD_HD44780_PINIO)
+    	  // Slower access to older genuine Hitachi devices
+    	  // default is setExecTimes(HD44780_CHEXECTIME, HD44780_INSEXECTIME);
+    	  // Values in useconds
+    	  // lcd.setExecTimes(2000,38);// default
+          lcd.setExecTimes(2000, 1200);// has to be slow or lcd_centre_print_timed() causes corruption
+        #endif
         lcd.begin(LCD_COLUMNS, LCD_ROWS);
      #endif
     #endif

@@ -34,7 +34,8 @@
 // #define FEATURE_LCD_FABO_PCF8574        // https://github.com/FaBoPlatform/FaBoLCD-PCF8574-Library
 // #define FEATURE_LCD_MATHERTEL_PCF8574   // https://github.com/mathertel/LiquidCrystal_PCF8574
 // #define FEATURE_LCD_I2C_FDEBRABANDER    // https://github.com/fdebrabander/Arduino-LiquidCrystal-I2C-library
-// #define FEATURE_LCD_HD44780
+// #define FEATURE_LCD_HD44780             // hd44780_I2Cexp subclass control LCD using i2c i/o expander backpack (PCF8574 or MCP23008) see https://https://github.com/duinoWitchery/hd44780 
+// #define FEATURE_LCD_HD44780_PINIO       // hd44780_pinIO subclass control LCD using direct Arduino Pin connections see https://https://github.com/duinoWitchery/hd44780 
 // #define FEATURE_OLED_SSD1306            // https://github.com/greiman/SSD1306Ascii
 // #define FEATURE_CW_DECODER              // https://github.com/k3ng/k3ng_cw_keyer/wiki/385-Feature:-CW-Decoder 
 // #define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE, may have mixed results with Mega and Mega ADK)
