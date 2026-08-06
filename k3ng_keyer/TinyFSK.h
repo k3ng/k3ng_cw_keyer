@@ -790,14 +790,15 @@ void TinyFSKsetup() {  // ======================================================
 
 
 
-  #ifdef __LGT8FX8P__
+  #if defined(__LGT8FX8P__) || defined(__LGT8FX8E__)
     /* LGT chip emulates EEPROM at the cost of giving up twice the space in program flash memory.
-     * Unortunately, the last 4 bytes of every 1KB block are read-only. Therefore 
-     * EEPROM.length() would return 1024 (readable EEPROM size), while EEPROM.size() returns 1020
-     * (writable EEPROM size). The following line will give the right figure for LGT.
+     * Unfortunately, the last 4 bytes of every 1KB block are read-only. Old LGT8Fx library returns
+     * EEPROM.length() as 1024 (readable EEPROM size) and EEPROM.size() as 1020 (writable EEPROM size).
+     * Now, EEPROM.size() has deprecated and EEPROM.length() returns 1020
+     * (Both LGT8F328D and LGT8F328P return same value).
      */
-    ee_speed_addr = EEPROM.size() - 1; 
-    ee_polarity_addr = EEPROM.size() - 2; 
+    ee_speed_addr = EEPROM.length() - 1; 
+    ee_polarity_addr = EEPROM.length() - 2; 
   #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
     ee_speed_addr = EEPROM.length() - 1; 
     ee_polarity_addr = EEPROM.length() - 2; 
