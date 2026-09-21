@@ -1417,6 +1417,19 @@ Recent Update History
     2024.03.20.2239
       tx_inhibit: unkey PTT when tx_inhibit goes active
 
+    2026.09.21.1841
+      Manual paddle keying: fixed a single tap sending two elements (dit_buffer/dah_buffer were
+        re-latched mid-element since loop() no longer blocks during a keyed element)
+      Fixed paddle echo (FEATURE_PADDLE_ECHO/WinKey) garbling multi-element characters into
+        separate single-element echoes
+      Fixed iambic squeeze sending all dits instead of alternating dit-dah-dit-dah
+      Fixed BUG mode: holding the dah paddle produced an oscillating sidetone instead of a
+        steady tone
+      Reworked potentiometer speed control (FEATURE_POTENTIOMETER) so it only overrides the
+        speed on a genuine knob turn - previously it could silently revert a \W/paddle-adjust/
+        macro/MIDI speed change from ADC noise alone, or immediately override it if the pot's
+        physical position differed from the newly-set speed
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1447,9 +1460,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2024.03.20.2239"
+#define CODE_VERSION "2026.09.21.1841"
 
-#define eeprom_magic_number 42               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 44               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1881,6 +1894,21 @@ byte iambic_flag = 0;
 unsigned long last_config_write = 0;
 uint16_t memory_area_end = 0;
 
+// --- Non-blocking CW element scheduler (Milestone 1: manual/paddle keying) ---
+// Replaces the blocking busy-wait in loop_element_lengths() for MANUAL sending.
+// Automatic sending (send_char / buffers / memory) still uses loop_element_lengths()
+// in this milestone. All timing is micros()-based to preserve v1 keying fidelity.
+enum cw_scheduler_state_t {CW_IDLE, CW_PTT_LEAD_WAIT, CW_KEY_DOWN, CW_KEY_UP, CW_KEY_DOWN_HOLD};
+byte cw_scheduler_state = CW_IDLE;
+unsigned long cw_phase_start_us = 0;    // micros() at the start of the current key-down or key-up phase
+unsigned long cw_phase_ticks = 0;       // duration (us) of the current phase; also used for CMOS super-keyer % timing
+unsigned long cw_pending_keyup_us = 0;  // key-up (inter-element space) duration to run after the key-down phase
+byte cw_autospace_applied = 0;          // FEATURE_AUTOSPACE: extra letterspace already inserted for this element
+byte cw_bug_dah_flag = 0;               // BUG mode: dah paddle currently held (key manually down)
+byte cw_bug_dah_paddle_down = 0;        // BUG mode: raw dah paddle pin state, mirrored every check_dah_paddle() call (unlike dah_buffer, never consumed) so BUG mode's hold logic is stable across the multiple service_cw_scheduler() calls per loop() iteration
+unsigned long cw_bug_dah_key_down_time = 0;
+byte cw_last_manual_element = SENDING_NOTHING;  // for squeeze alternation: opposite of this goes next when both dit_buffer and dah_buffer are set
+
 #ifdef FEATURE_SLEEP
   unsigned long last_activity_time = 0;
 #endif
@@ -1943,6 +1971,10 @@ byte pot_wpm_low_value;
 #ifdef FEATURE_POTENTIOMETER
   byte pot_wpm_high_value;
   byte last_pot_wpm_read;
+  byte pot_wpm_change_candidate = 0;    // last differing pot-derived WPM seen, awaiting confirmation
+  byte pot_wpm_change_confirm_count = 0; // consecutive polls pot_wpm_change_candidate has repeated
+  byte pot_engaged = 1;                 // 0 = disengaged (a non-pot source set the speed); pot is ignored until it's moved back to the current speed
+  byte pot_is_setting_speed = 0;        // set around check_potentiometer()'s own speed_set() call so speed_set() doesn't disengage the pot for its own change
   int pot_full_scale_reading = default_pot_full_scale_reading;
 #endif //FEATURE_POTENTIOMETER
 
@@ -2547,15 +2579,16 @@ void loop()
       check_buttons();
     #endif
     check_paddles();
-    service_dit_dah_buffers();
+    service_cw_scheduler();       // non-blocking manual keying (replaces blocking service_dit_dah_buffers)
 
     #if defined(FEATURE_SERIAL)
       check_serial();
       check_paddles();
-      service_dit_dah_buffers();
+      service_cw_scheduler();
     #endif
 
     service_send_buffer(PRINTCHAR);
+    service_cw_scheduler();
     check_ptt_tail();
 
     #ifdef FEATURE_POTENTIOMETER
@@ -2587,7 +2620,9 @@ void loop()
     #ifdef FEATURE_DISPLAY
       check_paddles();
       service_send_buffer(PRINTCHAR);
+      service_cw_scheduler();
       service_display();
+      service_cw_scheduler();
     #endif
 
     #ifdef FEATURE_CW_DECODER
@@ -2663,6 +2698,8 @@ void loop()
     #endif
 
     service_async_eeprom_write();
+
+    service_cw_scheduler();       // final pass this loop iteration to minimize inter-element latency
 
   }
 
@@ -5697,6 +5734,10 @@ int sidetone_switch_value()
 
 
 #ifdef FEATURE_POTENTIOMETER
+  #define POTENTIOMETER_CONFIRM_POLLS 2   // consecutive matching polls required before the pot is allowed to change speed
+#endif
+
+#ifdef FEATURE_POTENTIOMETER
 void check_potentiometer()
 {
   #ifdef DEBUG_LOOP
@@ -5711,39 +5752,83 @@ void check_potentiometer()
       return;
     }
     byte pot_value_wpm_read = pot_value_wpm();
-    if (((abs(pot_value_wpm_read - last_pot_wpm_read) * 10) > (potentiometer_change_threshold * 10))) {
-      #ifdef DEBUG_POTENTIOMETER
-        debug_serial_port->print(F("check_potentiometer: speed change: "));
-        debug_serial_port->print(pot_value_wpm_read);
-        debug_serial_port->print(F(" analog read: "));
-        debug_serial_port->println(analogRead(potentiometer));
-      #endif
-      #ifdef FEATURE_WINKEY_EMULATION
-        if (keyer_machine_mode == KEYER_COMMAND_MODE) {
-          command_speed_set(pot_value_wpm_read);
+
+    if ((keyer_machine_mode != KEYER_COMMAND_MODE) && (!pot_engaged)) {
+      // Disengaged: a non-pot source (see speed_set()) set the speed since the pot last acted, so
+      // don't act on the pot again until its OWN reading is confirmed back at (within
+      // potentiometer_change_threshold of) the speed that's actually running now - like a fader
+      // with a "null/catch" detent. This is immune to ADC noise causing a false re-engage, since
+      // noise won't reliably coincide with wherever the speed was just set to; the pot has to
+      // genuinely be moved there. (Command Mode's pot control, via command_speed_set() below, was
+      // never subject to an external override in the first place, so it's exempted from this gate.)
+      if (((abs((int)pot_value_wpm_read - (int)configuration.wpm) * 10) <= (potentiometer_change_threshold * 10))) {
+        if (pot_value_wpm_read == pot_wpm_change_candidate) {
+          pot_wpm_change_confirm_count++;
         } else {
-          if (!winkey_host_open){
+          pot_wpm_change_candidate = pot_value_wpm_read;
+          pot_wpm_change_confirm_count = 1;
+        }
+        if (pot_wpm_change_confirm_count >= POTENTIOMETER_CONFIRM_POLLS) {
+          #ifdef DEBUG_POTENTIOMETER
+            debug_serial_port->print(F("check_potentiometer: re-engaged at: "));
+            debug_serial_port->println(pot_value_wpm_read);
+          #endif
+          pot_engaged = 1;
+          last_pot_wpm_read = pot_value_wpm_read;
+          pot_wpm_change_confirm_count = 0;
+        }
+      } else {
+        pot_wpm_change_confirm_count = 0;
+      }
+    } else if (((abs(pot_value_wpm_read - last_pot_wpm_read) * 10) > (potentiometer_change_threshold * 10))) {
+      // Require the same differing reading on consecutive polls before acting on it - a single-poll
+      // blip (e.g. ADC noise crossing a pot_value_wpm() mapping boundary while the pot is physically
+      // stationary) would otherwise be indistinguishable from a genuine knob turn.
+      if (pot_value_wpm_read == pot_wpm_change_candidate) {
+        pot_wpm_change_confirm_count++;
+      } else {
+        pot_wpm_change_candidate = pot_value_wpm_read;
+        pot_wpm_change_confirm_count = 1;
+      }
+      if (pot_wpm_change_confirm_count >= POTENTIOMETER_CONFIRM_POLLS) {
+        #ifdef DEBUG_POTENTIOMETER
+          debug_serial_port->print(F("check_potentiometer: speed change: "));
+          debug_serial_port->print(pot_value_wpm_read);
+          debug_serial_port->print(F(" analog read: "));
+          debug_serial_port->println(analogRead(potentiometer));
+        #endif
+        pot_is_setting_speed = 1;
+        #ifdef FEATURE_WINKEY_EMULATION
+          if (keyer_machine_mode == KEYER_COMMAND_MODE) {
+            command_speed_set(pot_value_wpm_read);
+          } else {
+            if (!winkey_host_open){
+              speed_set(pot_value_wpm_read);
+            }
+          }
+          if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
+            winkey_port_write(((pot_value_wpm_read-pot_wpm_low_value)|128),0);
+            winkey_last_unbuffered_speed_wpm = configuration.wpm;
+          }
+        #else
+          if (keyer_machine_mode == KEYER_COMMAND_MODE) {
+            command_speed_set(pot_value_wpm_read);
+          } else {
             speed_set(pot_value_wpm_read);
           }
-        }
-        if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
-          winkey_port_write(((pot_value_wpm_read-pot_wpm_low_value)|128),0);
-          winkey_last_unbuffered_speed_wpm = configuration.wpm;
-        }        
-      #else
-        if (keyer_machine_mode == KEYER_COMMAND_MODE) {
-          command_speed_set(pot_value_wpm_read);
-        } else {
-          speed_set(pot_value_wpm_read);
-        }
-      #endif
-      last_pot_wpm_read = pot_value_wpm_read;
-      #ifdef FEATURE_SLEEP
-        last_activity_time = millis();
-      #endif //FEATURE_SLEEP
-      #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
-        last_active_time = millis();
-      #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
+        #endif
+        pot_is_setting_speed = 0;
+        last_pot_wpm_read = pot_value_wpm_read;
+        pot_wpm_change_confirm_count = 0;
+        #ifdef FEATURE_SLEEP
+          last_activity_time = millis();
+        #endif //FEATURE_SLEEP
+        #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+          last_active_time = millis();
+        #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
+      }
+    } else {
+      pot_wpm_change_confirm_count = 0;
     }
   }
 }
@@ -5751,23 +5836,52 @@ void check_potentiometer()
 #endif
 //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_POTENTIOMETER
+  #define POTENTIOMETER_SMOOTHING_FACTOR 4   // low-pass filter strength on the raw ADC reading (higher = smoother/slower)
+#endif
+
+#ifdef FEATURE_POTENTIOMETER
 byte pot_value_wpm()
 {
 
   static int last_pot_read = 0;
   static byte return_value = 0;
+  static int smoothed_pot_read = -1;   // -1 sentinel: not yet seeded
   int pot_read = analogRead(potentiometer);
-  if (abs(pot_read - last_pot_read) > potentiometer_reading_threshold ) {
+  // A single analogRead() can land on a noise spike, and since ~46 raw counts separate each WPM
+  // step in this build, a spike right at a step boundary can flip the mapped WPM by 1 even with
+  // the pot completely stationary - which check_potentiometer()'s comparison would otherwise treat
+  // as a real knob turn. Low-pass filter the raw reading here so that noise, not just its downstream
+  // symptoms, gets suppressed for every consumer of this function.
+  if (smoothed_pot_read < 0) {
+    smoothed_pot_read = pot_read;
+  } else {
+    smoothed_pot_read += (pot_read - smoothed_pot_read) / POTENTIOMETER_SMOOTHING_FACTOR;
+  }
+  if (abs(smoothed_pot_read - last_pot_read) > potentiometer_reading_threshold ) {
     #if defined(default_pot_full_ccw_reading)
-      return_value = map(pot_read, default_pot_full_ccw_reading, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+      return_value = map(smoothed_pot_read, default_pot_full_ccw_reading, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
     #else
-      return_value = map(pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
+      return_value = map(smoothed_pot_read, 0, pot_full_scale_reading, pot_wpm_low_value, pot_wpm_high_value);
     #endif
-    last_pot_read = pot_read;
+    last_pot_read = smoothed_pot_read;
   }
   return return_value;
 
 }
+
+//-------------------------------------------------------------------------------------------------------
+#ifdef FEATURE_POTENTIOMETER
+void disengage_potentiometer_override(){
+  // Called whenever something other than the pot itself changes the speed (\W, paddle-adjust,
+  // PS/2 keyboard, MIDI, memory-macro speed commands - see speed_set()). Rather than snapshotting
+  // "where the pot is right now" as a new baseline (fragile - a single noisy ADC sample caught at
+  // the wrong instant could still look like a subsequent "change"), disengage the pot entirely:
+  // check_potentiometer() won't act on it again until it's physically moved back to (within
+  // tolerance of) the speed that was just set - like a fader with a "null/catch" detent.
+  pot_engaged = 0;
+  pot_wpm_change_confirm_count = 0;
+}
+#endif
 
 #endif
 
@@ -5939,9 +6053,18 @@ void check_paddles()
 
   static byte last_closure = NO_CLOSURE;
 
+  // Bugfix: don't re-sample (re-latch) whichever paddle's element is currently in flight. In the
+  // original blocking v1, check_paddles() could never run again during a busy-wait element send; the
+  // only sampling reachable then was the interior loop's own being_sent-gated opposite-paddle check
+  // (mirrored in service_cw_scheduler()'s Part A). Since loop() no longer blocks, check_paddles() now
+  // runs many times during that same element's playback, and a still-closed paddle (as any human tap
+  // is, for many loop() iterations) would re-arm its own buffer before the scheduler ever goes idle -
+  // producing a spurious second element even though the operator already released.
+  byte dit_element_in_flight = ((cw_scheduler_state == CW_KEY_DOWN) || (cw_scheduler_state == CW_KEY_UP)) && (being_sent == SENDING_DIT);
+  byte dah_element_in_flight = ((cw_scheduler_state == CW_KEY_DOWN) || (cw_scheduler_state == CW_KEY_UP)) && (being_sent == SENDING_DAH);
 
-  check_dit_paddle();
-  check_dah_paddle();
+  if (!dit_element_in_flight) { check_dit_paddle(); }
+  if (!dah_element_in_flight) { check_dah_paddle(); }
 
   #ifdef FEATURE_WINKEY_EMULATION
     if (winkey_dit_invoke) {
@@ -6811,6 +6934,8 @@ void check_dah_paddle()
     if (usb_dah) {pin_value = 0;}
   #endif
 
+  cw_bug_dah_paddle_down = (pin_value == 0) ? 1 : 0;
+
   if (pin_value == 0) {
     #ifdef FEATURE_DEAD_OP_WATCHDOG
       if (dah_buffer == 0) {
@@ -7489,6 +7614,396 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
 
 } //void loop_element_lengths
 
+//-------------------------------------------------------------------------------------------------------
+// Non-blocking CW element scheduler (Milestone 1)
+//
+// service_cw_scheduler() is the non-blocking replacement for the manual-keying path that used to run
+// through service_dit_dah_buffers() -> send_dit()/send_dah() -> loop_element_lengths() (a busy-wait).
+// It is called several times per loop() iteration.  Element timing is computed with the same math as
+// loop_element_lengths() so keying is bit-for-bit identical to v1, but the waiting is done by comparing
+// micros() to a stored deadline instead of spinning.
+//-------------------------------------------------------------------------------------------------------
+
+unsigned long cw_element_length_ticks(float lengths, float additional_time_ms, int speed_wpm_in){
+
+  // Mirrors the tick computation inside loop_element_lengths() (the FEATURE_FARNSWORTH / speed_mode /
+  // ticks block) so manual element durations match v1 exactly.  Returns microseconds.
+
+  float element_length;
+
+  if (lengths <= 0){
+    return 0;
+  }
+
+  #if defined(FEATURE_FARNSWORTH)
+    if ((lengths == 1) && (speed_wpm_in == 0)){
+      element_length = additional_time_ms;
+    } else {
+      if (speed_mode == SPEED_NORMAL) {
+        element_length = 1200/speed_wpm_in;
+      } else {
+        element_length = qrss_dit_length * 1000;
+      }
+    }
+  #else //FEATURE_FARNSWORTH
+    if (speed_mode == SPEED_NORMAL) {
+      element_length = 1200/speed_wpm_in;
+    } else {
+      element_length = qrss_dit_length * 1000;
+    }
+  #endif //FEATURE_FARNSWORTH
+
+  long ticks = long(element_length*lengths*1000) + long(additional_time_ms*1000);
+  if (ticks < 0){
+    return 0;
+  }
+  return (unsigned long)ticks;
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_schedule_manual_element(byte element){
+
+  // Start one dit or dah (element == SENDING_DIT or SENDING_DAH) without blocking.  Keys down now and
+  // arms the state machine; the key-up and inter-element space happen later in service_cw_scheduler().
+  // The lengths/additional_time arguments mirror the loop_element_lengths() calls in send_dit()/send_dah().
+
+  unsigned int character_wpm = configuration.wpm;
+  // Note: Farnsworth is intentionally not applied here - it only affects AUTOMATIC_SENDING in v1.
+  if (keyer_machine_mode == KEYER_COMMAND_MODE){
+    character_wpm = configuration.wpm_command_mode;
+  }
+
+  float mark_lengths;
+  float space_lengths;
+
+  if (element == SENDING_DIT){
+    #ifdef FEATURE_QLF
+      if (qlf_active){
+        mark_lengths = (1.0*(float(configuration.weighting)/50)*(random(qlf_dit_min,qlf_dit_max)/100.0));
+      } else {
+        mark_lengths = (1.0*(float(configuration.weighting)/50));
+      }
+    #else //FEATURE_QLF
+      mark_lengths = (1.0*(float(configuration.weighting)/50));
+    #endif //FEATURE_QLF
+    space_lengths = (2.0-(float(configuration.weighting)/50));
+  } else { // SENDING_DAH
+    #ifdef FEATURE_QLF
+      if (qlf_active){
+        mark_lengths = (float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)*(random(qlf_dah_min,qlf_dah_max)/100.0));
+      } else {
+        mark_lengths = (float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50));
+      }
+    #else //FEATURE_QLF
+      mark_lengths = (float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50));
+    #endif //FEATURE_QLF
+    space_lengths = (4.0-(3.0*(float(configuration.weighting)/50)));
+  }
+
+  unsigned long mark_ticks  = cw_element_length_ticks(mark_lengths, configuration.keying_compensation, character_wpm);
+  unsigned long space_ticks = cw_element_length_ticks(space_lengths, (-1.0*configuration.keying_compensation), character_wpm);
+
+  being_sent = element;
+  tx_and_sidetone_key(1);
+  if (element == SENDING_DIT){
+    if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,tx_key_dit_and_dah_pins_active_state);}
+  } else {
+    if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_active_state);}
+  }
+
+  cw_phase_start_us = micros();
+  cw_phase_ticks = mark_ticks;
+  cw_pending_keyup_us = space_ticks;
+  cw_autospace_applied = 0;
+  cw_scheduler_state = CW_KEY_DOWN;
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_end_of_manual_element(){
+
+  // End-of-element bookkeeping, run once the inter-element space (and any autospace) has elapsed.
+  // Mirrors the tail of send_dit()/send_dah() (winkey/paddle echo, being_sent reset, check_paddles()).
+
+  #ifdef FEATURE_WINKEY_EMULATION
+    if ((winkey_host_open) && (winkey_paddle_echo_activated) && (sending_mode == MANUAL_SENDING)) {
+      winkey_paddle_echo_buffer = (winkey_paddle_echo_buffer * 10) + ((being_sent == SENDING_DIT) ? 1 : 2);
+      winkey_paddle_echo_buffer_decode_time = millis() + (float(winkey_paddle_echo_buffer_decode_timing_factor*1200.0/float(configuration.wpm))*length_letterspace);
+      #ifdef FEATURE_AUTOSPACE
+        if (cw_autospace_applied){winkey_paddle_echo_buffer_decode_time = 0;}
+      #endif //FEATURE_AUTOSPACE
+    }
+  #endif
+
+  #ifdef FEATURE_PADDLE_ECHO
+    if (sending_mode == MANUAL_SENDING) {
+      paddle_echo_buffer = (paddle_echo_buffer * 10) + ((being_sent == SENDING_DIT) ? 1 : 2);
+      paddle_echo_buffer_decode_time = millis() + (((float)1200.0/(float)configuration.wpm) * ((float)configuration.cw_echo_timing_factor/(float)100));
+      #ifdef FEATURE_AUTOSPACE
+        if (cw_autospace_applied){paddle_echo_buffer_decode_time = 0;}
+      #endif //FEATURE_AUTOSPACE
+    }
+  #endif //FEATURE_PADDLE_ECHO
+
+  being_sent = SENDING_NOTHING;
+  last_sending_mode = sending_mode;
+  check_paddles();
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void service_cw_scheduler(){
+
+  #ifdef DEBUG_LOOP
+    debug_serial_port->println(F("loop: entering service_cw_scheduler"));
+  #endif
+
+  if (keyer_machine_mode == BEACON){return;}
+
+  // ---- STRAIGHT key: mirror the paddle directly, no timed elements ----
+  if (configuration.keyer_mode == STRAIGHT) {
+    if (dit_buffer) {
+      dit_buffer = 0;
+      sending_mode = MANUAL_SENDING;
+      tx_and_sidetone_key(1);
+    } else {
+      sending_mode = MANUAL_SENDING;
+      tx_and_sidetone_key(0);
+    }
+    #ifdef FEATURE_DEAD_OP_WATCHDOG
+      dit_counter = 0;
+    #endif
+    return;
+  }
+
+  // ---- Part A: mid-element opposite-paddle sampling (iambic memory) ----
+  // Port of the paddle-sampling block that used to run inside the loop_element_lengths() busy-wait.
+  if (((cw_scheduler_state == CW_KEY_DOWN) || (cw_scheduler_state == CW_KEY_UP))) {
+
+    if ((configuration.keyer_mode != ULTIMATIC) && (configuration.keyer_mode != SINGLE_PADDLE)) {
+      if ((configuration.keyer_mode == IAMBIC_A) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
+        iambic_flag = 1;
+      }
+
+      #ifndef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+        if (being_sent == SENDING_DIT) {
+          check_dah_paddle();
+        } else {
+          if (being_sent == SENDING_DAH) {
+            check_dit_paddle();
+          } else {
+            check_dah_paddle();
+            check_dit_paddle();
+          }
+        }
+      #else //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+        if ((configuration.cmos_super_keyer_iambic_b_timing_on) && (sending_mode == MANUAL_SENDING)) {
+          if ((float(float(micros()-cw_phase_start_us)/float(cw_phase_ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
+            if (being_sent == SENDING_DIT) {
+              check_dah_paddle();
+            } else {
+              if (being_sent == SENDING_DAH) {
+                check_dit_paddle();
+              }
+            }
+          } else {
+            if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
+              dah_buffer = 0;
+              dit_buffer = 0;
+            }
+          }
+        } else {
+          if (being_sent == SENDING_DIT) {
+            check_dah_paddle();
+          } else {
+            if (being_sent == SENDING_DAH) {
+              check_dit_paddle();
+            } else {
+              check_dah_paddle();
+              check_dit_paddle();
+            }
+          }
+        }
+      #endif //FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+
+    } else { //(configuration.keyer_mode != ULTIMATIC)
+      #ifndef OPTION_NO_ULTIMATIC
+      if (being_sent == SENDING_DIT) {
+        check_dah_paddle();
+      } else {
+        if (being_sent == SENDING_DAH) {
+          check_dit_paddle();
+        } else {
+          check_dah_paddle();
+          check_dit_paddle();
+        }
+      }
+      #endif // OPTION_NO_ULTIMATIC
+    }
+  }
+
+  // ---- Part B: advance the key state machine by micros() deadline ----
+  switch (cw_scheduler_state) {
+
+    case CW_KEY_DOWN:
+      if ((micros() - cw_phase_start_us) >= cw_phase_ticks) {
+        // key-down (mark) complete -> raise the key and start the inter-element space
+        if (being_sent == SENDING_DIT){
+          if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,tx_key_dit_and_dah_pins_inactive_state);}
+        } else {
+          if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_inactive_state);}
+        }
+        tx_and_sidetone_key(0);
+        if (cw_pending_keyup_us > 0) {
+          cw_phase_start_us = micros();
+          cw_phase_ticks = cw_pending_keyup_us;
+          cw_scheduler_state = CW_KEY_UP;
+        } else {
+          cw_end_of_manual_element();
+          cw_scheduler_state = CW_IDLE;
+        }
+      }
+      break;
+
+    case CW_KEY_UP:
+      if ((micros() - cw_phase_start_us) >= cw_phase_ticks) {
+        // inter-element space complete.  Apply the same element-boundary cleanup loop_element_lengths did.
+        if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
+          iambic_flag = 0;
+          dit_buffer = 0;
+          dah_buffer = 0;
+        }
+        if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
+          if (configuration.dit_buffer_off) {dit_buffer = 0;}
+          if (configuration.dah_buffer_off) {dah_buffer = 0;}
+        }
+
+        #ifdef FEATURE_AUTOSPACE
+          if ((sending_mode == MANUAL_SENDING) && (configuration.autospace_active) && (!cw_autospace_applied)) {
+            check_paddles();
+            if ((dit_buffer == 0) && (dah_buffer == 0)) {
+              float as_lengths = (being_sent == SENDING_DIT) ? ((float)configuration.autospace_timing_factor/(float)100) : 2.0;
+              cw_phase_start_us = micros();
+              cw_phase_ticks = cw_element_length_ticks(as_lengths, 0, configuration.wpm);
+              cw_autospace_applied = 1;
+              break; // stay in CW_KEY_UP for the autospace duration
+            }
+          }
+        #endif //FEATURE_AUTOSPACE
+
+        cw_end_of_manual_element();
+        cw_scheduler_state = CW_IDLE;
+      }
+      break;
+
+    default:
+      // CW_IDLE, CW_PTT_LEAD_WAIT (M4), CW_KEY_DOWN_HOLD: nothing to advance here
+      break;
+  }
+
+  // ---- Part C: when idle, start the next element (folds in service_dit_dah_buffers() dispatch) ----
+  if (cw_scheduler_state == CW_IDLE) {
+
+    if (automatic_sending_interruption_time != 0){
+      if ((millis() - automatic_sending_interruption_time) > (configuration.paddle_interruption_quiet_time_element_lengths*(1200/configuration.wpm))){
+        automatic_sending_interruption_time = 0;
+        sending_mode = MANUAL_SENDING;
+      } else {
+        dit_buffer = 0;
+        dah_buffer = 0;
+        return;
+      }
+    }
+
+    if ((configuration.keyer_mode == IAMBIC_A) || (configuration.keyer_mode == IAMBIC_B) || (configuration.keyer_mode == ULTIMATIC) || (configuration.keyer_mode == SINGLE_PADDLE)) {
+      if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left)) && (paddle_pin_read(paddle_right))) {
+        iambic_flag = 0;
+        dit_buffer = 0;
+        dah_buffer = 0;
+      } else {
+        // Bugfix: when both paddles are held (a genuine squeeze), check_paddles() re-samples both fresh
+        // at every element boundary (via cw_end_of_manual_element()), so dit_buffer and dah_buffer are
+        // BOTH 1 at essentially every pass throughout the squeeze. Originally (service_dit_dah_buffers())
+        // this alternated "for free" via two separate, sequential if-statements (blocking send_dit() then
+        // send_dah() every pass); ported as if/else-if for the non-blocking model (calling
+        // cw_schedule_manual_element() twice in a row would clobber the first element), that sequential
+        // alternation was lost - always preferring dit produced "dit-dit-dit..." instead of alternating.
+        // Track the last element sent and, when both are set, dispatch the opposite of it.
+        if (dit_buffer && dah_buffer) {
+          if (cw_last_manual_element == SENDING_DIT) {
+            dah_buffer = 0;
+            sending_mode = MANUAL_SENDING;
+            cw_schedule_manual_element(SENDING_DAH);
+            cw_last_manual_element = SENDING_DAH;
+          } else {
+            dit_buffer = 0;
+            sending_mode = MANUAL_SENDING;
+            cw_schedule_manual_element(SENDING_DIT);
+            cw_last_manual_element = SENDING_DIT;
+          }
+        } else if (dit_buffer) {
+          dit_buffer = 0;
+          sending_mode = MANUAL_SENDING;
+          cw_schedule_manual_element(SENDING_DIT);
+          cw_last_manual_element = SENDING_DIT;
+        } else if (dah_buffer) {
+          dah_buffer = 0;
+          sending_mode = MANUAL_SENDING;
+          cw_schedule_manual_element(SENDING_DAH);
+          cw_last_manual_element = SENDING_DAH;
+        }
+      }
+    } else if (configuration.keyer_mode == BUG) {
+      // dah paddle = manually-held key; dit paddle = automatic dits
+      // Note: gated on cw_bug_dah_paddle_down (a fresh, non-consumed pin mirror), not dah_buffer -
+      // dah_buffer is a one-shot latch consumed by this same block, and since service_cw_scheduler()
+      // runs multiple times per loop() iteration while check_paddles() runs fewer times, testing
+      // dah_buffer directly caused spurious key-up/key-down oscillation on "orphan" scheduler calls
+      // that ran before the next check_paddles() refreshed it.
+      dah_buffer = 0;
+      if (cw_bug_dah_paddle_down) {
+        if (!cw_bug_dah_flag) {
+          sending_mode = MANUAL_SENDING;
+          tx_and_sidetone_key(1);
+          cw_bug_dah_flag = 1;
+          #ifdef FEATURE_PADDLE_ECHO
+            cw_bug_dah_key_down_time = millis();
+          #endif //FEATURE_PADDLE_ECHO
+        }
+      } else {
+        if (cw_bug_dah_flag){
+          sending_mode = MANUAL_SENDING;
+          tx_and_sidetone_key(0);
+          #ifdef FEATURE_PADDLE_ECHO
+            if ((millis() - cw_bug_dah_key_down_time) > (0.5 * (1200.0/configuration.wpm))){
+              if ((millis() - cw_bug_dah_key_down_time) > (2 * (1200.0/configuration.wpm))){
+                paddle_echo_buffer = (paddle_echo_buffer * 10) + 2;
+              } else {
+                paddle_echo_buffer = (paddle_echo_buffer * 10) + 1;
+              }
+              paddle_echo_buffer_decode_time = millis() + (((float)3000.0/(float)configuration.wpm) * ((float)configuration.cw_echo_timing_factor/(float)100));
+            }
+          #endif //FEATURE_PADDLE_ECHO
+          cw_bug_dah_flag = 0;
+        }
+      }
+      #ifdef FEATURE_DEAD_OP_WATCHDOG
+        dah_counter = 0;
+      #endif
+      if ((dit_buffer) && (!cw_bug_dah_flag)) {
+        dit_buffer = 0;
+        sending_mode = MANUAL_SENDING;
+        cw_schedule_manual_element(SENDING_DIT);
+      }
+    }
+  }
+
+} //void service_cw_scheduler
+
 
 //-------------------------------------------------------------------------------------------------------
 
@@ -7528,6 +8043,14 @@ void speed_set(int wpm_set){
   if ((wpm_set > 0) && (wpm_set < 1000)){
     configuration.wpm = wpm_set;
     config_dirty = 1;
+
+    #ifdef FEATURE_POTENTIOMETER
+      if (pot_is_setting_speed) {
+        pot_is_setting_speed = 0;
+      } else {
+        disengage_potentiometer_override();
+      }
+    #endif
 
     #ifdef FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
       if ((configuration.wpm >= DYNAMIC_DAH_TO_DIT_RATIO_LOWER_LIMIT_WPM) && (configuration.wpm <= DYNAMIC_DAH_TO_DIT_RATIO_UPPER_LIMIT_WPM)){
@@ -11620,7 +12143,10 @@ void service_winkey(byte action) {
       winkey_port_write(0xc0|winkey_sending|winkey_xoff,0);    //send a status byte back for giggles
     }
 
-    if ((winkey_host_open) && (winkey_paddle_echo_buffer) && (winkey_paddle_echo_activated) && (millis() > winkey_paddle_echo_buffer_decode_time)) {
+    // Bugfix: see the matching guard in service_paddle_echo() - don't decode while an element is still
+    // in flight, or a single-element buffer gets decoded as its own "character" mid-way through the
+    // next element of the same character.
+    if ((winkey_host_open) && (winkey_paddle_echo_buffer) && (winkey_paddle_echo_activated) && (millis() > winkey_paddle_echo_buffer_decode_time) && (cw_scheduler_state == CW_IDLE)) {
       #ifdef DEBUG_WINKEY
         debug_serial_port->println("\r\nservice_winkey:sending paddle echo char");
       #endif //DEBUG_WINKEY
@@ -11630,7 +12156,7 @@ void service_winkey(byte action) {
       winkey_paddle_echo_space_sent = 0;
     }
 
-    if ((winkey_host_open) && (winkey_paddle_echo_buffer == 0) && (winkey_paddle_echo_activated) && (millis() > (winkey_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!winkey_paddle_echo_space_sent)) {
+    if ((winkey_host_open) && (winkey_paddle_echo_buffer == 0) && (winkey_paddle_echo_activated) && (millis() > (winkey_paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!winkey_paddle_echo_space_sent) && (cw_scheduler_state == CW_IDLE)) {
       #ifdef DEBUG_WINKEY
         debug_serial_port->println("\r\nservice_winkey:sending paddle echo space");
       #endif //DEBUG_WINKEY
@@ -13903,7 +14429,13 @@ void service_paddle_echo()
   #endif
 
 
-  if ((paddle_echo_buffer) && (millis() > paddle_echo_buffer_decode_time)) {
+  // Bugfix: don't decode while an element is still in flight (cw_scheduler_state != CW_IDLE). In the
+  // original blocking v1, service_paddle_echo() could never run mid-element - whichever element had
+  // just finished always appended its digit (inside the same blocking call) before this function got a
+  // chance to check the deadline. Non-blocking, this now runs continuously, and cw_echo_timing_factor's
+  // default ~1.75 dit-unit deadline can expire while the NEXT element of the same character is still
+  // being keyed - decoding a lone digit as its own one-element "character" instead of waiting for it.
+  if ((paddle_echo_buffer) && (millis() > paddle_echo_buffer_decode_time) && (cw_scheduler_state == CW_IDLE)) {
 
 
     #if defined(FEATURE_CW_COMPUTER_KEYBOARD)
@@ -14214,7 +14746,7 @@ void service_paddle_echo()
   }
 
   // is it time to echo a space?
-  if ((paddle_echo_buffer == 0) && (millis() > (paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!paddle_echo_space_sent)) {
+  if ((paddle_echo_buffer == 0) && (millis() > (paddle_echo_buffer_decode_time + (float(1200/configuration.wpm)*(configuration.length_wordspace-length_letterspace)))) && (!paddle_echo_space_sent) && (cw_scheduler_state == CW_IDLE)) {
 
     #if defined(FEATURE_CW_COMPUTER_KEYBOARD)
       if (!no_space){
