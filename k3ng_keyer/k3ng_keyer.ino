@@ -14094,6 +14094,37 @@ As Colin arrives home, he resolves to uncover the truth behind the mysterious ca
 */
 
 
+/*
+
+Chapter Four
+
+Colin pulled into his driveway, cut the engine, and sat motionless for a long moment, watching the street behind him in the rearview mirror until he was satisfied nothing had followed him the last mile.  His hands were still trembling as he carried the taped box and the carton of books inside, setting them down in the garage rather than the house, telling himself it was only to keep the clutter away from the kids, though he knew that wasn't the real reason.
+
+He waited until after dinner, after the kids were in bed, before bringing the box down to his basement radio room.  His wife had texted that her flight back from visiting her sister would be delayed until Monday, which gave him the house, and the evening, to himself.  He locked the basement door, something he had never done before in the fifteen years they'd lived there.
+
+The duct tape peeled back easily, as if it had been resealed more than once.  Inside, nested in foam and old newspaper, was one of Walter's silver boxes, smaller than a cigar box, with a toggle switch, a single LED, and a nine-pin connector Colin didn't immediately recognize.  Underneath it, wrapped in a handkerchief, was a spiral notebook, its pages brittle and yellowed, filled with Walter's cramped handwriting; columns of numbers, what looked like sine waves sketched in pencil, and, near the back, a hand-drawn tree of sixteen-character strings branching off from each other like a family tree.
+
+Colin found his own string near one of the outermost branches, and traced the line back, generation by generation, until it converged with a string circled twice in red ink near the center of the page.  Above it, in block letters, Walter had written a single word:  ORIGIN.
+
+He spent two hours with the electronics textbook, matching the pencil notes in the margins against the notebook, piecing together enough of the scheme to recognize it was not quite what Walter had described at the coffee shop; or rather, it was that, but underneath, layered deeper, there was something else, an older system, slower, built from vacuum-tube-era thinking rather than modern digital signal processing.  Colin realized with a start that Walter hadn't just updated an existing encryption scheme.  He had built it, decades earlier, from scratch, likely during his years at Bell Labs, and had spent the rest of his life quietly modernizing it so a new generation could carry it forward, undetected, in the noise.
+
+A little after midnight, with the notebook open on his desk and his coffee gone cold, Colin connected the silver box to his receiver the way the diagrams in the notebook suggested, improvising with alligator clips where the old connector didn't match anything in his junk box.  He powered up his microcontroller rig alongside it, tuned to 80 meters, and waited.
+
+For almost an hour, nothing came but ordinary static and a late-night ragchew between two old-timers discussing a lawnmower repair.  Colin's eyes grew heavy.  Just as he reached to shut everything down for the night, the band erupted in a burst that was unmistakably different from atmospheric noise, structured, rhythmic, almost musical in its cadence.  His microcontroller terminal filled with characters:
+
+8^fGwq9(:lLDPu6$ : WALTER IS GONE.  THE ORIGIN STREAM IS UNGUARDED.  OTHERS KNOW THIS.  THEY WILL COME FOR THE BOX.  DO NOT TRUST THE MAN IN THE GRAY SEDAN.  HE WAS PURGED IN '94.  GUARD THE NOTEBOOK.  MORE TO FOLLOW.
+
+Colin stared at the screen, his pulse suddenly loud in his ears.  A gray sedan.  He hadn't gotten a good look at the car that had chased him from the yard sale, hadn't even been certain of the color in the fading afternoon light, but he was fairly sure, now that he thought back on it, that it had been gray.
+
+He killed the lights in the basement and climbed the stairs two at a time, checking the lock on the front door, then the back, then standing at the front window for a long while, watching the empty street.  Nothing moved except a neighbor's cat crossing under a streetlamp.  Colin told himself he was being paranoid, that a man who had spent an evening reading a dead stranger's margin notes had no business feeling like a character in a spy novel.
+
+But as he finally climbed into bed, exhausted and wired at the same time, he couldn't shake the feeling that somewhere out there, someone purged from the network decades ago was no longer content to stay hidden in the noise, and that the box now sitting in his basement, and the sixteen characters he had memorized at a coffee shop, had made him a target in a war he didn't yet understand the rules of.
+
+He didn't sleep much that night.  Every car that passed on the street below sounded, to his ears, like it was slowing down.
+
+*/
+
+
 //---------------------------------------------------------------------
 
 #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && defined(FEATURE_AUTOSPACE)
