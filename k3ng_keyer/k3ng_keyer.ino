@@ -8938,10 +8938,16 @@ void command_weighting_adjust() {
     if (paddle_pin_read(paddle_left) == LOW) {
       configuration.weighting = configuration.weighting + 1;
       if (configuration.weighting > 90){configuration.weighting = 90;}
+      #ifdef FEATURE_DISPLAY
+        lcd_center_print_timed("Weighting " + String(configuration.weighting), 1, default_display_msg_delay);
+      #endif
     }
     if (paddle_pin_read(paddle_right) == LOW) {
       configuration.weighting = configuration.weighting - 1;
       if (configuration.weighting < 10){configuration.weighting = 10;}
+      #ifdef FEATURE_DISPLAY
+        lcd_center_print_timed("Weighting " + String(configuration.weighting), 1, default_display_msg_delay);
+      #endif
     }
     while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
       looping = 0;
@@ -8955,6 +8961,7 @@ void command_weighting_adjust() {
   while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   dit_buffer = 0;
   dah_buffer = 0;
+  config_dirty = 1;
 }
 #endif //FEATURE_COMMAND_MODE
 
@@ -20176,9 +20183,19 @@ int paddle_pin_read(int pin_to_read){
     #ifndef OPTION_INVERT_PADDLE_PIN_LOGIC
       #ifdef OPTION_DIRECT_PADDLE_PIN_READS_MEGA              // after April 2019, if this option is not defined then a direct read of the pins can never occur
         switch(pin_to_read) {
-          case 2: return(bitRead(PINE, 4)); break;
-          case 5: return(bitRead(PINE, 3)); break;
-        }                                                     // end switch
+          case 2:  return(bitRead(PINE, 4)); break;           // pins 2 and 5 are the default paddle pins and are placed at the top
+          case 5:  return(bitRead(PINE, 3)); break;           // as the greatest liklihood is that they will be examined first and then we exit
+          case 3:  return(bitRead(PINE, 5)); break;           // this should cover cases where board makers are not using the generic pins 2 and 5 for paddle connections
+          case 4:  return(bitRead(PING, 5)); break;           // additional case statements are here to provide responses for testing pins other than 2 or 5, in the range 2-13
+          case 6:  return(bitRead(PINH, 3)); break;           // this adds a few bytes of code, but a MEGA2560 is not constrained by available flash memory
+          case 7:  return(bitRead(PINH, 4)); break;
+          case 8:  return(bitRead(PINH, 5)); break;
+          case 9:  return(bitRead(PINH, 6)); break;
+          case 10: return(bitRead(PINB, 4)); break;
+          case 11: return(bitRead(PINB, 5)); break;
+          case 12: return(bitRead(PINB, 6)); break;
+          case 13: return(bitRead(PINB, 7)); break;
+        }                                                     // end switch(pin_to_read)
       #endif                                                  // OPTION_DIRECT_PADDLE_READS_MEGA
       #ifdef OPTION_DIRECT_PADDLE_PIN_READS_UNO               // since with this verion, April 2019, this option is not defined then a direct read of the pins can never occur
         return (bitRead(PIND, pin_to_read));                  // use this line on Unos and Nanos
