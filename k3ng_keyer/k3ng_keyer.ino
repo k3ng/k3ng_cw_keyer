@@ -75,7 +75,6 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \.     Toggle dit buffer on/off
     \-     Toggle dah buffer on/off
     \~     Reset unit
-    \;     Toggle cw send echo
     \{     QLF mode on/off
     \>     Send serial number, then increment
     \<     Send current serial number
@@ -90,7 +89,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \_     Beacon Mode at Boot Up Enable / Disable (requires FEATURE_BEACON_SETTING)
     \;     CW Send Inhibit Enable / Disable
     \\     Immediately clear the buffer, stop memory sending, etc.
-    \:     Extended CLLI commands
+    \:     Extended CLI commands
             eepromdump              - do a byte dump of EEPROM for troubleshooting
             saveeeprom <filename>   - store EEPROM in a file
             loadeeprom <filename>   - load into EEPROM from a file
@@ -12935,7 +12934,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\.\t\t: Toggle dit buffer on/off"));
   port_to_use->println(F("\\-\t\t: Toggle dah buffer on/off"));
   port_to_use->println(F("\\~\t\t: Reset unit")); //Added missing command(WD9DMP)
-  port_to_use->println(F("\\:\t\t: Toggle cw send echo")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\;\t\t: CW Send Inhibit Enable / Disable"));
   port_to_use->println(F("\\{\t\t: QLF mode on/off")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\>\t\t: Send serial number, then increment")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\<\t\t: Send current serial number")); //Added missing command(WD9DMP)
@@ -12985,7 +12984,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
 
   #if !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
     if (paged_help) {serial_page_pause(port_to_use,10);}
-    port_to_use->println(F("\r\n\\:\tExtended CLLI commands"));
+    port_to_use->println(F("\r\n\\:\tExtended CLI commands"));
     port_to_use->println(F("\t\teepromdump\t\t- do a byte dump of EEPROM for troubleshooting"));
     port_to_use->println(F("\t\tsaveeeprom <filename>\t- store EEPROM in a file"));
     port_to_use->println(F("\t\tloadeeprom <filename> \t- load into EEPROM from a file"));
