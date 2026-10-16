@@ -1416,6 +1416,16 @@ Recent Update History
     2024.03.20.2239
       tx_inhibit: unkey PTT when tx_inhibit goes active
 
+    2026.10.16.0811
+      Fixed stale \: CLI help text (was still describing the old "Toggle cw send echo" command
+        that moved to \; years ago) and a "CLLI" typo in the Extended CLI Commands help text
+      Fixed HARDWARE_IZ3GME comment in keyer_hardware.h naming the wrong settings file
+      Extended OPTION_DIRECT_PADDLE_PIN_READS_MEGA's direct register-read switch in
+        paddle_pin_read() to cover pins 2-13, not just the default 2 and 5
+      Fixed command_weighting_adjust() never setting config_dirty, so paddle-based weighting
+        adjustments were silently lost on reboot instead of being saved to EEPROM; also added
+        live "Weighting NN" display feedback during the adjustment
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1446,7 +1456,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2024.03.20.2239"
+#define CODE_VERSION "2026.10.16.0811"
 
 #define eeprom_magic_number 42               // you can change this number to have the unit re-initialize EEPROM
 
