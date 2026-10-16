@@ -75,7 +75,6 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \.     Toggle dit buffer on/off
     \-     Toggle dah buffer on/off
     \~     Reset unit
-    \;     Toggle cw send echo
     \{     QLF mode on/off
     \>     Send serial number, then increment
     \<     Send current serial number
@@ -90,7 +89,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \_     Beacon Mode at Boot Up Enable / Disable (requires FEATURE_BEACON_SETTING)
     \;     CW Send Inhibit Enable / Disable
     \\     Immediately clear the buffer, stop memory sending, etc.
-    \:     Extended CLLI commands
+    \:     Extended CLI commands
             eepromdump              - do a byte dump of EEPROM for troubleshooting
             saveeeprom <filename>   - store EEPROM in a file
             loadeeprom <filename>   - load into EEPROM from a file
@@ -1430,6 +1429,16 @@ Recent Update History
         macro/MIDI speed change from ADC noise alone, or immediately override it if the pot's
         physical position differed from the newly-set speed
 
+    2026.10.16.0811
+      Fixed stale \: CLI help text (was still describing the old "Toggle cw send echo" command
+        that moved to \; years ago) and a "CLLI" typo in the Extended CLI Commands help text
+      Fixed HARDWARE_IZ3GME comment in keyer_hardware.h naming the wrong settings file
+      Extended OPTION_DIRECT_PADDLE_PIN_READS_MEGA's direct register-read switch in
+        paddle_pin_read() to cover pins 2-13, not just the default 2 and 5
+      Fixed command_weighting_adjust() never setting config_dirty, so paddle-based weighting
+        adjustments were silently lost on reboot instead of being saved to EEPROM; also added
+        live "Weighting NN" display feedback during the adjustment
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1460,7 +1469,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.09.21.1841"
+#define CODE_VERSION "2026.10.16.0811"
 
 #define eeprom_magic_number 44               // you can change this number to have the unit re-initialize EEPROM
 
@@ -9462,10 +9471,16 @@ void command_weighting_adjust() {
     if (paddle_pin_read(paddle_left) == LOW) {
       configuration.weighting = configuration.weighting + 1;
       if (configuration.weighting > 90){configuration.weighting = 90;}
+      #ifdef FEATURE_DISPLAY
+        lcd_center_print_timed("Weighting " + String(configuration.weighting), 1, default_display_msg_delay);
+      #endif
     }
     if (paddle_pin_read(paddle_right) == LOW) {
       configuration.weighting = configuration.weighting - 1;
       if (configuration.weighting < 10){configuration.weighting = 10;}
+      #ifdef FEATURE_DISPLAY
+        lcd_center_print_timed("Weighting " + String(configuration.weighting), 1, default_display_msg_delay);
+      #endif
     }
     while ((paddle_pin_read(paddle_left) == LOW && paddle_pin_read(paddle_right) == LOW) || (analogbuttonread(0))) { // if paddles are squeezed or button0 pressed - exit
       looping = 0;
@@ -9479,6 +9494,7 @@ void command_weighting_adjust() {
   while (paddle_pin_read(paddle_left) == LOW || paddle_pin_read(paddle_right) == LOW || analogbuttonread(0) ) {}  // wait for all lines to go high
   dit_buffer = 0;
   dah_buffer = 0;
+  config_dirty = 1;
 }
 #endif //FEATURE_COMMAND_MODE
 
@@ -13461,7 +13477,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   port_to_use->println(F("\\.\t\t: Toggle dit buffer on/off"));
   port_to_use->println(F("\\-\t\t: Toggle dah buffer on/off"));
   port_to_use->println(F("\\~\t\t: Reset unit")); //Added missing command(WD9DMP)
-  port_to_use->println(F("\\:\t\t: Toggle cw send echo")); //Added missing command(WD9DMP)
+  port_to_use->println(F("\\;\t\t: CW Send Inhibit Enable / Disable"));
   port_to_use->println(F("\\{\t\t: QLF mode on/off")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\>\t\t: Send serial number, then increment")); //Added missing command(WD9DMP)
   port_to_use->println(F("\\<\t\t: Send current serial number")); //Added missing command(WD9DMP)
@@ -13511,7 +13527,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
 
   #if !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
     if (paged_help) {serial_page_pause(port_to_use,10);}
-    port_to_use->println(F("\r\n\\:\tExtended CLLI commands"));
+    port_to_use->println(F("\r\n\\:\tExtended CLI commands"));
     port_to_use->println(F("\t\teepromdump\t\t- do a byte dump of EEPROM for troubleshooting"));
     port_to_use->println(F("\t\tsaveeeprom <filename>\t- store EEPROM in a file"));
     port_to_use->println(F("\t\tloadeeprom <filename> \t- load into EEPROM from a file"));
@@ -20709,9 +20725,19 @@ int paddle_pin_read(int pin_to_read){
     #ifndef OPTION_INVERT_PADDLE_PIN_LOGIC
       #ifdef OPTION_DIRECT_PADDLE_PIN_READS_MEGA              // after April 2019, if this option is not defined then a direct read of the pins can never occur
         switch(pin_to_read) {
-          case 2: return(bitRead(PINE, 4)); break;
-          case 5: return(bitRead(PINE, 3)); break;
-        }                                                     // end switch
+          case 2:  return(bitRead(PINE, 4)); break;           // pins 2 and 5 are the default paddle pins and are placed at the top
+          case 5:  return(bitRead(PINE, 3)); break;           // as the greatest liklihood is that they will be examined first and then we exit
+          case 3:  return(bitRead(PINE, 5)); break;           // this should cover cases where board makers are not using the generic pins 2 and 5 for paddle connections
+          case 4:  return(bitRead(PING, 5)); break;           // additional case statements are here to provide responses for testing pins other than 2 or 5, in the range 2-13
+          case 6:  return(bitRead(PINH, 3)); break;           // this adds a few bytes of code, but a MEGA2560 is not constrained by available flash memory
+          case 7:  return(bitRead(PINH, 4)); break;
+          case 8:  return(bitRead(PINH, 5)); break;
+          case 9:  return(bitRead(PINH, 6)); break;
+          case 10: return(bitRead(PINB, 4)); break;
+          case 11: return(bitRead(PINB, 5)); break;
+          case 12: return(bitRead(PINB, 6)); break;
+          case 13: return(bitRead(PINB, 7)); break;
+        }                                                     // end switch(pin_to_read)
       #endif                                                  // OPTION_DIRECT_PADDLE_READS_MEGA
       #ifdef OPTION_DIRECT_PADDLE_PIN_READS_UNO               // since with this verion, April 2019, this option is not defined then a direct read of the pins can never occur
         return (bitRead(PIND, pin_to_read));                  // use this line on Unos and Nanos
