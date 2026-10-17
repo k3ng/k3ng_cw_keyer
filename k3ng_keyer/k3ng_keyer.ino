@@ -1439,6 +1439,13 @@ Recent Update History
         adjustments were silently lost on reboot instead of being saved to EEPROM; also added
         live "Weighting NN" display feedback during the adjustment
 
+    2026.10.17.1930
+      Fixed BUG mode (FEATURE_PADDLE_ECHO): characters with a dah that wasn't alone and first
+        (M, O, 0, 1-4, 7-9) echoed as garbled fragments instead of the correct character. The
+        manually-held dah's decode deadline was only set on release and never refreshed while a
+        later dah of the same character was held down, and the existing cw_scheduler_state ==
+        CW_IDLE decode guard doesn't protect BUG mode's dah-hold since it never leaves CW_IDLE
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -14482,7 +14489,12 @@ void service_paddle_echo()
   // chance to check the deadline. Non-blocking, this now runs continuously, and cw_echo_timing_factor's
   // default ~1.75 dit-unit deadline can expire while the NEXT element of the same character is still
   // being keyed - decoding a lone digit as its own one-element "character" instead of waiting for it.
-  if ((paddle_echo_buffer) && (millis() > paddle_echo_buffer_decode_time) && (cw_scheduler_state == CW_IDLE)) {
+  // cw_scheduler_state == CW_IDLE doesn't catch this for BUG mode's manually-held dah, though: that
+  // hold never transitions the scheduler out of CW_IDLE (see service_cw_scheduler()'s BUG mode block),
+  // so a stale deadline from the previous dah's release could still fire while the next dah is held
+  // down. cw_bug_dah_flag (set for the duration of that hold) closes that gap; it's never set outside
+  // BUG mode, so this is a no-op for every other keyer mode.
+  if ((paddle_echo_buffer) && (millis() > paddle_echo_buffer_decode_time) && (cw_scheduler_state == CW_IDLE) && (!cw_bug_dah_flag)) {
 
 
     #if defined(FEATURE_CW_COMPUTER_KEYBOARD)
