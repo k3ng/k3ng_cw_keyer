@@ -58,7 +58,7 @@
 // #define FEATURE_PTT_INTERLOCK 
 // #define FEATURE_QLF
 // #define FEATURE_EEPROM_E24C1024
-// #define FEATURE_STRAIGHT_KEY
+#define FEATURE_STRAIGHT_KEY
 // #define FEATURE_DYNAMIC_DAH_TO_DIT_RATIO
 #define FEATURE_PADDLE_ECHO
 // #define FEATURE_STRAIGHT_KEY_ECHO
@@ -152,8 +152,8 @@
 
 // #define OPTION_DFROBOT_LCD_COMMAND_BUTTONS
 
-#define OPTION_EXCLUDE_MILL_MODE
-#define OPTION_NO_ULTIMATIC // reduce memory usage by removing ultimatic code.
+//#define OPTION_EXCLUDE_MILL_MODE
+//#define OPTION_NO_ULTIMATIC // reduce memory usage by removing ultimatic code.
 
 
 #define OPTION_DISABLE_SERIAL_PORT_CHECKING_WHILE_SENDING_CW

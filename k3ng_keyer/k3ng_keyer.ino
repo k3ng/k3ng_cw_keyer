@@ -1446,6 +1446,18 @@ Recent Update History
         later dah of the same character was held down, and the existing cw_scheduler_state ==
         CW_IDLE decode guard doesn't protect BUG mode's dah-hold since it never leaves CW_IDLE
 
+    2026.10.17.1955
+      Fixed Ultimatic mode (keyer_mode == ULTIMATIC): holding one paddle then adding the other
+        failed to switch priority to the newly-pressed paddle as it should. last_closure's
+        priority state machine in check_paddles() tested dit_buffer/dah_buffer for "is this
+        paddle still held," but those buffers are consumed the instant an element is dispatched
+        and aren't re-latched until it finishes - so a continuously-held paddle looked released
+        for the duration of its own element. Added ultimatic_dit_paddle_down/
+        ultimatic_dah_paddle_down, raw pin mirrors refreshed every check_paddles() call (with a
+        few-poll release debounce, since check_paddles() now samples the raw pin far more often
+        than the original blocking code ever did), and switched last_closure to test those
+        instead of the consumed buffers
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1476,9 +1488,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.16.0811"
+#define CODE_VERSION "2026.10.17.1955"
 
-#define eeprom_magic_number 44               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 45               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1924,6 +1936,12 @@ byte cw_bug_dah_flag = 0;               // BUG mode: dah paddle currently held (
 byte cw_bug_dah_paddle_down = 0;        // BUG mode: raw dah paddle pin state, mirrored every check_dah_paddle() call (unlike dah_buffer, never consumed) so BUG mode's hold logic is stable across the multiple service_cw_scheduler() calls per loop() iteration
 unsigned long cw_bug_dah_key_down_time = 0;
 byte cw_last_manual_element = SENDING_NOTHING;  // for squeeze alternation: opposite of this goes next when both dit_buffer and dah_buffer are set
+byte ultimatic_dit_paddle_down = 0;     // ULTIMATIC mode: raw dit paddle pin state, refreshed every check_paddles() call
+                                         // regardless of the in-flight buffer-suppression guard, so last_closure's priority
+                                         // state machine sees the paddle's true physical state even while its own element
+                                         // is being sent (dit_buffer/dah_buffer can't be used for this - they're consumed
+                                         // the instant an element is dispatched and not re-latched again until it finishes)
+byte ultimatic_dah_paddle_down = 0;     // ULTIMATIC mode: dah counterpart of the above
 
 #ifdef FEATURE_SLEEP
   unsigned long last_activity_time = 0;
@@ -6094,41 +6112,78 @@ void check_paddles()
   if (configuration.keyer_mode == ULTIMATIC) {
     if (ultimatic_mode == ULTIMATIC_NORMAL) {
 
+      // Bugfix: last_closure's transitions below used to test dit_buffer/dah_buffer directly - fine
+      // in the original blocking code, where those buffers were effectively a continuous mirror of
+      // the pin (check_paddles() could never run again while an element was in flight). Non-blocking,
+      // dit_buffer/dah_buffer are consumed the instant Part C dispatches an element and aren't
+      // re-latched until it finishes (check_paddles()'s in-flight suppression guard, above), so
+      // last_closure would see a held paddle as "released" for that element's whole duration. Refresh
+      // a pair of raw, un-suppressed pin mirrors here instead and test those below.
+      //
+      // dit_buffer/dah_buffer are naturally immune to a brief contact-bounce/jitter release reading,
+      // since check_dit_paddle()/check_dah_paddle() only ever SET them on a down reading and never
+      // clear them on an up reading (only an explicit consumer does that) - effectively a one-sided
+      // debounce. check_paddles() runs far more often than the old blocking code ever called this
+      // function, so a raw instantaneous mirror sampled every single call needs the same protection
+      // against a momentary false-release reading; require a few consecutive "up" reads before
+      // accepting a release, instead of a single raw sample (same lesson as the potentiometer noise
+      // fix elsewhere in this file: filter a noisy raw signal at the source, not just in the decision
+      // logic downstream of it).
+      #define ULTIMATIC_PADDLE_RELEASE_CONFIRM_POLLS 3
+      static byte ultimatic_dit_release_confirm = 0;
+      static byte ultimatic_dah_release_confirm = 0;
+      { byte ultimatic_dit_pin = (configuration.paddle_mode == PADDLE_NORMAL) ? paddle_left : paddle_right;
+        byte ultimatic_dit_pin_down_now = (paddle_pin_read(ultimatic_dit_pin) == LOW) ? 1 : 0;
+        #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
+          if (usb_dit) { ultimatic_dit_pin_down_now = 1; }
+        #endif
+        if (ultimatic_dit_pin_down_now) {
+          ultimatic_dit_paddle_down = 1;
+          ultimatic_dit_release_confirm = 0;
+        } else {
+          if (ultimatic_dit_release_confirm < ULTIMATIC_PADDLE_RELEASE_CONFIRM_POLLS) { ultimatic_dit_release_confirm++; }
+          if (ultimatic_dit_release_confirm >= ULTIMATIC_PADDLE_RELEASE_CONFIRM_POLLS) { ultimatic_dit_paddle_down = 0; }
+        }
+      }
+      { byte ultimatic_dah_pin = (configuration.paddle_mode == PADDLE_NORMAL) ? paddle_right : paddle_left;
+        byte ultimatic_dah_pin_down_now = (paddle_pin_read(ultimatic_dah_pin) == LOW) ? 1 : 0;
+        #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
+          if (usb_dah) { ultimatic_dah_pin_down_now = 1; }
+        #endif
+        if (ultimatic_dah_pin_down_now) {
+          ultimatic_dah_paddle_down = 1;
+          ultimatic_dah_release_confirm = 0;
+        } else {
+          if (ultimatic_dah_release_confirm < ULTIMATIC_PADDLE_RELEASE_CONFIRM_POLLS) { ultimatic_dah_release_confirm++; }
+          if (ultimatic_dah_release_confirm >= ULTIMATIC_PADDLE_RELEASE_CONFIRM_POLLS) { ultimatic_dah_paddle_down = 0; }
+        }
+      }
+
       switch (last_closure) {
         case DIT_CLOSURE_DAH_OFF:
-          if (dah_buffer) {
-            if (dit_buffer) {
+          if (ultimatic_dah_paddle_down) {
+            if (ultimatic_dit_paddle_down) {
               last_closure = DAH_CLOSURE_DIT_ON;
               dit_buffer = 0;
             } else {
               last_closure = DAH_CLOSURE_DIT_OFF;
             }
           } else {
-            if (!dit_buffer) {
+            if (!ultimatic_dit_paddle_down) {
               last_closure = NO_CLOSURE;
             }
           }
           break;
         case DIT_CLOSURE_DAH_ON:
-          if (dit_buffer) {
-            if (dah_buffer) {
+          if (ultimatic_dit_paddle_down) {
+            if (ultimatic_dah_paddle_down) {
               dah_buffer = 0;
             } else {
               last_closure = DIT_CLOSURE_DAH_OFF;
             }
           } else {
-            if (dah_buffer) {
-              // DIT just ended; only queue DAH if paddle is still physically held.
-              // dah_buffer may have been set by check_dah_paddle() during DIT even
-              // though the operator has since released the DAH paddle.
-              { byte dah_pin = (configuration.paddle_mode == PADDLE_NORMAL) ? paddle_right : paddle_left;
-                if (paddle_pin_read(dah_pin) == LOW) {
-                  last_closure = DAH_CLOSURE_DIT_OFF;
-                } else {
-                  dah_buffer = 0;
-                  last_closure = NO_CLOSURE;
-                }
-              }
+            if (ultimatic_dah_paddle_down) {
+              last_closure = DAH_CLOSURE_DIT_OFF;
             } else {
               last_closure = NO_CLOSURE;
             }
@@ -6136,38 +6191,30 @@ void check_paddles()
           break;
 
         case DAH_CLOSURE_DIT_OFF:
-          if (dit_buffer) {
-            if (dah_buffer) {
+          if (ultimatic_dit_paddle_down) {
+            if (ultimatic_dah_paddle_down) {
               last_closure = DIT_CLOSURE_DAH_ON;
               dah_buffer = 0;
             } else {
               last_closure = DIT_CLOSURE_DAH_OFF;
             }
           } else {
-            if (!dah_buffer) {
+            if (!ultimatic_dah_paddle_down) {
               last_closure = NO_CLOSURE;
             }
           }
           break;
 
         case DAH_CLOSURE_DIT_ON:
-          if (dah_buffer) {
-            if (dit_buffer) {
+          if (ultimatic_dah_paddle_down) {
+            if (ultimatic_dit_paddle_down) {
               dit_buffer = 0;
             } else {
               last_closure = DAH_CLOSURE_DIT_OFF;
             }
           } else {
-            if (dit_buffer) {
-              // DAH just ended; only queue DIT if paddle is still physically held.
-              { byte dit_pin = (configuration.paddle_mode == PADDLE_NORMAL) ? paddle_left : paddle_right;
-                if (paddle_pin_read(dit_pin) == LOW) {
-                  last_closure = DIT_CLOSURE_DAH_OFF;
-                } else {
-                  dit_buffer = 0;
-                  last_closure = NO_CLOSURE;
-                }
-              }
+            if (ultimatic_dit_paddle_down) {
+              last_closure = DIT_CLOSURE_DAH_OFF;
             } else {
               last_closure = NO_CLOSURE;
             }
@@ -6175,14 +6222,14 @@ void check_paddles()
           break;
 
         case NO_CLOSURE:
-          if ((dit_buffer) && (!dah_buffer)) {
+          if ((ultimatic_dit_paddle_down) && (!ultimatic_dah_paddle_down)) {
             last_closure = DIT_CLOSURE_DAH_OFF;
           } else {
-            if ((dah_buffer) && (!dit_buffer)) {
+            if ((ultimatic_dah_paddle_down) && (!ultimatic_dit_paddle_down)) {
               last_closure = DAH_CLOSURE_DIT_OFF;
             } else {
-              if ((dit_buffer) && (dah_buffer)) {
-                // need to handle dit/dah priority here
+              if ((ultimatic_dit_paddle_down) && (ultimatic_dah_paddle_down)) {
+                // Both newly down at once from idle - no recency to go on; dit arbitrarily wins.
                 last_closure = DIT_CLOSURE_DAH_ON;
                 dah_buffer = 0;
               }
