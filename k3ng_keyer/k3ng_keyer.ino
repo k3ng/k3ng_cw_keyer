@@ -1458,6 +1458,16 @@ Recent Update History
         than the original blocking code ever did), and switched last_closure to test those
         instead of the consumed buffers
 
+    2026.10.17.2042
+      Fixed paddle-mode STRAIGHT (keyer_mode == STRAIGHT, entered by holding the right paddle at
+        power-up): holding the key produced an oscillating sidetone instead of a steady tone -
+        the same root cause as the earlier BUG-mode dah-hold oscillation. service_cw_scheduler()'s
+        STRAIGHT block read dit_buffer, a one-shot latch consumed the instant it's seen, but
+        service_cw_scheduler() runs several times per loop() while check_paddles() (which
+        refreshes dit_buffer) runs fewer times - orphan calls saw a stale, already-consumed
+        dit_buffer == 0 and wrongly keyed up before the next refresh re-armed it. Switched to a
+        raw, non-consumed read of the paddle pin, same fix pattern as cw_bug_dah_paddle_down
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1488,9 +1498,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.17.1955"
+#define CODE_VERSION "2026.10.17.2042"
 
-#define eeprom_magic_number 45               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 46               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -7829,13 +7839,23 @@ void service_cw_scheduler(){
 
   // ---- STRAIGHT key: mirror the paddle directly, no timed elements ----
   if (configuration.keyer_mode == STRAIGHT) {
-    if (dit_buffer) {
-      dit_buffer = 0;
+    // Bugfix: this used to read dit_buffer directly, a one-shot latch consumed the instant it's seen -
+    // correct for every other mode's dispatch semantics, but wrong here, for the same reason as the
+    // BUG-mode dah-hold oscillation fixed earlier (cw_bug_dah_paddle_down): service_cw_scheduler() runs
+    // several times per loop() while check_paddles() (which refreshes dit_buffer via check_dit_paddle())
+    // runs fewer times. Any "orphan" call that ran before the next check_paddles() refresh saw a stale,
+    // already-consumed dit_buffer == 0 and wrongly keyed up, then the next check_paddles() re-armed it
+    // and the next scheduler call keyed back down - an oscillating sidetone for as long as the key was
+    // held. Read the raw, non-consumed pin directly instead; dit_buffer is still zeroed below so a stale
+    // latch doesn't cause a spurious dit if the operator later switches out of STRAIGHT mode.
+    dit_buffer = 0;
+    { byte straight_key_pin = (configuration.paddle_mode == PADDLE_NORMAL) ? paddle_left : paddle_right;
+      byte straight_key_down = (paddle_pin_read(straight_key_pin) == LOW) ? 1 : 0;
+      #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
+        if (usb_dit) { straight_key_down = 1; }
+      #endif
       sending_mode = MANUAL_SENDING;
-      tx_and_sidetone_key(1);
-    } else {
-      sending_mode = MANUAL_SENDING;
-      tx_and_sidetone_key(0);
+      tx_and_sidetone_key(straight_key_down);
     }
     #ifdef FEATURE_DEAD_OP_WATCHDOG
       dit_counter = 0;
