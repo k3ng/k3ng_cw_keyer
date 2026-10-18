@@ -1435,6 +1435,18 @@ Recent Update History
         (tx_and_sidetone_key(0); ptt_unkey();) before disabling future writes, the same pattern
         already used elsewhere in this file before entering command mode
 
+    2026.10.18.0730
+      Fixed FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING deviating from the documented classic (1981
+        PK-4) behavior in two ways, confirmed against reference material: (1) it was symmetric -
+        delaying dah-memory during a dit the same as dit-memory during a dah - but the classic rule
+        only inhibits dit-memory during a dah's mark; dah-memory during a dit should operate
+        normally with no grace period. (2) the grace-period check re-evaluated against the dah's
+        trailing inter-element space (a separate loop_element_lengths() call) once the mark ended,
+        instead of staying resolved for the rest of that dah once the grace period passed during
+        the mark. Fixed via a new cmos_dit_memory_enabled latch, reset at the start of each dah in
+        send_dah(), since the mark and its trailing space are separate loop_element_lengths() calls
+        with no shared phase-state to check otherwise
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1465,9 +1477,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.17.2110"
+#define CODE_VERSION "2026.10.18.0730"
 
-#define eeprom_magic_number 43               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 44               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -1896,6 +1908,12 @@ float ptt_hang_time_wordspace_units = default_ptt_hang_time_wordspace_units;
 byte last_sending_mode = MANUAL_SENDING;
 byte zero = 0;
 byte iambic_flag = 0;
+byte cmos_dit_memory_enabled = 0;       // FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING: latches true once a
+                                         // dah's grace period has passed, so a later, separate
+                                         // loop_element_lengths() call for that same dah's trailing space
+                                         // doesn't re-evaluate a fresh (much shorter) grace period against
+                                         // its own elapsed time. Reset to 0 at the start of each new dah in
+                                         // send_dah().
 unsigned long last_config_write = 0;
 uint16_t memory_area_end = 0;
 
@@ -6996,6 +7014,9 @@ void send_dah(){
   }
 
   being_sent = SENDING_DAH;
+  #ifdef FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
+    cmos_dit_memory_enabled = 0;
+  #endif
   tx_and_sidetone_key(1);
   #ifdef DEBUG_VARIABLE_DUMP
     dah_start_time = millis();
@@ -7407,20 +7428,19 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
             }
           }
         #else ////FEATURE_CMOS_SUPER_KEYER_IAMBIC_B_TIMING
-          //if (configuration.cmos_super_keyer_iambic_b_timing_on){
-          if ((configuration.cmos_super_keyer_iambic_b_timing_on) && (sending_mode == MANUAL_SENDING)) {
-            if ((float(float(micros()-start)/float(ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
-            //if ((float(float(millis()-starttime)/float(starttime-ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent) {
-             if (being_sent == SENDING_DIT) {
-                check_dah_paddle();
-              } else {
-                if (being_sent == SENDING_DAH) {
-                  check_dit_paddle();
-                }
-              }
+          // Bugfix: per the classic (1981 PK-4) CMOS Super Keyer rule, the grace period only inhibits
+          // DIT memory during a DAH's mark - it's asymmetric (dah-memory during a dit operates
+          // normally, no grace period at all - the unconditional else branch below), and once it
+          // passes it must stay passed for the rest of this dah, including its trailing
+          // inter-element space (sent via a SEPARATE loop_element_lengths() call from send_dah() -
+          // cmos_dit_memory_enabled latches so that call doesn't re-evaluate a fresh, much shorter
+          // grace period against its own elapsed time).
+          if ((configuration.cmos_super_keyer_iambic_b_timing_on) && (sending_mode == MANUAL_SENDING) && (being_sent == SENDING_DAH)) {
+            if (cmos_dit_memory_enabled || ((float(float(micros()-start)/float(ticks))*100) >= configuration.cmos_super_keyer_iambic_b_timing_percent)) {
+              cmos_dit_memory_enabled = 1;
+              check_dit_paddle();
             } else {
-              if (((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)) && (paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
-                dah_buffer = 0;
+              if ((paddle_pin_read(paddle_left) == LOW ) && (paddle_pin_read(paddle_right) == LOW )) {
                 dit_buffer = 0;
               }
             }
