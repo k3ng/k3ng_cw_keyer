@@ -1468,6 +1468,17 @@ Recent Update History
         dit_buffer == 0 and wrongly keyed up before the next refresh re-armed it. Switched to a
         raw, non-consumed read of the paddle pin, same fix pattern as cw_bug_dah_paddle_down
 
+    2026.10.17.2110
+      Fixed FEATURE_DEAD_OP_WATCHDOG leaving TX_KEY stuck ACTIVE instead of going inactive when it
+        trips. check_for_dead_op() just set key_tx = 0, but tx_and_sidetone_key() gates its
+        digitalWrite() in both directions on key_tx - if the key happened to be physically active
+        at that exact moment, the next call that tried to bring it back up saw key_tx == 0 and
+        skipped the write, leaving the pin stuck. Fixed by forcing the key/PTT off
+        (tx_and_sidetone_key(0); ptt_unkey();) before disabling future writes, the same pattern
+        already used elsewhere in this file before entering command mode. Also applied to master
+        as a defensive no-op (unreachable there - master's blocking keying architecture means
+        check_for_dead_op() can only ever run with the key already up)
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1498,9 +1509,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.17.2042"
+#define CODE_VERSION "2026.10.17.2110"
 
-#define eeprom_magic_number 46               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 47               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -4193,6 +4204,16 @@ void check_for_dead_op()
   #endif
 
   if (dead_op_watchdog_active && ((dit_counter > 100) || (dah_counter > 100))) {
+    // Bugfix: used to just set key_tx = 0 here. tx_and_sidetone_key() gates its digitalWrite() in
+    // BOTH directions on key_tx, so if the key happened to be physically active at this exact
+    // moment, whatever later call tried to bring it back up would see key_tx == 0 and skip that
+    // write entirely - leaving TX_KEY stuck active forever (key_state keeps toggling internally
+    // regardless, so the code "thinks" it unkeyed even though the pin was never touched again).
+    // Force the key/PTT off now, while key_tx is still 1, before disabling future writes - same
+    // pattern already used before entering command mode (see the key_tx = 0 site a few thousand
+    // lines down that's preceded by tx_and_sidetone_key(0)/ptt_unkey()).
+    tx_and_sidetone_key(0);
+    ptt_unkey();
     key_tx = 0;
   }
 }
