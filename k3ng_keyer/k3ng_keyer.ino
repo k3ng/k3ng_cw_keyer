@@ -1447,6 +1447,17 @@ Recent Update History
         send_dah(), since the mark and its trailing space are separate loop_element_lengths() calls
         with no shared phase-state to check otherwise
 
+    2026.10.19.1105
+      Fixed WinKey TX_CHANGE (1D xx) never switching the active transmitter (GitHub #164, reported
+        and diagnosed by a user with FEATURE_WINKEY_EMULATION + OPTION_WINKEY_2_SUPPORT, two keying
+        outputs, FEATURE_SO2R_BASE not enabled). service_send_buffer() called
+        remove_from_send_buffer() unconditionally before checking send_buffer_bytes > 1, so when the
+        buffer held exactly [TX_CHANGE, tx_num] with nothing queued after it, that removal already
+        dropped the count to 1 before the check ran - the switch never happened, and the tx_num byte
+        itself was left unconsumed (falling through as a stray ordinary character on the next pass).
+        Fixed by checking the length before removing anything, per the reporter's own diagnosis and
+        suggested fix
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1477,9 +1488,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.18.0730"
+#define CODE_VERSION "2026.10.19.1105"
 
-#define eeprom_magic_number 44               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 45               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -10402,11 +10413,16 @@ void service_send_buffer(byte no_print)
             debug_serial_port->println("service_send_buffer: SERIAL_SEND_BUFFER_TX_CHANGE");
           #endif
 
-          remove_from_send_buffer();
+          // Bugfix (GitHub #164): this used to call remove_from_send_buffer() unconditionally here,
+          // then check send_buffer_bytes > 1 - but when the buffer holds exactly [TX_CHANGE, tx_num]
+          // with nothing queued after it (confirmed by the reporter to happen whether the WinKey host
+          // sends the TX-change command standalone or together with CW data), that unconditional
+          // removal already drops the count to 1 before the check runs, so the check always fails:
+          // the TX switch silently never happens, AND the tx_num byte itself is left unconsumed in
+          // the buffer (it's outside SERIAL_SEND_BUFFER_SPECIAL_START/_END, so the next pass treats it
+          // as an ordinary character to send instead). Check the length BEFORE removing anything.
           if (send_buffer_bytes > 1) {
-            // if ((send_buffer_array[0] > 0) && (send_buffer_array[0] < 7)){
-            //   switch_to_tx_silent(send_buffer_array[0]);
-            // }
+            remove_from_send_buffer();
             #ifdef FEATURE_SO2R_BASE
               if ((send_buffer_array[0] > 0) && (send_buffer_array[0] < 3)){
                 if (ptt_line_activated) {
