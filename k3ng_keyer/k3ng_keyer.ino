@@ -1458,6 +1458,17 @@ Recent Update History
         Fixed by checking the length before removing anything, per the reporter's own diagnosis and
         suggested fix
 
+    2026.10.19.1931
+      Fixed use of debug_serial_port before initialization under DEBUG_AUX_SERIAL_PORT, in
+        initialize_serial_ports() (GitHub #160 - same bug class the reporter found at a different
+        line, DEBUG_STARTUP, which had already been fixed by PR #162's ESP32 support work).
+        debug_serial_port is a global pointer, null until explicitly assigned, but this block called
+        ->begin()/->print() on it before ever pointing it at the aux port. Also removed a dead
+        "debug_port = DEBUG_AUX_SERIAL_PORT;" line - debug_port isn't declared anywhere in the sketch
+        and nothing reads it, so this block couldn't have compiled at all until that was removed.
+        DEBUG_AUX_SERIAL_PORT isn't defined in any current hardware profile, so this was previously
+        unreachable/untested dead code
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1488,9 +1499,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.19.1105"
+#define CODE_VERSION "2026.10.19.1931"
 
-#define eeprom_magic_number 45               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 46               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -18911,7 +18922,13 @@ void initialize_serial_ports(){
     #endif //!defined(OPTION_SUPPRESS_SERIAL_BOOT_MSG) && defined(FEATURE_COMMAND_LINE_INTERFACE)
 
     #ifdef DEBUG_AUX_SERIAL_PORT
-      debug_port = DEBUG_AUX_SERIAL_PORT;
+      // Bugfix (GitHub #160, same bug class as the already-fixed DEBUG_STARTUP line above):
+      // debug_serial_port is a global pointer, null until explicitly assigned - this used to call
+      // ->begin()/->print() on it here without ever pointing it at the aux port first. Also removed
+      // the dead "debug_port = DEBUG_AUX_SERIAL_PORT;" line that preceded this - debug_port isn't
+      // declared anywhere in the sketch (and nothing reads it), so this block couldn't have compiled
+      // at all until that was removed.
+      debug_serial_port = DEBUG_AUX_SERIAL_PORT;
       debug_serial_port->begin(DEBUG_AUX_SERIAL_PORT_BAUD);
       debug_serial_port->print("debug port open ");
       debug_serial_port->println(CODE_VERSION);
