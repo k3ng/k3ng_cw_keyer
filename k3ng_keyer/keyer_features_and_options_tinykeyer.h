@@ -56,6 +56,7 @@
 // #define OPTION_WINKEY_BLINK_PTT_ON_HOST_OPEN
 // #define OPTION_WINKEY_SEND_VERSION_ON_HOST_CLOSE
 // #define OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_LINE  // Have Winkeyer PTT setting activate/deactivate PTT line rather than control buffered character PTT hold 
+// #define OPTION_SWAP_BEACON_AND_STRAIGHT_KEY_BOOT_PADDLES  // swap which paddle triggers BEACON vs STRAIGHT key mode at power-up/reset (default: left=BEACON, right=STRAIGHT) - for straight keys wired to the left/dit paddle position (GitHub #159)
 #define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode
 #define OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT         // this makes dit paddle memory interruption a little smoother
 //#define OPTION_WATCHDOG_TIMER                      // this enables a four second ATmega48/88/168/328 watchdog timer; use for unattended/remote operation only
