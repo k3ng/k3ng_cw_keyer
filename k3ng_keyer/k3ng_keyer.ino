@@ -1522,6 +1522,19 @@ Recent Update History
         straight key. This option swaps which paddle triggers which mode. Default (option undefined)
         is unchanged. Added to all 24 keyer_features_and_options*.h hardware-profile files
 
+    2026.10.20.0921
+      Fixed a phantom element in Ultimatic mode after releasing both paddles mid-element (GitHub
+        #157, reported against a different fork - checked and confirmed the same gap exists here).
+        check_paddles()'s last_closure switch correctly tracked state via the raw paddle-down mirrors
+        when transitioning to NO_CLOSURE, but never reconciled dit_buffer/dah_buffer - if the other
+        paddle got re-latched to 1 moments before its own release was debounce-confirmed, that stale
+        1 was never cleared (release never clears these buffers, only an explicit consumer does), so
+        Part C dispatched it as a phantom element once the scheduler went idle. Fixed by zeroing both
+        buffers at every transition into NO_CLOSURE, since that state means neither paddle is a
+        current closure. Also confirmed the other bug in the same report (dit_buffer_off/
+        dah_buffer_off forced on when entering Ultimatic) was already fixed here, pre-existing from
+        GitHub #158 (2015)
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1552,9 +1565,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.20.0811"
+#define CODE_VERSION "2026.10.20.0921"
 
-#define eeprom_magic_number 51               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 52               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -6250,7 +6263,16 @@ void check_paddles()
             }
           } else {
             if (!ultimatic_dit_paddle_down) {
+              // Bugfix (GitHub #157): transitioning to NO_CLOSURE only updated last_closure's state,
+              // never the one-shot dit_buffer/dah_buffer - if the other paddle had been re-latched to
+              // 1 moments earlier (e.g. check_dah_paddle() ran, saw dah still physically down, right
+              // before its release got debounce-confirmed a few polls later), that stale 1 was never
+              // cleared (release never clears these, only an explicit consumer does), and Part C would
+              // dispatch it as a phantom element once the scheduler went idle. NO_CLOSURE means neither
+              // paddle is a current closure, so nothing should be left pending dispatch.
               last_closure = NO_CLOSURE;
+              dit_buffer = 0;
+              dah_buffer = 0;
             }
           }
           break;
@@ -6266,6 +6288,8 @@ void check_paddles()
               last_closure = DAH_CLOSURE_DIT_OFF;
             } else {
               last_closure = NO_CLOSURE;
+              dit_buffer = 0;
+              dah_buffer = 0;
             }
           }
           break;
@@ -6281,6 +6305,8 @@ void check_paddles()
           } else {
             if (!ultimatic_dah_paddle_down) {
               last_closure = NO_CLOSURE;
+              dit_buffer = 0;
+              dah_buffer = 0;
             }
           }
           break;
@@ -6297,6 +6323,8 @@ void check_paddles()
               last_closure = DIT_CLOSURE_DAH_OFF;
             } else {
               last_closure = NO_CLOSURE;
+              dit_buffer = 0;
+              dah_buffer = 0;
             }
           }
           break;
