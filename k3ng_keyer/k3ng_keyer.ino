@@ -1494,6 +1494,13 @@ Recent Update History
         NO_CLOSURE as a defensive backstop. This also subsumes and simplifies away the two now-
         redundant ad hoc live-reread blocks
 
+    2026.10.20.1324
+      Prosign CLI echo: sending a prosign via \+ (e.g. \+AS) now echoes it to the CLI serial
+        terminal as a bracketed pair, e.g. [AS], the same way ordinary typed characters are already
+        echoed as they're sent. Previously it was silently sent with no terminal feedback at all -
+        the existing echo logic lived in the normal-character branch of service_send_buffer(), which
+        the SERIAL_SEND_BUFFER_PROSIGN marker's own handling bypassed entirely
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1524,9 +1531,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.20.1222"
+#define CODE_VERSION "2026.10.20.1324"
 
-#define eeprom_magic_number 48               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 49               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -10298,6 +10305,17 @@ void serial_qrss_mode()
 #endif
 //-------------------------------------------------------------------------------------------------------
 
+#if defined(FEATURE_COMMAND_LINE_INTERFACE)
+void cli_echo_sent_byte(byte no_print, byte the_byte) {
+  if ((!no_print) && (!cw_send_echo_inhibit)){
+    if (primary_serial_port_mode == SERIAL_CLI) {primary_serial_port->write(the_byte);}
+    #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+      secondary_serial_port->write(the_byte);
+    #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+  }
+}
+#endif //FEATURE_COMMAND_LINE_INTERFACE
+
 void service_send_buffer(byte no_print)
 {
   // send one character out of the send buffer
@@ -10504,6 +10522,10 @@ void service_send_buffer(byte no_print)
 
           remove_from_send_buffer();
           if (send_buffer_bytes) {
+            #if defined(FEATURE_COMMAND_LINE_INTERFACE)
+              cli_echo_sent_byte(no_print,'[');
+              cli_echo_sent_byte(no_print,send_buffer_array[0]);
+            #endif //FEATURE_COMMAND_LINE_INTERFACE
             send_char(send_buffer_array[0],OMIT_LETTERSPACE);
             #ifdef FEATURE_WINKEY_EMULATION
               if (winkey_host_open){
@@ -10515,6 +10537,10 @@ void service_send_buffer(byte no_print)
             remove_from_send_buffer();
           }
           if (send_buffer_bytes) {
+            #if defined(FEATURE_COMMAND_LINE_INTERFACE)
+              cli_echo_sent_byte(no_print,send_buffer_array[0]);
+              cli_echo_sent_byte(no_print,']');
+            #endif //FEATURE_COMMAND_LINE_INTERFACE
             send_char(send_buffer_array[0],KEYER_NORMAL);
             #ifdef FEATURE_WINKEY_EMULATION
               if (winkey_host_open){
