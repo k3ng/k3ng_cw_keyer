@@ -256,8 +256,8 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
 
 Useful Stuff
     Reset to defaults: squeeze both paddles at power up (good to use if you dorked up the speed and don't have the CLI)
-    Press the right paddle to enter straight key mode at power up
-    Press the left  paddle at power up to enter and stay forever in beacon mode
+    Press the right paddle to enter straight key mode at power up (swap with OPTION_SWAP_BEACON_AND_STRAIGHT_KEY_BOOT_PADDLES)
+    Press the left  paddle at power up to enter and stay forever in beacon mode (swap with OPTION_SWAP_BEACON_AND_STRAIGHT_KEY_BOOT_PADDLES)
 
 Recent Update History
 
@@ -1514,6 +1514,14 @@ Recent Update History
         DEBUG_AUX_SERIAL_PORT isn't defined in any current hardware profile, so this was previously
         unreachable/untested dead code
 
+    2026.10.20.0811
+      Added OPTION_SWAP_BEACON_AND_STRAIGHT_KEY_BOOT_PADDLES (GitHub #159): at power-up/reset,
+        holding the left paddle forces BEACON mode and the right paddle forces STRAIGHT key mode -
+        inconvenient for anyone with a straight key wired to the left/dit paddle position, who
+        previously had to plug in a paddle, power up into straight key mode, then swap in their
+        straight key. This option swaps which paddle triggers which mode. Default (option undefined)
+        is unchanged. Added to all 24 keyer_features_and_options*.h hardware-profile files
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1544,9 +1552,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.20.0810"
+#define CODE_VERSION "2026.10.20.0811"
 
-#define eeprom_magic_number 50               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 51               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -19436,13 +19444,22 @@ void initialize_eeprom(){
 void check_for_beacon_mode(){
 
   #ifndef OPTION_SAVE_MEMORY_NANOKEYER
-  // check for beacon mode (paddle_left == low) or straight key mode (paddle_right == low)
-  if (paddle_pin_read(paddle_left) == LOW) {
+  // check for beacon mode (paddle_left == low) or straight key mode (paddle_right == low) - or the
+  // reverse, if OPTION_SWAP_BEACON_AND_STRAIGHT_KEY_BOOT_PADDLES is defined (GitHub #159 - for
+  // straight keys wired to the left/dit paddle position)
+  #ifdef OPTION_SWAP_BEACON_AND_STRAIGHT_KEY_BOOT_PADDLES
+    byte beacon_boot_paddle = paddle_right;
+    byte straight_key_boot_paddle = paddle_left;
+  #else
+    byte beacon_boot_paddle = paddle_left;
+    byte straight_key_boot_paddle = paddle_right;
+  #endif
+  if (paddle_pin_read(beacon_boot_paddle) == LOW) {
     #ifdef FEATURE_BEACON
     keyer_machine_mode = BEACON;
     #endif
   } else {
-    if (paddle_pin_read(paddle_right) == LOW) {
+    if (paddle_pin_read(straight_key_boot_paddle) == LOW) {
       configuration.keyer_mode = STRAIGHT;
     }
   }
