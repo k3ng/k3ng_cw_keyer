@@ -1525,6 +1525,23 @@ Recent Update History
         temporarily enabled that the fix actually compiles in and is exercised); reporter's hardware not
         available here to confirm against
 
+    2026.10.21.0827
+      Fixed flawed button-averaging causing unreliable button detection (GitHub #148, src/buttonarray/
+        buttonarray.cpp). Reported as the command button occasionally being misread as a memory button
+        and corrupting the memory1 slot, worst on an STM32 Blue Pill. ButtonArray::ReadButtons() (decides
+        which button is pressed, used by check_buttons()'s main command-mode/memory-playback dispatch)
+        was doing analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2 once per
+        sample - not a real average of the configured 19 samples, a decaying-weight scheme dominated by
+        whichever in-range sample landed last - and silently discarded any sample reading above
+        high_limit_ instead of counting it as evidence against a press, so a few noisy out-of-range
+        readings mixed with in-range ones could still resolve to the wrong button. This code is shared by
+        every analog-resistor-ladder button hardware profile, not just STM32 - a noisier/faster ADC just
+        makes the flaw easier to trigger. Fixed to take a real mean of the in-range samples and require a
+        genuine majority of all samples to be in-range before concluding any button is pressed at all.
+        Compile-verified only (FEATURE_BUTTONS temporarily enabled to confirm the fix actually compiles in
+        and changes the binary, then reverted); not hardware-tested, reporter's STM32 Blue Pill not
+        available here
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1555,9 +1572,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.0804"
+#define CODE_VERSION "2026.10.21.0827"
 
-#define eeprom_magic_number 51               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 52               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
