@@ -1573,6 +1573,20 @@ Recent Update History
         of the line. (This is a different code path from configuration.keyer_mode == STRAIGHT, fixed
         above - that one is the boot-time paddle-hold mode; this is the separate, dedicated-pin feature)
 
+    2026.10.20.2030
+      Fixed FEATURE_AUTOSPACE inserting 2-3 extra element-spaces between every dit/dah while a paddle
+        was held, instead of only after a genuine release at a letter boundary. The CW_KEY_UP autospace
+        check calls check_paddles() to decide whether the paddle is still down - but at that point,
+        being_sent/cw_scheduler_state still reflect the element that just finished (they don't change
+        until cw_end_of_manual_element(), called right after), so check_paddles()'s own in-flight
+        suppression (added to stop a quick tap from re-arming a second element mid-send) saw this
+        element as still in flight and skipped refreshing dit_buffer/dah_buffer entirely. That left them
+        at the stale 0 dispatch itself had already consumed, so the autospace condition always read
+        "released," regardless of whether the operator was still holding the paddle. Fixed by sampling
+        both paddles directly (check_dit_paddle()/check_dah_paddle()) instead of through check_paddles()
+        at this one decision point, since the suppression doesn't apply here - this is exactly the
+        instant the live paddle state is supposed to matter again
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1603,9 +1617,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.20.2015"
+#define CODE_VERSION "2026.10.20.2030-NG"
 
-#define eeprom_magic_number 54               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 55               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -8498,7 +8512,19 @@ void service_cw_scheduler(){
 
           #ifdef FEATURE_AUTOSPACE
             if ((configuration.autospace_active) && (!cw_autospace_applied)) {
-              check_paddles();
+              // Bugfix: check_paddles() suppresses re-latching whichever paddle's element is "in
+              // flight" (cw_scheduler_state == CW_KEY_DOWN/CW_KEY_UP with being_sent matching - see its
+              // own comment) so a quick tap can't re-arm a second element mid-send. But right here,
+              // being_sent/cw_scheduler_state haven't changed yet - that only happens a few lines below,
+              // in cw_end_of_manual_element() and the switch's own CW_IDLE assignment - so
+              // check_paddles() would see THIS element as still in flight and skip refreshing
+              // dit_buffer/dah_buffer entirely, leaving them at the stale 0 that dispatch itself already
+              // consumed. That made this condition always read "released," autospacing after every
+              // single element regardless of whether the paddle was still held. Sample both paddles
+              // directly instead - that suppression doesn't apply here; this is exactly the instant the
+              // live paddle state is supposed to matter again.
+              check_dit_paddle();
+              check_dah_paddle();
               if ((dit_buffer == 0) && (dah_buffer == 0)) {
                 float as_lengths = (being_sent == SENDING_DIT) ? ((float)configuration.autospace_timing_factor/(float)100) : 2.0;
                 cw_phase_start_us = micros();
