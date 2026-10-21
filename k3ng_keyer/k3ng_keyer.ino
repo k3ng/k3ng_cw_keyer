@@ -1542,6 +1542,30 @@ Recent Update History
         and changes the binary, then reverted); not hardware-tested, reporter's STM32 Blue Pill not
         available here
 
+    2026.10.21.0920
+      That ReadButtons() fix introduced a worse regression, found via the project author's own hardware
+        testing: pressing any of buttons 1-3 resolved to button 3 every time. A raw-analogRead()
+        diagnostic (DEBUG_BUTTONS-gated, in check_buttons(), sent to primary_serial_port directly since
+        FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT routes debug_serial_port elsewhere) showed why in
+        two stages. First: a mechanical button's contact bounce/RC settling ramps the ADC reading down
+        from the "not pressed" rail, through every OTHER (higher-numbered) button's voltage range in turn,
+        before settling on the one actually pressed - all share one resistor ladder and pin - so averaging
+        raw voltages across that transient skewed the result toward the highest-numbered button regardless
+        of which one was pressed. Fixed by classifying each of the 19 samples independently into its own
+        matching button (or "no button") first, then taking whichever got an outright majority of the
+        votes. Second, confirmed on hardware this still wasn't enough: back-to-back analogRead() calls
+        with no delay between them finish in under 1ms on AVR, well before real mechanical bounce settles
+        (routinely several ms to tens of ms) - so all 19 samples could be taken while the contact was still
+        mid-bounce, and no amount of voting among them reflects the true settled value. Fixed by spreading
+        the 19 reads across ~2ms each (BUTTON_READ_SETTLE_DELAY_MS) instead of taking them back-to-back.
+        Also fixed DEBUG_BUTTONS' status-report print, which was showing the never-populated legacy
+        button_array_low_limit[]/button_array_high_limit[] globals (always 0/0, dead code predating the
+        ButtonArray class) instead of the real per-button thresholds - added low_limit(index)/
+        high_limit(index) accessors to ButtonArray for this. Compile-verified only (FEATURE_BUTTONS/
+        DEBUG_BUTTONS temporarily enabled together to confirm, then reverted); the raw-reading diagnostic
+        is left in place for continued hardware testing - reporter suspects their own test rig may have a
+        hardware issue and plans to test with different hardware
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1572,7 +1596,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.0827"
+#define CODE_VERSION "2026.10.21.0920"
 
 #define eeprom_magic_number 52               // you can change this number to have the unit re-initialize EEPROM
 
@@ -2064,8 +2088,6 @@ uint16_t memory_area_end = 0;
 #endif //DEBUG_VARIABLE_DUMP
 
 #ifdef FEATURE_BUTTONS
-  int button_array_high_limit[analog_buttons_number_of_buttons];
-  int button_array_low_limit[analog_buttons_number_of_buttons];
   long button_last_add_to_send_buffer_time = 0;
 #endif //FEATURE_BUTTONS
 
@@ -9530,6 +9552,20 @@ void check_buttons() {
   byte paddle_was_hit = 0;
   byte previous_sidetone_mode = 0;
 
+  #ifdef DEBUG_BUTTONS
+    // Temporary diagnostic (GitHub #148 follow-up) - sent to primary_serial_port directly (not
+    // debug_serial_port, which FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT routes elsewhere) so it
+    // shows up on whichever port is actually being watched. Remove once #148 is confirmed fixed.
+    if (analogbuttontemp >= 0) {
+      primary_serial_port->print(F("\ncheck_buttons: raw analogRead("));
+      primary_serial_port->print(analog_buttons_pin);
+      primary_serial_port->print(F("): "));
+      primary_serial_port->print(analogRead(analog_buttons_pin));
+      primary_serial_port->print(F("  resolved button index: "));
+      primary_serial_port->println(analogbuttontemp);
+    }
+  #endif //DEBUG_BUTTONS
+
   if (analogbuttontemp < 0 ) { // no button pressed.
     return;
   }
@@ -16694,13 +16730,16 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   #endif //DEBUG_VARIABLE_DUMP
 
   #ifdef DEBUG_BUTTONS
+    // Bugfix (GitHub #148 investigation): this used to print the never-populated legacy
+    // button_array_low_limit[]/button_array_high_limit[] globals (always 0/0, dead code left over from
+    // before the ButtonArray class existed) instead of the real per-button thresholds actually in use.
     for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
       port_to_use->print(F("analog_button_array:   "));
       port_to_use->print(x);
       port_to_use->print(F(" button_array_low_limit: "));
-      port_to_use->print(button_array_low_limit[x]);
+      port_to_use->print(button_array.low_limit(x));
       port_to_use->print(F("  button_array_high_limit: "));
-      port_to_use->println(button_array_high_limit[x]);
+      port_to_use->println(button_array.high_limit(x));
     }
   #endif
 //aaaaaaa

@@ -85,44 +85,87 @@ int32_t ButtonArray::high_limit(){
     return high_limit_;
 }
 
+int32_t ButtonArray::low_limit(uint8_t index){
+    if (index < nb_buttons_) {
+        return button_array_[index].low_limit();
+    }
+    return 0;
+}
+
+int32_t ButtonArray::high_limit(uint8_t index){
+    if (index < nb_buttons_) {
+        return button_array_[index].high_limit();
+    }
+    return 0;
+}
+
 int8_t ButtonArray::ReadButtons(){
     // Bugfix (GitHub #148): this used to do analog_line_read_average = (analog_line_read_average +
     // analog_read_temp) / 2 once per sample - not a real average of the NUMBER_OF_BUTTON_READS_TO_AVERAGE
-    // samples, but a decaying-weight scheme dominated by whichever in-range sample happened to land last.
-    // Worse, any sample reading above high_limit_ (i.e. "no button currently pressed" on that one sample)
-    // was silently discarded rather than counted as evidence against a press, so a handful of noisy
-    // out-of-range readings mixed with a couple of in-range ones could still resolve to a button. On a
-    // noisier/faster ADC (reported on STM32, though every analog-button-ladder hardware profile shares
-    // this same code) that could land on the wrong button entirely - e.g. misreading the command button
-    // as a memory button mid-sequence, corrupting whatever was being programmed into that memory slot.
-    // Now takes a real mean of the in-range samples, and requires a genuine majority of all samples to be
-    // in-range before concluding any button is pressed at all - a few stray out-of-range samples no longer
-    // get silently dropped, they count as "not pressed" votes.
-    uint32_t analog_read_temp = 0;
-    uint32_t analog_read_total = 0;
-    uint8_t valid_samples = 0;
+    // samples, but a decaying-weight scheme dominated by whichever in-range sample happened to land last -
+    // and silently discarded any sample reading above high_limit_ instead of counting it as evidence
+    // against a press. A first fix here replaced that with a true mean of the in-range samples, but that
+    // introduced a worse regression: a mechanical button's contact bounce/RC settling ramps the ADC
+    // reading down from the "not pressed" rail, through every OTHER (higher-numbered) button's voltage
+    // range in turn, before settling on the one actually pressed - all of these buttons share one
+    // resistor ladder and one pin. Averaging raw voltages across that transient skews the result toward
+    // whichever range the signal spent the most time passing through while settling, which is reliably
+    // the highest-numbered button, regardless of which one was actually pressed (confirmed on hardware:
+    // every one of buttons 1-3 resolved to button 3).
+    //
+    // Classify each sample independently into its own matching button (or "no button") first, then take
+    // whichever got an outright majority of the votes - this only cares about which state the samples
+    // spent most of their time in, not the magnitude of any transient in between, so as long as a genuine
+    // press is held for more than half of this read's sample count (true for any normal human press) the
+    // correct button wins even with a few transient samples mixed in from other ranges along the way.
+    //
+    // Bugfix (GitHub #148, hardware-confirmed): the majority-vote above assumed the mechanical bounce/
+    // settling transient was brief relative to the whole read. Hardware testing with a raw-reading
+    // diagnostic showed otherwise - pressing button 1 or 2 would often read a raw value well into button
+    // 3's range for the ENTIRE read, not just a few samples at the start, because back-to-back
+    // analogRead() calls with no delay between them (19 reads take under 1ms total on AVR) can complete
+    // well before a real mechanical contact has finished bouncing/settling - mechanical bounce routinely
+    // lasts several ms to tens of ms. A vote among 19 samples all taken during that same still-settling
+    // window doesn't help if none of them reflect the final, fully-seated contact resistance yet. Spread
+    // the reads across the typical bounce duration instead of taking them back-to-back, so most of them
+    // land after the contact has actually settled.
+    #define BUTTON_READ_SETTLE_DELAY_MS 2
+    int8_t votes[MAX_ARRAY_BUTTONS] = {0};
+    uint8_t no_button_votes = 0;
 
     for (byte x = 0; x < NUMBER_OF_BUTTON_READS_TO_AVERAGE; x++){
-        analog_read_temp = analogRead(pin_);
+        if (x > 0) { delay(BUTTON_READ_SETTLE_DELAY_MS); }
+        uint32_t analog_read_temp = analogRead(pin_);
+        int8_t matched = -1;
         if (analog_read_temp <= high_limit_){
-            analog_read_total += analog_read_temp;
-            valid_samples++;
+            for (size_t b = 0; b < nb_buttons_; b++) {
+                if (button_array_[b].Pressed(analog_read_temp)) {
+                    matched = b;
+                    break;
+                }
+            }
+        }
+        if (matched >= 0) {
+            votes[matched]++;
+        } else {
+            no_button_votes++;
         }
     }
 
-    if (valid_samples <= (NUMBER_OF_BUTTON_READS_TO_AVERAGE / 2)) {
-        return -1;
-    }
-
-    uint32_t analog_line_read_average = analog_read_total / valid_samples;
-
-    for (size_t x = 0; x < nb_buttons_; x++) {
-        Button button = button_array_[x];
-        if (button.Pressed(analog_line_read_average)) {
-            last_pressed_ms = millis();
-            return x;
+    int8_t best_button = -1;
+    uint8_t best_votes = no_button_votes;
+    for (size_t b = 0; b < nb_buttons_; b++) {
+        if (votes[b] > best_votes) {
+            best_votes = votes[b];
+            best_button = b;
         }
     }
+
+    if ((best_button >= 0) && (best_votes > (NUMBER_OF_BUTTON_READS_TO_AVERAGE / 2))) {
+        last_pressed_ms = millis();
+        return best_button;
+    }
+
     return -1;
 }
 // returns true if analog reading indicate a pressed button
