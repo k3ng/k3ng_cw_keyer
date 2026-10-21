@@ -49,6 +49,8 @@ class ButtonArray {
         void Add(uint8_t step, uint8_t index);
         void Add(uint8_t step, uint8_t index, int32_t low_limit, int32_t high_limit);
         int32_t high_limit();
+        int32_t low_limit(uint8_t index);
+        int32_t high_limit(uint8_t index);
         int8_t Pressed();
         bool Pressed(uint8_t index);
         bool Held(uint8_t index);

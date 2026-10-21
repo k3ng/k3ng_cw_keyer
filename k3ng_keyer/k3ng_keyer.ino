@@ -1657,6 +1657,47 @@ Recent Update History
         enabled in the test config, so this build already exercises the fix); not hardware-tested,
         reporter's STM32 Blue Pill not available here
 
+    2026.10.21.0839
+      That previous ReadButtons() fix introduced a worse regression, found via hardware testing: pressing
+        any of buttons 1-3 resolved to button 3 every time. A mechanical button's contact bounce/RC
+        settling ramps the ADC reading down from the "not pressed" rail, through every OTHER (higher-
+        numbered) button's voltage range in turn, before settling on the one actually pressed - all share
+        one resistor ladder and pin. Averaging raw voltages across that transient skews the result toward
+        whichever range the signal spent the most time passing through while settling, reliably the
+        highest-numbered button, regardless of which one was actually pressed. Fixed by classifying each
+        of the 19 samples independently into its own matching button (or "no button") first, then taking
+        whichever got an outright majority of the votes - this only cares which state the samples spent
+        most of their time in, not the magnitude of any transient in between, so a genuine press held for
+        more than half the sample window wins even with a few transient samples from other ranges mixed
+        in. Also fixed DEBUG_BUTTONS' status-report print, which was showing the never-populated legacy
+        button_array_low_limit[]/button_array_high_limit[] globals (always 0/0, dead code predating the
+        ButtonArray class) instead of the real per-button thresholds - added low_limit(index)/
+        high_limit(index) accessors to ButtonArray for this. Compile-verified only; confirming on the
+        user's hardware next
+
+    2026.10.21.0845
+      Still resolving every button to button 3 on hardware even with the above fix and confirmed-correct
+        per-button thresholds - added a temporary raw-analogRead() diagnostic print to check_buttons()
+        (DEBUG_BUTTONS-gated, sent to primary_serial_port directly since FEATURE_COMMAND_LINE_INTERFACE_
+        ON_SECONDARY_PORT routes debug_serial_port elsewhere) to see whether the raw ADC readings
+        genuinely differ per physical button or not, before guessing further. To be removed once #148 is
+        actually resolved. eeprom_magic_number deliberately NOT bumped this time - this is diagnostic-only,
+        no EEPROM layout change, and bumping it would wipe the test memories just programmed for this
+        session
+
+    2026.10.21.0854
+      The diagnostic above paid off: raw readings for a deliberately-pressed button 1 or 2 would often
+        land squarely in button 3's range for the ENTIRE 19-sample read, not just a few samples - the
+        majority-vote fix above assumed the bounce/settling transient was brief relative to the whole
+        read, but back-to-back analogRead() calls with no delay between them finish in under 1ms on AVR,
+        well before a real mechanical contact has finished bouncing (routinely several ms to tens of ms).
+        Voting among 19 samples all taken during that same still-settling window doesn't help if none of
+        them reflect the final, fully-seated contact resistance yet. Fixed in ButtonArray::ReadButtons()
+        by spreading the 19 reads across ~2ms each (BUTTON_READ_SETTLE_DELAY_MS) instead of taking them
+        back-to-back, so most of them land after the contact has actually settled - adds under 40ms to a
+        button read, imperceptible for a human button press. eeprom_magic_number again not bumped (no
+        EEPROM layout change)
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1687,9 +1728,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.0828-NG"
+#define CODE_VERSION "2026.10.21.0854-NG"
 
-#define eeprom_magic_number 59               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -2242,8 +2283,6 @@ byte ultimatic_dah_paddle_down = 0;     // ULTIMATIC mode: dah counterpart of th
 #endif //DEBUG_VARIABLE_DUMP
 
 #ifdef FEATURE_BUTTONS
-  int button_array_high_limit[analog_buttons_number_of_buttons];
-  int button_array_low_limit[analog_buttons_number_of_buttons];
   long button_last_add_to_send_buffer_time = 0;
 #endif //FEATURE_BUTTONS
 
@@ -10676,6 +10715,20 @@ void check_buttons() {
   byte paddle_was_hit = 0;
   byte previous_sidetone_mode = 0;
 
+  #ifdef DEBUG_BUTTONS
+    // Temporary diagnostic (GitHub #148 follow-up) - sent to primary_serial_port directly (not
+    // debug_serial_port, which FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT routes elsewhere) so it
+    // shows up on whichever port is actually being watched. Remove once #148 is confirmed fixed.
+    if (analogbuttontemp >= 0) {
+      primary_serial_port->print(F("\ncheck_buttons: raw analogRead("));
+      primary_serial_port->print(analog_buttons_pin);
+      primary_serial_port->print(F("): "));
+      primary_serial_port->print(analogRead(analog_buttons_pin));
+      primary_serial_port->print(F("  resolved button index: "));
+      primary_serial_port->println(analogbuttontemp);
+    }
+  #endif //DEBUG_BUTTONS
+
   if (analogbuttontemp < 0 ) { // no button pressed.
     return;
   }
@@ -17870,13 +17923,16 @@ void serial_status(PRIMARY_SERIAL_CLS * port_to_use) {
   #endif //DEBUG_VARIABLE_DUMP
 
   #ifdef DEBUG_BUTTONS
+    // Bugfix (GitHub #148 investigation): this used to print the never-populated legacy
+    // button_array_low_limit[]/button_array_high_limit[] globals (always 0/0, dead code left over from
+    // before the ButtonArray class existed) instead of the real per-button thresholds actually in use.
     for (int x = 0;x < analog_buttons_number_of_buttons;x++) {
       port_to_use->print(F("analog_button_array:   "));
       port_to_use->print(x);
       port_to_use->print(F(" button_array_low_limit: "));
-      port_to_use->print(button_array_low_limit[x]);
+      port_to_use->print(button_array.low_limit(x));
       port_to_use->print(F("  button_array_high_limit: "));
-      port_to_use->println(button_array_high_limit[x]);
+      port_to_use->println(button_array.high_limit(x));
     }
   #endif
 //aaaaaaa
