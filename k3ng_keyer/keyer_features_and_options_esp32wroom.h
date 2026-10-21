@@ -86,6 +86,7 @@
 // #define OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_LINE  // Have Winkeyer PTT setting activate/deactivate PTT line rather than control buffered character PTT hold 
 // #define OPTION_REVERSE_BUTTON_ORDER                // This is mainly for the DJ0MY NanoKeyer http://nanokeyer.wordpress.com/
 // #define OPTION_SWAP_BEACON_AND_STRAIGHT_KEY_BOOT_PADDLES  // swap which paddle triggers BEACON vs STRAIGHT key mode at power-up/reset (default: left=BEACON, right=STRAIGHT) - for straight keys wired to the left/dit paddle position (GitHub #159)
+// #define OPTION_FIX_SLOW_CLOCK_AFTER_POWER_CYCLE  // AVR only: forces the clock prescaler to full speed at boot - works around some ATmega32U4 clone boards (Pro Micro, Leonardo, etc.) running at a fraction of normal speed after a cold power-on until manually reset (GitHub #144)
 #define OPTION_PROG_MEM_TRIM_TRAILING_SPACES         // trim trailing spaces from memory when programming in command mode
 #define OPTION_DIT_PADDLE_NO_SEND_ON_MEM_RPT         // this makes dit paddle memory interruption a little smoother
 #define OPTION_MORE_DISPLAY_MSGS                     // additional optional display messages - comment out to save memory
