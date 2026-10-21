@@ -1535,12 +1535,43 @@ Recent Update History
         dah_buffer_off forced on when entering Ultimatic) was already fixed here, pre-existing from
         GitHub #158 (2015)
 
+    2026.10.20.0925
+      Ported M2 (non-blocking automatic/typed CW sending) into next_gen_version_development - it had
+        only ever been implemented in a disconnected directory snapshot from before this project
+        switched to a git-branch workflow, and was never actually on this branch despite M1 testing
+        being complete. Added a non-blocking element-token queue (cw_element_buffer,
+        cw_enqueue_char()/cw_enqueue_the_dits_and_dahs(), the non-blocking counterparts to
+        send_char()/send_the_dits_and_dahs()) and cw_schedule_auto_element(), dequeued and timed by
+        service_cw_scheduler() (Part C) the same way manual elements already are. HELL/AMERICAN_MORSE
+        character modes and ps2/usb keyboard, play_memory(), and command mode remain on the old
+        blocking send_char() path, unconverted. Merged this session's STRAIGHT-mode oscillation fix
+        with M2's own change to that same block (falls through instead of returning, so automatic
+        sending keeps advancing in STRAIGHT mode without an idle key cutting off an in-flight
+        automatic element). Bugfix: that fall-through alone didn't make pressing the straight key
+        actually interrupt an in-flight typed/memory message - Part B kept running the in-flight
+        element's own timed key-up regardless, and Part C kept dispatching the rest of the queued
+        message. Fixed by having the STRAIGHT block itself call clear_send_buffer() and reset
+        cw_scheduler_state to CW_IDLE the instant the key is read down, consistent with how a paddle
+        touch already aborts typed sending the same way via check_dit_paddle()/check_dah_paddle()
+
     2026.10.20.1318
       Prosign CLI echo: sending a prosign via \+ (e.g. \+AS) now echoes it to the CLI serial
         terminal as a bracketed pair, e.g. [AS], the same way ordinary typed characters are already
         echoed as they're sent. Previously it was silently sent with no terminal feedback at all -
         the existing echo logic lived in the normal-character branch of service_send_buffer(), which
         the SERIAL_SEND_BUFFER_PROSIGN marker's own handling bypassed entirely
+
+    2026.10.20.2015
+      Fixed FEATURE_STRAIGHT_KEY's dedicated straight-key pin not interrupting typed/memory CW sending.
+        service_straight_key() only called clear_send_buffer() under FEATURE_MEMORIES (to stop a
+        repeating memory) - but service_cw_scheduler()'s non-blocking scheduler (Milestone 2) now also
+        routes typed/CLI automatic sending through that same send buffer, so with FEATURE_MEMORIES off
+        the key had no way to abort it at all, and the typed message just kept going underneath the key.
+        Now clears the buffers unconditionally and also resets cw_scheduler_state/being_sent directly,
+        since clear_send_buffer() alone doesn't touch an element already mid-flight - without that,
+        Part B would still run that element's own timed key-up on schedule, fighting the key for control
+        of the line. (This is a different code path from configuration.keyer_mode == STRAIGHT, fixed
+        above - that one is the boot-time paddle-hold mode; this is the separate, dedicated-pin feature)
 
   qwerty
 
@@ -1572,9 +1603,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.20.1318"
+#define CODE_VERSION "2026.10.20.2015"
 
-#define eeprom_magic_number 53               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 54               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -2026,6 +2057,18 @@ byte cw_bug_dah_flag = 0;               // BUG mode: dah paddle currently held (
 byte cw_bug_dah_paddle_down = 0;        // BUG mode: raw dah paddle pin state, mirrored every check_dah_paddle() call (unlike dah_buffer, never consumed) so BUG mode's hold logic is stable across the multiple service_cw_scheduler() calls per loop() iteration
 unsigned long cw_bug_dah_key_down_time = 0;
 byte cw_last_manual_element = SENDING_NOTHING;  // for squeeze alternation: opposite of this goes next when both dit_buffer and dah_buffer are set
+
+// --- Non-blocking automatic (typed/CLI/memory) CW sending (Milestone 2) ---
+// send_char()/send_the_dits_and_dahs() (still present, unchanged, blocking) remain in use by callers
+// not yet converted (ps2/usb keyboard, play_memory(), command mode, HELL/AMERICAN_MORSE char modes).
+// The normal ASCII path in service_send_buffer() instead calls cw_enqueue_char(), which pushes element
+// tokens here; service_cw_scheduler() (Part C) dequeues and times them via cw_schedule_auto_element(),
+// reusing the same micros() state machine as manual keying. Only one character's worth of tokens is
+// ever in flight: service_send_buffer() only enqueues a new character once this buffer has drained.
+enum cw_element_token_t {CW_TOK_DIT, CW_TOK_DAH, CW_TOK_HALF_SPACE, CW_TOK_LETTERSPACE, CW_TOK_WORDSPACE, CW_TOK_FARNSWORTH_EXTRA};
+#define CW_ELEMENT_BUFFER_SIZE 24
+byte cw_element_buffer[CW_ELEMENT_BUFFER_SIZE];
+byte cw_element_buffer_bytes = 0;
 byte ultimatic_dit_paddle_down = 0;     // ULTIMATIC mode: raw dit paddle pin state, refreshed every check_paddles() call
                                          // regardless of the in-flight buffer-suppression guard, so last_closure's priority
                                          // state machine sees the paddle's true physical state even while its own element
@@ -3209,8 +3252,20 @@ void service_keypad(){
         sending_mode = MANUAL_SENDING;
         tx_and_sidetone_key(1);
         last_straight_key_state = 1;
+        // Bugfix: break in on any in-flight/queued automatic (typed/memory) CW - this dedicated
+        // straight-key pin always wins, the same way a paddle touch already aborts typed sending via
+        // check_dit_paddle()/check_dah_paddle()'s clear_send_buffer() call. clear_send_buffer() used to
+        // run only under FEATURE_MEMORIES (to stop a repeating memory), but service_cw_scheduler()'s
+        // non-blocking scheduler (Milestone 2) now also uses the same send buffer for typed/CLI
+        // automatic sending, so it needs clearing unconditionally too - not just when FEATURE_MEMORIES
+        // happens to be enabled. Also reset the scheduler state directly: clear_send_buffer() only
+        // empties the buffers, it doesn't touch an element already mid-flight, so without this,
+        // service_cw_scheduler()'s Part B would still run that element's own timed key-up on schedule,
+        // fighting the key for control of the line.
+        clear_send_buffer();
+        cw_scheduler_state = CW_IDLE;
+        being_sent = SENDING_NOTHING;
         #ifdef FEATURE_MEMORIES
-          clear_send_buffer();
           repeat_memory = 255;
         #endif
       }
@@ -7935,6 +7990,350 @@ void cw_end_of_manual_element(){
 }
 
 //-------------------------------------------------------------------------------------------------------
+// Non-blocking automatic (typed/CLI/memory) CW sending - element buffer (Milestone 2)
+//-------------------------------------------------------------------------------------------------------
+
+void cw_add_to_element_buffer(byte cw_token){
+  if (cw_element_buffer_bytes < CW_ELEMENT_BUFFER_SIZE){
+    cw_element_buffer[cw_element_buffer_bytes] = cw_token;
+    cw_element_buffer_bytes++;
+  }
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_remove_from_element_buffer(){
+  if (cw_element_buffer_bytes) {
+    cw_element_buffer_bytes--;
+    for (byte x = 0; x < cw_element_buffer_bytes; x++){
+      cw_element_buffer[x] = cw_element_buffer[x+1];
+    }
+  }
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_enqueue_the_dits_and_dahs(char const * cw_to_send){
+
+  // Non-blocking counterpart to send_the_dits_and_dahs(), for standard CW-mode patterns only (which are
+  // always pure '.'/'-' - the American Morse '~'/'='/'&' extension is only reached via char_send_mode ==
+  // AMERICAN_MORSE, which stays on the old blocking send_char()/send_the_dits_and_dahs() path).
+
+  for (int x = 0; x < 12; x++){
+    switch(cw_to_send[x]){
+      case '.': cw_add_to_element_buffer(CW_TOK_DIT); break;
+      case '-': cw_add_to_element_buffer(CW_TOK_DAH); break;
+      default: x = 12; break;
+    }
+  }
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_enqueue_char(byte cw_char, byte omit_letterspace){
+
+  // Non-blocking counterpart to send_char(), used only when char_send_mode == CW.  Expands a character
+  // into element-buffer tokens instead of blocking-sending it; timing for each token is computed later,
+  // at dequeue time, in cw_schedule_auto_element() - exactly mirroring when loop_element_lengths() would
+  // have computed it in the original blocking code (i.e. right as that phase of transmission begins).
+
+  #ifdef FEATURE_SLEEP
+    last_activity_time = millis();
+  #endif //FEATURE_SLEEP
+  #ifdef FEATURE_LCD_BACKLIGHT_AUTO_DIM
+    last_active_time = millis();
+  #endif //FEATURE_LCD_BACKLIGHT_AUTO_DIM
+
+  if ((cw_char == 10) || (cw_char == 13)) { return; }  // don't attempt to send carriage return or line feed
+
+  sending_mode = AUTOMATIC_SENDING;
+
+  switch (cw_char) {
+    case 'A': cw_enqueue_the_dits_and_dahs(".-");   break;
+    case 'B': cw_enqueue_the_dits_and_dahs("-..."); break;
+    case 'C': cw_enqueue_the_dits_and_dahs("-.-."); break;
+    case 'D': cw_enqueue_the_dits_and_dahs("-..");  break;
+    case 'E': cw_enqueue_the_dits_and_dahs(".");    break;
+    case 'F': cw_enqueue_the_dits_and_dahs("..-."); break;
+    case 'G': cw_enqueue_the_dits_and_dahs("--.");  break;
+    case 'H': cw_enqueue_the_dits_and_dahs("...."); break;
+    case 'I': cw_enqueue_the_dits_and_dahs("..");   break;
+    case 'J': cw_enqueue_the_dits_and_dahs(".---"); break;
+    case 'K': cw_enqueue_the_dits_and_dahs("-.-");  break;
+    case 'L': cw_enqueue_the_dits_and_dahs(".-.."); break;
+    case 'M': cw_enqueue_the_dits_and_dahs("--");   break;
+    case 'N': cw_enqueue_the_dits_and_dahs("-.");   break;
+    case 'O': cw_enqueue_the_dits_and_dahs("---");  break;
+    case 'P': cw_enqueue_the_dits_and_dahs(".--."); break;
+    case 'Q': cw_enqueue_the_dits_and_dahs("--.-"); break;
+    case 'R': cw_enqueue_the_dits_and_dahs(".-.");  break;
+    case 'S': cw_enqueue_the_dits_and_dahs("...");  break;
+    case 'T': cw_enqueue_the_dits_and_dahs("-");    break;
+    case 'U': cw_enqueue_the_dits_and_dahs("..-");  break;
+    case 'V': cw_enqueue_the_dits_and_dahs("...-"); break;
+    case 'W': cw_enqueue_the_dits_and_dahs(".--");  break;
+    case 'X': cw_enqueue_the_dits_and_dahs("-..-"); break;
+    case 'Y': cw_enqueue_the_dits_and_dahs("-.--"); break;
+    case 'Z': cw_enqueue_the_dits_and_dahs("--.."); break;
+
+    case '0': cw_enqueue_the_dits_and_dahs("-----");break;
+    case '1': cw_enqueue_the_dits_and_dahs(".----");break;
+    case '2': cw_enqueue_the_dits_and_dahs("..---");break;
+    case '3': cw_enqueue_the_dits_and_dahs("...--");break;
+    case '4': cw_enqueue_the_dits_and_dahs("....-");break;
+    case '5': cw_enqueue_the_dits_and_dahs(".....");break;
+    case '6': cw_enqueue_the_dits_and_dahs("-....");break;
+    case '7': cw_enqueue_the_dits_and_dahs("--...");break;
+    case '8': cw_enqueue_the_dits_and_dahs("---..");break;
+    case '9': cw_enqueue_the_dits_and_dahs("----.");break;
+
+    case '=': cw_enqueue_the_dits_and_dahs("-...-");   break;
+    case '/': cw_enqueue_the_dits_and_dahs("-..-.");   break;
+    case '*': cw_enqueue_the_dits_and_dahs("-...-.-"); break;
+    case '.': cw_enqueue_the_dits_and_dahs(".-.-.-");  break;
+    case ',': cw_enqueue_the_dits_and_dahs("--..--");  break;
+    case '!': cw_enqueue_the_dits_and_dahs("--..--");  break;
+    case '\'': cw_enqueue_the_dits_and_dahs(".----."); break; // apostrophe
+    case '(': cw_enqueue_the_dits_and_dahs("-.--.");   break;
+    case ')': cw_enqueue_the_dits_and_dahs("-.--.-");  break;
+    case '&': cw_enqueue_the_dits_and_dahs(".-...");   break;
+
+    case '+': cw_enqueue_the_dits_and_dahs(".-.-.");   break;
+    case '-': cw_enqueue_the_dits_and_dahs("-....-");  break;
+    case '_': cw_enqueue_the_dits_and_dahs("..--.-");  break;
+    case '"': cw_enqueue_the_dits_and_dahs(".-..-.");  break;
+    case '$': cw_enqueue_the_dits_and_dahs("...-..-"); break;
+    case '@': cw_enqueue_the_dits_and_dahs(".--.-.");  break;
+    case '<': cw_enqueue_the_dits_and_dahs(".-.-.");   break; // AR
+    case '>': cw_enqueue_the_dits_and_dahs("...-.-");  break; // SK
+
+    #if defined(OPTION_WINKEY_PROSIGN_COMPATIBILITY)
+      case 0x5C: cw_enqueue_the_dits_and_dahs("-..-.");  break;   // Backslash
+      case '[': cw_enqueue_the_dits_and_dahs(".-...");  break;
+      case ':': cw_enqueue_the_dits_and_dahs("-.--.");  break;
+      case ';': cw_enqueue_the_dits_and_dahs(".-.-");   break;
+      case ']': cw_enqueue_the_dits_and_dahs("-.--.");  break;
+    #else
+      case ':': cw_enqueue_the_dits_and_dahs("---...");  break;
+      case ';': cw_enqueue_the_dits_and_dahs("-.-.-.");  break;
+    #endif
+
+    case ' ':
+      cw_add_to_element_buffer(CW_TOK_WORDSPACE);
+      break;
+
+    #ifdef OPTION_RUSSIAN_LANGUAGE_SEND_CLI    // Contributed by Павел Бирюков, UA1AQC
+      case 192: cw_enqueue_the_dits_and_dahs(".-");break; //А
+      case 193: cw_enqueue_the_dits_and_dahs("-...");break; //Б
+      case 194: cw_enqueue_the_dits_and_dahs(".--");break; //В
+      case 195: cw_enqueue_the_dits_and_dahs("--.");break; //Г
+      case 196: cw_enqueue_the_dits_and_dahs("-..");break; //Д
+      case 197: cw_enqueue_the_dits_and_dahs(".");break; //Е
+      case 168: cw_enqueue_the_dits_and_dahs(".");break; //Ё
+      case 184: cw_enqueue_the_dits_and_dahs(".");break; //ё
+      case 198: cw_enqueue_the_dits_and_dahs("...-");break; //Ж
+      case 199: cw_enqueue_the_dits_and_dahs("--..");break; //З
+      case 200: cw_enqueue_the_dits_and_dahs("..");break; //И
+      case 201: cw_enqueue_the_dits_and_dahs(".---");break; //Й
+      case 202: cw_enqueue_the_dits_and_dahs("-.-");break; //К
+      case 203: cw_enqueue_the_dits_and_dahs(".-..");break; //Л
+      case 204: cw_enqueue_the_dits_and_dahs("--");break; //М
+      case 205: cw_enqueue_the_dits_and_dahs("-.");break; //Н
+      case 206: cw_enqueue_the_dits_and_dahs("---");break; //О
+      case 207: cw_enqueue_the_dits_and_dahs(".--.");break; //П
+      case 208: cw_enqueue_the_dits_and_dahs(".-.");break; //Р
+      case 209: cw_enqueue_the_dits_and_dahs("...");break; //С
+      case 210: cw_enqueue_the_dits_and_dahs("-");break; //Т
+      case 211: cw_enqueue_the_dits_and_dahs("..-");break; //У
+      case 212: cw_enqueue_the_dits_and_dahs("..-.");break; //Ф
+      case 213: cw_enqueue_the_dits_and_dahs("....");break; //Х
+      case 214: cw_enqueue_the_dits_and_dahs("-.-.");break; //Ц
+      case 215: cw_enqueue_the_dits_and_dahs("---.");break; //Ч
+      case 216: cw_enqueue_the_dits_and_dahs("----");break; //Ш
+      case 217: cw_enqueue_the_dits_and_dahs("--.-");break; //Щ
+      case 218: cw_enqueue_the_dits_and_dahs("--.--");break; //Ъ
+      case 219: cw_enqueue_the_dits_and_dahs("-.--");break; //Ы
+      case 220: cw_enqueue_the_dits_and_dahs("-..-");break; //Ь
+      case 221: cw_enqueue_the_dits_and_dahs("..-..");break; //Э
+      case 222: cw_enqueue_the_dits_and_dahs("..--");break; //Ю
+      case 223: cw_enqueue_the_dits_and_dahs(".-.-");break; //Я
+      case 255: cw_enqueue_the_dits_and_dahs(".-.-");break; //я
+    #endif //OPTION_RUSSIAN_LANGUAGE_SEND_CLI
+
+    #if defined(OPTION_PROSIGN_SUPPORT)
+      case PROSIGN_AA: cw_enqueue_the_dits_and_dahs(".-.-");       break;
+      case PROSIGN_AS: cw_enqueue_the_dits_and_dahs(".-...");      break;
+      case PROSIGN_BK: cw_enqueue_the_dits_and_dahs("-...-.-");    break;
+      case PROSIGN_CL: cw_enqueue_the_dits_and_dahs("-.-..-..");   break;
+      case PROSIGN_CT: cw_enqueue_the_dits_and_dahs("-.-.-");      break;
+      case PROSIGN_KN: cw_enqueue_the_dits_and_dahs("-.--.");      break;
+      case PROSIGN_NJ: cw_enqueue_the_dits_and_dahs("-..---");     break;
+      case PROSIGN_SK: cw_enqueue_the_dits_and_dahs("...-.-");     break;
+      case PROSIGN_SN: cw_enqueue_the_dits_and_dahs("...-.");      break;
+      case PROSIGN_HH: cw_enqueue_the_dits_and_dahs("........");   break;
+      case PROSIGN_SOS: cw_enqueue_the_dits_and_dahs("...---..."); break;
+      case PROSIGN_SO: cw_enqueue_the_dits_and_dahs("...---");     break;
+      #if !defined(OPTION_CW_KEYBOARD_GERMAN) && !defined(OPTION_CW_KEYBOARD_ITALIAN) && !defined(OPTION_PS2_NON_ENGLISH_CHAR_LCD_DISPLAY_SUPPORT)
+        case PROSIGN_OS: cw_enqueue_the_dits_and_dahs("---...");   break;
+      #endif
+    #endif
+
+    #ifdef OPTION_NON_ENGLISH_EXTENSIONS
+    case 192: cw_enqueue_the_dits_and_dahs(".--.-");break;// 'À'
+    case 194: cw_enqueue_the_dits_and_dahs(".-.-");break;// 'Â'
+    case 197: cw_enqueue_the_dits_and_dahs(".--.-");break;// 'Å'
+    case 196: cw_enqueue_the_dits_and_dahs(".-.-");break;// 'Ä'
+    case 198: cw_enqueue_the_dits_and_dahs(".-.-");break;// 'Æ'
+    case 199: cw_enqueue_the_dits_and_dahs("-.-..");break;// 'Ç'
+    case 208: cw_enqueue_the_dits_and_dahs("..--.");break;// 'Ð'
+    case 138: cw_enqueue_the_dits_and_dahs("----");break;// 'Š'
+    case 200: cw_enqueue_the_dits_and_dahs(".-..-");break;// 'È'
+    case 201: cw_enqueue_the_dits_and_dahs("..-..");break;// 'É'
+    case 142: cw_enqueue_the_dits_and_dahs("--..-.");break;// 'Ž'
+    case 209: cw_enqueue_the_dits_and_dahs("--.--");break;// 'Ñ'
+    case 214: cw_enqueue_the_dits_and_dahs("---.");break;// 'Ö'
+    case 216: cw_enqueue_the_dits_and_dahs("---.");break;// 'Ø'
+    case 211: cw_enqueue_the_dits_and_dahs("---.");break;// 'Ó'
+    case 220: cw_enqueue_the_dits_and_dahs("..--");break;// 'Ü'
+    case 223: cw_enqueue_the_dits_and_dahs("------");break;// 'ß'
+    case 225: cw_enqueue_the_dits_and_dahs(".-.-");break;// 'ä' LA3ZA
+    case 239: cw_enqueue_the_dits_and_dahs("---.");break;// 'ö' LA3ZA
+    case 242: cw_enqueue_the_dits_and_dahs("---.");break;// 'ø' LA3ZA
+    case 245: cw_enqueue_the_dits_and_dahs("..--");break;// 'ü' LA3ZA
+    case 246: cw_enqueue_the_dits_and_dahs("----");break;// almost '' or rather sigma LA3ZA
+    case 252: cw_enqueue_the_dits_and_dahs(".--.-");break;// å (sort of) LA3ZA
+    case 238: cw_enqueue_the_dits_and_dahs("--.--");break;// 'ñ' LA3ZA
+    case 226: cw_enqueue_the_dits_and_dahs("------");break;// 'ß' LA3ZA
+    #endif //OPTION_NON_ENGLISH_EXTENSIONS
+
+    case '|':
+      #if !defined(OPTION_WINKEY_DO_NOT_SEND_7C_BYTE_HALF_SPACE)
+        cw_add_to_element_buffer(CW_TOK_HALF_SPACE);
+      #endif
+      return;
+
+    #if defined(OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION)
+      case '?': cw_enqueue_the_dits_and_dahs("..--..");break;
+    #endif
+
+    default:
+      #if !defined(OPTION_DO_NOT_SEND_UNKNOWN_CHAR_QUESTION)
+        cw_enqueue_the_dits_and_dahs("..--..");
+      #endif
+      break;
+  }
+
+  if (omit_letterspace != OMIT_LETTERSPACE) {
+    cw_add_to_element_buffer(CW_TOK_LETTERSPACE);
+  }
+
+  #ifdef FEATURE_FARNSWORTH
+    if (configuration.wpm_farnsworth > configuration.wpm){
+      cw_add_to_element_buffer(CW_TOK_FARNSWORTH_EXTRA);
+    }
+  #endif
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_schedule_auto_element(){
+
+  // Called from service_cw_scheduler() Part C when idle and cw_element_buffer has queued tokens.
+  // Pops the next token and arms the key state machine (mark+space for dit/dah, or a bare key-up wait
+  // for pure-space tokens), using the same duration math as loop_element_lengths()/send_dit()/send_dah().
+
+  byte cw_token = cw_element_buffer[0];
+  cw_remove_from_element_buffer();
+
+  unsigned int character_wpm = configuration.wpm;
+  #ifdef FEATURE_FARNSWORTH
+    if (configuration.wpm_farnsworth > configuration.wpm) {
+      character_wpm = configuration.wpm_farnsworth;
+    }
+  #endif //FEATURE_FARNSWORTH
+  if (keyer_machine_mode == KEYER_COMMAND_MODE){
+    character_wpm = configuration.wpm_command_mode;
+  }
+
+  unsigned long mark_ticks = 0;
+  unsigned long space_ticks = 0;
+  byte new_being_sent = SENDING_NOTHING;
+
+  switch (cw_token) {
+
+    case CW_TOK_DIT: {
+      float mark_lengths;
+      #ifdef FEATURE_QLF
+        mark_lengths = qlf_active ? (1.0*(float(configuration.weighting)/50)*(random(qlf_dit_min,qlf_dit_max)/100.0)) : (1.0*(float(configuration.weighting)/50));
+      #else //FEATURE_QLF
+        mark_lengths = (1.0*(float(configuration.weighting)/50));
+      #endif //FEATURE_QLF
+      mark_ticks  = cw_element_length_ticks(mark_lengths, configuration.keying_compensation, character_wpm);
+      space_ticks = cw_element_length_ticks((2.0-(float(configuration.weighting)/50)), (-1.0*configuration.keying_compensation), character_wpm);
+      new_being_sent = SENDING_DIT;
+      break;
+    }
+
+    case CW_TOK_DAH: {
+      float mark_lengths;
+      #ifdef FEATURE_QLF
+        mark_lengths = qlf_active ? (float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50)*(random(qlf_dah_min,qlf_dah_max)/100.0)) : (float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50));
+      #else //FEATURE_QLF
+        mark_lengths = (float(configuration.dah_to_dit_ratio/100.0)*(float(configuration.weighting)/50));
+      #endif //FEATURE_QLF
+      mark_ticks  = cw_element_length_ticks(mark_lengths, configuration.keying_compensation, character_wpm);
+      space_ticks = cw_element_length_ticks((4.0-(3.0*(float(configuration.weighting)/50))), (-1.0*configuration.keying_compensation), character_wpm);
+      new_being_sent = SENDING_DAH;
+      break;
+    }
+
+    case CW_TOK_HALF_SPACE:
+      space_ticks = cw_element_length_ticks(0.5, 0, configuration.wpm);
+      break;
+
+    case CW_TOK_LETTERSPACE:
+      space_ticks = cw_element_length_ticks((length_letterspace-1), 0, configuration.wpm);
+      break;
+
+    case CW_TOK_WORDSPACE:
+      space_ticks = cw_element_length_ticks((configuration.length_wordspace-length_letterspace-2), 0, configuration.wpm);
+      break;
+
+    #ifdef FEATURE_FARNSWORTH
+    case CW_TOK_FARNSWORTH_EXTRA: {
+      float additional_intercharacter_time_ms = ((( (1.0 * farnsworth_timing_calibration) * ((60.0 * float(configuration.wpm_farnsworth) ) - (37.2 * float(configuration.wpm) ))/( float(configuration.wpm) * float(configuration.wpm_farnsworth) ))/19.0)*1000.0) - (1200.0/ float(configuration.wpm_farnsworth) );
+      space_ticks = cw_element_length_ticks(1, additional_intercharacter_time_ms, 0);
+      break;
+    }
+    #endif //FEATURE_FARNSWORTH
+
+  }
+
+  if (mark_ticks > 0) {
+    being_sent = new_being_sent;
+    tx_and_sidetone_key(1);
+    if (being_sent == SENDING_DIT){
+      if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,tx_key_dit_and_dah_pins_active_state);}
+    } else {
+      if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_active_state);}
+    }
+    cw_phase_start_us = micros();
+    cw_phase_ticks = mark_ticks;
+    cw_pending_keyup_us = space_ticks;
+    cw_scheduler_state = CW_KEY_DOWN;
+  } else {
+    being_sent = SENDING_NOTHING;
+    cw_phase_start_us = micros();
+    cw_phase_ticks = space_ticks;
+    cw_pending_keyup_us = 0;
+    cw_scheduler_state = CW_KEY_UP;
+  }
+
+} //void cw_schedule_auto_element
+
+//-------------------------------------------------------------------------------------------------------
 
 void service_cw_scheduler(){
 
@@ -7945,29 +8344,47 @@ void service_cw_scheduler(){
   if (keyer_machine_mode == BEACON){return;}
 
   // ---- STRAIGHT key: mirror the paddle directly, no timed elements ----
+  // Bugfix: this used to read dit_buffer directly, a one-shot latch consumed the instant it's seen -
+  // correct for every other mode's dispatch semantics, but wrong here, for the same reason as the
+  // BUG-mode dah-hold oscillation fixed earlier (cw_bug_dah_paddle_down): service_cw_scheduler() runs
+  // several times per loop() while check_paddles() (which refreshes dit_buffer via check_dit_paddle())
+  // runs fewer times. Any "orphan" call that ran before the next check_paddles() refresh saw a stale,
+  // already-consumed dit_buffer == 0 and wrongly keyed up, then the next check_paddles() re-armed it
+  // and the next scheduler call keyed back down - an oscillating sidetone for as long as the key was
+  // held. Read the raw, non-consumed pin directly instead; dit_buffer is still zeroed below so a stale
+  // latch doesn't cause a spurious dit if the operator later switches out of STRAIGHT mode.
+  // Falls through (does not return) so automatic/typed CW sending (Part C, below) keeps advancing even
+  // when the paddle mode is STRAIGHT.
   if (configuration.keyer_mode == STRAIGHT) {
-    // Bugfix: this used to read dit_buffer directly, a one-shot latch consumed the instant it's seen -
-    // correct for every other mode's dispatch semantics, but wrong here, for the same reason as the
-    // BUG-mode dah-hold oscillation fixed earlier (cw_bug_dah_paddle_down): service_cw_scheduler() runs
-    // several times per loop() while check_paddles() (which refreshes dit_buffer via check_dit_paddle())
-    // runs fewer times. Any "orphan" call that ran before the next check_paddles() refresh saw a stale,
-    // already-consumed dit_buffer == 0 and wrongly keyed up, then the next check_paddles() re-armed it
-    // and the next scheduler call keyed back down - an oscillating sidetone for as long as the key was
-    // held. Read the raw, non-consumed pin directly instead; dit_buffer is still zeroed below so a stale
-    // latch doesn't cause a spurious dit if the operator later switches out of STRAIGHT mode.
     dit_buffer = 0;
     { byte straight_key_pin = (configuration.paddle_mode == PADDLE_NORMAL) ? paddle_left : paddle_right;
       byte straight_key_down = (paddle_pin_read(straight_key_pin) == LOW) ? 1 : 0;
       #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
         if (usb_dit) { straight_key_down = 1; }
       #endif
-      sending_mode = MANUAL_SENDING;
-      tx_and_sidetone_key(straight_key_down);
+      if (straight_key_down) {
+        // Bugfix: break in on any in-flight/queued automatic (typed/memory) CW - the straight key
+        // always wins, consistent with how a paddle touch already aborts typed sending (check_dit_
+        // paddle()/check_dah_paddle() call clear_send_buffer() unconditionally every tick they read
+        // their pin down). Without this, pressing the key mid-element did nothing: Part B (below)
+        // would still run the in-flight automatic element's own timed key-up on schedule regardless of
+        // the key, and Part C would keep dispatching the rest of the queued message, since neither one
+        // was ever told to stop.
+        clear_send_buffer();
+        if (cw_scheduler_state != CW_IDLE) {
+          cw_scheduler_state = CW_IDLE;
+          being_sent = SENDING_NOTHING;
+        }
+        sending_mode = MANUAL_SENDING;
+        tx_and_sidetone_key(1);
+      } else if (cw_scheduler_state == CW_IDLE) {
+        sending_mode = MANUAL_SENDING;
+        tx_and_sidetone_key(0);
+      }
     }
     #ifdef FEATURE_DEAD_OP_WATCHDOG
       dit_counter = 0;
     #endif
-    return;
   }
 
   // ---- Part A: mid-element opposite-paddle sampling (iambic memory) ----
@@ -8054,7 +8471,11 @@ void service_cw_scheduler(){
           cw_phase_ticks = cw_pending_keyup_us;
           cw_scheduler_state = CW_KEY_UP;
         } else {
-          cw_end_of_manual_element();
+          if (sending_mode == MANUAL_SENDING) {
+            cw_end_of_manual_element();
+          } else {
+            being_sent = SENDING_NOTHING;
+          }
           cw_scheduler_state = CW_IDLE;
         }
       }
@@ -8062,31 +8483,37 @@ void service_cw_scheduler(){
 
     case CW_KEY_UP:
       if ((micros() - cw_phase_start_us) >= cw_phase_ticks) {
-        // inter-element space complete.  Apply the same element-boundary cleanup loop_element_lengths did.
-        if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
-          iambic_flag = 0;
-          dit_buffer = 0;
-          dah_buffer = 0;
-        }
-        if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
-          if (configuration.dit_buffer_off) {dit_buffer = 0;}
-          if (configuration.dah_buffer_off) {dah_buffer = 0;}
-        }
-
-        #ifdef FEATURE_AUTOSPACE
-          if ((sending_mode == MANUAL_SENDING) && (configuration.autospace_active) && (!cw_autospace_applied)) {
-            check_paddles();
-            if ((dit_buffer == 0) && (dah_buffer == 0)) {
-              float as_lengths = (being_sent == SENDING_DIT) ? ((float)configuration.autospace_timing_factor/(float)100) : 2.0;
-              cw_phase_start_us = micros();
-              cw_phase_ticks = cw_element_length_ticks(as_lengths, 0, configuration.wpm);
-              cw_autospace_applied = 1;
-              break; // stay in CW_KEY_UP for the autospace duration
-            }
+        // inter-element space complete.
+        if (sending_mode == MANUAL_SENDING) {
+          // Apply the same element-boundary cleanup loop_element_lengths did for manual (paddle) elements.
+          if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left) == HIGH ) && (paddle_pin_read(paddle_right) == HIGH )) {
+            iambic_flag = 0;
+            dit_buffer = 0;
+            dah_buffer = 0;
           }
-        #endif //FEATURE_AUTOSPACE
+          if ((being_sent == SENDING_DIT) || (being_sent == SENDING_DAH)){
+            if (configuration.dit_buffer_off) {dit_buffer = 0;}
+            if (configuration.dah_buffer_off) {dah_buffer = 0;}
+          }
 
-        cw_end_of_manual_element();
+          #ifdef FEATURE_AUTOSPACE
+            if ((configuration.autospace_active) && (!cw_autospace_applied)) {
+              check_paddles();
+              if ((dit_buffer == 0) && (dah_buffer == 0)) {
+                float as_lengths = (being_sent == SENDING_DIT) ? ((float)configuration.autospace_timing_factor/(float)100) : 2.0;
+                cw_phase_start_us = micros();
+                cw_phase_ticks = cw_element_length_ticks(as_lengths, 0, configuration.wpm);
+                cw_autospace_applied = 1;
+                break; // stay in CW_KEY_UP for the autospace duration
+              }
+            }
+          #endif //FEATURE_AUTOSPACE
+
+          cw_end_of_manual_element();
+        } else {
+          // automatic (typed/memory) sending: no paddle-echo/autospace bookkeeping, just clear being_sent
+          being_sent = SENDING_NOTHING;
+        }
         cw_scheduler_state = CW_IDLE;
       }
       break;
@@ -8190,6 +8617,14 @@ void service_cw_scheduler(){
         sending_mode = MANUAL_SENDING;
         cw_schedule_manual_element(SENDING_DIT);
       }
+    }
+
+    // ---- Automatic (typed/CLI/memory) CW sending ----
+    // Only start the next queued element if nothing manual just claimed the scheduler this tick, and
+    // (BUG mode) the dah paddle isn't currently held down as a manual straight key (cw_bug_dah_flag) -
+    // that path never touches cw_scheduler_state, so it wouldn't otherwise be caught by the check below.
+    if ((cw_scheduler_state == CW_IDLE) && (!((configuration.keyer_mode == BUG) && (cw_bug_dah_flag))) && (cw_element_buffer_bytes > 0)) {
+      cw_schedule_auto_element();
     }
   }
 
@@ -10969,7 +11404,10 @@ void service_send_buffer(byte no_print)
 
 
   if (send_buffer_status == SERIAL_SEND_BUFFER_NORMAL) {
-    if ((send_buffer_bytes) && (pause_sending_buffer == 0)) {
+    // cw_element_buffer_bytes == 0: don't pop the next buffered item (plain char or control byte) until
+    // the previous character's non-blocking elements (Milestone 2) have fully drained. Special-byte
+    // branches (PROSIGN, MEMORY_NUMBER, etc.) enqueue and then wait for this same drain on later calls.
+    if ((send_buffer_bytes) && (pause_sending_buffer == 0) && (cw_element_buffer_bytes == 0)) {
       #ifdef FEATURE_SLEEP
         last_activity_time = millis();
       #endif //FEATURE_SLEEP
@@ -11254,7 +11692,11 @@ void service_send_buffer(byte no_print)
           Serial.flush();
         #endif
 
-        send_char(send_buffer_array[0],KEYER_NORMAL);  //****************
+        if (char_send_mode == CW) {
+          cw_enqueue_char(send_buffer_array[0],KEYER_NORMAL);  // non-blocking (Milestone 2)
+        } else {
+          send_char(send_buffer_array[0],KEYER_NORMAL);  // HELL / AMERICAN_MORSE: still blocking  //****************
+        }
 
         #ifdef FEATURE_WINKEY_EMULATION
           if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_serial_echo) && (winkey_host_open) && (!no_print) && (!cw_send_echo_inhibit)){
@@ -11375,6 +11817,7 @@ void clear_send_buffer()
     winkey_xoff=0;
   #endif
   send_buffer_bytes = 0;
+  cw_element_buffer_bytes = 0;  // also drop any in-flight non-blocking auto-sent elements (Milestone 2)
 }
 
 //-------------------------------------------------------------------------------------------------------
