@@ -1587,6 +1587,36 @@ Recent Update History
         on AVR); the RP2040/RP2350 toolchain isn't installed here to actually build-test against, and I
         don't have RP2350 hardware
 
+    2026.10.21.1636
+      Fixed HARDWARE_GENERIC_STM32F103C/HARDWARE_MAPLE_MINI compiling against the modern STM32 core
+        (GitHub #137). Same root cause family as the RP2350 fix above: these profiles were written against
+        the older, now largely unmaintained roger-clark "Arduino_STM32" core, which defines
+        ARDUINO_GENERIC_STM32F103C/ARDUINO_MAPLE_MINI directly. The modern, actively-maintained core most
+        users install today (STMicroelectronics:stm32) instead defines a distinct macro per board
+        selection - ARDUINO_BLUEPILL_F103C8, ARDUINO_GENERIC_F103C8TX, ARDUINO_BLACKPILL_F103C8, etc. -
+        none of which matched, so the sketch fell through to the AVR-only #else branch and failed
+        immediately on avr/wdt.h, before ever reaching the paddle-pin/serial-type errors originally
+        reported. Added a new K3NG_STM32_BLUEPILL_MODERN_CORE umbrella macro (keyer_hardware.h) covering
+        the modern core's Blue Pill/Black Pill/generic F103C6/C8/CB board selections, and added it
+        alongside every existing ARDUINO_MAPLE_MINI/ARDUINO_GENERIC_STM32F103C check. Also: (1)
+        PRIMARY_SERIAL_CLS was hardcoded to USBSerial, but the modern core's "USB support" board option
+        defaults to "None" (plain HardwareSerial on Serial) - USBSerial only applies if the user explicitly
+        selects USB CDC mode, which is the exact cannot-convert-HardwareSerial-to-USBSerial error reporters
+        hit. Now defaults to HardwareSerial (matching the out-of-the-box board config), with
+        OPTION_STM32_USB_CDC_SERIAL as an opt-in for the native-USB-CDC case. (2) keyer_stm32duino.h's
+        forward declarations are now skipped for the modern core - they exist only to work around a
+        prototype-generation quirk specific to the legacy core, and could conflict with the modern core's
+        own tone()/noTone(). (3) EEPROM.init()/EEPROM.format() (legacy-core-only emulated-EEPROM calls,
+        no equivalent needed on the modern core's self-initializing EEPROM library) are now skipped for the
+        modern core. Also fixed two call sites (practice-mode random character generation) that assigned a
+        bare char to a String - compiles on AVR's String implementation but not the modern STM32 core's -
+        found while compile-testing HARDWARE_MAPLE_MINI, unrelated to the macro/serial-class issue itself.
+        Ported from next_gen_version_development, where this was found and fixed first. Build-tested for
+        real against STMicroelectronics:stm32 3.0.0: BLUEPILL_F103CB and MAPLEMINI_F103CB (128K-flash
+        variants) compile clean. The 64K-flash variant (BLUEPILL_F103C8) was confirmed separately (on
+        next_gen_version_development) to compile correctly but overflow flash with this project's default
+        STM32 feature set - a capacity/feature-tuning question for that specific chip, not a code bug
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1617,7 +1647,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.1508"
+#define CODE_VERSION "2026.10.21.1636"
 
 #define eeprom_magic_number 52               // you can change this number to have the unit re-initialize EEPROM
 
@@ -1629,11 +1659,17 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <Wire.h>
   #define tone toneDUE
   #define noTone noToneDUE
-#elif defined(ARDUINO_MAPLE_MINI)|| defined(ARDUINO_GENERIC_STM32F103C) || defined(__STM32F1__)
+#elif defined(ARDUINO_MAPLE_MINI)|| defined(ARDUINO_GENERIC_STM32F103C) || defined(__STM32F1__) || defined(K3NG_STM32_BLUEPILL_MODERN_CORE)
   #include <SPI.h>
   #include <Wire.h>
   #include <EEPROM.h>
-  #include "keyer_stm32duino.h"
+  #if !defined(K3NG_STM32_BLUEPILL_MODERN_CORE)
+    // keyer_stm32duino.h's forward declarations work around a prototype-generation quirk specific to the
+    // old roger-clark Arduino_STM32 core (GitHub #137) - the modern core generates prototypes normally
+    // like any standard Arduino core, and doesn't need this (and its tone()/noTone() declarations could
+    // conflict with the modern core's own, differently-signed versions).
+    #include "keyer_stm32duino.h"
+  #endif
 #elif defined(_BOARD_PIC32_PINGUINO_)
   #include <EEPROM.h>
 #elif defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
@@ -1882,7 +1918,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #endif
 
 #if defined(FEATURE_ETHERNET)
-#if !defined(ARDUINO_MAPLE_MINI) && !defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
+#if !defined(ARDUINO_MAPLE_MINI) && !defined(ARDUINO_GENERIC_STM32F103C) && !defined(K3NG_STM32_BLUEPILL_MODERN_CORE) //sp5iou 20180329
   #include <Ethernet.h>  // if this is not included, compilation fails even though all ethernet code is #ifdef'ed out
   #if defined(FEATURE_INTERNET_LINK)
     #include <EthernetUdp.h>
@@ -8779,7 +8815,10 @@ void command_progressive_5_char_echo_practice() {
     //     cw_to_send_to_user = generate_callsign(practice_mode);
     //     break;
     //   case ECHO_PROGRESSIVE_5:
-        cw_to_send_to_user = (char)random(65,91);
+        // Bugfix (found testing GitHub #137's STM32 fix against HARDWARE_MAPLE_MINI): plain char->String
+        // assignment compiles on AVR's String implementation but not every core's (e.g. the modern
+        // STMicroelectronics:stm32 core) - wrap in an explicit String() constructor call instead.
+        cw_to_send_to_user = String((char)random(65,91));
         cw_to_send_to_user.concat((char)random(65,91));
         cw_to_send_to_user.concat((char)random(65,91));
         cw_to_send_to_user.concat((char)random(65,91));
@@ -15434,7 +15473,10 @@ void receive_transmit_echo_practice(PRIMARY_SERIAL_CLS * port_to_use, byte pract
         cw_to_send_to_user = generate_callsign(practice_mode);
         break;
       case ECHO_PROGRESSIVE_5:
-        cw_to_send_to_user = (char)random(65,91);
+        // Bugfix (found testing GitHub #137's STM32 fix against HARDWARE_MAPLE_MINI): plain char->String
+        // assignment compiles on AVR's String implementation but not every core's (e.g. the modern
+        // STMicroelectronics:stm32 core) - wrap in an explicit String() constructor call instead.
+        cw_to_send_to_user = String((char)random(65,91));
         cw_to_send_to_user.concat((char)random(65,91));
         cw_to_send_to_user.concat((char)random(65,91));
         cw_to_send_to_user.concat((char)random(65,91));
@@ -18895,7 +18937,7 @@ void initialize_rotary_encoder(){
 
   #ifdef FEATURE_ROTARY_ENCODER
     #ifdef OPTION_ENCODER_ENABLE_PULLUPS
-      #if defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
+      #if defined (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C)||defined(K3NG_STM32_BLUEPILL_MODERN_CORE) //sp5iou 20180329
         pinMode(rotary_pin1, INPUT_PULLUP);//sp5iou 20180329
         pinMode(rotary_pin2, INPUT_PULLUP);//sp5iou 20180329
       #else // (ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
@@ -18960,7 +19002,11 @@ void check_eeprom_for_initialization(){
 
   // read settings from eeprom and initialize eeprom if it has never been written to
   if (read_settings_from_eeprom()) {
-    #if defined(HARDWARE_GENERIC_STM32F103C)
+    // Bugfix (GitHub #137): EEPROM.init()/EEPROM.format() are specific to the legacy roger-clark
+    // Arduino_STM32 core's emulated-EEPROM library; the modern STMicroelectronics:stm32 core's EEPROM
+    // library has no such methods (and needs none - its flash-emulated EEPROM initializes itself
+    // transparently on first use).
+    #if defined(HARDWARE_GENERIC_STM32F103C) && !defined(K3NG_STM32_BLUEPILL_MODERN_CORE)
       EEPROM.init(); //sp5iou 20180328 to reinitialize / initialize EEPROM
       EEPROM.format();//sp5iou 20180328 to reinitialize / format EEPROM
     #endif
