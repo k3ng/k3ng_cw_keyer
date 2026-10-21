@@ -1511,6 +1511,20 @@ Recent Update History
         typed sending via check_dit_paddle()/check_dah_paddle()'s own unconditional clear_send_buffer()
         call
 
+    2026.10.21.0804
+      Fixed tx_pause_pin not holding PTT while held (GitHub #149). service_tx_inhibit_and_pause() pauses
+        the send buffer while the pin is active, so no new CW elements get dispatched - but key_state
+        stays false the whole time, and ptt_time is only ever refreshed while key_state is true, so it
+        went stale and check_ptt_tail()'s ordinary PTT tail timeout fired and dropped PTT on its own
+        schedule regardless of the pin, often before the external interface holding it low ever released
+        it. Reported as an assert-PTT/one-element/drop-PTT cycle after the pin released. Fixed by treating
+        a held tx_pause_pin the same as actively keying for PTT-tail purposes in check_ptt_tail(): keep
+        refreshing ptt_time and skip the unkey decision entirely while it's held, since the pin being
+        held is specifically the external interface saying transmission is imminent and PTT should stay
+        up. Compile-verified only (confirmed via a before/after size comparison with tx_pause_pin
+        temporarily enabled that the fix actually compiles in and is exercised); reporter's hardware not
+        available here to confirm against
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1541,9 +1555,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.20.2020"
+#define CODE_VERSION "2026.10.21.0804"
 
-#define eeprom_magic_number 50               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 51               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -6521,6 +6535,19 @@ void check_ptt_tail()
   #endif
 
   //static byte manual_ptt_invoke_ptt_input_pin = 0;
+
+  // Bugfix (GitHub #149): tx_pause_pin pauses the send buffer (service_tx_inhibit_and_pause()) so no
+  // new CW elements get dispatched while it's held, but held-low also means key_state stays false the
+  // whole time - ptt_time is only ever refreshed while key_state is true, so it goes stale and the
+  // ordinary PTT tail timeout below fires and drops PTT on its own schedule, regardless of the pin -
+  // often before the external interface holding it ever releases it. Treat a held pause pin the same as
+  // actively keying for PTT-tail purposes: keep refreshing ptt_time and skip the unkey decision entirely,
+  // since the pin being held is specifically the external interface saying "transmission is imminent,
+  // keep PTT up and wait."
+  if ((tx_pause_pin) && (digitalRead(tx_pause_pin) == tx_pause_pin_active_state)) {
+    ptt_time = millis();
+    return;
+  }
 
   if (ptt_input_pin){
     if ((digitalRead(ptt_input_pin) == ptt_input_pin_active_state)){
