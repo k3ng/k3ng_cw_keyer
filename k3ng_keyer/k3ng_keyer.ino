@@ -1501,6 +1501,16 @@ Recent Update History
         the existing echo logic lived in the normal-character branch of service_send_buffer(), which
         the SERIAL_SEND_BUFFER_PROSIGN marker's own handling bypassed entirely
 
+    2026.10.20.2020
+      Fixed FEATURE_STRAIGHT_KEY's dedicated straight-key pin not interrupting typed/memory CW sending
+        when FEATURE_MEMORIES is disabled. service_straight_key() only called clear_send_buffer() under
+        FEATURE_MEMORIES (to stop a repeating memory) - but that's also the buffer typed/CLI automatic
+        sending uses, so with FEATURE_MEMORIES off the key had no way to abort it: loop_element_lengths()'s
+        busy-wait would finish the current element and then just keep sending from the buffer, ignoring
+        the key entirely. Now clears unconditionally, consistent with how a paddle touch already aborts
+        typed sending via check_dit_paddle()/check_dah_paddle()'s own unconditional clear_send_buffer()
+        call
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1531,9 +1541,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.20.1324"
+#define CODE_VERSION "2026.10.20.2020"
 
-#define eeprom_magic_number 49               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 50               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -3138,8 +3148,15 @@ void service_keypad(){
         sending_mode = MANUAL_SENDING;
         tx_and_sidetone_key(1);
         last_straight_key_state = 1;
+        // Bugfix: break in on any in-flight/queued automatic (typed/memory) CW - this dedicated
+        // straight-key pin always wins, the same way a paddle touch already aborts typed sending via
+        // check_dit_paddle()/check_dah_paddle()'s unconditional clear_send_buffer() call. Here it used
+        // to run only under FEATURE_MEMORIES (to stop a repeating memory), so with FEATURE_MEMORIES off
+        // the key had no way to abort a CLI/typed send already in progress - loop_element_lengths()'s
+        // busy-wait would finish the current element and then just keep sending from the buffer,
+        // ignoring the key entirely.
+        clear_send_buffer();
         #ifdef FEATURE_MEMORIES
-          clear_send_buffer();
           repeat_memory = 255;
         #endif
       }
