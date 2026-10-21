@@ -1587,6 +1587,45 @@ Recent Update History
         at this one decision point, since the suppression doesn't apply here - this is exactly the
         instant the live paddle state is supposed to matter again
 
+    2026.10.20.2055
+      Ported M3 (non-blocking memory/macro playback) into next_gen_version_development - like M2, it
+        had only ever been implemented in a disconnected directory snapshot from before this project
+        switched to a git-branch workflow, and was never actually on this branch. Rewrote the ~600-line
+        blocking play_memory() as a persistent step-machine: start_play_memory() validates and kicks off
+        a session (no-ops with a boop() if one's already active - impossible in the old blocking model,
+        now needs an explicit guard), service_play_memory() (called from service_send_buffer() every
+        loop() tick) advances it one EEPROM position/macro at a time through PM_PROCESS_BYTE/PM_WAIT_CHAR
+        (draining a just-enqueued character through the Milestone 2 element buffer before moving on)/
+        PM_WAIT_DELAY (the \D and \T macros' timed waits). All the locals that used to live on the old
+        function's stack across for-loop iterations (y, jump_back_to_y/memory_number, the prosign flags,
+        the pause-sending-buffer backspace flag) become persistent pm_* state instead. Deleted the now-
+        dead memory_nonblocking_delay() (its job is absorbed into PM_WAIT_DELAY). Added a small
+        pm_pending_chars[] mini-buffer + pm_send_serial_number_enqueue() so the \C/\E serial-number
+        macros' resolved characters can be played back one at a time through cw_enqueue_char() instead of
+        the old blocking send_char()/send_serial_number() calls. service_send_buffer() gained a
+        service_play_memory() call every tick, its play_memory_prempt reset moved into
+        start_play_memory() only (zeroing it unconditionally every tick would now stomp a genuine preempt
+        request the instant after it's set), and its normal dispatch gated on !play_memory_is_active()
+        (memory playback feeds cw_element_buffer directly, bypassing send_buffer_array entirely). All 7
+        play_memory() call sites rewired to start_play_memory(). BEACON mode's while loop in loop() got a
+        wait-until-drained spin added so its PTT-tail/repeat-time delays still only fire once playback has
+        actually finished (BEACON mode's own outer loop is still blocking/delay()-based, unchanged - a
+        full rewrite of that is out of scope here)
+
+    2026.10.20.2114
+      Fixed paddle break-in not interrupting memory playback (M3 hardware testing) - straight-key
+        break-in already worked, paddle didn't. service_cw_scheduler()'s Part C unconditionally
+        dispatched a manual paddle element whenever dit_buffer/dah_buffer were set and the scheduler went
+        idle, regardless of whether a memory (Milestone 3) was playing - every time that fired during
+        playback it both keyed a spurious manual element into the memory's own output and consumed
+        dit_buffer/dah_buffer before pm_finish_iteration()'s interrupt check ever got a chance to see
+        they'd been set, so the memory just kept playing right through a held or tapped paddle instead of
+        aborting (straight key's check reads the pin directly, which is why only that one worked). Fixed
+        by gating the whole manual IAMBIC_A/B/ULTIMATIC/SINGLE_PADDLE/BUG dispatch block on
+        !play_memory_is_active(), so a touched paddle during playback now only ever serves as the
+        interrupt signal service_play_memory() is already watching for, never as something to dispatch
+        mid-playback
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1617,9 +1656,9 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.20.2030-NG"
+#define CODE_VERSION "2026.10.20.2114-NG"
 
-#define eeprom_magic_number 55               // you can change this number to have the unit re-initialize EEPROM
+#define eeprom_magic_number 57               // you can change this number to have the unit re-initialize EEPROM
 
 #include <stdio.h>
 #include "keyer_hardware.h"
@@ -2074,7 +2113,8 @@ byte cw_last_manual_element = SENDING_NOTHING;  // for squeeze alternation: oppo
 
 // --- Non-blocking automatic (typed/CLI/memory) CW sending (Milestone 2) ---
 // send_char()/send_the_dits_and_dahs() (still present, unchanged, blocking) remain in use by callers
-// not yet converted (ps2/usb keyboard, play_memory(), command mode, HELL/AMERICAN_MORSE char modes).
+// not yet converted (ps2/usb keyboard, command mode, HELL/AMERICAN_MORSE char modes). play_memory()
+// was converted separately (Milestone 3, see service_play_memory() and the pm_* state below).
 // The normal ASCII path in service_send_buffer() instead calls cw_enqueue_char(), which pushes element
 // tokens here; service_cw_scheduler() (Part C) dequeues and times them via cw_schedule_auto_element(),
 // reusing the same micros() state machine as manual keying. Only one character's worth of tokens is
@@ -2083,6 +2123,35 @@ enum cw_element_token_t {CW_TOK_DIT, CW_TOK_DAH, CW_TOK_HALF_SPACE, CW_TOK_LETTE
 #define CW_ELEMENT_BUFFER_SIZE 24
 byte cw_element_buffer[CW_ELEMENT_BUFFER_SIZE];
 byte cw_element_buffer_bytes = 0;
+
+// --- Non-blocking memory playback (Milestone 3) ---
+// play_memory() is rewritten as a re-entrant step function serviced from service_send_buffer() every
+// loop() tick (via service_play_memory()), instead of one big blocking call. All the locals that used
+// to live on play_memory()'s stack across for-loop iterations become persistent state here instead.
+#ifdef FEATURE_MEMORIES
+  enum play_memory_state_t {PM_IDLE, PM_PROCESS_BYTE, PM_WAIT_CHAR, PM_WAIT_DELAY};
+  byte pm_state = PM_IDLE;
+  byte pm_memory_number;
+  int pm_y;
+  unsigned int pm_jump_back_to_y;
+  byte pm_jump_back_to_memory_number;
+  byte pm_prosign_flag = 0;
+  byte pm_prosign_before_flag = 0;
+  #if defined(OPTION_PROSIGN_SUPPORT)
+    char * pm_prosign_temp = 0;
+  #endif
+  byte pm_pause_sending_buffer_backspace = 0;
+
+  unsigned long pm_delay_until_ms = 0;
+  byte pm_delay_is_timed_tx = 0;
+
+  #define PM_PENDING_CHARS_SIZE 8
+  byte pm_pending_chars[PM_PENDING_CHARS_SIZE];
+  byte pm_pending_chars_len = 0;
+  byte pm_pending_chars_index = 0;
+  byte pm_pending_chars_omit_letterspace = 0;
+#endif //FEATURE_MEMORIES
+
 byte ultimatic_dit_paddle_down = 0;     // ULTIMATIC mode: raw dit paddle pin state, refreshed every check_paddles() call
                                          // regardless of the in-flight buffer-suppression guard, so last_closure's priority
                                          // state machine sees the paddle's true physical state even while its own element
@@ -2730,6 +2799,24 @@ void loop()
           add_to_send_buffer(0);
         }
         service_send_buffer(PRINTCHAR);
+
+        // service_send_buffer()/play_memory() are non-blocking (Milestones 2-3): drive them here until
+        // the memory has fully finished playing, so the PTT-tail/repeat-time delays below still only
+        // begin once transmission is actually complete (preserving this loop's original timing, since
+        // it is itself still fully blocking/delay()-based - beacon mode is out of scope for now).
+        #ifdef FEATURE_MEMORIES
+          while ((play_memory_is_active()) || (cw_element_buffer_bytes > 0) || (cw_scheduler_state != CW_IDLE)) {
+            service_send_buffer(PRINTCHAR);
+            service_cw_scheduler();
+            #ifdef FEATURE_SERIAL
+              check_serial();
+            #endif
+            #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+              wdt_reset();
+            #endif
+          }
+        #endif //FEATURE_MEMORIES
+
         #ifdef OPTION_BEACON_MODE_PTT_TAIL_TIME
           delay(configuration.ptt_tail_time[configuration.current_tx - 1]);         // after memory 1 has played, this holds the PTT line active for the ptt tail time of the current tx
           check_ptt_tail();                                                         // this resets things so that the ptt line will go high during the next playout
@@ -5938,9 +6025,7 @@ int sidetone_switch_value()
 
 #ifdef FEATURE_POTENTIOMETER
   #define POTENTIOMETER_CONFIRM_POLLS 2   // consecutive matching polls required before the pot is allowed to change speed
-#endif
 
-#ifdef FEATURE_POTENTIOMETER
 void check_potentiometer()
 {
   #ifdef DEBUG_LOOP
@@ -8563,87 +8648,100 @@ void service_cw_scheduler(){
       }
     }
 
-    if ((configuration.keyer_mode == IAMBIC_A) || (configuration.keyer_mode == IAMBIC_B) || (configuration.keyer_mode == ULTIMATIC) || (configuration.keyer_mode == SINGLE_PADDLE)) {
-      if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left)) && (paddle_pin_read(paddle_right))) {
-        iambic_flag = 0;
-        dit_buffer = 0;
-        dah_buffer = 0;
-      } else {
-        // Bugfix: when both paddles are held (a genuine squeeze), check_paddles() re-samples both fresh
-        // at every element boundary (via cw_end_of_manual_element()), so dit_buffer and dah_buffer are
-        // BOTH 1 at essentially every pass throughout the squeeze. Originally (service_dit_dah_buffers())
-        // this alternated "for free" via two separate, sequential if-statements (blocking send_dit() then
-        // send_dah() every pass); ported as if/else-if for the non-blocking model (calling
-        // cw_schedule_manual_element() twice in a row would clobber the first element), that sequential
-        // alternation was lost - always preferring dit produced "dit-dit-dit..." instead of alternating.
-        // Track the last element sent and, when both are set, dispatch the opposite of it.
-        if (dit_buffer && dah_buffer) {
-          if (cw_last_manual_element == SENDING_DIT) {
+    // Bugfix: a memory (Milestone 3) has exclusive control of cw_element_buffer/cw_scheduler_state while
+    // it's playing - dit_buffer/dah_buffer/cw_bug_dah_paddle_down being set by a touched paddle must only
+    // ever serve as the *interrupt signal* service_play_memory() checks for at the next element/macro
+    // boundary (pm_finish_iteration(), the PM_WAIT_DELAY case), never as a manual element to dispatch
+    // mid-playback - that would both interleave spurious paddle-keyed elements into the memory's own
+    // output and consume dit_buffer/dah_buffer before the interrupt check ever saw it was set, so the
+    // memory would just keep playing right through a held or tapped paddle instead of aborting.
+    #ifdef FEATURE_MEMORIES
+      if (!play_memory_is_active()) {
+    #endif
+        if ((configuration.keyer_mode == IAMBIC_A) || (configuration.keyer_mode == IAMBIC_B) || (configuration.keyer_mode == ULTIMATIC) || (configuration.keyer_mode == SINGLE_PADDLE)) {
+          if ((configuration.keyer_mode == IAMBIC_A) && (iambic_flag) && (paddle_pin_read(paddle_left)) && (paddle_pin_read(paddle_right))) {
+            iambic_flag = 0;
+            dit_buffer = 0;
             dah_buffer = 0;
-            sending_mode = MANUAL_SENDING;
-            cw_schedule_manual_element(SENDING_DAH);
-            cw_last_manual_element = SENDING_DAH;
           } else {
+            // Bugfix: when both paddles are held (a genuine squeeze), check_paddles() re-samples both fresh
+            // at every element boundary (via cw_end_of_manual_element()), so dit_buffer and dah_buffer are
+            // BOTH 1 at essentially every pass throughout the squeeze. Originally (service_dit_dah_buffers())
+            // this alternated "for free" via two separate, sequential if-statements (blocking send_dit() then
+            // send_dah() every pass); ported as if/else-if for the non-blocking model (calling
+            // cw_schedule_manual_element() twice in a row would clobber the first element), that sequential
+            // alternation was lost - always preferring dit produced "dit-dit-dit..." instead of alternating.
+            // Track the last element sent and, when both are set, dispatch the opposite of it.
+            if (dit_buffer && dah_buffer) {
+              if (cw_last_manual_element == SENDING_DIT) {
+                dah_buffer = 0;
+                sending_mode = MANUAL_SENDING;
+                cw_schedule_manual_element(SENDING_DAH);
+                cw_last_manual_element = SENDING_DAH;
+              } else {
+                dit_buffer = 0;
+                sending_mode = MANUAL_SENDING;
+                cw_schedule_manual_element(SENDING_DIT);
+                cw_last_manual_element = SENDING_DIT;
+              }
+            } else if (dit_buffer) {
+              dit_buffer = 0;
+              sending_mode = MANUAL_SENDING;
+              cw_schedule_manual_element(SENDING_DIT);
+              cw_last_manual_element = SENDING_DIT;
+            } else if (dah_buffer) {
+              dah_buffer = 0;
+              sending_mode = MANUAL_SENDING;
+              cw_schedule_manual_element(SENDING_DAH);
+              cw_last_manual_element = SENDING_DAH;
+            }
+          }
+        } else if (configuration.keyer_mode == BUG) {
+          // dah paddle = manually-held key; dit paddle = automatic dits
+          // Note: gated on cw_bug_dah_paddle_down (a fresh, non-consumed pin mirror), not dah_buffer -
+          // dah_buffer is a one-shot latch consumed by this same block, and since service_cw_scheduler()
+          // runs multiple times per loop() iteration while check_paddles() runs fewer times, testing
+          // dah_buffer directly caused spurious key-up/key-down oscillation on "orphan" scheduler calls
+          // that ran before the next check_paddles() refreshed it.
+          dah_buffer = 0;
+          if (cw_bug_dah_paddle_down) {
+            if (!cw_bug_dah_flag) {
+              sending_mode = MANUAL_SENDING;
+              tx_and_sidetone_key(1);
+              cw_bug_dah_flag = 1;
+              #ifdef FEATURE_PADDLE_ECHO
+                cw_bug_dah_key_down_time = millis();
+              #endif //FEATURE_PADDLE_ECHO
+            }
+          } else {
+            if (cw_bug_dah_flag){
+              sending_mode = MANUAL_SENDING;
+              tx_and_sidetone_key(0);
+              #ifdef FEATURE_PADDLE_ECHO
+                if ((millis() - cw_bug_dah_key_down_time) > (0.5 * (1200.0/configuration.wpm))){
+                  if ((millis() - cw_bug_dah_key_down_time) > (2 * (1200.0/configuration.wpm))){
+                    paddle_echo_buffer = (paddle_echo_buffer * 10) + 2;
+                  } else {
+                    paddle_echo_buffer = (paddle_echo_buffer * 10) + 1;
+                  }
+                  paddle_echo_buffer_decode_time = millis() + (((float)3000.0/(float)configuration.wpm) * ((float)configuration.cw_echo_timing_factor/(float)100));
+                }
+              #endif //FEATURE_PADDLE_ECHO
+              cw_bug_dah_flag = 0;
+            }
+          }
+          #ifdef FEATURE_DEAD_OP_WATCHDOG
+            dah_counter = 0;
+          #endif
+          if ((dit_buffer) && (!cw_bug_dah_flag)) {
             dit_buffer = 0;
             sending_mode = MANUAL_SENDING;
             cw_schedule_manual_element(SENDING_DIT);
-            cw_last_manual_element = SENDING_DIT;
           }
-        } else if (dit_buffer) {
-          dit_buffer = 0;
-          sending_mode = MANUAL_SENDING;
-          cw_schedule_manual_element(SENDING_DIT);
-          cw_last_manual_element = SENDING_DIT;
-        } else if (dah_buffer) {
-          dah_buffer = 0;
-          sending_mode = MANUAL_SENDING;
-          cw_schedule_manual_element(SENDING_DAH);
-          cw_last_manual_element = SENDING_DAH;
         }
+    #ifdef FEATURE_MEMORIES
       }
-    } else if (configuration.keyer_mode == BUG) {
-      // dah paddle = manually-held key; dit paddle = automatic dits
-      // Note: gated on cw_bug_dah_paddle_down (a fresh, non-consumed pin mirror), not dah_buffer -
-      // dah_buffer is a one-shot latch consumed by this same block, and since service_cw_scheduler()
-      // runs multiple times per loop() iteration while check_paddles() runs fewer times, testing
-      // dah_buffer directly caused spurious key-up/key-down oscillation on "orphan" scheduler calls
-      // that ran before the next check_paddles() refreshed it.
-      dah_buffer = 0;
-      if (cw_bug_dah_paddle_down) {
-        if (!cw_bug_dah_flag) {
-          sending_mode = MANUAL_SENDING;
-          tx_and_sidetone_key(1);
-          cw_bug_dah_flag = 1;
-          #ifdef FEATURE_PADDLE_ECHO
-            cw_bug_dah_key_down_time = millis();
-          #endif //FEATURE_PADDLE_ECHO
-        }
-      } else {
-        if (cw_bug_dah_flag){
-          sending_mode = MANUAL_SENDING;
-          tx_and_sidetone_key(0);
-          #ifdef FEATURE_PADDLE_ECHO
-            if ((millis() - cw_bug_dah_key_down_time) > (0.5 * (1200.0/configuration.wpm))){
-              if ((millis() - cw_bug_dah_key_down_time) > (2 * (1200.0/configuration.wpm))){
-                paddle_echo_buffer = (paddle_echo_buffer * 10) + 2;
-              } else {
-                paddle_echo_buffer = (paddle_echo_buffer * 10) + 1;
-              }
-              paddle_echo_buffer_decode_time = millis() + (((float)3000.0/(float)configuration.wpm) * ((float)configuration.cw_echo_timing_factor/(float)100));
-            }
-          #endif //FEATURE_PADDLE_ECHO
-          cw_bug_dah_flag = 0;
-        }
-      }
-      #ifdef FEATURE_DEAD_OP_WATCHDOG
-        dah_counter = 0;
-      #endif
-      if ((dit_buffer) && (!cw_bug_dah_flag)) {
-        dit_buffer = 0;
-        sending_mode = MANUAL_SENDING;
-        cw_schedule_manual_element(SENDING_DIT);
-      }
-    }
+    #endif
 
     // ---- Automatic (typed/CLI/memory) CW sending ----
     // Only start the next queued element if nothing manual just claimed the scheduler this tick, and
@@ -9370,7 +9468,7 @@ void command_mode() {
                   command_display_memory(0);
                 #endif                                                           // OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
               #endif                                                             // FEATURE_DISPLAY
-              play_memory(0);
+              start_play_memory(0);
             } else {
               #ifdef FEATURE_DISPLAY
                 if (LCD_COLUMNS > 17) lcd_center_print_timed("Invalid memory #1", 0, default_display_msg_delay);
@@ -9388,7 +9486,7 @@ void command_mode() {
                   command_display_memory(1);
                 #endif                                                           // OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
               #endif                                                             // FEATURE_DISPLAY
-              play_memory(1);
+              start_play_memory(1);
             } else {
               #ifdef FEATURE_DISPLAY
                 if (LCD_COLUMNS > 17) lcd_center_print_timed("Invalid memory #2", 0, default_display_msg_delay);
@@ -9406,7 +9504,7 @@ void command_mode() {
                   command_display_memory(2);
                 #endif                                                           // OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
               #endif                                                             // FEATURE_DISPLAY
-              play_memory(2);
+              start_play_memory(2);
             } else {
               #ifdef FEATURE_DISPLAY
                 if (LCD_COLUMNS > 17) lcd_center_print_timed("Invalid memory #3", 0, default_display_msg_delay);
@@ -9424,7 +9522,7 @@ void command_mode() {
                   command_display_memory(3);
                 #endif                                                           // OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
               #endif                                                             // FEATURE_DISPLAY
-              play_memory(3);
+              start_play_memory(3);
             } else {
               #ifdef FEATURE_DISPLAY
                 if (LCD_COLUMNS > 17) lcd_center_print_timed("Invalid memory #4", 0, default_display_msg_delay);
@@ -9442,7 +9540,7 @@ void command_mode() {
                   command_display_memory(4);
                 #endif                                                           // OPTION_DISPLAY_MEMORY_CONTENTS_COMMAND_MODE
               #endif                                                             // FEATURE_DISPLAY
-              play_memory(4);
+              start_play_memory(4);
             } else {
               #ifdef FEATURE_DISPLAY
                 if (LCD_COLUMNS > 17) lcd_center_print_timed("Invalid memory #5", 0, default_display_msg_delay);
@@ -11393,6 +11491,10 @@ void service_send_buffer(byte no_print)
   static unsigned long timed_command_end_time;
   static byte timed_command_in_progress = 0;
 
+  #ifdef FEATURE_MEMORIES
+    service_play_memory();  // advance any in-progress non-blocking memory playback (Milestone 3)
+  #endif
+
   #if defined(DEBUG_SERVICE_SEND_BUFFER)
 
     byte no_bytes_flag = 0;
@@ -11422,18 +11524,22 @@ void service_send_buffer(byte no_print)
   }
 
 
-  #ifdef FEATURE_MEMORIES
-    play_memory_prempt = 0;
-  #endif
-
-
-
+  // Note: play_memory_prempt is reset inside start_play_memory() when a session begins, not here -
+  // service_send_buffer() (and this reset) now runs on every loop() tick, including while a memory is
+  // actively playing, so unconditionally zeroing it here would stomp a genuine preempt request the
+  // instant after it's set.
 
   if (send_buffer_status == SERIAL_SEND_BUFFER_NORMAL) {
-    // cw_element_buffer_bytes == 0: don't pop the next buffered item (plain char or control byte) until
-    // the previous character's non-blocking elements (Milestone 2) have fully drained. Special-byte
-    // branches (PROSIGN, MEMORY_NUMBER, etc.) enqueue and then wait for this same drain on later calls.
-    if ((send_buffer_bytes) && (pause_sending_buffer == 0) && (cw_element_buffer_bytes == 0)) {
+    // cw_element_buffer_bytes == 0 && !play_memory_is_active(): don't pop the next buffered item (plain
+    // char or control byte) until the previous character's non-blocking elements (Milestone 2) have
+    // fully drained, and don't touch send_buffer_array at all while a memory is playing (Milestone 3) -
+    // its characters are fed directly into cw_element_buffer by service_play_memory(), bypassing this
+    // buffer entirely.
+    #ifdef FEATURE_MEMORIES
+      if ((send_buffer_bytes) && (pause_sending_buffer == 0) && (cw_element_buffer_bytes == 0) && (!play_memory_is_active())) {
+    #else
+      if ((send_buffer_bytes) && (pause_sending_buffer == 0) && (cw_element_buffer_bytes == 0)) {
+    #endif
       #ifdef FEATURE_SLEEP
         last_activity_time = millis();
       #endif //FEATURE_SLEEP
@@ -11488,7 +11594,7 @@ void service_send_buffer(byte no_print)
           if (send_buffer_bytes) {
             if (send_buffer_array[0] < number_of_memories) {
               #ifdef FEATURE_MEMORIES
-                play_memory(send_buffer_array[0]);
+                start_play_memory(send_buffer_array[0]);  // non-blocking; service_play_memory() advances it
               #endif
             }
             remove_from_send_buffer();
@@ -18190,32 +18296,6 @@ void command_program_memory()
 
 //---------------------------------------------------------------------
 
-#ifdef FEATURE_MEMORIES
-byte memory_nonblocking_delay(unsigned long delaytime)
-{
-  // 2012-04-20 was long starttime = millis();
-  unsigned long starttime = millis();
-
-  while ((millis() - starttime) < delaytime) {
-    check_paddles();
-    #ifdef FEATURE_BUTTONS
-      if (((dit_buffer) || (dah_buffer) || (analogbuttonread(0))) && (keyer_machine_mode != BEACON)) {   // exit if the paddle or button0 was hit
-    #else
-      if (((dit_buffer) || (dah_buffer)) && (keyer_machine_mode != BEACON)) {   // exit if the paddle or button0 was hit
-    #endif
-      dit_buffer = 0;
-      dah_buffer = 0;
-      #ifdef FEATURE_BUTTONS
-        while (analogbuttonread(0)) {}
-      #endif
-      return 1;
-    }
-  }
-  return 0;
-}
-
-#endif
-
 //---------------------------------------------------------------------
 void check_button0()
 {
@@ -18339,41 +18419,139 @@ void display_serial_number_character(char snumchar){
 //---------------------------------------------------------------------
 
 #ifdef FEATURE_MEMORIES
-byte play_memory(byte memory_number) {
 
-  unsigned int jump_back_to_y = 9999;
-  byte jump_back_to_memory_number = 255;
-  static byte prosign_flag = 0;
-  static byte prosign_before_flag = 0;
-  byte eeprom_byte_read = 0;
-  byte pause_sending_buffer_backspace = 0;
+byte play_memory_is_active(){
+  return (pm_state != PM_IDLE);
+}
 
-  play_memory_prempt = 0;
+//-------------------------------------------------------------------------------------------------------
 
-  #if defined(OPTION_PROSIGN_SUPPORT)
-    byte eeprom_temp = 0;
-    static char * prosign_temp = 0;
-  #endif
+void pm_finish_iteration(byte check_interrupt){
+
+  // Common "move to the next EEPROM position" step. Mirrors the tail of the original blocking
+  // play_memory()'s for-loop body: the paddle/button0/straight-key interrupt check (only for iterations
+  // that actually processed a character or macro), then the implicit y++ the original for-loop's own
+  // increment provided, then the last_memory_repeat_time touch.
+
+  if (check_interrupt) {
+    byte interrupted;
+    #ifdef FEATURE_STRAIGHT_KEY
+      interrupted = ((dit_buffer) || (dah_buffer) || (button0_buffer) || (digitalRead(pin_straight_key) == STRAIGHT_KEY_ACTIVE_STATE));
+    #else //FEATURE_STRAIGHT_KEY
+      interrupted = ((dit_buffer) || (dah_buffer) || (button0_buffer));
+    #endif //FEATURE_STRAIGHT_KEY
+    if ((keyer_machine_mode != BEACON) && interrupted) {
+      dit_buffer = 0;
+      dah_buffer = 0;
+      button0_buffer = 0;
+      repeat_memory = 255;
+      #ifdef FEATURE_BUTTONS
+        while (analogbuttonread(0)) {}
+      #endif
+      pm_state = PM_IDLE;
+      return;
+    }
+  }
+
+  pm_y++;
+  last_memory_repeat_time = millis();
+  pm_state = PM_PROCESS_BYTE;
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void pm_start_pending_chars(){
+  // Enqueues the first of pm_pending_chars[] (already filled by the caller) and enters the wait state.
+  pm_pending_chars_index = 0;
+  cw_enqueue_char(pm_pending_chars[0], pm_pending_chars_omit_letterspace ? OMIT_LETTERSPACE : KEYER_NORMAL);
+  pm_state = PM_WAIT_CHAR;
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+#if defined(FEATURE_MEMORY_MACROS)
+void pm_send_serial_number_enqueue(byte cut_numbers, int increment_serial_number){
+
+  // Non-blocking counterpart to send_serial_number(..., buffered_sending=0), used only by the \C and \E
+  // memory macros. Same character-substitution and display-echo logic; instead of calling send_char()
+  // directly, the resolved characters are appended to pm_pending_chars[] for the caller to play back
+  // one at a time via PM_WAIT_CHAR (so they don't race with cw_enqueue_char calls made elsewhere).
+
+  String serial_number_string;
+  serial_number_string = String(serial_number, DEC);
+
+  pm_pending_chars_len = 0;
+
+  if (serial_number_string.length() < 3 ) {
+    if (cut_numbers){
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');}
+      if (pm_pending_chars_len < PM_PENDING_CHARS_SIZE) {pm_pending_chars[pm_pending_chars_len++] = 'T';}
+    } else {
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');}
+      if (pm_pending_chars_len < PM_PENDING_CHARS_SIZE) {pm_pending_chars[pm_pending_chars_len++] = '0';}
+    }
+  }
+  if (serial_number_string.length() == 1) {
+    if (cut_numbers){
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');}
+      if (pm_pending_chars_len < PM_PENDING_CHARS_SIZE) {pm_pending_chars[pm_pending_chars_len++] = 'T';}
+    } else {
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('0');}
+      if (pm_pending_chars_len < PM_PENDING_CHARS_SIZE) {pm_pending_chars[pm_pending_chars_len++] = '0';}
+    }
+  }
+  for (unsigned int a = 0; a < serial_number_string.length(); a++)  {
+    if ((serial_number_string[a] == '0') && (cut_numbers)){
+      if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('T');}
+      if (pm_pending_chars_len < PM_PENDING_CHARS_SIZE) {pm_pending_chars[pm_pending_chars_len++] = 'T';}
+    } else {
+      if ((serial_number_string[a] == '9') && (cut_numbers)) {
+        if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character('N');}
+        if (pm_pending_chars_len < PM_PENDING_CHARS_SIZE) {pm_pending_chars[pm_pending_chars_len++] = 'N';}
+      } else {
+        if (keyer_machine_mode != KEYER_COMMAND_MODE){display_serial_number_character(serial_number_string[a]);}
+        if (pm_pending_chars_len < PM_PENDING_CHARS_SIZE) {pm_pending_chars[pm_pending_chars_len++] = serial_number_string[a];}
+      }
+    }
+  }
+
+  serial_number = serial_number + increment_serial_number;
+
+}
+#endif //FEATURE_MEMORY_MACROS
+
+//-------------------------------------------------------------------------------------------------------
+
+void start_play_memory(byte memory_number) {
+
+  // Non-blocking counterpart to the old blocking play_memory(): validates and kicks off a session, then
+  // returns immediately. service_play_memory() (called from service_send_buffer() every loop() tick)
+  // advances it one step at a time until the memory finishes playing.
 
   if (memory_number > (number_of_memories - 1)) {
     boop();
-    return 0;
+    return;
   }
 
-  #ifdef DEBUG_PLAY_MEMORY
-    debug_serial_port->print(F("play_memory: called with memory_number:"));
-    debug_serial_port->println(memory_number);
-  #endif
+  if (pm_state != PM_IDLE) {
+    // A memory is already playing. In the original blocking model this could never happen (loop()
+    // couldn't run check_buttons()/service_send_buffer() again until the prior play_memory() call fully
+    // returned) - ignore the new request rather than stomp the in-progress session's state.
+    boop();
+    return;
+  }
 
-  #ifdef FEATURE_MEMORY_MACROS
-    byte eeprom_byte_read2;
-    int z;
-    byte input_error;
-    byte delay_result = 0;
-    int int_from_macro;
-  #endif //FEATURE_MEMORY_MACROS
+  play_memory_prempt = 0;
 
-  button0_buffer = 0;
+  pm_memory_number = memory_number;
+  pm_y = memory_start(memory_number);
+  pm_jump_back_to_y = 9999;
+  pm_jump_back_to_memory_number = 255;
+  pm_pause_sending_buffer_backspace = 0;
+  pm_pending_chars_len = 0;
+  pm_pending_chars_index = 0;
+  pm_delay_is_timed_tx = 0;
 
   if (keyer_machine_mode == KEYER_NORMAL) {
     #if defined(FEATURE_SERIAL)
@@ -18384,188 +18562,260 @@ byte play_memory(byte memory_number) {
       #else
         primary_serial_port->println();
       #endif
-
       #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
         secondary_serial_port->println();
       #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
     #endif
   }
 
-  for (int y = (memory_start(memory_number)); (y < (memory_end(memory_number)+1)); y++) {
+  pm_state = PM_PROCESS_BYTE;
 
-    service_tx_inhibit_and_pause();
+}
 
-    if (keyer_machine_mode == KEYER_NORMAL) {
-      #ifdef FEATURE_POTENTIOMETER
-        check_potentiometer();
-      #endif
+//-------------------------------------------------------------------------------------------------------
 
-      #ifdef FEATURE_ROTARY_ENCODER
-        check_rotary_encoder();
-      #endif //FEATURE_ROTARY_ENCODER
+void service_play_memory(){
 
-      #ifdef FEATURE_PS2_KEYBOARD
-        check_ps2_keyboard();
-      #endif
+  if (pm_state == PM_IDLE) {return;}
 
-      check_button0();
+  // --- per-"iteration" servicing that used to run every for-loop pass, regardless of branch ---
+  service_tx_inhibit_and_pause();
 
-      #ifdef FEATURE_DISPLAY
-        service_display();
-      #endif
-    }
-
-    #if defined(FEATURE_SERIAL)
-      check_serial();
+  if (keyer_machine_mode == KEYER_NORMAL) {
+    #ifdef FEATURE_POTENTIOMETER
+      check_potentiometer();
     #endif
+    #ifdef FEATURE_ROTARY_ENCODER
+      check_rotary_encoder();
+    #endif //FEATURE_ROTARY_ENCODER
+    #ifdef FEATURE_PS2_KEYBOARD
+      check_ps2_keyboard();
+    #endif
+    check_button0();
+    #ifdef FEATURE_DISPLAY
+      service_display();
+    #endif
+  }
 
-    if ((play_memory_prempt == 0) && (pause_sending_buffer == 0)) {
+  #if defined(FEATURE_SERIAL)
+    check_serial();
+  #endif
 
-      pause_sending_buffer_backspace = 0;
+  // --- resolve a pending wait first ---
 
-      eeprom_byte_read = EEPROM.read(y);
-      if (eeprom_byte_read < 255) {
+  if (pm_state == PM_WAIT_CHAR) {
+    if ((cw_element_buffer_bytes == 0) && (cw_scheduler_state == CW_IDLE)) {
+      pm_pending_chars_index++;
+      if (pm_pending_chars_index < pm_pending_chars_len) {
+        cw_enqueue_char(pm_pending_chars[pm_pending_chars_index], pm_pending_chars_omit_letterspace ? OMIT_LETTERSPACE : KEYER_NORMAL);
+      } else {
+        pm_finish_iteration(1);
+      }
+    }
+    return;
+  }
 
-        #ifdef DEBUG_PLAY_MEMORY
-          debug_serial_port->println(F("\n\nplay_memory:\r"));
-          debug_serial_port->print(F("    Memory number:"));
-          debug_serial_port->println(memory_number);
-          debug_serial_port->print(F("    EEPROM location:"));
-          debug_serial_port->println(y);
-          debug_serial_port->print(F("    eeprom_byte_read:"));
-          debug_serial_port->println(eeprom_byte_read);
+  if (pm_state == PM_WAIT_DELAY) {
+    byte interrupted;
+    #ifdef FEATURE_BUTTONS
+      interrupted = ((dit_buffer) || (dah_buffer) || (analogbuttonread(0)));
+    #else
+      interrupted = ((dit_buffer) || (dah_buffer));
+    #endif
+    if ((keyer_machine_mode != BEACON) && interrupted) {
+      dit_buffer = 0;
+      dah_buffer = 0;
+      #ifdef FEATURE_BUTTONS
+        while (analogbuttonread(0)) {}
+      #endif
+      if (pm_delay_is_timed_tx) {tx_and_sidetone_key(0);}
+      pm_state = PM_IDLE;
+      return;
+    }
+    if (millis() >= pm_delay_until_ms) {
+      if (pm_delay_is_timed_tx) {tx_and_sidetone_key(0);}
+      pm_finish_iteration(1);
+    }
+    return;
+  }
+
+  // pm_state == PM_PROCESS_BYTE: process exactly one EEPROM position
+
+  if ((play_memory_prempt == 0) && (pause_sending_buffer == 0)) {
+
+    pm_pause_sending_buffer_backspace = 0;
+
+    byte eeprom_byte_read = EEPROM.read(pm_y);
+
+    if (eeprom_byte_read < 255) {
+
+      if (eeprom_byte_read != 92) {          // do we have a backslash?
+
+        #if defined(OPTION_PROSIGN_SUPPORT)
+          byte eeprom_temp = eeprom_byte_read;
         #endif
 
-        if (eeprom_byte_read != 92) {          // do we have a backslash?
-          if (keyer_machine_mode == KEYER_NORMAL) {
+        if (keyer_machine_mode == KEYER_NORMAL) {
 
-            #if defined(OPTION_PROSIGN_SUPPORT)
-              eeprom_temp = eeprom_byte_read;
-              if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
-                prosign_temp = convert_prosign(eeprom_temp);
-              }
-            #endif //OPTION_PROSIGN_SUPPORT
+          #if defined(OPTION_PROSIGN_SUPPORT)
+            if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+              pm_prosign_temp = convert_prosign(eeprom_temp);
+            }
+          #endif //OPTION_PROSIGN_SUPPORT
 
-            #if defined(FEATURE_SERIAL)
-              #ifndef FEATURE_WINKEY_EMULATION
-                if (!cw_send_echo_inhibit) {
-                  #if defined(OPTION_PROSIGN_SUPPORT)
-                    if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
-                      primary_serial_port->print(prosign_temp[0]);
-                      primary_serial_port->print(prosign_temp[1]);
-                      if(strlen(prosign_temp) == 3) primary_serial_port->print(prosign_temp[2]);
-                       #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                        secondary_serial_port->print(prosign_temp[0]);
-                        secondary_serial_port->print(prosign_temp[1]);
-                        if(strlen(prosign_temp) == 3) secondary_serial_port->print(prosign_temp[2]);
-                      #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT                      
-                    } else {
-                      primary_serial_port->write(eeprom_byte_read);
-                      #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                        secondary_serial_port->write(eeprom_byte_read);
-                      #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                    }
-                  #else
+          #if defined(FEATURE_SERIAL)
+            #ifndef FEATURE_WINKEY_EMULATION
+              if (!cw_send_echo_inhibit) {
+                #if defined(OPTION_PROSIGN_SUPPORT)
+                  if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+                    primary_serial_port->print(pm_prosign_temp[0]);
+                    primary_serial_port->print(pm_prosign_temp[1]);
+                    if(strlen(pm_prosign_temp) == 3) primary_serial_port->print(pm_prosign_temp[2]);
+                     #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                      secondary_serial_port->print(pm_prosign_temp[0]);
+                      secondary_serial_port->print(pm_prosign_temp[1]);
+                      if(strlen(pm_prosign_temp) == 3) secondary_serial_port->print(pm_prosign_temp[2]);
+                    #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                  } else {
                     primary_serial_port->write(eeprom_byte_read);
                     #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                       secondary_serial_port->write(eeprom_byte_read);
                     #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                  #endif // OPTION_PROSIGN_SUPPORT
-                }
-              #else  //FEATURE_WINKEY_EMULATION
-                if (((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_paddle_echo_activated) && (winkey_host_open)) || (primary_serial_port_mode != SERIAL_WINKEY_EMULATION)) {
-
-                  #if defined(OPTION_PROSIGN_SUPPORT)
-                    if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
-                      winkey_port_write(prosign_temp[0],0);
-                      winkey_port_write(prosign_temp[1],0);
-                    } else {
-                      winkey_port_write(eeprom_byte_read,0);
-                    }
-                  #else
-                    winkey_port_write(eeprom_byte_read,0);
-                  #endif // OPTION_PROSIGN_SUPPORT
-
-		}
-                #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                  #if defined(OPTION_PROSIGN_SUPPORT)
-                    if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
-                      secondary_serial_port->print(prosign_temp[0]);
-                      secondary_serial_port->print(prosign_temp[1]);
-                    } else {
-                      secondary_serial_port->write(eeprom_byte_read);
-                    }
-                  #else
+                  }
+                #else
+                  primary_serial_port->write(eeprom_byte_read);
+                  #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                     secondary_serial_port->write(eeprom_byte_read);
-                  #endif // OPTION_PROSIGN_SUPPORT
-                #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                  #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                #endif // OPTION_PROSIGN_SUPPORT
+              }
+            #else  //FEATURE_WINKEY_EMULATION
+              if (((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_paddle_echo_activated) && (winkey_host_open)) || (primary_serial_port_mode != SERIAL_WINKEY_EMULATION)) {
 
-              #endif //FEATURE_WINKEY_EMULATION
-            #endif //FEATURE_SERIAL
-
-            #ifdef FEATURE_DISPLAY
-              if (lcd_send_echo) {
                 #if defined(OPTION_PROSIGN_SUPPORT)
-                    if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
-                      display_scroll_print_char(prosign_temp[0]);
-                      display_scroll_print_char(prosign_temp[1]);
+                  if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+                    winkey_port_write(pm_prosign_temp[0],0);
+                    winkey_port_write(pm_prosign_temp[1],0);
+                  } else {
+                    winkey_port_write(eeprom_byte_read,0);
+                  }
+                #else
+                  winkey_port_write(eeprom_byte_read,0);
+                #endif // OPTION_PROSIGN_SUPPORT
+
+              }
+              #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                #if defined(OPTION_PROSIGN_SUPPORT)
+                  if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+                    secondary_serial_port->print(pm_prosign_temp[0]);
+                    secondary_serial_port->print(pm_prosign_temp[1]);
+                  } else {
+                    secondary_serial_port->write(eeprom_byte_read);
+                  }
+                #else
+                  secondary_serial_port->write(eeprom_byte_read);
+                #endif // OPTION_PROSIGN_SUPPORT
+              #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+
+            #endif //FEATURE_WINKEY_EMULATION
+          #endif //FEATURE_SERIAL
+
+          #ifdef FEATURE_DISPLAY
+            if (lcd_send_echo) {
+              #if defined(OPTION_PROSIGN_SUPPORT)
+                  if ((eeprom_temp > PROSIGN_START) && (eeprom_temp < PROSIGN_END)){
+                    display_scroll_print_char(pm_prosign_temp[0]);
+                    display_scroll_print_char(pm_prosign_temp[1]);
+                  } else {
+                    if (pm_prosign_flag){
+                      display_scroll_print_char(eeprom_byte_read);
+                      display_scroll_print_char(EEPROM.read(pm_y+1));
+                      pm_prosign_before_flag = 1;
                     } else {
-                      if (prosign_flag){
-                        display_scroll_print_char(eeprom_byte_read);
-                        display_scroll_print_char(EEPROM.read(y+1));
-                        prosign_before_flag = 1;
+                      if (pm_prosign_before_flag){
+                        pm_prosign_before_flag = 0;
                       } else {
-                        if (prosign_before_flag){
-                          prosign_before_flag = 0;
-                        } else {
-                          display_scroll_print_char(eeprom_byte_read);
-                        }
+                        display_scroll_print_char(eeprom_byte_read);
                       }
                     }
-                #else
-                  if (prosign_flag){
-                    display_scroll_print_char(eeprom_byte_read);
-                    display_scroll_print_char(EEPROM.read(y+1));
-                    prosign_before_flag = 1;
-                  } else {
-                    if (prosign_before_flag){
-                      prosign_before_flag = 0;
-                    } else {
-                      display_scroll_print_char(eeprom_byte_read);
-                    }
                   }
-                #endif
-                service_display();
-              }
-            #endif    // FEATURE_DISPLAY
+              #else
+                if (pm_prosign_flag){
+                  display_scroll_print_char(eeprom_byte_read);
+                  display_scroll_print_char(EEPROM.read(pm_y+1));
+                  pm_prosign_before_flag = 1;
+                } else {
+                  if (pm_prosign_before_flag){
+                    pm_prosign_before_flag = 0;
+                  } else {
+                    display_scroll_print_char(eeprom_byte_read);
+                  }
+                }
+              #endif
+              service_display();
+            }
+          #endif    // FEATURE_DISPLAY
 
-          }
-          if (prosign_flag) {
-            send_char(eeprom_byte_read,OMIT_LETTERSPACE);
-            prosign_flag = 0;
-          } else {
-            send_char(eeprom_byte_read,KEYER_NORMAL);         // no - play the character
-          }
-        } else {                               // yes - we have a backslash command ("macro")
-          y++;                                 // get the next memory byte
-          #ifdef FEATURE_MEMORY_MACROS
-          if (y < (memory_end(memory_number)+1)) {
-            eeprom_byte_read = EEPROM.read(y);            // memory macros (backslash commands)
-            switch (eeprom_byte_read) {
-              case 48:                         // 0 - jump to memory 10
-                eeprom_byte_read = 58;
-              case 49:                         // 1 - jump to memory 1
-              case 50:                         // 2 - jump to memory 2
-              case 51:                         // 3 - jump to memory 3
-              case 52:                         // 4 - jump to memory 4
-              case 53:                         // 5 - jump to memory 5
-              case 54:                         // 6 - jump to memory 6
-              case 55:                         // 7 - jump to memory 7
-              case 56:                         // 8 - jump to memory 8
-              case 57:                         // 9 - jump to memory 9
+        }
+
+        pm_pending_chars_len = 1;
+        pm_pending_chars[0] = eeprom_byte_read;
+        if (pm_prosign_flag) {
+          pm_pending_chars_omit_letterspace = 1;
+          pm_prosign_flag = 0;
+        } else {
+          pm_pending_chars_omit_letterspace = 0;
+        }
+        pm_start_pending_chars();
+        return;
+
+      } else {                               // yes - we have a backslash command ("macro")
+
+        pm_y++;                                 // get the next memory byte
+
+        byte macro_yielded = 0;
+
+        #ifdef FEATURE_MEMORY_MACROS
+        if (pm_y < (memory_end(pm_memory_number)+1)) {
+          eeprom_byte_read = EEPROM.read(pm_y);            // memory macros (backslash commands)
+
+          byte eeprom_byte_read2;
+          int z;
+          byte input_error;
+          int int_from_macro;
+
+          switch (eeprom_byte_read) {
+            case 48:                         // 0 - jump to memory 10
+              eeprom_byte_read = 58;
+            case 49:                         // 1 - jump to memory 1
+            case 50:                         // 2 - jump to memory 2
+            case 51:                         // 3 - jump to memory 3
+            case 52:                         // 4 - jump to memory 4
+            case 53:                         // 5 - jump to memory 5
+            case 54:                         // 6 - jump to memory 6
+            case 55:                         // 7 - jump to memory 7
+            case 56:                         // 8 - jump to memory 8
+            case 57:                         // 9 - jump to memory 9
+              if (number_of_memories > (eeprom_byte_read-49)) {
+                pm_memory_number = (eeprom_byte_read-49);
+                pm_y = ((memory_start(pm_memory_number)) - 1);
+                if (keyer_machine_mode == KEYER_NORMAL) {
+                  primary_serial_port->println();
+                  #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                    secondary_serial_port->println();
+                  #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                }
+              }
+              break;
+            case 'I': // insert memory #
+              pm_y++;
+              if (pm_y < (memory_end(pm_memory_number)+1)) {  // get the next byte
+               eeprom_byte_read = EEPROM.read(pm_y);
                 if (number_of_memories > (eeprom_byte_read-49)) {
-                  memory_number = (eeprom_byte_read-49);
-                  y = ((memory_start(memory_number)) - 1);
+                  pm_jump_back_to_y = pm_y;
+                  pm_jump_back_to_memory_number = pm_memory_number;
+                  pm_memory_number = (eeprom_byte_read-49);
+                  pm_y = ((memory_start(pm_memory_number)) - 1);
                   if (keyer_machine_mode == KEYER_NORMAL) {
                     primary_serial_port->println();
                     #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
@@ -18573,383 +18823,323 @@ byte play_memory(byte memory_number) {
                     #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
                   }
                 }
-                break;
-              case 'I': // insert memory #
-                y++;
-                if (y < (memory_end(memory_number)+1)) {  // get the next byte
-                 eeprom_byte_read = EEPROM.read(y);
-                  if (number_of_memories > (eeprom_byte_read-49)) {
-                    jump_back_to_y = y;
-                    jump_back_to_memory_number = memory_number;
-                    memory_number = (eeprom_byte_read-49);
-                    y = ((memory_start(memory_number)) - 1);
-                    if (keyer_machine_mode == KEYER_NORMAL) {
-                      primary_serial_port->println();
-                      #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                        secondary_serial_port->println();
-                      #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                    }
-                  }
-                }
-                break;
-
-              case 'S': // insert space
-                send_char(' ',KEYER_NORMAL);
-                primary_serial_port->print(' ');
-                #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                  secondary_serial_port->print(' ');
-                #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-                #ifdef FEATURE_DISPLAY
-                if (lcd_send_echo) {
-                  display_scroll_print_char(' ');
-                }
-                #endif //FEATURE_DISPLAY
-                break;
-
-              case 'X':                         // X - switch transmitter
-                y++;
-                if (y < (memory_end(memory_number)+1)) {
-                  eeprom_byte_read2 = EEPROM.read(y);
-                  if ((eeprom_byte_read2 > 48) && (eeprom_byte_read2 < 55)) {
-                     switch (eeprom_byte_read2) {
-                       case 49: switch_to_tx_silent(1); break;
-                       case 50: if ((ptt_tx_2) || (tx_key_line_2)) {switch_to_tx_silent(2); } break;
-                       case 51: if ((ptt_tx_3) || (tx_key_line_3)) {switch_to_tx_silent(3); } break;
-                       case 52: if ((ptt_tx_4) || (tx_key_line_4)) {switch_to_tx_silent(4); } break;
-                       case 53: if ((ptt_tx_5) || (tx_key_line_5)) {switch_to_tx_silent(5); } break;
-                       case 54: if ((ptt_tx_6) || (tx_key_line_6)) {switch_to_tx_silent(6); } break;
-                     }
-                  }
-
-                }
-                break;  // case X
-
-              case 'C':                       // C - play serial number with cut numbers T and N, then increment
-                  send_serial_number(1,1,0);
-                break;
-
-              case 'D':                      // D - delay for ### seconds
-                int_from_macro = 0;
-                z = 100;
-                input_error = 0;
-                for (int x = 1; x < 4; x ++) {
-                  y++;
-                  if (y < (memory_end(memory_number)+1)) {
-                    eeprom_byte_read2 = EEPROM.read(y);
-                    if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
-                      int_from_macro = int_from_macro + ((eeprom_byte_read2 - 48) * z);
-                      z = z / 10;
-                    } else {
-                      x = 4;           // error - exit
-                      input_error = 1;
-                      y--;             // go back one so we can at least play the errant character
-                    }
-                  } else {
-                    x = 4;
-                    input_error = 1;
-                  }
-                }
-                if (input_error != 1) {   // do the delay
-                  delay_result = memory_nonblocking_delay(int_from_macro*1000);
-                }
-                if (delay_result) {   // if a paddle or button0 was hit during the delay, exit
-                  return 0;
-                }
-                break;                 // case D
-
-              case 'E':                       // E - play serial number, then increment
-                  send_serial_number(0,1,0);
-                break;
-
-              case 'F':                       // F - change sidetone frequency
-                int_from_macro = 0;
-                z = 1000;
-                input_error = 0;
-                for (int x = 1; x < 5; x ++) {
-                  y++;
-                  if (y < (memory_end(memory_number)+1)) {
-                    eeprom_byte_read2 = EEPROM.read(y);
-                    if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
-                      int_from_macro = int_from_macro + ((eeprom_byte_read2 - 48) * z);
-                      z = z / 10;
-                    } else {
-                      x = 5;           // error - exit
-                      input_error = 1;
-                      y--;             // go back one so we can at least play the errant character
-                    }
-                  }  else {
-                    x = 4;
-                    input_error = 1;
-                  }
-                }
-                if ((input_error != 1) && (int_from_macro > sidetone_hz_limit_low) && (int_from_macro < sidetone_hz_limit_high)) {
-                  configuration.hz_sidetone = int_from_macro;
-                  #ifdef FEATURE_DISPLAY
-                    if (LCD_COLUMNS < 9) lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
-                    else lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
-                  #endif                                                    // FEATURE_DISPLAY
-                }
-                break;
-	        if ((input_error != 1) && (int_from_macro > sidetone_hz_limit_low) && (int_from_macro < sidetone_hz_limit_high)) {
-                  configuration.hz_sidetone = int_from_macro;
-                }
-                break;
-
-              case 'H':                       // H - Switch to Hell
-                char_send_mode = HELL;
-                break;
-
-              case 'L':                       // L - Switch to CW
-                char_send_mode = CW;
-                break;
-
-              case 'N':                       // N - decrement serial number (do not play)
-                serial_number--;
-                break;
-
-              case '+':                       // + - Prosign
-                prosign_flag = 1;
-                break;
-
-              case 'Q':                       // Q - QRSS mode and set dit length to ##
-                int_from_macro = 0;
-                z = 10;
-                input_error = 0;
-                for (int x = 1; x < 3; x ++) {
-                  y++;
-                  if (y < (memory_end(memory_number)+1)) {
-                    eeprom_byte_read2 = EEPROM.read(y);
-                    if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
-                      int_from_macro = int_from_macro + ((eeprom_byte_read2 - 48) * z);
-                      z = z / 10;
-                    } else {
-                      x = 4;           // error - exit
-                      input_error = 1;
-                      y--;             // go back one so we can at least play the errant character
-                    }
-                  } else {
-                    x = 4;
-                    input_error = 1;
-                  }
-                }
-                if (input_error == 0) {
-                  speed_mode = SPEED_QRSS;
-                  qrss_dit_length =  int_from_macro;
-                  //calculate_element_length();
-                }
-              break;  //case Q
-
-              case 'R':                       // R - regular speed mode
-                speed_mode = SPEED_NORMAL;
-                //calculate_element_length();
+              }
               break;
 
-              case 'T':                      // T - transmit for ### seconds
-                int_from_macro = 0;
-                z = 100;
-                input_error = 0;
-                for (int x = 1; x < 4; x ++) {
-                  y++;
-                  if (y < (memory_end(memory_number)+1)) {
-                    eeprom_byte_read2 = EEPROM.read(y);
-                    if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
-                      int_from_macro = int_from_macro + ((eeprom_byte_read2 - 48) * z);
-                      z = z / 10;
-                    } else {
-                      x = 4;           // error - exit
-                      input_error = 1;
-                      y--;             // go back one so we can at least play the errant character
-                    }
+            case 'S': // insert space
+              primary_serial_port->print(' ');
+              #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+                secondary_serial_port->print(' ');
+              #endif //FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
+              #ifdef FEATURE_DISPLAY
+              if (lcd_send_echo) {
+                display_scroll_print_char(' ');
+              }
+              #endif //FEATURE_DISPLAY
+              pm_pending_chars_len = 1;
+              pm_pending_chars[0] = ' ';
+              pm_pending_chars_omit_letterspace = 0;
+              pm_start_pending_chars();
+              macro_yielded = 1;
+              break;
+
+            case 'X':                         // X - switch transmitter
+              pm_y++;
+              if (pm_y < (memory_end(pm_memory_number)+1)) {
+                eeprom_byte_read2 = EEPROM.read(pm_y);
+                if ((eeprom_byte_read2 > 48) && (eeprom_byte_read2 < 55)) {
+                   switch (eeprom_byte_read2) {
+                     case 49: switch_to_tx_silent(1); break;
+                     case 50: if ((ptt_tx_2) || (tx_key_line_2)) {switch_to_tx_silent(2); } break;
+                     case 51: if ((ptt_tx_3) || (tx_key_line_3)) {switch_to_tx_silent(3); } break;
+                     case 52: if ((ptt_tx_4) || (tx_key_line_4)) {switch_to_tx_silent(4); } break;
+                     case 53: if ((ptt_tx_5) || (tx_key_line_5)) {switch_to_tx_silent(5); } break;
+                     case 54: if ((ptt_tx_6) || (tx_key_line_6)) {switch_to_tx_silent(6); } break;
+                   }
+                }
+              }
+              break;  // case X
+
+            case 'C':                       // C - play serial number with cut numbers T and N, then increment
+              pm_send_serial_number_enqueue(1,1);
+              if (pm_pending_chars_len > 0) {
+                pm_pending_chars_omit_letterspace = 0;
+                pm_start_pending_chars();
+                macro_yielded = 1;
+              }
+              break;
+
+            case 'D':                      // D - delay for ### seconds
+              int_from_macro = 0;
+              z = 100;
+              input_error = 0;
+              for (int x = 1; x < 4; x ++) {
+                pm_y++;
+                if (pm_y < (memory_end(pm_memory_number)+1)) {
+                  eeprom_byte_read2 = EEPROM.read(pm_y);
+                  if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
+                    int_from_macro = int_from_macro + ((eeprom_byte_read2 - 48) * z);
+                    z = z / 10;
                   } else {
-                    x = 4;
+                    x = 4;           // error - exit
                     input_error = 1;
+                    pm_y--;             // go back one so we can at least play the errant character
                   }
+                } else {
+                  x = 4;
+                  input_error = 1;
                 }
-                sending_mode = AUTOMATIC_SENDING;
-                if (input_error != 1) {   // go ahead and transmit
-                  tx_and_sidetone_key(1);
-                  delay_result = memory_nonblocking_delay(int_from_macro*1000);
-                  tx_and_sidetone_key(0);
-                }
-                if (delay_result) {   // if a paddle or button0 was hit during the delay, exit
-                  return 0;
-                }
-                break;  // case T
+              }
+              if (input_error != 1) {   // do the delay
+                pm_delay_until_ms = millis() + ((unsigned long)int_from_macro*1000UL);
+                pm_delay_is_timed_tx = 0;
+                pm_state = PM_WAIT_DELAY;
+                macro_yielded = 1;
+              }
+              break;                 // case D
 
-              case 'U':                      // U - turn on PTT
-                manual_ptt_invoke = 1;
-                ptt_key();
-                break;
+            case 'E':                       // E - play serial number, then increment
+              pm_send_serial_number_enqueue(0,1);
+              if (pm_pending_chars_len > 0) {
+                pm_pending_chars_omit_letterspace = 0;
+                pm_start_pending_chars();
+                macro_yielded = 1;
+              }
+              break;
 
-              case 'V':                      // V - turn off PTT
-                manual_ptt_invoke = 0;
-                ptt_unkey();
-                break;
-
-              case 'W':                      // W - change speed to ### WPM
-                int_from_macro = 0;
-                z = 100;
-                input_error = 0;
-                for (int x = 1; x < 4; x ++) {
-                  y++;
-                  if (y < (memory_end(memory_number)+1)) {
-                    eeprom_byte_read2 = EEPROM.read(y);
-                    if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
-                      int_from_macro = int_from_macro + ((eeprom_byte_read2 - 48) * z);
-                      z = z / 10;
-                    } else {
-                      x = 4;           // error - exit
-                      input_error = 1;
-                      y--;             // go back one so we can at least play the errant character
-                    }
-                  }  else {
-                    x = 4;
+            case 'F':                       // F - change sidetone frequency
+              int_from_macro = 0;
+              z = 1000;
+              input_error = 0;
+              for (int x = 1; x < 5; x ++) {
+                pm_y++;
+                if (pm_y < (memory_end(pm_memory_number)+1)) {
+                  eeprom_byte_read2 = EEPROM.read(pm_y);
+                  if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
+                    int_from_macro = int_from_macro + ((eeprom_byte_read2 - 48) * z);
+                    z = z / 10;
+                  } else {
+                    x = 5;           // error - exit
                     input_error = 1;
+                    pm_y--;             // go back one so we can at least play the errant character
                   }
+                }  else {
+                  x = 4;
+                  input_error = 1;
                 }
-                if (input_error != 1) {
-                  speed_mode = SPEED_NORMAL;
-                  speed_set(int_from_macro);
+              }
+              if ((input_error != 1) && (int_from_macro > sidetone_hz_limit_low) && (int_from_macro < sidetone_hz_limit_high)) {
+                configuration.hz_sidetone = int_from_macro;
+                #ifdef FEATURE_DISPLAY
+                  if (LCD_COLUMNS < 9) lcd_center_print_timed(String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+                  else lcd_center_print_timed("Sidetone " + String(configuration.hz_sidetone) + " Hz", 0, default_display_msg_delay);
+                #endif                                                    // FEATURE_DISPLAY
+              }
+              break;
+
+            case 'H':                       // H - Switch to Hell
+              char_send_mode = HELL;
+              break;
+
+            case 'L':                       // L - Switch to CW
+              char_send_mode = CW;
+              break;
+
+            case 'N':                       // N - decrement serial number (do not play)
+              serial_number--;
+              break;
+
+            case '+':                       // + - Prosign
+              pm_prosign_flag = 1;
+              break;
+
+            case 'Q':                       // Q - QRSS mode and set dit length to ##
+              int_from_macro = 0;
+              z = 10;
+              input_error = 0;
+              for (int x = 1; x < 3; x ++) {
+                pm_y++;
+                if (pm_y < (memory_end(pm_memory_number)+1)) {
+                  eeprom_byte_read2 = EEPROM.read(pm_y);
+                  if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
+                    int_from_macro = int_from_macro + ((eeprom_byte_read2 - 48) * z);
+                    z = z / 10;
+                  } else {
+                    x = 4;           // error - exit
+                    input_error = 1;
+                    pm_y--;             // go back one so we can at least play the errant character
+                  }
+                } else {
+                  x = 4;
+                  input_error = 1;
                 }
-                break;  // case W
+              }
+              if (input_error == 0) {
+                speed_mode = SPEED_QRSS;
+                qrss_dit_length =  int_from_macro;
+              }
+            break;  //case Q
 
-                case 'Y':                // Y - Relative WPM change (positive)
-                  y++;
-                  if ((y < (memory_end(memory_number)+1)) && (speed_mode == SPEED_NORMAL)) {
-                    eeprom_byte_read2 = EEPROM.read(y);
-                    if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
-                      speed_set(configuration.wpm + eeprom_byte_read2 - 48);
-                    } else {
-                      y--;             // go back one so we can at least play the errant character
-                    }
+            case 'R':                       // R - regular speed mode
+              speed_mode = SPEED_NORMAL;
+            break;
+
+            case 'T':                      // T - transmit for ### seconds
+              int_from_macro = 0;
+              z = 100;
+              input_error = 0;
+              for (int x = 1; x < 4; x ++) {
+                pm_y++;
+                if (pm_y < (memory_end(pm_memory_number)+1)) {
+                  eeprom_byte_read2 = EEPROM.read(pm_y);
+                  if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
+                    int_from_macro = int_from_macro + ((eeprom_byte_read2 - 48) * z);
+                    z = z / 10;
                   } else {
+                    x = 4;           // error - exit
+                    input_error = 1;
+                    pm_y--;             // go back one so we can at least play the errant character
                   }
-                  break; // case Y
+                } else {
+                  x = 4;
+                  input_error = 1;
+                }
+              }
+              sending_mode = AUTOMATIC_SENDING;
+              if (input_error != 1) {   // go ahead and transmit
+                tx_and_sidetone_key(1);
+                pm_delay_until_ms = millis() + ((unsigned long)int_from_macro*1000UL);
+                pm_delay_is_timed_tx = 1;
+                pm_state = PM_WAIT_DELAY;
+                macro_yielded = 1;
+              }
+              break;  // case T
 
-                case 'Z':                // Z - Relative WPM change (positive)
-                  y++;
-                  if ((y < (memory_end(memory_number)+1)) && (speed_mode == SPEED_NORMAL)) {
-                    eeprom_byte_read2 = EEPROM.read(y);
-                    if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
-                      speed_set(configuration.wpm - (eeprom_byte_read2 - 48));
-                    } else {
-                      y--;             // go back one so we can at least play the errant character
-                    }
+            case 'U':                      // U - turn on PTT
+              manual_ptt_invoke = 1;
+              ptt_key();
+              break;
+
+            case 'V':                      // V - turn off PTT
+              manual_ptt_invoke = 0;
+              ptt_unkey();
+              break;
+
+            case 'W':                      // W - change speed to ### WPM
+              int_from_macro = 0;
+              z = 100;
+              input_error = 0;
+              for (int x = 1; x < 4; x ++) {
+                pm_y++;
+                if (pm_y < (memory_end(pm_memory_number)+1)) {
+                  eeprom_byte_read2 = EEPROM.read(pm_y);
+                  if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
+                    int_from_macro = int_from_macro + ((eeprom_byte_read2 - 48) * z);
+                    z = z / 10;
                   } else {
+                    x = 4;           // error - exit
+                    input_error = 1;
+                    pm_y--;             // go back one so we can at least play the errant character
                   }
-                  break; // case Z
+                }  else {
+                  x = 4;
+                  input_error = 1;
+                }
+              }
+              if (input_error != 1) {
+                speed_mode = SPEED_NORMAL;
+                speed_set(int_from_macro);
+              }
+              break;  // case W
 
-            }
+            case 'Y':                // Y - Relative WPM change (positive)
+              pm_y++;
+              if ((pm_y < (memory_end(pm_memory_number)+1)) && (speed_mode == SPEED_NORMAL)) {
+                eeprom_byte_read2 = EEPROM.read(pm_y);
+                if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
+                  speed_set(configuration.wpm + eeprom_byte_read2 - 48);
+                } else {
+                  pm_y--;             // go back one so we can at least play the errant character
+                }
+              }
+              break; // case Y
+
+            case 'Z':                // Z - Relative WPM change (negative)
+              pm_y++;
+              if ((pm_y < (memory_end(pm_memory_number)+1)) && (speed_mode == SPEED_NORMAL)) {
+                eeprom_byte_read2 = EEPROM.read(pm_y);
+                if ((eeprom_byte_read2 > 47) && (eeprom_byte_read2 < 58)) {    // ascii 48-57 = "0" - "9")
+                  speed_set(configuration.wpm - (eeprom_byte_read2 - 48));
+                } else {
+                  pm_y--;             // go back one so we can at least play the errant character
+                }
+              }
+              break; // case Z
 
           }
-          #endif //FEATURE_MEMORY_MACROS
+
         }
-        if (keyer_machine_mode != BEACON) {
-          #ifdef FEATURE_STRAIGHT_KEY
-            if ((dit_buffer) || (dah_buffer) || (button0_buffer) || (digitalRead(pin_straight_key) == STRAIGHT_KEY_ACTIVE_STATE)) {   // exit if the paddle or button0 was hit
-              dit_buffer = 0;
-              dah_buffer = 0;
-              button0_buffer = 0;
-              repeat_memory = 255;
-              #ifdef FEATURE_BUTTONS
-                while (analogbuttonread(0)) {}
-              #endif
-              return 0;
-            }
-          #else //FEATURE_STRAIGHT_KEY
-            if ((dit_buffer) || (dah_buffer) || (button0_buffer)) {   // exit if the paddle or button0 was hit
-              dit_buffer = 0;
-              dah_buffer = 0;
-              button0_buffer = 0;
-              repeat_memory = 255;
-              #ifdef FEATURE_BUTTONS
-                while (analogbuttonread(0)) {}
-              #endif
-              return 0;
-            }
-          #endif //FEATURE_STRAIGHT_KEY
+        #endif //FEATURE_MEMORY_MACROS
+
+        if (!macro_yielded) {
+          pm_finish_iteration(1);
         }
+        return;
 
-      } else {
-        if (y == (memory_start(memory_number))) {      // memory is totally empty - do a boop
-          repeat_memory = 255;
-          #ifdef FEATURE_DISPLAY
-            if (LCD_COLUMNS < 9){
-              lcd_center_print_timed("MemEmpty", 0, default_display_msg_delay);
-            } else {
-              lcd_center_print_timed("Memory empty", 0, default_display_msg_delay);
-            }
-          #else
-            boop();
-          #endif
-        }
-
-        // if we had an inserted memory, jump back to the original one
-        if (/*(y== (memory_end(memory_number)+1)) &&*/ (jump_back_to_y < 9999) && (jump_back_to_memory_number < 255)) {
-          #ifdef DEBUG_PLAY_MEMORY
-            debug_serial_port->print(F("\nplay_memory: jump back to original memory:"));
-            debug_serial_port->println(jump_back_to_memory_number);
-          #endif
-          y = jump_back_to_y;
-          memory_number = jump_back_to_memory_number;
-          jump_back_to_y = 9999;
-          jump_back_to_memory_number = 255;
-        } else {
-
-
-
-         return 0;
-        }
       }
+
     } else {
-      if (pause_sending_buffer == 0) {
-        y = (memory_end(memory_number)+1);   // we got a play_memory_prempt flag, exit out
-      } else {
-        y--;  // we're in a pause mode, so sit and spin awhile
-        if ((y > (memory_start(memory_number)) && (!pause_sending_buffer_backspace))){
-          y--;
-          pause_sending_buffer_backspace = 1;
-        }
-        check_ptt_tail();
-        #if defined(FEATURE_SEQUENCER)
-          check_sequencer_tail_time();
+      // eeprom_byte_read == 255 (empty)
+      if (pm_y == memory_start(pm_memory_number)) {      // memory is totally empty - do a boop
+        repeat_memory = 255;
+        #ifdef FEATURE_DISPLAY
+          if (LCD_COLUMNS < 9){
+            lcd_center_print_timed("MemEmpty", 0, default_display_msg_delay);
+          } else {
+            lcd_center_print_timed("Memory empty", 0, default_display_msg_delay);
+          }
+        #else
+          boop();
         #endif
       }
+
+      // if we had an inserted memory, jump back to the original one
+      if ((pm_jump_back_to_y < 9999) && (pm_jump_back_to_memory_number < 255)) {
+        pm_y = pm_jump_back_to_y;
+        pm_memory_number = pm_jump_back_to_memory_number;
+        pm_jump_back_to_y = 9999;
+        pm_jump_back_to_memory_number = 255;
+        pm_finish_iteration(0);
+      } else {
+        pm_state = PM_IDLE;
+      }
+      return;
     }
 
-    last_memory_repeat_time = millis();
-    #ifdef DEBUG_PLAY_MEMORY
-      debug_serial_port->println(F("\nplay_memory: reset last_memory_repeat_time"));
-      debug_serial_port->print("y: ");
-      debug_serial_port->print(y);
-      debug_serial_port->print("\tmemory_number: ");
-      debug_serial_port->print(memory_number);
-      debug_serial_port->print("\tmemory_end: ");
-      debug_serial_port->print(memory_end(memory_number));
-      debug_serial_port->print("\tjump_back_to_y: ");
-      debug_serial_port->print(jump_back_to_y);
-      debug_serial_port->print("\tjump_back_to_memory_number: ");
-      debug_serial_port->println(jump_back_to_memory_number);
-    #endif
-
-
-    // if we had an inserted memory, jump back to the original one
-    /*
-    if ((y== (memory_end(memory_number)+1)) && (jump_back_to_y < 99999) && (jump_back_to_memory_number < 255)) {
-      primary_serial_port->print(F("\nplay_memory: jump back to original memory:"));
-      primary_serial_port->println(jump_back_to_memory_number);
-      y = jump_back_to_y;
-      memory_number = jump_back_to_memory_number;
-      jump_back_to_y = 99999;
-      jump_back_to_memory_number = 255;
+  } else {
+    if (pause_sending_buffer == 0) {
+      // play_memory_prempt flag - exit out
+      last_memory_repeat_time = millis();
+      pm_state = PM_IDLE;
+    } else {
+      // paused - sit and spin awhile
+      pm_y--;
+      if ((pm_y > (memory_start(pm_memory_number))) && (!pm_pause_sending_buffer_backspace)){
+        pm_y--;
+        pm_pause_sending_buffer_backspace = 1;
+      }
+      check_ptt_tail();
+      #if defined(FEATURE_SEQUENCER)
+        check_sequencer_tail_time();
+      #endif
+      pm_finish_iteration(0);
     }
-    */
-
-
-  } //for (int y = (memory_start(memory_number)); (y < (memory_end(memory_number)+1)); y++)
+    return;
+  }
 
 }
-#endif
+
+#endif //FEATURE_MEMORIES
 
 //---------------------------------------------------------------------
 
@@ -19150,7 +19340,7 @@ void program_memory(int memory_number)
     lcd_center_print_timed("Done", 0, default_display_msg_delay);
   #endif
 
-  play_memory(memory_number);
+  start_play_memory(memory_number);
 
 
 }
