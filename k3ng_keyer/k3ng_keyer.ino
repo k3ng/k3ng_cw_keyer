@@ -1698,6 +1698,11 @@ Recent Update History
         button read, imperceptible for a human button press. eeprom_magic_number again not bumped (no
         EEPROM layout change)
 
+    2026.10.21.1048
+      GitHub #148 confirmed fixed - verified proper button operation on different hardware than the
+        original flaky test rig. Removed the temporary raw-analogRead() diagnostic print from
+        check_buttons() now that it's served its purpose
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1728,7 +1733,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.0854-NG"
+#define CODE_VERSION "2026.10.21.1048-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
@@ -10714,20 +10719,6 @@ void check_buttons() {
   long button_depress_time;
   byte paddle_was_hit = 0;
   byte previous_sidetone_mode = 0;
-
-  #ifdef DEBUG_BUTTONS
-    // Temporary diagnostic (GitHub #148 follow-up) - sent to primary_serial_port directly (not
-    // debug_serial_port, which FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT routes elsewhere) so it
-    // shows up on whichever port is actually being watched. Remove once #148 is confirmed fixed.
-    if (analogbuttontemp >= 0) {
-      primary_serial_port->print(F("\ncheck_buttons: raw analogRead("));
-      primary_serial_port->print(analog_buttons_pin);
-      primary_serial_port->print(F("): "));
-      primary_serial_port->print(analogRead(analog_buttons_pin));
-      primary_serial_port->print(F("  resolved button index: "));
-      primary_serial_port->println(analogbuttontemp);
-    }
-  #endif //DEBUG_BUTTONS
 
   if (analogbuttontemp < 0 ) { // no button pressed.
     return;
