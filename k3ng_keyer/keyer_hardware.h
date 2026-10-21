@@ -78,11 +78,37 @@
 
 
 
+// Bugfix (GitHub #137): HARDWARE_MAPLE_MINI/HARDWARE_GENERIC_STM32F103C were written against the older,
+// now largely unmaintained roger-clark "Arduino_STM32" core, which defines ARDUINO_MAPLE_MINI/
+// ARDUINO_GENERIC_STM32F103C directly. The modern, actively-maintained core most users install today
+// (STMicroelectronics:stm32, board manager https://github.com/stm32duino/BoardManagerFiles) instead
+// defines a distinct macro per board selection - ARDUINO_BLUEPILL_F103C8, ARDUINO_GENERIC_F103C8TX,
+// ARDUINO_BLACKPILL_F103C8, etc. - so a sketch built with that core never matched either macro and fell
+// all the way through to the AVR-only #else branches, failing immediately on #include <avr/wdt.h>.
+// Recognize the modern core's "blue pill shaped" F103C6/C8/CB board selections (both the named
+// BluePill/BlackPill variants and the generic GENERIC_F103*TX ones) as equivalent.
+#if defined(ARDUINO_BLUEPILL_F103C6) || defined(ARDUINO_BLUEPILL_F103C8) || defined(ARDUINO_BLUEPILL_F103CB) || \
+    defined(ARDUINO_BLACKPILL_F103C8) || defined(ARDUINO_BLACKPILL_F103CB) || \
+    defined(ARDUINO_GENERIC_F103C6TX) || defined(ARDUINO_GENERIC_F103C8TX) || defined(ARDUINO_GENERIC_F103CBTX) || \
+    defined(ARDUINO_MAPLEMINI_F103CB)
+  #define K3NG_STM32_BLUEPILL_MODERN_CORE
+#endif
+
 // Serial port class definitions for various devices
 
-#if defined(ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C) //sp5iou 20180329
-  #define PRIMARY_SERIAL_CLS USBSerial
-  #define SECONDARY_SERIAL_CLS USBSerial 
+#if defined(ARDUINO_MAPLE_MINI)||defined(ARDUINO_GENERIC_STM32F103C)||defined(K3NG_STM32_BLUEPILL_MODERN_CORE) //sp5iou 20180329
+  // Bugfix (GitHub #137): this used to hardcode USBSerial unconditionally, but the modern core's "USB
+  // support" board option defaults to "None" (plain UART on Serial, HardwareSerial) - USBSerial only
+  // applies if the user explicitly selects "CDC (generic 'Serial' supersede U(S)ART)" in that menu.
+  // Defaulting to HardwareSerial matches the out-of-the-box board configuration most users actually have;
+  // define OPTION_STM32_USB_CDC_SERIAL if you've selected that USB mode and want native-USB Serial instead.
+  #if defined(OPTION_STM32_USB_CDC_SERIAL)
+    #define PRIMARY_SERIAL_CLS USBSerial
+    #define SECONDARY_SERIAL_CLS USBSerial
+  #else
+    #define PRIMARY_SERIAL_CLS HardwareSerial
+    #define SECONDARY_SERIAL_CLS HardwareSerial
+  #endif
 #elif defined(ARDUINO_AVR_PROMICRO) || defined(ARDUINO_AVR_LEONARDO) || defined(ARDUINO_AVR_MICRO) || defined(ARDUINO_AVR_YUN) || defined(ARDUINO_AVR_ESPLORA) || defined(ARDUINO_AVR_LILYPAD_USB) || defined(ARDUINO_AVR_ROBOT_CONTROL) || defined(ARDUINO_AVR_ROBOT_MOTOR) || defined(ARDUINO_AVR_LEONARDO_ETH)  || defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
   #define PRIMARY_SERIAL_CLS Serial_
   #define SECONDARY_SERIAL_CLS Serial_ 
