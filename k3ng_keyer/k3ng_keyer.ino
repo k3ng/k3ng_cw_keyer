@@ -1571,6 +1571,22 @@ Recent Update History
         original flaky test rig. Removed the temporary raw-analogRead() diagnostic print from
         check_buttons() now that it's served its purpose
 
+    2026.10.21.1508
+      Fixed compiling for RP2350-based boards (GitHub #147) - RP2040 (original Pico/Pico W) compiled fine,
+        but RP2350 (Pico 2/Pico 2 W) fell through every #if/#elif chain gating AVR-only headers
+        (avr/wdt.h, avr/pgmspace.h) and watchdog/sleep/EEPROM-debug code written for
+        ARDUINO_RASPBERRY_PI_PICO(_W)/ARDUINO_ARCH_MBED, since the RP2350 core defines its own distinct
+        ARDUINO_RASPBERRY_PI_PICO_2/ARDUINO_RASPBERRY_PI_PICO_2W macros instead - landing in the AVR
+        #else branch at the very first #include selection and failing immediately on avr/wdt.h, which
+        doesn't exist for that toolchain. Added defined(ARDUINO_RASPBERRY_PI_PICO_2)/
+        defined(ARDUINO_RASPBERRY_PI_PICO_2W) alongside every existing PICO_W/PICO check (31 sites, not
+        just the one the report pointed at - the same AVR-only-header problem would have recurred at the
+        next occurrence otherwise) via a global find/replace, purely additive so no other board's
+        behavior changes. Ported from next_gen_version_development, where this was found and fixed first.
+        Compile-verified only on arduino:avr:mega (confirms no syntax errors - these branches are inert
+        on AVR); the RP2040/RP2350 toolchain isn't installed here to actually build-test against, and I
+        don't have RP2350 hardware
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1601,7 +1617,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.1049"
+#define CODE_VERSION "2026.10.21.1508"
 
 #define eeprom_magic_number 52               // you can change this number to have the unit re-initialize EEPROM
 
@@ -1622,7 +1638,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <EEPROM.h>
 #elif defined(ARDUINO_SAMD_VARIANT_COMPLIANCE)
   #include <FlashAsEEPROM.h>
-#elif defined(ARDUINO_ARCH_MBED) || defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+#elif defined(ARDUINO_ARCH_MBED) || defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO) || defined(ARDUINO_RASPBERRY_PI_PICO_2W) || defined(ARDUINO_RASPBERRY_PI_PICO_2)
   #include <EEPROM.h>
   #include <avr/pgmspace.h>
 #elif defined(ESP32)
@@ -1787,7 +1803,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #define noTone noNewTone
 #endif //FEATURE_SIDETONE_NEWTONE
 
-#if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+#if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
   #include <avr/sleep.h>  // It should be different library for ARM sp5iou
 #endif
 
@@ -2658,7 +2674,7 @@ void loop()
     } else {
   #endif
 
-  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
     wdt_reset();
   #endif  //OPTION_WATCHDOG_TIMER
 
@@ -2685,7 +2701,7 @@ void loop()
           check_serial();
         #endif
 
-        #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+        #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
           wdt_reset();
         #endif                                                                      // OPTION_WATCHDOG_TIMER
 
@@ -2756,7 +2772,7 @@ void loop()
       update_led_ring();
     #endif
 
-    #if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
       check_sleep();
     #endif
 
@@ -3800,7 +3816,7 @@ void wakeup() {
 #endif //FEATURE_SLEEP
 */
 
-#if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)     // Code contributed by Graeme, ZL2APV 2016-01-18
+#if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)     // Code contributed by Graeme, ZL2APV 2016-01-18
 void wakeup() {
   sleep_disable();
   detachInterrupt (0);
@@ -3857,7 +3873,7 @@ void check_sleep(){
 */
 
 
-#if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)   // Code contributed by Graeme, ZL2APV  2016-01-18
+#if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)   // Code contributed by Graeme, ZL2APV  2016-01-18
 void check_sleep(){
 
   if ((millis() - last_activity_time) > ((unsigned long)go_to_sleep_inactivity_time*60000)){
@@ -6728,7 +6744,7 @@ void check_ptt_tail()
 //-------------------------------------------------------------------------------------------------------
 void write_settings_to_eeprom(int initialize_eeprom) {
 
-  #if (!defined(ESP32) && !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if (!defined(ESP32) && !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
     if (initialize_eeprom) {
       //configuration.magic_number = eeprom_magic_number;
@@ -6749,7 +6765,7 @@ void write_settings_to_eeprom(int initialize_eeprom) {
   #endif //!defined(ARDUINO_SAM_DUE) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
 
-  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO) || defined(ESP32)
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO) || defined(ARDUINO_RASPBERRY_PI_PICO_2W) || defined(ARDUINO_RASPBERRY_PI_PICO_2) || defined(ESP32)
     #if defined(DEBUG_EEPROM)
       debug_serial_port->println(F("write_settings_to_eeprom: ARDUINO_RASPBERRY_PI_PICO"));
     #endif
@@ -6769,7 +6785,7 @@ void service_async_eeprom_write(){
 
   // This writes one byte out to EEPROM each time it is called
 
-  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
 
   static byte last_async_eeprom_write_status = 0;
   static int ee = 0;
@@ -6844,7 +6860,7 @@ int read_settings_from_eeprom() {
 
     if (EEPROM.read(0) == eeprom_magic_number){
 
-      #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+      #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO) || defined(ARDUINO_RASPBERRY_PI_PICO_2W) || defined(ARDUINO_RASPBERRY_PI_PICO_2)
         #if defined(DEBUG_EEPROM_READ_SETTINGS)
           debug_serial_port->println(F("read_settings_from_eeprom: ARDUINO_RASPBERRY_PI_PICO"));
         #endif
@@ -7535,7 +7551,7 @@ void loop_element_lengths(float lengths, float additional_time_ms, int speed_wpm
         }
       #endif //FEATURE_INTERNET_LINK
 
-      #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+      #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
         wdt_reset();
       #endif  //OPTION_WATCHDOG_TIMER
 
@@ -7789,7 +7805,7 @@ long get_cw_input_from_user(unsigned int exit_time_milliseconds) {
 
   while (looping) {
 
-    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -7887,7 +7903,7 @@ void command_mode() {
     debug_serial_port->println(F("command_mode: entering"));
   #endif
 
-  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
     wdt_disable();
   #endif //OPTION_WATCHDOG_TIMER
 
@@ -8647,7 +8663,7 @@ void command_mode() {
     paddle_echo_buffer = 0;
   #endif
 
-  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
     wdt_enable(WDTO_4S);
   #endif //OPTION_WATCHDOG_TIMER
 	
@@ -9063,7 +9079,7 @@ void command_keying_compensation_adjust() {
     }
 
 
-    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -9105,7 +9121,7 @@ void command_dah_to_dit_ratio_adjust() {
     }
 
 
-    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -9152,7 +9168,7 @@ void command_weighting_adjust() {
       looping = 0;
     }
 
-    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -9191,7 +9207,7 @@ void command_tuning_mode() {
   key_tx = 1;
   while (looping) {
 
-    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -9323,7 +9339,7 @@ void command_sidetone_freq_adj() {
       looping = 0;
     }
 
-    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -9399,7 +9415,7 @@ void command_speed_mode(byte mode) {
       looping = 0;
     }
 
-    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -9991,7 +10007,7 @@ void send_the_dits_and_dahs(char const * cw_to_send){
       #endif
     #endif
 
-    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
@@ -13668,7 +13684,7 @@ void cli_extended_commands(PRIMARY_SERIAL_CLS * port_to_use)
       }
     }
   } //while (looping)
-  #if (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+  #if (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
   if (userinput.startsWith("EEPROMDUMP")){cli_eeprom_dump(port_to_use);return;}
   #endif //#if !defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED)|| (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
   if (userinput.startsWith("TIMING")){cli_timing_print(port_to_use);return;}
@@ -14068,7 +14084,7 @@ void sd_card_save_eeprom_to_file(PRIMARY_SERIAL_CLS * port_to_use,String filenam
 #endif //defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && d!defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS)
 //---------------------------------------------------------------------
 
-#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && ((!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024)))
+#if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) && !defined(OPTION_EXCLUDE_EXTENDED_CLI_COMMANDS) && ((!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024)))
 void cli_eeprom_dump(PRIMARY_SERIAL_CLS * port_to_use){
 
   byte eeprom_byte_in;
@@ -18318,7 +18334,7 @@ void initialize_pins() {
     digitalWrite(compression_detection_pin,LOW);
   #endif //FEATURE_COMPETITION_COMPRESSION_DETECTION
 
-  #if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+  #if defined(FEATURE_SLEEP) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
     if (keyer_awake){
       pinMode(keyer_awake,OUTPUT);
       digitalWrite(keyer_awake,KEYER_AWAKE_PIN_AWAKE_STATE);
@@ -18832,7 +18848,7 @@ void initialize_keyer_state(){
       * (writable EEPROM size). The following line will give the right figure for LGT.
       */
       memory_area_end = EEPROM.size() - 1; 
-    #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+    #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
       memory_area_end = EEPROM.length() - 1;
     #else
       #if defined(HARDWARE_GENERIC_STM32F103C)
@@ -18849,7 +18865,7 @@ void initialize_keyer_state(){
       * (writable EEPROM size). The following line will give the right figure for LGT.
       */
       memory_area_end = EEPROM.size() - 1 - 2; 
-    #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
+    #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
       memory_area_end = EEPROM.length() - 1 - 2;
     #else
       #if defined(HARDWARE_GENERIC_STM32F103C)
@@ -18922,7 +18938,7 @@ void initialize_default_modes(){
 
 void initialize_watchdog(){
 
-  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+  #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
     wdt_enable(WDTO_4S);
   #endif //OPTION_WATCHDOG_TIMER
 
@@ -18932,7 +18948,7 @@ void initialize_watchdog(){
 
 void check_eeprom_for_initialization(){
 
-  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)  || defined(ESP32)
+  #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO) || defined(ARDUINO_RASPBERRY_PI_PICO_2W) || defined(ARDUINO_RASPBERRY_PI_PICO_2)  || defined(ESP32)
     EEPROM.begin(4096);
   #endif
 
@@ -19094,7 +19110,7 @@ void initialize_serial_ports(){
     #endif //DEBUG_AUX_SERIAL_PORT
 
     #ifdef FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT
-      #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO)
+      #if defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO) || defined(ARDUINO_RASPBERRY_PI_PICO_2W) || defined(ARDUINO_RASPBERRY_PI_PICO_2)
         Serial2.setRX(9);
         Serial2.setTX(8);
         Serial2.begin(SECONDARY_SERIAL_PORT_BAUD);
@@ -19330,7 +19346,7 @@ void blink_ptt_dits_and_dahs(char const * cw_to_send){
     }
 
 
-    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO)
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
       wdt_reset();
     #endif  //OPTION_WATCHDOG_TIMER
 
