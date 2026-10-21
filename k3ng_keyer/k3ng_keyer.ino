@@ -1748,6 +1748,27 @@ Recent Update History
         project's default STM32 feature set - a capacity/feature-tuning question for that specific chip,
         not a code bug; left as-is rather than guessing which features to cut
 
+    2026.10.21.1721
+      Added OPTION_FIX_SLOW_CLOCK_AFTER_POWER_CYCLE (GitHub #144, all 24 keyer_features_and_options*.h
+        files). Reported on an Arduino Pro Micro (ATmega32U4): after a cold power-cycle, everything in the
+        sketch ran uniformly slow (tone duration, CLI/HID character pacing) until a manual reset fixed it.
+        No clock-prescaler handling exists anywhere in this sketch, which points to a well-known class of
+        issue on some ATmega32U4 clone boards - their bootloader only correctly sets the clock prescaler
+        during the IDE's reset-into-bootloader upload sequence, not on a genuine cold power-on, leaving the
+        MCU running at the factory-default safety prescaler (a fraction of its intended speed) until a
+        manual reset re-triggers correct initialization. Since every millis()/delay()-derived timing in
+        this sketch assumes the real clock speed, that explains the uniform slowdown. Added an opt-in
+        (not default, since some board profiles may deliberately run at a reduced clock for power savings)
+        option that calls clock_prescale_set(clock_div_1) as the very first thing in setup(), forcing the
+        prescaler to full speed explicitly rather than trusting whatever the bootloader left it at - a
+        no-op (and therefore always safe to enable) on boards already running at the correct prescaler.
+        AVR-only (#if defined(OPTION_FIX_SLOW_CLOCK_AFTER_POWER_CYCLE) && defined(__AVR__)); added
+        <avr/power.h> to the existing plain-AVR #include block for clock_prescale_set()/clock_div_1.
+        Compile-verified (arduino:avr:mega and arduino:avr:leonardo, a real ATmega32U4 target, both with
+        the option on and off) - I don't have the reporter's exact clone board to confirm this actually
+        fixes their specific symptom, only that the theory fits and the code is a safe, standard fix for
+        it
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1778,7 +1799,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.1633-NG"
+#define CODE_VERSION "2026.10.21.1721-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
@@ -1814,6 +1835,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 #else
   #include <avr/pgmspace.h>
   #include <avr/wdt.h>
+  #include <avr/power.h>  // for clock_prescale_set() - see OPTION_FIX_SLOW_CLOCK_AFTER_POWER_CYCLE (GitHub #144)
   #include <EEPROM.h>
 #endif //ARDUINO_SAM_DUE
 
@@ -2841,7 +2863,19 @@ byte async_eeprom_write = 0;
 void setup()
 {
 
-
+  #if defined(OPTION_FIX_SLOW_CLOCK_AFTER_POWER_CYCLE) && defined(__AVR__)
+    // Bugfix (GitHub #144): some ATmega32U4 clone boards (Pro Micro, Leonardo, Micro, etc.) only
+    // correctly set the clock prescaler during the IDE's reset-into-bootloader upload sequence, not on
+    // a genuine cold power-on - leaving the MCU running at a fraction of its intended clock speed (the
+    // factory-default safety prescaler) until a manual reset re-triggers correct initialization. Since
+    // every millis()/delay()-derived timing in this sketch (tone duration, CLI/HID character pacing,
+    // CW element timing) assumes the real clock speed, that manifests as everything running uniformly
+    // slow after a power cycle, back to normal after a reset - exactly the reported symptom. This has
+    // no effect on boards already running at the correct prescaler (explicitly forcing divide-by-1 is a
+    // no-op there), so it's always safe to enable - it's opt-in, not default, only because some board
+    // profiles may deliberately run at a reduced clock for power savings and this would override that.
+    clock_prescale_set(clock_div_1);
+  #endif
 
   #if defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
   check_run_tinyfsk_pin(); // read Mortty+v5 CW<->RTTY slide switch
