@@ -86,19 +86,36 @@ int32_t ButtonArray::high_limit(){
 }
 
 int8_t ButtonArray::ReadButtons(){
+    // Bugfix (GitHub #148): this used to do analog_line_read_average = (analog_line_read_average +
+    // analog_read_temp) / 2 once per sample - not a real average of the NUMBER_OF_BUTTON_READS_TO_AVERAGE
+    // samples, but a decaying-weight scheme dominated by whichever in-range sample happened to land last.
+    // Worse, any sample reading above high_limit_ (i.e. "no button currently pressed" on that one sample)
+    // was silently discarded rather than counted as evidence against a press, so a handful of noisy
+    // out-of-range readings mixed with a couple of in-range ones could still resolve to a button. On a
+    // noisier/faster ADC (reported on STM32, though every analog-button-ladder hardware profile shares
+    // this same code) that could land on the wrong button entirely - e.g. misreading the command button
+    // as a memory button mid-sequence, corrupting whatever was being programmed into that memory slot.
+    // Now takes a real mean of the in-range samples, and requires a genuine majority of all samples to be
+    // in-range before concluding any button is pressed at all - a few stray out-of-range samples no longer
+    // get silently dropped, they count as "not pressed" votes.
     uint32_t analog_read_temp = 0;
-    uint32_t analog_line_read_average = 0;
-    //uint8_t number_of_samples = 0;
+    uint32_t analog_read_total = 0;
+    uint8_t valid_samples = 0;
 
     for (byte x = 0; x < NUMBER_OF_BUTTON_READS_TO_AVERAGE; x++){
         analog_read_temp = analogRead(pin_);
         if (analog_read_temp <= high_limit_){
-            analog_line_read_average = (analog_line_read_average + analog_read_temp) / 2;
-            //analog_line_read_average = analog_line_read_average + analog_read_temp;
-            //number_of_samples++;
+            analog_read_total += analog_read_temp;
+            valid_samples++;
         }
     }
-    //analog_line_read_average = analog_line_read_average / number_of_samples;
+
+    if (valid_samples <= (NUMBER_OF_BUTTON_READS_TO_AVERAGE / 2)) {
+        return -1;
+    }
+
+    uint32_t analog_line_read_average = analog_read_total / valid_samples;
+
     for (size_t x = 0; x < nb_buttons_; x++) {
         Button button = button_array_[x];
         if (button.Pressed(analog_line_read_average)) {
