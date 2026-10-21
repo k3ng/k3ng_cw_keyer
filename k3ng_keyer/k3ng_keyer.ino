@@ -50,7 +50,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
     \j###  Dah to dit ratio (300 = 3.00, do \j alone to set to default)
     \k     CW Training Module                                     (requires FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
     \l##   Set weighting (50 = normal, do \l alone to set to default)
-    \m###  Set Farnsworth speed
+    \m###  Set Farnsworth CHARACTER speed (the fast side - must be set higher than \w to take effect)
     \n     Toggle paddle reverse
     \o     Toggle sidetone on/off
     \p#(#) Program memory #
@@ -178,7 +178,7 @@ English code training word lists from gen_cw_words.pl by Andy Stewart, KB1OIQ
    CTRL-G           Bug
    CTRL-H           Toggle Hell Mode On/Off              (requires FEATURE_HELL)
    CTRL-I           TX enable / disable
-   CTRL-M           Set Farnsworth Speed (0 = disabled)  (requires FEATURE_FARNSWORTH)
+   CTRL-M           Set Farnsworth CHARACTER speed, the fast side (0 = disabled)  (requires FEATURE_FARNSWORTH)
    CTRL-N           Paddle Reverse
    CTRL-O           Toggle Sidetone On/Off
    CTRL-S           CMOS Superkeyer Timing On/Off
@@ -1638,6 +1638,23 @@ Recent Update History
         off) - I don't have the reporter's exact clone board to confirm this actually fixes their specific
         symptom, only that the theory fits and the code is a safe, standard fix for it
 
+    2026.10.21.1908
+      Clarified the \M###/CTRL-M Farnsworth help text (GitHub #135). Reported: a user following CWops'
+        own Farnsworth training guidance ("25cpm character speed, 4wpm Farnsworth speed") set \w to the
+        fast character value and \m to the slow target value, found Farnsworth showed as "Disabled", and
+        concluded (reasonably, given the help text just said "Set Farnsworth speed" with no further
+        detail) that the overall speed can't be set higher than the Farnsworth speed - backwards from
+        this keyer's actual model. \w is always the regular/overall speed; \m sets the FASTER character
+        speed and only takes effect once it's set higher than \w - the behavior was already correct
+        (documented in the 362-Feature:-Farnsworth wiki page added earlier this session), but nothing in
+        the CLI/PS2/USB help text itself said which side \m actually controls, inviting exactly this
+        backwards assumption. Reworded the \M###/CTRL-M help text (CLI runtime, PS2/USB keyboard banner,
+        and the duplicate banner-comment command list) to say "Set Farnsworth CHARACTER speed (the fast
+        side - must be set higher than \W to take effect)" instead of the bare "Set Farnsworth speed."
+        No functional/logic change - ported from next_gen_version_development, compile-verified with
+        FEATURE_SERIAL_HELP/FEATURE_FARNSWORTH temporarily enabled to confirm the new text actually
+        compiles in, then reverted
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1668,7 +1685,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.1724"
+#define CODE_VERSION "2026.10.21.1908"
 
 #define eeprom_magic_number 52               // you can change this number to have the unit re-initialize EEPROM
 
@@ -13213,7 +13230,7 @@ void print_serial_help(PRIMARY_SERIAL_CLS * port_to_use,byte paged_help){
   #endif
   port_to_use->println(F("\\L##\t\t: Set weighting (50 = normal)"));
   #ifdef FEATURE_FARNSWORTH
-    port_to_use->println(F("\\M###\t\t: Set Farnsworth speed")); //Upper case to first letter only(WD9DMP)
+    port_to_use->println(F("\\M###\t\t: Set Farnsworth CHARACTER speed (the fast side - must be higher than \\W to take effect)")); //Upper case to first letter only(WD9DMP)
   #endif
   if (paged_help) {serial_page_pause(port_to_use,10);}
   port_to_use->println(F("\\N\t\t: Toggle paddle reverse")); //Upper case to first letter only(WD9DMP)
