@@ -1806,6 +1806,18 @@ Recent Update History
         flagged, not fixed here, since fixing it means touching the shared helper used throughout the CLI,
         a broader change than this specific report. Compile-verified only
 
+    2026.10.21.2222-NG
+      Fixed a compile error when enabling DEBUG_STARTUP on a profile without both FEATURE_SERIAL and
+        FEATURE_COMMAND_LINE_INTERFACE defined (e.g. HARDWARE_NANOKEYER_REV_B, which has
+        FEATURE_COMMAND_LINE_INTERFACE commented out). initialize_debug_startup() called serial_status()
+        unconditionally under #ifdef DEBUG_STARTUP, but serial_status() itself is only defined under
+        #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE) - a pre-existing gap
+        (present on master too) that just never surfaced before now, since enabling DEBUG_STARTUP without
+        the CLI feature is an unusual combination. Gated the serial_status() call with the same condition
+        as its definition; every other line in this function is just a plain debug println, unaffected.
+        Found while investigating a reported next_gen_version_development startup hang. Compile-verified
+        (arduino:avr:mega, HARDWARE_NANOKEYER_REV_B profile with DEBUG_STARTUP enabled)
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1836,7 +1848,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.2031-NG"
+#define CODE_VERSION "2026.10.21.2222-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
@@ -19821,7 +19833,9 @@ void initialize_pins() {
 void initialize_debug_startup(){
 #ifdef DEBUG_STARTUP
 
+  #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
   serial_status(debug_serial_port);
+  #endif
   #if defined(FEATURE_SERIAL)
   debug_serial_port->println(F("FEATURE_SERIAL"));
   #endif
