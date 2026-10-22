@@ -33,8 +33,20 @@
 // #define HARDWARE_TEST_EVERYTHING
 // #define HARDWARE_TEST
 
+// Add any new HARDWARE_* profile to both the #define list above AND this sum, or it won't be covered by this check.
+#if (defined(HARDWARE_ESP32_WROOM_KEYER) + defined(HARDWARE_NANOKEYER_REV_B) + defined(HARDWARE_NANOKEYER_REV_D) + \
+     defined(HARDWARE_OPEN_INTERFACE) + defined(HARDWARE_TINYKEYER) + defined(HARDWARE_FK_10) + \
+     defined(HARDWARE_FK_11) + defined(HARDWARE_MAPLE_MINI) + defined(HARDWARE_GENERIC_STM32F103C) + \
+     defined(HARDWARE_MORTTY) + defined(HARDWARE_MORTTY_REGULAR) + defined(HARDWARE_MORTTY_REGULAR_WITH_POTENTIOMETER) + \
+     defined(HARDWARE_MORTTY_SO2R) + defined(HARDWARE_MORTTY_PICO_OVER_USB) + defined(HARDWARE_MORTTY_SO2R_WITH_POTENTIOMETER) + \
+     defined(HARDWARE_YAACWK) + defined(HARDWARE_K5BCQ) + defined(HARDWARE_MEGAKEYER) + \
+     defined(HARDWARE_OPENCWKEYER_MK2) + defined(HARDWARE_IZ3GME) + defined(HARDWARE_YCCC_SO2R_MINI) + \
+     defined(HARDWARE_TEST_EVERYTHING) + defined(HARDWARE_TEST)) > 1
+  #error "More than one HARDWARE_* profile is active in keyer_hardware.h - only one may be defined at a time. Comment out all but one (the first one found wins silently otherwise, which is exactly the bug this check exists to catch)."
+#endif
 
-/* 
+
+/*
 
 
     HARDWARE_GENERIC_STM32F103C  (Contributed by sp5iou)
