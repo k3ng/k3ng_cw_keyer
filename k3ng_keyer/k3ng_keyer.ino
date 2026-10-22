@@ -1785,6 +1785,27 @@ Recent Update History
         "Set Farnsworth speed." No functional/logic change - compile-verified with FEATURE_SERIAL_HELP/
         FEATURE_FARNSWORTH temporarily enabled to confirm the new text actually compiles in, then reverted
 
+    2026.10.21.2031
+      Fixed \Q (QRSS mode) crashing/hanging on hardware with FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_
+        PORT, e.g. the Funtronics FK-11 (GitHub #125, reported and root-caused by the reporter in 2022,
+        with a dirty working patch - properly fixed here using the established helper instead). serial_
+        qrss_mode() hand-rolled its own digit-collection loop against primary_serial_port unconditionally,
+        rather than whichever port the \Q command actually arrived on. Typing \Q on the secondary port
+        left the loop waiting forever on primary_serial_port->available(), which is never satisfied -
+        check_paddles()/service_dit_dah_buffers() kept it from being a true infinite loop, but nothing in
+        it fed the watchdog timer either, so it ran until OPTION_WATCHDOG_TIMER's 4-second timeout force-
+        reset the board (or hung indefinitely with the watchdog disabled, per the report). It also never
+        echoed the digits being typed. The reporter's own patch hardcoded secondary_serial_port instead,
+        which would have just broken it the other way for anyone using the primary port. Replaced the
+        bespoke loop with serial_get_number_input(), the same helper every other numeric CLI command in
+        this file already uses - it takes port_to_use like every other handler (process_serial_command()
+        already had it in scope, just never passed it through), and already echoes each digit back. The
+        ASCII-to-decimal conversion bug the reporter also found was already fixed independently since
+        2022. Not fixed (pre-existing, shared by every serial_get_number_input() caller, not unique to
+        QRSS): the same 4-second watchdog risk if the operator pauses mid-entry on any numeric CLI prompt -
+        flagged, not fixed here, since fixing it means touching the shared helper used throughout the CLI,
+        a broader change than this specific report. Compile-verified only
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1815,7 +1836,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.1907-NG"
+#define CODE_VERSION "2026.10.21.2031-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
@@ -11594,63 +11615,26 @@ int uppercase (int charbytein)
 //-------------------------------------------------------------------------------------------------------
 #if defined(FEATURE_SERIAL)
 #ifdef FEATURE_COMMAND_LINE_INTERFACE
-void serial_qrss_mode()
+void serial_qrss_mode(PRIMARY_SERIAL_CLS * port_to_use)
 {
-  byte looping = 1;
-  byte incoming_serial_byte;
-  byte numbers[4];
-  byte numberindex = 0;
-  String numberstring;
-  byte error =0;
+  // Bugfix (GitHub #125): this used to hand-roll its own digit-collection loop against
+  // primary_serial_port unconditionally, rather than whichever port the \Q command actually arrived on.
+  // On hardware with FEATURE_COMMAND_LINE_INTERFACE_ON_SECONDARY_PORT (e.g. the Funtronics FK-11), typing
+  // \Q on the secondary port left this loop waiting forever on primary_serial_port->available(), which is
+  // never satisfied - check_paddles()/service_dit_dah_buffers() kept it from being a true infinite loop,
+  // but nothing in it ever fed the watchdog timer either, so it ran until OPTION_WATCHDOG_TIMER's 4-second
+  // timeout force-reset the board (or hung indefinitely with the watchdog disabled). It also never echoed
+  // the digits being typed, leaving the operator unable to see what they'd entered. Replaced the
+  // bespoke loop with serial_get_number_input(), the same helper every other numeric CLI command in this
+  // file already uses - it takes port_to_use like everything else, and already echoes each digit back.
+  int set_dit_length = serial_get_number_input(2,-1,100,port_to_use,RAISE_ERROR_MSG);
 
-  while (looping) {
-    if (primary_serial_port->available() == 0) {        // wait for the next keystroke
-      if (keyer_machine_mode == KEYER_NORMAL) {          // might as well do something while we're waiting
-        check_paddles();
-        service_dit_dah_buffers();
-        //check_the_memory_buttons();
-      }
-    } else {
-
-      incoming_serial_byte = primary_serial_port->read();
-      if ((incoming_serial_byte > 47) && (incoming_serial_byte < 58)) {    // ascii 48-57 = "0" - "9")
-        numberstring = numberstring + incoming_serial_byte;
-        numbers[numberindex] = incoming_serial_byte;
-//        primary_serial_port->write("numberindex:");
-//        primary_serial_port->print(numberindex,DEC);
-//        primary_serial_port->write("     numbers:");
-//        primary_serial_port->println(numbers[numberindex],DEC);
-        numberindex++;
-        if (numberindex > 2)
-          {
-            looping = 0;
-            error = 1;
-          }
-      } else {
-        if (incoming_serial_byte == 13) {   // carriage return - get out
-          looping = 0;
-        } else {                 // bogus input - error out
-          looping = 0;
-          error = 1;
-        }
-      }
-    }
-  }
-
-  if (error) {
-    primary_serial_port->println(F("Error..."));
-    while (primary_serial_port->available() > 0) { incoming_serial_byte = primary_serial_port->read(); }  // clear out buffer
+  if (set_dit_length < 0) {
     return;
   } else {
-    primary_serial_port->print(F("Setting keyer to QRSS Mode. Dit length: "));
-    primary_serial_port->print(numberstring);
-    primary_serial_port->println(F(" seconds"));
-    int y = 1;
-    int set_dit_length = 0;
-    for (int x = (numberindex - 1); x >= 0 ; x = x - 1) {
-      set_dit_length = set_dit_length + ((numbers[x]-48) * y);
-      y = y * 10;
-    }
+    port_to_use->print(F("Setting keyer to QRSS Mode. Dit length: "));
+    port_to_use->print(set_dit_length,DEC);
+    port_to_use->println(F(" seconds"));
     qrss_dit_length = set_dit_length;
     speed_mode = SPEED_QRSS;
   }
@@ -14639,7 +14623,7 @@ void process_serial_command(PRIMARY_SERIAL_CLS * port_to_use) {
       case 57: serial_play_memory(incoming_serial_byte-49); break;
       case 80: repeat_memory = 255; serial_program_memory(port_to_use); break;                                // P - program memory
     #endif //FEATURE_MEMORIES
-    case 'Q': serial_qrss_mode(); break; // Q - activate QRSS mode
+    case 'Q': serial_qrss_mode(port_to_use); break; // Q - activate QRSS mode
     case 'R': speed_mode = SPEED_NORMAL; port_to_use->println(F("\r\nQRSS Off")); break; // R - activate regular timing mode
     case 'S': serial_status(port_to_use); break;                                              // S - Status command
     case 'J': serial_set_dit_to_dah_ratio(port_to_use); break;                          // J - dit to dah ratio
