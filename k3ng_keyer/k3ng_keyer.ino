@@ -1837,6 +1837,35 @@ Recent Update History
         Compile-verified: HARDWARE_NANOKEYER_REV_B profile (FEATURE_SERIAL undefined) and the default
         profile with FEATURE_COMMAND_LINE_INTERFACE enabled (confirmed debug output still compiles in)
 
+    2026.10.21.2303-NG
+      Ported Milestone 4 (non-blocking PTT lead time / sequencer wait for the CW dit/dah element path)
+        to next_gen_version_development - like M2/M3, this was done and hardware-noted as "DONE" in the
+        old pre-git-branch milestone plan but never actually transplanted onto this branch (confirmed via
+        grep: no cw_ptt_key_start/cw_begin_key_down/etc existed here before this, only the CW_PTT_LEAD_WAIT
+        enum placeholder). Ported by diffing the old k3ng_cw_keyer_m3->k3ng_cw_keyer_m4 directory snapshots
+        (~320 lines) and transplanting the same design onto the current, already-diverged branch. Added
+        cw_ptt_key_start()/cw_ptt_lead_wait_satisfied() (non-blocking replicas of ptt_key()'s activate+
+        busy-wait halves) and cw_begin_key_down()/cw_finish_key_down() (shared tail for both element
+        schedulers, handling the first_extension_time mark-duration fold-in), wired into a new
+        CW_PTT_LEAD_WAIT case in service_cw_scheduler()'s Part B (the enum value already existed as an M1
+        scaffold). cw_schedule_manual_element()/cw_schedule_auto_element() now call cw_begin_key_down()
+        instead of keying the line directly; it defers to CW_PTT_LEAD_WAIT only when PTT must first come up
+        from idle, keying immediately otherwise (unchanged behavior). check_paddles()'s in-flight paddle
+        suppression (added for an earlier bug family) now also covers CW_PTT_LEAD_WAIT via
+        cw_ptt_pending_element, so a paddle tap during the PTT lead-time wait doesn't get mis-sampled the
+        same way an in-flight element wouldn't be. Deliberately did NOT touch ptt_key()/tx_and_sidetone_key()
+        themselves (still used as-is, and still block briefly) by straight-key/bug-mode hold-down,
+        memory-macro \U/\V, and SERIAL_SEND_BUFFER_TIMED_KEY_DOWN - a narrower scope matching the original
+        M4 design, not a regression; M5 (not yet ported) covers converting those remaining paths.
+        Compile-verified on arduino:avr:mega across multiple combos: default (FEATURE_SEQUENCER/SO2R_BASE/
+        WINKEY_EMULATION off), FEATURE_SEQUENCER+FEATURE_WINKEY_EMULATION+OPTION_WINKEY_PINCONFIG_PTT_
+        CONTROLS_PTT_LINE+OPTION_WINKEY_2_SUPPORT, and FEATURE_WINKEY_EMULATION alone (no sequencer,
+        exercising the non-sequencer PTT-lead-wait branch) - all clean, baseline size unchanged after
+        reverting test toggles. FEATURE_SO2R_BASE could not be compile-tested on the generic HARDWARE_TEST
+        profile (so2r_set_rx(), pre-existing/unrelated to this change, needs SO2R-specific pins this
+        profile's keyer_pin_settings_test.h doesn't define) - flagging, not fixing, since that gap predates
+        this port and affects every other so2r_set_rx() call site identically. Not yet hardware-tested.
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1867,7 +1896,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.2232-NG"
+#define CODE_VERSION "2026.10.21.2303-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
@@ -2328,6 +2357,20 @@ byte cw_bug_dah_flag = 0;               // BUG mode: dah paddle currently held (
 byte cw_bug_dah_paddle_down = 0;        // BUG mode: raw dah paddle pin state, mirrored every check_dah_paddle() call (unlike dah_buffer, never consumed) so BUG mode's hold logic is stable across the multiple service_cw_scheduler() calls per loop() iteration
 unsigned long cw_bug_dah_key_down_time = 0;
 byte cw_last_manual_element = SENDING_NOTHING;  // for squeeze alternation: opposite of this goes next when both dit_buffer and dah_buffer are set
+
+// --- Non-blocking PTT lead time / sequencer wait for CW elements (Milestone 4) ---
+// cw_schedule_manual_element()/cw_schedule_auto_element() key an element down through
+// cw_begin_key_down(), which defers to CW_PTT_LEAD_WAIT (via cw_ptt_key_start()) when PTT must first
+// come up from idle - mirroring what the blocking ptt_key() busy-wait used to do, spread across many
+// loop() ticks instead. tx_and_sidetone_key()/ptt_key() themselves are UNCHANGED and still used as-is
+// (and still block briefly) by other direct callers not on this path - straight key/bug mode hold-down,
+// memory-macro \U /\V PTT-only commands, and SERIAL_SEND_BUFFER_TIMED_KEY_DOWN - a deliberately narrower,
+// lower-risk scope than rewriting ptt_key() itself.
+unsigned long cw_ptt_activation_time_ms = 0;
+byte cw_ptt_pending_element = SENDING_NOTHING;
+unsigned long cw_ptt_pending_mark_ticks = 0;
+unsigned long cw_ptt_pending_space_ticks = 0;
+byte cw_ptt_pending_apply_first_extension = 0;
 
 // --- Non-blocking automatic (typed/CLI/memory) CW sending (Milestone 2) ---
 // send_char()/send_the_dits_and_dahs() (still present, unchanged, blocking) remain in use by callers
@@ -6569,15 +6612,18 @@ void check_paddles()
 
   static byte last_closure = NO_CLOSURE;
 
-  // Bugfix: don't re-sample (re-latch) whichever paddle's element is currently in flight. In the
-  // original blocking v1, check_paddles() could never run again during a busy-wait element send; the
-  // only sampling reachable then was the interior loop's own being_sent-gated opposite-paddle check
-  // (mirrored in service_cw_scheduler()'s Part A). Since loop() no longer blocks, check_paddles() now
-  // runs many times during that same element's playback, and a still-closed paddle (as any human tap
-  // is, for many loop() iterations) would re-arm its own buffer before the scheduler ever goes idle -
-  // producing a spurious second element even though the operator already released.
-  byte dit_element_in_flight = ((cw_scheduler_state == CW_KEY_DOWN) || (cw_scheduler_state == CW_KEY_UP)) && (being_sent == SENDING_DIT);
-  byte dah_element_in_flight = ((cw_scheduler_state == CW_KEY_DOWN) || (cw_scheduler_state == CW_KEY_UP)) && (being_sent == SENDING_DAH);
+  // Bugfix: don't re-sample (re-latch) whichever paddle's element is currently in flight or pending in
+  // CW_PTT_LEAD_WAIT. In the original blocking v1, check_paddles() could never run again during a
+  // busy-wait element send; the only sampling reachable then was the interior loop's own
+  // being_sent-gated opposite-paddle check (mirrored in service_cw_scheduler()'s Part A). Since loop()
+  // no longer blocks, check_paddles() now runs many times during that same element's playback (or its
+  // PTT lead-time wait), and a still-closed paddle (as any human tap is, for many loop() iterations)
+  // would re-arm its own buffer before the scheduler ever goes idle - producing a spurious second
+  // element even though the operator already released.
+  byte dit_element_in_flight = (((cw_scheduler_state == CW_KEY_DOWN) || (cw_scheduler_state == CW_KEY_UP)) && (being_sent == SENDING_DIT))
+                             || ((cw_scheduler_state == CW_PTT_LEAD_WAIT) && (cw_ptt_pending_element == SENDING_DIT));
+  byte dah_element_in_flight = (((cw_scheduler_state == CW_KEY_DOWN) || (cw_scheduler_state == CW_KEY_UP)) && (being_sent == SENDING_DAH))
+                             || ((cw_scheduler_state == CW_PTT_LEAD_WAIT) && (cw_ptt_pending_element == SENDING_DAH));
 
   if (!dit_element_in_flight) { check_dit_paddle(); }
   if (!dah_element_in_flight) { check_dah_paddle(); }
@@ -8238,6 +8284,197 @@ unsigned long cw_element_length_ticks(float lengths, float additional_time_ms, i
 
 //-------------------------------------------------------------------------------------------------------
 
+void cw_ptt_key_start(){
+
+  // Non-blocking counterpart to the "bring PTT up" half of ptt_key() - asserts the PTT pin(s) and any
+  // sequencer pins that are due immediately, and arms cw_ptt_activation_time_ms for
+  // cw_ptt_lead_wait_satisfied() to check on later loop() ticks. Only called when ptt_line_activated==0
+  // and !configuration.ptt_disabled (checked by the caller, cw_begin_key_down()).
+
+  #ifdef FEATURE_SEQUENCER
+    sequencer_ptt_inactive_time = 0;
+  #endif
+
+  #ifdef FEATURE_SO2R_BASE
+    if (current_tx_ptt_line && (configuration.ptt_buffer_hold_active || manual_ptt_invoke_ptt_input_pin)) {
+      #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_LINE)
+        if (winkey_pinconfig_ptt_bit){
+          digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
+        }
+      #else
+        digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
+      #endif
+    }
+  #else
+    if (configuration.current_ptt_line) {
+      #if defined(FEATURE_WINKEY_EMULATION) && defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_LINE)
+        if (winkey_pinconfig_ptt_bit){
+          digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
+        }
+      #else
+        digitalWrite (configuration.current_ptt_line, ptt_line_active_state);
+      #endif
+
+      #if defined(OPTION_WINKEY_2_SUPPORT) && defined(FEATURE_WINKEY_EMULATION)
+        if ((wk2_both_tx_activated) && (ptt_tx_2)) {
+          digitalWrite (ptt_tx_2, ptt_line_active_state);
+        }
+      #endif
+    }
+  #endif //FEATURE_SO2R_BASE
+
+  #ifdef FEATURE_MIDI
+    midi_key_ptt(1);
+  #endif
+
+  ptt_line_activated = 1;
+
+  #ifdef FEATURE_SO2R_BASE
+    so2r_set_rx();
+  #endif
+
+  cw_ptt_activation_time_ms = millis();
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+byte cw_ptt_lead_wait_satisfied(){
+
+  // Non-blocking counterpart to the while(!all_delays_satisfied) busy-wait in ptt_key() - one check per
+  // call instead of spinning. Returns 1 once the PTT lead time (and, if FEATURE_SEQUENCER, all sequencer
+  // pins) are satisfied.
+
+  #ifdef FEATURE_SEQUENCER
+
+    byte sequencer_1_ok, sequencer_2_ok, sequencer_3_ok, sequencer_4_ok, sequencer_5_ok;
+
+    if (sequencer_1_pin){
+      if (((millis() - cw_ptt_activation_time_ms) >= configuration.ptt_active_to_sequencer_active_time[0]) || sequencer_1_active){
+        digitalWrite(sequencer_1_pin,sequencer_pins_active_state);
+        sequencer_1_ok = 1;
+        sequencer_1_active = 1;
+      } else {
+        sequencer_1_ok = 0;
+      }
+    } else {
+      sequencer_1_ok = 1;
+    }
+    if (sequencer_2_pin){
+      if (((millis() - cw_ptt_activation_time_ms) >= configuration.ptt_active_to_sequencer_active_time[1]) || sequencer_2_active){
+        digitalWrite(sequencer_2_pin,sequencer_pins_active_state);
+        sequencer_2_ok = 1;
+        sequencer_2_active = 1;
+      } else {
+        sequencer_2_ok = 0;
+      }
+    } else {
+      sequencer_2_ok = 1;
+    }
+    if (sequencer_3_pin){
+      if (((millis() - cw_ptt_activation_time_ms) >= configuration.ptt_active_to_sequencer_active_time[2]) || sequencer_3_active){
+        digitalWrite(sequencer_3_pin,sequencer_pins_active_state);
+        sequencer_3_ok = 1;
+        sequencer_3_active = 1;
+      } else {
+        sequencer_3_ok = 0;
+      }
+    } else {
+      sequencer_3_ok = 1;
+    }
+    if (sequencer_4_pin){
+      if (((millis() - cw_ptt_activation_time_ms) >= configuration.ptt_active_to_sequencer_active_time[3]) || sequencer_4_active){
+        digitalWrite(sequencer_4_pin,sequencer_pins_active_state);
+        sequencer_4_ok = 1;
+        sequencer_4_active = 1;
+      } else {
+        sequencer_4_ok = 0;
+      }
+    } else {
+      sequencer_4_ok = 1;
+    }
+    if (sequencer_5_pin){
+      if (((millis() - cw_ptt_activation_time_ms) >= configuration.ptt_active_to_sequencer_active_time[4]) || sequencer_5_active){
+        digitalWrite(sequencer_5_pin,sequencer_pins_active_state);
+        sequencer_5_ok = 1;
+        sequencer_5_active = 1;
+      } else {
+        sequencer_5_ok = 0;
+      }
+    } else {
+      sequencer_5_ok = 1;
+    }
+
+    return (((millis() - cw_ptt_activation_time_ms) >= configuration.ptt_lead_time[configuration.current_tx-1]) && sequencer_1_ok && sequencer_2_ok && sequencer_3_ok && sequencer_4_ok && sequencer_5_ok);
+
+  #else //FEATURE_SEQUENCER
+
+    #if defined(FEATURE_WINKEY_EMULATION) && !defined(OPTION_WINKEY_PINCONFIG_PTT_CONTROLS_PTT_HOLD)
+      return (((millis() - cw_ptt_activation_time_ms) >= configuration.ptt_lead_time[configuration.current_tx-1]) || (winkey_host_open && !winkey_pinconfig_ptt_bit));
+    #else
+      return ((millis() - cw_ptt_activation_time_ms) >= configuration.ptt_lead_time[configuration.current_tx-1]);
+    #endif
+
+  #endif //FEATURE_SEQUENCER
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_finish_key_down(byte element_type, unsigned long mark_ticks, unsigned long space_ticks, byte apply_first_extension){
+
+  // Actually keys the line (TX key line + sidetone via tx_and_sidetone_key(), plus the optional separate
+  // dit/dah output pins) and arms the KEY_DOWN phase. If this is the first keydown since PTT came up
+  // from idle, extends the mark duration by first_extension_time instead of the old delay(first_extension_time)
+  // (tx_and_sidetone_key()'s own internal first_extension_time delay() is a no-op here since, by this
+  // point, ptt_line_activated is already 1 - so this replaces it rather than stacking with it).
+
+  being_sent = element_type;
+  tx_and_sidetone_key(1);
+  if (element_type == SENDING_DIT){
+    if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,tx_key_dit_and_dah_pins_active_state);}
+  } else {
+    if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_active_state);}
+  }
+
+  if ((apply_first_extension) && (first_extension_time)) {
+    mark_ticks += ((unsigned long)first_extension_time) * 1000UL;
+  }
+
+  cw_phase_start_us = micros();
+  cw_phase_ticks = mark_ticks;
+  cw_pending_keyup_us = space_ticks;
+  cw_scheduler_state = CW_KEY_DOWN;
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_begin_key_down(byte element_type, unsigned long mark_ticks, unsigned long space_ticks){
+
+  // Common "start keying this element" entry point shared by cw_schedule_manual_element() and
+  // cw_schedule_auto_element(). If PTT needs to come up from idle first, defers the actual keying to
+  // CW_PTT_LEAD_WAIT (service_cw_scheduler() calls cw_finish_key_down() once cw_ptt_lead_wait_satisfied());
+  // otherwise keys immediately, exactly as before.
+
+  byte fresh_ptt_activation = ((key_tx) && (ptt_line_activated == 0));
+
+  if ((key_tx) && (ptt_line_activated == 0) && (!configuration.ptt_disabled)) {
+    cw_ptt_key_start();
+    cw_ptt_pending_element = element_type;
+    cw_ptt_pending_mark_ticks = mark_ticks;
+    cw_ptt_pending_space_ticks = space_ticks;
+    cw_ptt_pending_apply_first_extension = fresh_ptt_activation;
+    cw_scheduler_state = CW_PTT_LEAD_WAIT;
+    return;
+  }
+
+  cw_finish_key_down(element_type, mark_ticks, space_ticks, fresh_ptt_activation);
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
 void cw_schedule_manual_element(byte element){
 
   // Start one dit or dah (element == SENDING_DIT or SENDING_DAH) without blocking.  Keys down now and
@@ -8280,19 +8517,8 @@ void cw_schedule_manual_element(byte element){
   unsigned long mark_ticks  = cw_element_length_ticks(mark_lengths, configuration.keying_compensation, character_wpm);
   unsigned long space_ticks = cw_element_length_ticks(space_lengths, (-1.0*configuration.keying_compensation), character_wpm);
 
-  being_sent = element;
-  tx_and_sidetone_key(1);
-  if (element == SENDING_DIT){
-    if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,tx_key_dit_and_dah_pins_active_state);}
-  } else {
-    if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_active_state);}
-  }
-
-  cw_phase_start_us = micros();
-  cw_phase_ticks = mark_ticks;
-  cw_pending_keyup_us = space_ticks;
   cw_autospace_applied = 0;
-  cw_scheduler_state = CW_KEY_DOWN;
+  cw_begin_key_down(element, mark_ticks, space_ticks);
 
 }
 
@@ -8652,17 +8878,7 @@ void cw_schedule_auto_element(){
   }
 
   if (mark_ticks > 0) {
-    being_sent = new_being_sent;
-    tx_and_sidetone_key(1);
-    if (being_sent == SENDING_DIT){
-      if ((tx_key_dit) && (key_tx)) {digitalWrite(tx_key_dit,tx_key_dit_and_dah_pins_active_state);}
-    } else {
-      if ((tx_key_dah) && (key_tx)) {digitalWrite(tx_key_dah,tx_key_dit_and_dah_pins_active_state);}
-    }
-    cw_phase_start_us = micros();
-    cw_phase_ticks = mark_ticks;
-    cw_pending_keyup_us = space_ticks;
-    cw_scheduler_state = CW_KEY_DOWN;
+    cw_begin_key_down(new_being_sent, mark_ticks, space_ticks);
   } else {
     being_sent = SENDING_NOTHING;
     cw_phase_start_us = micros();
@@ -8870,8 +9086,14 @@ void service_cw_scheduler(){
       }
       break;
 
+    case CW_PTT_LEAD_WAIT:
+      if (cw_ptt_lead_wait_satisfied()) {
+        cw_finish_key_down(cw_ptt_pending_element, cw_ptt_pending_mark_ticks, cw_ptt_pending_space_ticks, cw_ptt_pending_apply_first_extension);
+      }
+      break;
+
     default:
-      // CW_IDLE, CW_PTT_LEAD_WAIT (M4), CW_KEY_DOWN_HOLD: nothing to advance here
+      // CW_IDLE, CW_KEY_DOWN_HOLD: nothing to advance here
       break;
   }
 
