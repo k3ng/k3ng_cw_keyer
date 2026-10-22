@@ -1866,6 +1866,21 @@ Recent Update History
         profile's keyer_pin_settings_test.h doesn't define) - flagging, not fixing, since that gap predates
         this port and affects every other so2r_set_rx() call site identically. Not yet hardware-tested.
 
+    2026.10.21.2311-NG
+      Fixed check_ptt_tail() dropping PTT mid-wait during M4's new CW_PTT_LEAD_WAIT state. Found
+        proactively (not yet hardware-reported) while re-reading the original M4/M5 snapshot design notes
+        right after porting M4 above - the old (pre-git-branch) M5 milestone had already found and fixed
+        this exact gap, so it was a known, already-solved problem being re-introduced by porting M4 alone
+        without this one accompanying fix. check_ptt_tail() only refreshed ptt_time while key_state was
+        true, but during CW_PTT_LEAD_WAIT the element hasn't actually keyed yet (key_state is still 0)
+        even though PTT is already up and waiting on the lead-time/sequencer delay - so ptt_time went
+        stale during that wait and the ordinary tail-timeout logic could call ptt_unkey() before the
+        element it was raised for ever got to key, undoing the lead-time wait entirely. Fixed in both
+        check_ptt_tail() branches (#if !defined(FEATURE_WINKEY_EMULATION) and its #else) by treating
+        CW_PTT_LEAD_WAIT the same as key_state for ptt_time-refresh purposes, matching the original M5
+        fix exactly. next_gen_version_development only - master has no CW_PTT_LEAD_WAIT state (still fully
+        blocking keying), so this gap doesn't exist there. Compile-verified only; not yet hardware-tested.
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1896,7 +1911,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.2303-NG"
+#define CODE_VERSION "2026.10.21.2311-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
@@ -7160,7 +7175,11 @@ void check_ptt_tail()
 
 
   #if !defined(FEATURE_WINKEY_EMULATION)
-    if (key_state) {
+    // Bugfix (M4/M5): key_state alone isn't enough - during CW_PTT_LEAD_WAIT the element hasn't
+    // actually keyed yet (key_state is still 0), but PTT is already up and waiting on the lead-time/
+    // sequencer delay. Without this, ptt_time goes stale during that wait and the tail-timeout logic
+    // below can drop PTT before the element it was raised for ever keys.
+    if ((key_state) || (cw_scheduler_state == CW_PTT_LEAD_WAIT)) {
       ptt_time = millis();
     } else {
       if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
@@ -7200,7 +7219,8 @@ void check_ptt_tail()
     }
   #else //FEATURE_WINKEY_EMULATION
 
-    if (key_state) {
+    // Bugfix (M4/M5): see the matching comment in the !FEATURE_WINKEY_EMULATION branch above.
+    if ((key_state) || (cw_scheduler_state == CW_PTT_LEAD_WAIT)) {
       ptt_time = millis();
     } else {
       if ((ptt_line_activated) && (manual_ptt_invoke == 0)) {
