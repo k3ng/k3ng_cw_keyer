@@ -1881,6 +1881,43 @@ Recent Update History
         fix exactly. next_gen_version_development only - master has no CW_PTT_LEAD_WAIT state (still fully
         blocking keying), so this gap doesn't exist there. Compile-verified only; not yet hardware-tested.
 
+    2026.10.22.0840-NG
+      Ported Milestone 5 (hold-down keying, PTT-only commands, beacon delays) to
+        next_gen_version_development - like M2/M3/M4, this was done and noted as "DONE" in the old
+        pre-git-branch milestone plan but never actually transplanted onto this branch. Ported by diffing
+        the old k3ng_cw_keyer_m4->k3ng_cw_keyer_m5 directory snapshots (~467 lines) and transplanting onto
+        the current, already-diverged branch (the check_ptt_tail() fix from this same snapshot diff was
+        already cherry-picked proactively during the M4 port, see 2026.10.21.2311-NG above - skipped here
+        to avoid duplicating it).
+        Added cw_ptt_only_key() (fire-and-forget PTT raise, no CW keying, for commands that don't need to
+        synchronize with the wait finishing - memory macro \U, SERIAL_SEND_BUFFER_PTT_ON) and
+        cw_begin_key_down_hold()/cw_end_key_down_hold()/cw_finish_key_down_hold() (indefinite hold via
+        CW_KEY_DOWN_HOLD, finally using the M1-scaffolded enum value), plus a new cw_ptt_pending_is_hold
+        flag so CW_PTT_LEAD_WAIT can resolve into either a timed element or an indefinite hold.
+        Rewired to the new hold functions: STRAIGHT-mode and BUG-mode dah-hold in service_cw_scheduler()
+        (BUG's dah-hold monitoring moved from Part C to an unconditional block near the top - CW_KEY_
+        DOWN_HOLD isn't CW_IDLE, so Part C's CW_IDLE-gated block would otherwise never see it release);
+        service_send_buffer()'s SERIAL_SEND_BUFFER_TIMED_KEY_DOWN (hold) and SERIAL_SEND_BUFFER_PTT_ON
+        (fire-and-forget); service_play_memory()'s \T (hold) and \U (fire-and-forget) macros and its
+        PM_WAIT_DELAY abort/completion paths; the dedicated hardware straight-key pin
+        (service_straight_key(), preserving this branch's own break-in-on-automatic-sending bugfix
+        unchanged); USB keyboard numpad-as-key (0x58) and USB mouse middle-button-as-key. check_paddles()'s
+        in-flight suppression now excludes cw_ptt_pending_is_hold (continuous re-latching is correct for a
+        held key/paddle, not a bug). Also converted loop()'s 3 BEACON-mode delay() calls to a new
+        beacon_nonblocking_wait() that keeps servicing check_serial()/wdt_reset() during the wait and
+        returns early if the operator exits beacon mode mid-wait - the surrounding
+        while(keyer_machine_mode==BEACON) loop itself is intentionally still blocking (a full beacon-mode
+        state-machine rewrite remains a separate, larger undertaking).
+        Deliberately left blocking (Group C, one-off/discrete UI actions, not part of continuous keying,
+        matching the original M5 scope): command-mode tune utilities, PS2/USB CTRL-T/CTRL-U shortcuts,
+        serial CLI tune/PTT commands, WinKey protocol key command, internet-link remote keying, HI-blink
+        utility, Hellschreiber pixel keying, American Morse long-dahs, ptt_input_pin external-PTT sensing.
+        Compile-verified on arduino:avr:mega: default profile, FEATURE_BEACON+FEATURE_MEMORIES (exercises
+        beacon_nonblocking_wait()), and FEATURE_USB_KEYBOARD+FEATURE_USB_MOUSE with the real USB Host
+        Shield Library 2.0 (not just the bundled incomplete stub) - all clean, baseline size unchanged
+        after reverting test toggles. BUG/STRAIGHT paddle modes are plain runtime settings, always
+        compiled in. Not yet hardware-tested.
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1911,7 +1948,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.2311-NG"
+#define CODE_VERSION "2026.10.22.0840-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
@@ -2386,6 +2423,8 @@ byte cw_ptt_pending_element = SENDING_NOTHING;
 unsigned long cw_ptt_pending_mark_ticks = 0;
 unsigned long cw_ptt_pending_space_ticks = 0;
 byte cw_ptt_pending_apply_first_extension = 0;
+byte cw_ptt_pending_is_hold = 0;  // Milestone 5: CW_PTT_LEAD_WAIT should resolve into CW_KEY_DOWN_HOLD (an
+                                  // indefinite hold - straight key / bug-mode dah) rather than a timed element.
 
 // --- Non-blocking automatic (typed/CLI/memory) CW sending (Milestone 2) ---
 // send_char()/send_the_dits_and_dahs() (still present, unchanged, blocking) remain in use by callers
@@ -3057,6 +3096,29 @@ void setup()
 
 // --------------------------------------------------------------------------------------------
 
+#if defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
+void beacon_nonblocking_wait(unsigned long wait_ms){
+
+  // Non-blocking counterpart to a bare delay(wait_ms) inside beacon mode's transmit-cycle loop
+  // (Milestone 5) - keeps servicing the serial port and watchdog during the wait (instead of freezing
+  // completely), and returns early if the operator exits beacon mode mid-wait. The surrounding
+  // while(keyer_machine_mode==BEACON) loop in loop() itself is intentionally left as-is (a full rewrite
+  // of beacon mode into a state machine that lets loop() return during active beaconing is a separate,
+  // larger undertaking than converting these delay() calls).
+
+  unsigned long start = millis();
+  while (((millis() - start) < wait_ms) && (keyer_machine_mode == BEACON)) {
+    #ifdef FEATURE_SERIAL
+      check_serial();
+    #endif
+    #if defined(OPTION_WATCHDOG_TIMER) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2)
+      wdt_reset();
+    #endif
+  }
+
+}
+#endif //defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
+
 void loop()
 {
 
@@ -3074,7 +3136,7 @@ void loop()
 
   #if defined(FEATURE_BEACON) && defined(FEATURE_MEMORIES)
     if (keyer_machine_mode == BEACON) {
-      delay(201);                                                                   // an odd duration delay before we enter BEACON mode
+      beacon_nonblocking_wait(201);                                                 // an odd duration delay before we enter BEACON mode
       #ifdef OPTION_BEACON_MODE_MEMORY_REPEAT_TIME
         unsigned int time_to_delay = configuration.memory_repeat_time - configuration.ptt_tail_time[configuration.current_tx - 1];
       #endif                                                                        // OPTION_BEACON_MODE_MEMORY_REPEAT_TIME
@@ -3104,7 +3166,7 @@ void loop()
         #endif //FEATURE_MEMORIES
 
         #ifdef OPTION_BEACON_MODE_PTT_TAIL_TIME
-          delay(configuration.ptt_tail_time[configuration.current_tx - 1]);         // after memory 1 has played, this holds the PTT line active for the ptt tail time of the current tx
+          beacon_nonblocking_wait(configuration.ptt_tail_time[configuration.current_tx - 1]);  // after memory 1 has played, this holds the PTT line active for the ptt tail time of the current tx
           check_ptt_tail();                                                         // this resets things so that the ptt line will go high during the next playout
           digitalWrite (configuration.current_ptt_line, ptt_line_inactive_state);   // forces the ptt line of the current tx to be inactive
         #endif                                                                      // OPTION_BEACON_MODE_PTT_TAIL_TIME
@@ -3118,7 +3180,7 @@ void loop()
         #endif                                                                      // OPTION_WATCHDOG_TIMER
 
         #ifdef OPTION_BEACON_MODE_MEMORY_REPEAT_TIME
-          if (time_to_delay > 0) delay(time_to_delay);                              // this provdes a delay between succesive playouts of the memory contents
+          if (time_to_delay > 0) beacon_nonblocking_wait(time_to_delay);            // this provdes a delay between succesive playouts of the memory contents
         #endif                                                                      // OPTION_BEACON_MODE_MEMORY_REPEAT_TIME
       }                                                                             // end while (keyer_machine_mode == BEACON)
     }                                                                               // end if (keyer_machine_mode == BEACON)
@@ -3637,7 +3699,7 @@ void service_keypad(){
     if (digitalRead(pin_straight_key) == STRAIGHT_KEY_ACTIVE_STATE){
       if (!last_straight_key_state){
         sending_mode = MANUAL_SENDING;
-        tx_and_sidetone_key(1);
+        cw_begin_key_down_hold();  // non-blocking (Milestone 5)
         last_straight_key_state = 1;
         // Bugfix: break in on any in-flight/queued automatic (typed/memory) CW - this dedicated
         // straight-key pin always wins, the same way a paddle touch already aborts typed sending via
@@ -3659,7 +3721,7 @@ void service_keypad(){
     } else {
       if (last_straight_key_state){
         sending_mode = MANUAL_SENDING;
-        tx_and_sidetone_key(0);
+        cw_end_key_down_hold();  // non-blocking (Milestone 5)
         last_straight_key_state = 0;
       }
     }
@@ -6634,11 +6696,12 @@ void check_paddles()
   // no longer blocks, check_paddles() now runs many times during that same element's playback (or its
   // PTT lead-time wait), and a still-closed paddle (as any human tap is, for many loop() iterations)
   // would re-arm its own buffer before the scheduler ever goes idle - producing a spurious second
-  // element even though the operator already released.
+  // element even though the operator already released. Excludes cw_ptt_pending_is_hold (straight key /
+  // bug dah-hold waiting on PTT) - continuous re-latching there is correct, not a bug.
   byte dit_element_in_flight = (((cw_scheduler_state == CW_KEY_DOWN) || (cw_scheduler_state == CW_KEY_UP)) && (being_sent == SENDING_DIT))
-                             || ((cw_scheduler_state == CW_PTT_LEAD_WAIT) && (cw_ptt_pending_element == SENDING_DIT));
+                             || ((cw_scheduler_state == CW_PTT_LEAD_WAIT) && (!cw_ptt_pending_is_hold) && (cw_ptt_pending_element == SENDING_DIT));
   byte dah_element_in_flight = (((cw_scheduler_state == CW_KEY_DOWN) || (cw_scheduler_state == CW_KEY_UP)) && (being_sent == SENDING_DAH))
-                             || ((cw_scheduler_state == CW_PTT_LEAD_WAIT) && (cw_ptt_pending_element == SENDING_DAH));
+                             || ((cw_scheduler_state == CW_PTT_LEAD_WAIT) && (!cw_ptt_pending_is_hold) && (cw_ptt_pending_element == SENDING_DAH));
 
   if (!dit_element_in_flight) { check_dit_paddle(); }
   if (!dah_element_in_flight) { check_dah_paddle(); }
@@ -8441,6 +8504,24 @@ byte cw_ptt_lead_wait_satisfied(){
 
 //-------------------------------------------------------------------------------------------------------
 
+void cw_ptt_only_key(){
+
+  // Non-blocking counterpart to a bare ptt_key() call for "PTT only, no CW keying" commands (memory
+  // macro \U, SERIAL_SEND_BUFFER_PTT_ON) - fires the PTT pin(s) without blocking for the lead time /
+  // sequencer to settle. Unlike cw_begin_key_down()/cw_begin_key_down_hold(), nothing here needs to
+  // synchronize with the wait finishing (there's no element or hold to key afterward), so it's safe to
+  // just start the sequence and let it settle in the background instead of tracking a pending state.
+
+  if ((ptt_line_activated == 0) && (!configuration.ptt_disabled)) {
+    cw_ptt_key_start();
+  } else {
+    ptt_key();  // already up, or disabled - an instant no-op/early-return either way
+  }
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
 void cw_finish_key_down(byte element_type, unsigned long mark_ticks, unsigned long space_ticks, byte apply_first_extension){
 
   // Actually keys the line (TX key line + sidetone via tx_and_sidetone_key(), plus the optional separate
@@ -8485,12 +8566,64 @@ void cw_begin_key_down(byte element_type, unsigned long mark_ticks, unsigned lon
     cw_ptt_pending_mark_ticks = mark_ticks;
     cw_ptt_pending_space_ticks = space_ticks;
     cw_ptt_pending_apply_first_extension = fresh_ptt_activation;
+    cw_ptt_pending_is_hold = 0;
     cw_scheduler_state = CW_PTT_LEAD_WAIT;
     return;
   }
 
   cw_finish_key_down(element_type, mark_ticks, space_ticks, fresh_ptt_activation);
 
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_begin_key_down_hold(){
+
+  // Non-blocking "key down and hold indefinitely" - used by STRAIGHT key mode and BUG mode's dah-hold
+  // (service_cw_scheduler()), and the hardware/USB-keyboard/USB-mouse straight-key mirrors. Released by
+  // cw_end_key_down_hold() when the physical key/paddle/pin goes back up. Idempotent: safe to call every
+  // tick while the key is held, matching how the callers already poll level (not edge) state.
+
+  if ((cw_scheduler_state == CW_KEY_DOWN_HOLD) || ((cw_scheduler_state == CW_PTT_LEAD_WAIT) && cw_ptt_pending_is_hold)) {
+    return;  // already holding, or already waiting to hold - nothing to do
+  }
+
+  if ((key_tx) && (ptt_line_activated == 0) && (!configuration.ptt_disabled)) {
+    cw_ptt_key_start();
+    cw_ptt_pending_is_hold = 1;
+    cw_scheduler_state = CW_PTT_LEAD_WAIT;
+    return;
+  }
+
+  tx_and_sidetone_key(1);
+  cw_scheduler_state = CW_KEY_DOWN_HOLD;
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_end_key_down_hold(){
+
+  // Releases a hold started by cw_begin_key_down_hold() - safe to call even if we never actually got to
+  // key the line (e.g. the key was tapped and released again while still in CW_PTT_LEAD_WAIT).
+
+  if ((cw_scheduler_state != CW_KEY_DOWN_HOLD) && !((cw_scheduler_state == CW_PTT_LEAD_WAIT) && cw_ptt_pending_is_hold)) {
+    return;  // not ours to release
+  }
+
+  tx_and_sidetone_key(0);
+  cw_ptt_pending_is_hold = 0;
+  cw_scheduler_state = CW_IDLE;
+
+}
+
+//-------------------------------------------------------------------------------------------------------
+
+void cw_finish_key_down_hold(){
+  // Called from service_cw_scheduler()'s CW_PTT_LEAD_WAIT case once cw_ptt_lead_wait_satisfied() and
+  // cw_ptt_pending_is_hold is set - completes the deferred half of cw_begin_key_down_hold().
+  tx_and_sidetone_key(1);
+  cw_scheduler_state = CW_KEY_DOWN_HOLD;
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -8930,9 +9063,14 @@ void service_cw_scheduler(){
   // held. Read the raw, non-consumed pin directly instead; dit_buffer is still zeroed below so a stale
   // latch doesn't cause a spurious dit if the operator later switches out of STRAIGHT mode.
   // Falls through (does not return) so automatic/typed CW sending (Part C, below) keeps advancing even
-  // when the paddle mode is STRAIGHT.
+  // when the paddle mode is STRAIGHT. Goes through cw_begin_key_down_hold()/cw_end_key_down_hold()
+  // (Milestone 5) so a fresh PTT activation gets the same non-blocking lead-time wait as CW elements do;
+  // both are idempotent no-ops if the state they'd act on doesn't apply (e.g. an automatic element
+  // mid-flight, CW_KEY_DOWN/CW_KEY_UP/a non-hold CW_PTT_LEAD_WAIT), so releasing the key never cuts one
+  // of those off - replacing the old cw_scheduler_state==CW_IDLE guard that used to do that job.
   if (configuration.keyer_mode == STRAIGHT) {
     dit_buffer = 0;
+    sending_mode = MANUAL_SENDING;
     { byte straight_key_pin = (configuration.paddle_mode == PADDLE_NORMAL) ? paddle_left : paddle_right;
       byte straight_key_down = (paddle_pin_read(straight_key_pin) == LOW) ? 1 : 0;
       #if defined(FEATURE_USB_MOUSE) || defined(FEATURE_USB_KEYBOARD)
@@ -8951,15 +9089,54 @@ void service_cw_scheduler(){
           cw_scheduler_state = CW_IDLE;
           being_sent = SENDING_NOTHING;
         }
-        sending_mode = MANUAL_SENDING;
-        tx_and_sidetone_key(1);
-      } else if (cw_scheduler_state == CW_IDLE) {
-        sending_mode = MANUAL_SENDING;
-        tx_and_sidetone_key(0);
+        cw_begin_key_down_hold();
+      } else {
+        cw_end_key_down_hold();
       }
     }
     #ifdef FEATURE_DEAD_OP_WATCHDOG
       dit_counter = 0;
+    #endif
+  }
+
+  // ---- BUG mode: dah paddle is a manually-held key (dit paddle's automatic dits are Part C, below) ----
+  // Runs unconditionally here (not gated on cw_scheduler_state), not in Part C (which only runs when
+  // cw_scheduler_state==CW_IDLE) - once the dah-hold uses CW_KEY_DOWN_HOLD, Part C would never see
+  // dah_buffer clear to release it otherwise.
+  // Gated on cw_bug_dah_paddle_down (a fresh, non-consumed pin mirror), not dah_buffer - dah_buffer is a
+  // one-shot latch consumed by this same block, and since service_cw_scheduler() runs multiple times per
+  // loop() iteration while check_paddles() runs fewer times, testing dah_buffer directly caused spurious
+  // key-up/key-down oscillation on every call that ran before the next check_paddles() refreshed it.
+  if (configuration.keyer_mode == BUG) {
+    dah_buffer = 0;
+    if (cw_bug_dah_paddle_down) {
+      if (!cw_bug_dah_flag) {
+        sending_mode = MANUAL_SENDING;
+        cw_begin_key_down_hold();
+        cw_bug_dah_flag = 1;
+        #ifdef FEATURE_PADDLE_ECHO
+          cw_bug_dah_key_down_time = millis();
+        #endif //FEATURE_PADDLE_ECHO
+      }
+    } else {
+      if (cw_bug_dah_flag){
+        sending_mode = MANUAL_SENDING;
+        cw_end_key_down_hold();
+        #ifdef FEATURE_PADDLE_ECHO
+          if ((millis() - cw_bug_dah_key_down_time) > (0.5 * (1200.0/configuration.wpm))){
+            if ((millis() - cw_bug_dah_key_down_time) > (2 * (1200.0/configuration.wpm))){
+              paddle_echo_buffer = (paddle_echo_buffer * 10) + 2;
+            } else {
+              paddle_echo_buffer = (paddle_echo_buffer * 10) + 1;
+            }
+            paddle_echo_buffer_decode_time = millis() + (((float)3000.0/(float)configuration.wpm) * ((float)configuration.cw_echo_timing_factor/(float)100));
+          }
+        #endif //FEATURE_PADDLE_ECHO
+        cw_bug_dah_flag = 0;
+      }
+    }
+    #ifdef FEATURE_DEAD_OP_WATCHDOG
+      dah_counter = 0;
     #endif
   }
 
@@ -9108,7 +9285,11 @@ void service_cw_scheduler(){
 
     case CW_PTT_LEAD_WAIT:
       if (cw_ptt_lead_wait_satisfied()) {
-        cw_finish_key_down(cw_ptt_pending_element, cw_ptt_pending_mark_ticks, cw_ptt_pending_space_ticks, cw_ptt_pending_apply_first_extension);
+        if (cw_ptt_pending_is_hold) {
+          cw_finish_key_down_hold();
+        } else {
+          cw_finish_key_down(cw_ptt_pending_element, cw_ptt_pending_mark_ticks, cw_ptt_pending_space_ticks, cw_ptt_pending_apply_first_extension);
+        }
       }
       break;
 
@@ -9180,42 +9361,9 @@ void service_cw_scheduler(){
             }
           }
         } else if (configuration.keyer_mode == BUG) {
-          // dah paddle = manually-held key; dit paddle = automatic dits
-          // Note: gated on cw_bug_dah_paddle_down (a fresh, non-consumed pin mirror), not dah_buffer -
-          // dah_buffer is a one-shot latch consumed by this same block, and since service_cw_scheduler()
-          // runs multiple times per loop() iteration while check_paddles() runs fewer times, testing
-          // dah_buffer directly caused spurious key-up/key-down oscillation on "orphan" scheduler calls
-          // that ran before the next check_paddles() refreshed it.
-          dah_buffer = 0;
-          if (cw_bug_dah_paddle_down) {
-            if (!cw_bug_dah_flag) {
-              sending_mode = MANUAL_SENDING;
-              tx_and_sidetone_key(1);
-              cw_bug_dah_flag = 1;
-              #ifdef FEATURE_PADDLE_ECHO
-                cw_bug_dah_key_down_time = millis();
-              #endif //FEATURE_PADDLE_ECHO
-            }
-          } else {
-            if (cw_bug_dah_flag){
-              sending_mode = MANUAL_SENDING;
-              tx_and_sidetone_key(0);
-              #ifdef FEATURE_PADDLE_ECHO
-                if ((millis() - cw_bug_dah_key_down_time) > (0.5 * (1200.0/configuration.wpm))){
-                  if ((millis() - cw_bug_dah_key_down_time) > (2 * (1200.0/configuration.wpm))){
-                    paddle_echo_buffer = (paddle_echo_buffer * 10) + 2;
-                  } else {
-                    paddle_echo_buffer = (paddle_echo_buffer * 10) + 1;
-                  }
-                  paddle_echo_buffer_decode_time = millis() + (((float)3000.0/(float)configuration.wpm) * ((float)configuration.cw_echo_timing_factor/(float)100));
-                }
-              #endif //FEATURE_PADDLE_ECHO
-              cw_bug_dah_flag = 0;
-            }
-          }
-          #ifdef FEATURE_DEAD_OP_WATCHDOG
-            dah_counter = 0;
-          #endif
+          // dah-hold itself is monitored unconditionally near the top of this function (Milestone 5)
+          // since it now uses CW_KEY_DOWN_HOLD, which this Part C block (CW_IDLE-gated) would never see
+          // release from. Only the dit paddle's automatic dits are handled here.
           if ((dit_buffer) && (!cw_bug_dah_flag)) {
             dit_buffer = 0;
             sending_mode = MANUAL_SENDING;
@@ -9227,10 +9375,10 @@ void service_cw_scheduler(){
     #endif
 
     // ---- Automatic (typed/CLI/memory) CW sending ----
-    // Only start the next queued element if nothing manual just claimed the scheduler this tick, and
-    // (BUG mode) the dah paddle isn't currently held down as a manual straight key (cw_bug_dah_flag) -
-    // that path never touches cw_scheduler_state, so it wouldn't otherwise be caught by the check below.
-    if ((cw_scheduler_state == CW_IDLE) && (!((configuration.keyer_mode == BUG) && (cw_bug_dah_flag))) && (cw_element_buffer_bytes > 0)) {
+    // Only start the next queued element if nothing manual just claimed the scheduler this tick.
+    // cw_scheduler_state == CW_IDLE already excludes an active BUG dah-hold (CW_KEY_DOWN_HOLD) or a
+    // pending PTT-lead wait for one (CW_PTT_LEAD_WAIT with cw_ptt_pending_is_hold set).
+    if ((cw_scheduler_state == CW_IDLE) && (cw_element_buffer_bytes > 0)) {
       cw_schedule_auto_element();
     }
   }
@@ -12186,7 +12334,7 @@ void service_send_buffer(byte no_print)
           if (send_buffer_bytes) {
             send_buffer_status = SERIAL_SEND_BUFFER_TIMED_COMMAND;
             sending_mode = AUTOMATIC_SENDING;
-            tx_and_sidetone_key(1);
+            cw_begin_key_down_hold();  // non-blocking (Milestone 5): same PTT-lead-wait as CW elements
             timed_command_end_time = millis() + (send_buffer_array[0] * 1000);
             timed_command_in_progress = SERIAL_SEND_BUFFER_TIMED_KEY_DOWN;
             remove_from_send_buffer();
@@ -12217,7 +12365,7 @@ void service_send_buffer(byte no_print)
 
           remove_from_send_buffer();
           manual_ptt_invoke = 1;
-          ptt_key();
+          cw_ptt_only_key();  // non-blocking (Milestone 5)
         }
 
         if (send_buffer_array[0] == SERIAL_SEND_BUFFER_PTT_OFF) {
@@ -12329,7 +12477,7 @@ void service_send_buffer(byte no_print)
 
       if ((timed_command_in_progress == SERIAL_SEND_BUFFER_TIMED_KEY_DOWN) && (millis() > timed_command_end_time)) {
         sending_mode = AUTOMATIC_SENDING;
-        tx_and_sidetone_key(0);
+        cw_end_key_down_hold();
         timed_command_in_progress = 0;
         send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
@@ -19083,12 +19231,12 @@ void service_play_memory(){
       #ifdef FEATURE_BUTTONS
         while (analogbuttonread(0)) {}
       #endif
-      if (pm_delay_is_timed_tx) {tx_and_sidetone_key(0);}
+      if (pm_delay_is_timed_tx) {cw_end_key_down_hold();}
       pm_state = PM_IDLE;
       return;
     }
     if (millis() >= pm_delay_until_ms) {
-      if (pm_delay_is_timed_tx) {tx_and_sidetone_key(0);}
+      if (pm_delay_is_timed_tx) {cw_end_key_down_hold();}
       pm_finish_iteration(1);
     }
     return;
@@ -19462,7 +19610,7 @@ void service_play_memory(){
               }
               sending_mode = AUTOMATIC_SENDING;
               if (input_error != 1) {   // go ahead and transmit
-                tx_and_sidetone_key(1);
+                cw_begin_key_down_hold();  // non-blocking (Milestone 5)
                 pm_delay_until_ms = millis() + ((unsigned long)int_from_macro*1000UL);
                 pm_delay_is_timed_tx = 1;
                 pm_state = PM_WAIT_DELAY;
@@ -19472,7 +19620,7 @@ void service_play_memory(){
 
             case 'U':                      // U - turn on PTT
               manual_ptt_invoke = 1;
-              ptt_key();
+              cw_ptt_only_key();  // non-blocking (Milestone 5)
               break;
 
             case 'V':                      // V - turn off PTT
@@ -21202,7 +21350,7 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
   // grab the keypad / and * for dit and dah paddling
   if (key == 0x54) {usb_dit = 1; return;}
   if (key == 0x55) {usb_dah = 1; return;}
-  if (key == 0x58) {sending_mode = MANUAL_SENDING;tx_and_sidetone_key(1);return;}
+  if (key == 0x58) {sending_mode = MANUAL_SENDING;cw_begin_key_down_hold();return;}  // non-blocking (Milestone 5)
 
   if ((modifier.bmLeftShift) || (modifier.bmRightShift)) {
     switch(key){
@@ -21768,7 +21916,7 @@ void KbdRptParser::OnKeyUp(uint8_t mod, uint8_t key)
   // grab the keypad / and * for dit and dah paddling
   if (key == 0x54) {usb_dit = 0; return;}
   if (key == 0x55) {usb_dah = 0; return;}
-  if (key == 0x58) {sending_mode = MANUAL_SENDING;tx_and_sidetone_key(0);return;}
+  if (key == 0x58) {sending_mode = MANUAL_SENDING;cw_end_key_down_hold();return;}  // non-blocking (Milestone 5)
 
 }
 #endif //FEATURE_USB_KEYBOARD
@@ -21877,11 +22025,11 @@ void MouseRptParser::OnRightButtonDown(MOUSEINFO *mi){
 };
 void MouseRptParser::OnMiddleButtonUp(MOUSEINFO *mi){
   sending_mode = MANUAL_SENDING;
-  tx_and_sidetone_key(0);
+  cw_end_key_down_hold();  // non-blocking (Milestone 5)
 };
 void MouseRptParser::OnMiddleButtonDown(MOUSEINFO *mi){
   sending_mode = MANUAL_SENDING;
-  tx_and_sidetone_key(1);
+  cw_begin_key_down_hold();  // non-blocking (Milestone 5)
 };
 #endif //FEATURE_USB_MOUSE
 //---------------------------------------------------------------------
