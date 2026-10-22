@@ -1690,6 +1690,26 @@ Recent Update History
         here since this function and bug are identical on both branches. Compile-verified (arduino:avr:
         mega, default profile with DEBUG_STARTUP enabled, with and without FEATURE_COMMAND_LINE_INTERFACE)
 
+    2026.10.21.2233
+      Fixed initialize_debug_startup() dereferencing a null debug_serial_port when DEBUG_STARTUP is
+        enabled on a profile without FEATURE_COMMAND_LINE_INTERFACE or FEATURE_WINKEY_EMULATION (e.g.
+        HARDWARE_NANOKEYER_REV_B). The previous fix above only gated the serial_status() call (the one
+        line that failed to compile), but every other line in this function calls debug_serial_port->
+        println(...) too, gated only on unrelated FEATURE_* flags - and debug_serial_port is only ever
+        assigned inside initialize_serial_ports(), itself gated on defined(FEATURE_SERIAL), which
+        keyer_dependencies.h only derives from FEATURE_COMMAND_LINE_INTERFACE or FEATURE_WINKEY_
+        EMULATION. Without either, FEATURE_SERIAL is never defined, no serial port is ever opened,
+        debug_serial_port stays null, and this function's first unconditional println (the OPTION_DO_
+        NOT_SAY_HI one) dereferenced it - reported as the keyer failing to start up at all with
+        DEBUG_STARTUP enabled, with nothing appearing on serial. Wrapped the whole function body in
+        #if defined(FEATURE_SERIAL) so it safely does nothing instead of crashing when no serial port
+        exists - a genuine limitation, not just a safety guard: without FEATURE_SERIAL there is no port
+        for DEBUG_STARTUP's output to go to regardless. To actually get DEBUG_STARTUP output on a
+        CLI-less profile, temporarily enable FEATURE_COMMAND_LINE_INTERFACE for the debugging session.
+        Found and fixed first on next_gen_version_development; ported here since this function and bug
+        are identical on both branches. Compile-verified: default profile with FEATURE_SERIAL undefined
+        and with FEATURE_COMMAND_LINE_INTERFACE enabled (confirmed debug output still compiles in)
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1720,7 +1740,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.2223"
+#define CODE_VERSION "2026.10.21.2233"
 
 #define eeprom_magic_number 52               // you can change this number to have the unit re-initialize EEPROM
 
@@ -18559,13 +18579,16 @@ void initialize_pins() {
 
 void initialize_debug_startup(){
 #ifdef DEBUG_STARTUP
+#if defined(FEATURE_SERIAL)
+  // debug_serial_port is only ever assigned inside initialize_serial_ports(), itself gated on
+  // defined(FEATURE_SERIAL) - without FEATURE_COMMAND_LINE_INTERFACE or FEATURE_WINKEY_EMULATION
+  // to derive it (keyer_dependencies.h), debug_serial_port stays null and every call below would
+  // dereference a null pointer, hanging/crashing setup() instead of merely printing nothing.
 
-  #if defined(FEATURE_SERIAL) && defined(FEATURE_COMMAND_LINE_INTERFACE)
+  #ifdef FEATURE_COMMAND_LINE_INTERFACE
   serial_status(debug_serial_port);
   #endif
-  #if defined(FEATURE_SERIAL)
   debug_serial_port->println(F("FEATURE_SERIAL"));
-  #endif
   #ifdef FEATURE_COMMAND_LINE_INTERFACE
   debug_serial_port->println(F("FEATURE_COMMAND_LINE_INTERFACE"));
   #endif
@@ -18630,6 +18653,7 @@ void initialize_debug_startup(){
   debug_serial_port->println(F("FEATURE_LCD_8BIT"));
   #endif
   debug_serial_port->println(F("setup: exiting, going into loop"));
+#endif //defined(FEATURE_SERIAL)
 #endif //DEBUG_STARTUP
 }
 
