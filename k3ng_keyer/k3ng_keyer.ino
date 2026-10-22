@@ -1710,6 +1710,36 @@ Recent Update History
         are identical on both branches. Compile-verified: default profile with FEATURE_SERIAL undefined
         and with FEATURE_COMMAND_LINE_INTERFACE enabled (confirmed debug output still compiles in)
 
+    2026.10.22.1830
+      Strengthened DEBUG_BUTTONS so it's actually useful to hand to another user doing button hardware
+        testing, rather than just the small set of high-level dispatch prints it had. Added a permanent
+        raw-ADC-reading diagnostic to check_buttons() (the temporary one added during GitHub #148's
+        investigation was removed once that bug was confirmed fixed, per the changelog above - this is a
+        proper, permanent version, not a resurrection of a throwaway) that prints the raw analogRead()
+        value and the resolved button index whenever the analog line looks like something is physically
+        pressed - crucially, not only on a successful resolution like the old temporary one, since a
+        miscalibrated or incorrectly wired button that never resolves to any configured index would
+        otherwise produce zero output under DEBUG_BUTTONS, which is exactly the failure mode most worth
+        being able to see. Cross-reference the raw reading against low_limit(index)/high_limit(index)
+        (already printed by the \S status command) to spot a miscalibrated threshold.
+        Also fixed a null debug_serial_port crash risk across every existing DEBUG_BUTTONS print site
+        (initialize_analog_button_array(), and four more in check_buttons()) - the same bug class just
+        fixed in initialize_debug_startup() a few entries above: debug_serial_port is only valid when
+        FEATURE_SERIAL is defined (derived from FEATURE_COMMAND_LINE_INTERFACE or
+        FEATURE_WINKEY_EMULATION), and FEATURE_BUTTONS can be used standalone (e.g. a memory-button box
+        with no CLI/WinKey at all) without either - gated every DEBUG_BUTTONS print site on
+        defined(FEATURE_SERIAL) too (the one inside serial_status() was already safe, that whole function
+        is gated on FEATURE_SERIAL already). Also removed DEBUG_BUTTON_ARRAY from keyer_debug.h - a
+        same-topic-sounding macro that was never referenced anywhere in the codebase, dead since whenever
+        it was added; kept it would have misled someone into thinking there's a more detailed button-array
+        debug flag to enable.
+        Ported from next_gen_version_development, where this was found and fixed first - unrelated to the
+        M1-M5 non-blocking refactor. Compile-verified: default profile with DEBUG_BUTTONS/FEATURE_BUTTONS
+        on and FEATURE_COMMAND_LINE_INTERFACE enabled (confirmed diagnostic prints compile in), and with
+        FEATURE_COMMAND_LINE_INTERFACE/FEATURE_WINKEY_EMULATION both off (FEATURE_SERIAL undefined -
+        confirmed every DEBUG_BUTTONS site now compiles to nothing instead of crashing). Baseline size
+        unchanged after reverting test toggles.
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1740,7 +1770,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.21.2233"
+#define CODE_VERSION "2026.10.22.1830"
 
 #define eeprom_magic_number 52               // you can change this number to have the unit re-initialize EEPROM
 
@@ -9661,7 +9691,7 @@ void check_the_memory_buttons()
 void initialize_analog_button_array() {
 #ifdef FEATURE_BUTTONS
 
-  #ifdef DEBUG_BUTTONS
+  #if defined(DEBUG_BUTTONS) && defined(FEATURE_SERIAL)
       debug_serial_port->print("initialize_analog_button_array: ");
   #endif
 
@@ -9717,6 +9747,30 @@ void check_buttons() {
   long button_depress_time;
   byte paddle_was_hit = 0;
   byte previous_sidetone_mode = 0;
+
+  #if defined(DEBUG_BUTTONS) && defined(FEATURE_SERIAL)
+    // Permanent diagnostic (GitHub #148 and beyond) - shows the raw ADC reading and the resolved button
+    // index (or -1 if it didn't resolve to any configured button) whenever the analog line looks like
+    // something is physically pressed, not only on a successful resolution - a miscalibrated or
+    // incorrectly wired button that never resolves to a valid index would otherwise produce no output at
+    // all under DEBUG_BUTTONS, which is exactly the failure mode most worth being able to see. Cross-
+    // reference the raw reading against each button's low_limit(index)/high_limit(index) (printed by the
+    // \S status command) to spot a miscalibrated threshold. This is a single extra analogRead(), separate
+    // from (and not perfectly time-synchronized with) the up-to-19-sample vote button_array.Pressed()
+    // just took internally - close enough to show whether readings for a given physical button land where
+    // expected, not a precise trace of that vote.
+    {
+      int debug_buttons_raw_reading = analogRead(analog_buttons_pin);
+      if (debug_buttons_raw_reading <= button_array.high_limit()) {
+        debug_serial_port->print(F("\ncheck_buttons: raw analogRead("));
+        debug_serial_port->print(analog_buttons_pin);
+        debug_serial_port->print(F("): "));
+        debug_serial_port->print(debug_buttons_raw_reading);
+        debug_serial_port->print(F("  resolved button index: "));
+        debug_serial_port->println(analogbuttontemp);
+      }
+    }
+  #endif //DEBUG_BUTTONS && FEATURE_SERIAL
 
   if (analogbuttontemp < 0 ) { // no button pressed.
     return;
@@ -9778,10 +9832,10 @@ void check_buttons() {
         #endif //FEATURE_WINKEY_EMULATION
 
         button_last_add_to_send_buffer_time = millis();
-        #ifdef DEBUG_BUTTONS
+        #if defined(DEBUG_BUTTONS) && defined(FEATURE_SERIAL)
         debug_serial_port->print(F("\ncheck_buttons: add_to_send_buffer: "));
         debug_serial_port->println(analogbuttontemp - 1);
-        #endif //DEBUG_BUTTONS
+        #endif //DEBUG_BUTTONS && FEATURE_SERIAL
       }
     #endif //ifdef FEATURE_MEMORIES
 
@@ -9805,13 +9859,13 @@ void check_buttons() {
             //speed_button_cmd_executed = 1;
             dit_buffer = 0;
 
-            #ifdef DEBUG_BUTTONS
+            #if defined(DEBUG_BUTTONS) && defined(FEATURE_SERIAL)
 	            #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
 		            debug_serial_port->println(F("\ncheck_buttons: speed_change(-1)"));
  	            #else
 		            debug_serial_port->println(F("\ncheck_buttons: speed_change(1)"));
 	            #endif                                                 // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
-            #endif                                                   // DEBUG_BUTTONS
+            #endif                                                   // DEBUG_BUTTONS && FEATURE_SERIAL
 
             #if defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_POTENTIOMETER)
               if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
@@ -9834,13 +9888,13 @@ void check_buttons() {
             configuration.sidetone_mode = previous_sidetone_mode;
             dah_buffer = 0;
 
-            #ifdef DEBUG_BUTTONS
+            #if defined(DEBUG_BUTTONS) && defined(FEATURE_SERIAL)
 	            #ifdef OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
                 debug_serial_port->println(F("\ncheck_buttons: speed_change(1)"));
 	            #else
                 debug_serial_port->println(F("\ncheck_buttons: speed_change(-1)"));
               #endif                                // OPTION_SWAP_PADDLE_PARAMETER_CHANGE_DIRECTION
-            #endif                                  // DEBUG_BUTTONS
+            #endif                                  // DEBUG_BUTTONS && FEATURE_SERIAL
 
             #if defined(FEATURE_WINKEY_EMULATION) && defined(FEATURE_POTENTIOMETER)
               if ((primary_serial_port_mode == SERIAL_WINKEY_EMULATION) && (winkey_host_open)) {
@@ -9858,10 +9912,10 @@ void check_buttons() {
             #ifdef FEATURE_MEMORIES
               repeat_memory = analogbuttontemp - 1;
               last_memory_repeat_time = 0;
-              #ifdef DEBUG_BUTTONS
+              #if defined(DEBUG_BUTTONS) && defined(FEATURE_SERIAL)
                 debug_serial_port->print(F("\ncheck_buttons: repeat_memory:"));
                 debug_serial_port->println(repeat_memory);
-              #endif //DEBUG_BUTTONS
+              #endif //DEBUG_BUTTONS && FEATURE_SERIAL
             #endif
             paddle_was_hit = 1;
           }
