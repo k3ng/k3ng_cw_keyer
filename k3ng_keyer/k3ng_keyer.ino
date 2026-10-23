@@ -1998,6 +1998,26 @@ Recent Update History
         mega, default profile with FEATURE_LCD_ST7032 enabled, bundled library via --library flag) - not
         hardware-tested, don't have this display.
 
+    2026.10.23.1123-NG
+      Fixed the command button (button 0) occasionally reading as "no button pressed" (GitHub #148
+        follow-up, reported after the earlier majority-vote/bounce-timing fix in this same issue).
+        Button::InitLimits(step) (src/buttonarray/buttonarray.cpp) computes each button's low_limit_ by
+        averaging against a "virtual neighbor" at step-1; for button 0 (the lowest step, no real neighbor
+        below it) that makes step-1 negative, so the inner expression legitimately comes out negative too -
+        matching this function's own doc comment example ("0: -56 - 46"). But button_value/
+        lower_button_value/higher_button_value were cast to uint32_t, and casting a negative float to an
+        unsigned type is undefined behavior in C++ - in practice this collapsed low_limit_ for button 0 to
+        0 on at least the reporter's toolchain. Button::Pressed()'s low-bound check is a strict ">", so a
+        button-0 press reading exactly 0 (very plausible - it's the lowest step, often a dead short to
+        ground) failed to match its own button, looking identical to "no button pressed." Fixed by casting
+        to int32_t instead, which preserves the intended negative low_limit_ for button 0 (now -56, as the
+        doc comment always said it should be) and changes nothing for every other button (step/step+1 are
+        never negative there). The reporter's own proposed workaround (flipping Pressed()'s comparison to
+        >=/<) masked the same symptom but only because the UB-derived value happened to resolve to exactly
+        0 on their specific toolchain - not guaranteed on every architecture, so fixed the actual cast
+        instead of relying on that. Compile-verified (arduino:avr:mega, FEATURE_BUTTONS enabled) - not yet
+        confirmed on the reporter's hardware.
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -2028,7 +2048,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.22.2143-NG"
+#define CODE_VERSION "2026.10.23.1123-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 

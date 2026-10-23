@@ -19,9 +19,18 @@ void Button::InitLimits(uint8_t step){
     int32_t lower_button_value;
     int32_t higher_button_value;
 
-    button_value = uint32_t(max_value * (float(step * r2_value)/float((step * r2_value) + r1_value)));
-    lower_button_value = uint32_t(max_value * (float((step-1) * r2_value)/float(((step-1) * r2_value) + r1_value)));
-    higher_button_value = uint32_t(max_value * (float((step+1) * r2_value)/float(((step+1) * r2_value) + r1_value)));
+    // Bugfix: these three were cast to uint32_t, but for the first button (step==0) the "virtual
+    // neighbor" at step-1 makes the inner expression legitimately negative (matching the "0: -56 - 46"
+    // example above) - casting a negative float to an unsigned type is undefined behavior in C++, and in
+    // practice collapsed lower_button_value (and so low_limit_) to 0 on at least one real toolchain.
+    // Button::Pressed()'s low-bound check is a strict ">", so a button-0 press reading exactly 0 (very
+    // plausible - it's the lowest step, often a dead short to ground) then failed to match its own
+    // button, looking identical to "no button pressed" (GitHub #148 follow-up). Casting to int32_t
+    // instead preserves the intended negative low_limit_ for button 0 and changes nothing for every
+    // other button (step/step+1 are never negative, so these values are unaffected there).
+    button_value = int32_t(max_value * (float(step * r2_value)/float((step * r2_value) + r1_value)));
+    lower_button_value = int32_t(max_value * (float((step-1) * r2_value)/float(((step-1) * r2_value) + r1_value)));
+    higher_button_value = int32_t(max_value * (float((step+1) * r2_value)/float(((step+1) * r2_value) + r1_value)));
     low_limit_= (button_value - ((button_value - lower_button_value)/2));
     high_limit_= (button_value + ((higher_button_value - button_value)/2));
     step_ = step;
