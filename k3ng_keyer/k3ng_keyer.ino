@@ -1971,6 +1971,33 @@ Recent Update History
         even with every FEATURE_* commented out) - a capacity/feature-tuning question for that chip, not a
         code bug, same category as the STM32 Blue Pill 64K overflow noted elsewhere in this changelog.
 
+    2026.10.22.2143-NG
+      Added FEATURE_LCD_ST7032 for Sitronix ST7032-based I2C character LCDs (e.g. SB1602B, SB0802G,
+        AQM0802A, AQM1602), using the bundled ST7032_asukiaaa library (MIT licensed,
+        https://github.com/asukiaaa/ST7032_asukiaaa). Based on GitHub PR #124, contributed by
+        ninelocks/Jon Trinder in 2022 - applied selectively rather than merging as-is: the PR (as its own
+        description flagged as a possible concern) mixed the generic display feature in with several of
+        the author's own personal build settings written directly into the shared default files -
+        FEATURE_COMMAND_LINE_INTERFACE, FEATURE_SERIAL_HELP, FEATURE_STRAIGHT_KEY, FEATURE_PADDLE_ECHO,
+        and FEATURE_STRAIGHT_KEY_ECHO uncommented (enabled) by default in keyer_features_and_options.h,
+        FEATURE_LCD_ST7032 itself left enabled by default rather than commented out like every other
+        display option, and keyer_pin_settings.h's shared pin_straight_key default repointed from 52 to 3
+        for the author's own wiring (unrelated to this display, and would have silently moved a default
+        pin assignment for anyone using the dedicated hardware straight-key feature). None of that is
+        appropriate for the shared default files, so only the actual display support was ported: the new
+        FEATURE_LCD_ST7032 #define (commented out, consistent with every other display option),
+        #include <ST7032_asukiaaa.h> and the lcd object declaration (both gated on the feature), adding
+        FEATURE_LCD_ST7032 to keyer_dependencies.h's FEATURE_DISPLAY umbrella check, and a setContrast(30)
+        call in initialize_display(). Also simplified vs. the original PR: ST7032_asukiaaa's begin()
+        signature (begin(uint8_t cols, uint8_t rows, uint8_t charsize = LCD_5x8DOTS)) is fully compatible
+        with the generic lcd.begin(LCD_COLUMNS, LCD_ROWS) call already made for every LCD type that isn't
+        individually special-cased above it in initialize_display() - the PR's own redundant second
+        lcd.begin(LCD_COLUMNS, LCD_ROWS) call right before setContrast() was dropped as unnecessary, not a
+        correctness fix, just a cleanup. Ported from master, where this was applied first (this feature is
+        plain display code, untouched by the M1-M5 non-blocking refactor). Compile-verified (arduino:avr:
+        mega, default profile with FEATURE_LCD_ST7032 enabled, bundled library via --library flag) - not
+        hardware-tested, don't have this display.
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -2001,7 +2028,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.22.2036-NG"
+#define CODE_VERSION "2026.10.22.2143-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
@@ -2262,6 +2289,10 @@ If you offer a hardware kit using this software, show your appreciation by sendi
   #include <Wire.h>
   #include "SSD1306Ascii.h"
   #include "SSD1306AsciiWire.h"
+#endif
+
+#if defined(FEATURE_LCD_ST7032)
+  #include <ST7032_asukiaaa.h>
 #endif
 
 #if defined(FEATURE_TRAINING_COMMAND_LINE_INTERFACE)
@@ -2826,6 +2857,10 @@ byte send_buffer_status = SERIAL_SEND_BUFFER_NORMAL;
 
 #if defined(FEATURE_OLED_SSD1306)
   SSD1306AsciiWire lcd;
+#endif
+
+#if defined(FEATURE_LCD_ST7032)
+  ST7032_asukiaaa lcd;
 #endif
 
 #if defined(FEATURE_USB_KEYBOARD) || defined(FEATURE_USB_MOUSE)
@@ -21102,7 +21137,10 @@ void initialize_display(){
     #ifdef FEATURE_LCD_MATHERTEL_PCF8574
       lcd.setBacklight(HIGH);
     #endif
-    
+    #ifdef FEATURE_LCD_ST7032
+      lcd.setContrast(30);
+    #endif //FEATURE_LCD_ST7032
+
     #ifdef OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS  // OZ1JHM provided code, cleaned up by LA3ZA
       // Store bit maps, designed using editor at http://omerk.github.io/lcdchargen/
 
