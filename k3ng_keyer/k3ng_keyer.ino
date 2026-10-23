@@ -1740,6 +1740,29 @@ Recent Update History
         confirmed every DEBUG_BUTTONS site now compiles to nothing instead of crashing). Baseline size
         unchanged after reverting test toggles.
 
+    2026.10.22.2038
+      Fixed LGT8F328P/328D (and 328-D variant 328E) failing to compile at all on current LGT8Fx board
+        package releases (GitHub PR #150, contributed by jg1uaa/SASANO Takayoshi, tested with lgt8fx
+        2.0.7). The LGT8Fx core's EEPROM.size() method - used here to get the true writable EEPROM size
+        (1020 bytes; the last 4 bytes of each 1KB block are read-only) instead of EEPROM.length()'s larger
+        raw-block figure - was removed from the library in commit da14ac9 (2021-02-19) and never restored
+        (confirmed: the restoration attempt, dbuezas/lgt8fx#335, was closed unmerged). Checked the
+        library's own history: EEPROM.length() was fixed to return the correct 1020 figure back in
+        commit 370b9c98 (2020-11-19), before size() even existed (added shortly after, Nov-Dec 2020) -
+        so every LGT8Fx release that ever had a working EEPROM.size() already had length() returning the
+        identical correct value; there's no version window where switching from .size() to .length()
+        changes behavior, only one (any release since Feb 2021) where staying on .size() stops compiling
+        at all. Replaced EEPROM.size() with EEPROM.length() at all 3 call sites (TinyFSK.h's
+        TinyFSKsetup(), two in k3ng_keyer.ino's initialize_keyer_state()) and extended the #ifdef guard to
+        also cover __LGT8FX8E__ (a real, separate chip variant macro defined in the LGT8Fx core, not a
+        typo - confirmed via the core's own source). Verified for real: installed the actual lgt8fx:avr
+        2.0.7 core and reproduced the exact reported 'struct EEPROMClass has no member named size' error
+        on an lgt8fx:avr:328 target before the fix; confirmed master's default (leaner than next_gen_
+        version_development's test config) feature set now compiles completely cleanly on that real target
+        (9756/29696 bytes) after the fix - no overflow here, unlike the next_gen test build. Also confirmed
+        zero effect on non-LGT8Fx builds (arduino:avr:mega baseline byte-for-byte unchanged).
+        Ported from next_gen_version_development, where this was found and fixed first.
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -1770,7 +1793,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.22.1830"
+#define CODE_VERSION "2026.10.22.2038"
 
 #define eeprom_magic_number 52               // you can change this number to have the unit re-initialize EEPROM
 
@@ -19012,13 +19035,14 @@ void initialize_keyer_state(){
   #endif
 
   #if !defined(FEATURE_DUAL_MODE_KEYER_AND_TINYFSK)
-    #ifdef __LGT8FX8P__
+    #if defined(__LGT8FX8P__) || defined(__LGT8FX8E__)
       /* LGT chip emulates EEPROM at the cost of giving up twice the space in program flash memory.
-      * Unortunately, the last 4 bytes of every 1KB block are read-only. Therefore 
-      * EEPROM.length() would return 1024 (readable EEPROM size), while EEPROM.size() returns 1020
-      * (writable EEPROM size). The following line will give the right figure for LGT.
+      * Unfortunately, the last 4 bytes of every 1KB block are read-only. Old LGT8Fx library returns
+      * EEPROM.length() as 1024 (readable EEPROM size) and EEPROM.size() as 1020 (writable EEPROM size).
+      * Now, EEPROM.size() has deprecated and EEPROM.length() returns 1020
+      * (Both LGT8F328D and LGT8F328P return same value).
       */
-      memory_area_end = EEPROM.size() - 1; 
+      memory_area_end = EEPROM.length() - 1;
     #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
       memory_area_end = EEPROM.length() - 1;
     #else
@@ -19029,13 +19053,14 @@ void initialize_keyer_state(){
       #endif
     #endif
   #else
-    #ifdef __LGT8FX8P__
+    #if defined(__LGT8FX8P__) || defined(__LGT8FX8E__)
       /* LGT chip emulates EEPROM at the cost of giving up twice the space in program flash memory.
-      * Unortunately, the last 4 bytes of every 1KB block are read-only. Therefore 
-      * EEPROM.length() would return 1024 (readable EEPROM size), while EEPROM.size() returns 1020
-      * (writable EEPROM size). The following line will give the right figure for LGT.
+      * Unfortunately, the last 4 bytes of every 1KB block are read-only. Old LGT8Fx library returns
+      * EEPROM.length() as 1024 (readable EEPROM size) and EEPROM.size() as 1020 (writable EEPROM size).
+      * Now, EEPROM.size() has deprecated and EEPROM.length() returns 1020
+      * (Both LGT8F328D and LGT8F328P return same value).
       */
-      memory_area_end = EEPROM.size() - 1 - 2; 
+      memory_area_end = EEPROM.length() - 1 - 2;
     #elif (!defined(ARDUINO_SAM_DUE) && !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_RASPBERRY_PI_PICO_W) && !defined(ARDUINO_RASPBERRY_PI_PICO) && !defined(ARDUINO_RASPBERRY_PI_PICO_2W) && !defined(ARDUINO_RASPBERRY_PI_PICO_2) && !defined(HARDWARE_GENERIC_STM32F103C)) || (defined(ARDUINO_SAM_DUE) && defined(FEATURE_EEPROM_E24C1024))
       memory_area_end = EEPROM.length() - 1 - 2;
     #else
