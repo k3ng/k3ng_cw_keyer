@@ -37,6 +37,7 @@
 // #define FEATURE_LCD_HD44780             // hd44780_I2Cexp subclass control LCD using i2c i/o expander backpack (PCF8574 or MCP23008) see https://https://github.com/duinoWitchery/hd44780 
 // #define FEATURE_LCD_HD44780_PINIO       // hd44780_pinIO subclass control LCD using direct Arduino Pin connections see https://https://github.com/duinoWitchery/hd44780 
 // #define FEATURE_OLED_SSD1306            // https://github.com/greiman/SSD1306Ascii
+// #define FEATURE_LCD_ST7032              // Sitronix ST7032-based I2C LCD (e.g. SB1602B, AQM0802A, AQM1602) using https://github.com/asukiaaa/ST7032_asukiaaa
 // #define FEATURE_CW_DECODER              // https://github.com/k3ng/k3ng_cw_keyer/wiki/385-Feature:-CW-Decoder 
 // #define FEATURE_SLEEP                   // go to sleep after x minutes to conserve battery power (not compatible with Arduino DUE, may have mixed results with Mega and Mega ADK)
 // #define FEATURE_LCD_BACKLIGHT_AUTO_DIM  // turn off LCD backlight and/or dim Power Indicator LED after x minutes (LED requires a PWM pin)
