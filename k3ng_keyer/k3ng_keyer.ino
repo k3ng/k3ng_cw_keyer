@@ -2018,6 +2018,24 @@ Recent Update History
         instead of relying on that. Compile-verified (arduino:avr:mega, FEATURE_BUTTONS enabled) - not yet
         confirmed on the reporter's hardware.
 
+    2026.10.23.1831-NG
+      Raised FEATURE_DEAD_OP_WATCHDOG's "stuck paddle" threshold from 100 to 200 consecutive same-type
+        elements, at the user's request after investigating a report of it tripping during WinKey
+        emulation testing. Traced the mechanism thoroughly first: dit_counter/dah_counter (the counters
+        check_for_dead_op() checks) are incremented only by check_dit_paddle()/check_dah_paddle() reading
+        the real physical paddle pins - there is no code path where WinKey host-driven serial sending
+        touches these counters, and check_paddles() (which calls both) runs every loop() iteration
+        regardless of whether a WinKey host has control, since paddle break-in has to keep working either
+        way. Paddle pins are properly INPUT_PULLUP, ruling out a floating-pin false trigger with no paddle
+        connected. Concluded the watchdog was working as designed, just easy to trip by accident: 100
+        consecutive elements is only ~3-6 seconds of continuously holding one paddle side at 20-35 WPM -
+        easily reached while deliberately testing whether the paddle can break into/interrupt WinKey host
+        sending, a standard thing to test. Not a bug in the WinKey/dead-op interaction; just raised the
+        threshold since 100 was an easy accidental trip for legitimate paddle-hold testing. dit_counter/
+        dah_counter are byte (0-255), so 200 remains safely within range. Compile-verified (arduino:avr:
+        mega, FEATURE_DEAD_OP_WATCHDOG explicitly enabled to confirm the changed code path is actually
+        exercised, not just left at its default-off state).
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -2048,7 +2066,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.23.1123-NG"
+#define CODE_VERSION "2026.10.23.1831-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
@@ -4875,7 +4893,7 @@ void check_memory_repeat() {
 #ifdef FEATURE_DEAD_OP_WATCHDOG
 void check_for_dead_op()
 
-  // if the dit or dah paddle is stuck, disable the transmitter line after 100 straight dits or dahs
+  // if the dit or dah paddle is stuck, disable the transmitter line after 200 straight dits or dahs
   // go in and out of command mode to clear or just reset the unit
 
 {
@@ -4884,7 +4902,7 @@ void check_for_dead_op()
     debug_serial_port->println(F("loop: entering check_for_dead_op"));
   #endif
 
-  if (dead_op_watchdog_active && ((dit_counter > 100) || (dah_counter > 100))) {
+  if (dead_op_watchdog_active && ((dit_counter > 200) || (dah_counter > 200))) {
     // Bugfix: used to just set key_tx = 0 here. tx_and_sidetone_key() gates its digitalWrite() in
     // BOTH directions on key_tx, so if the key happened to be physically active at this exact
     // moment, whatever later call tried to bring it back up would see key_tx == 0 and skip that
