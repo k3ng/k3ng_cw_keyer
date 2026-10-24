@@ -2036,6 +2036,25 @@ Recent Update History
         mega, FEATURE_DEAD_OP_WATCHDOG explicitly enabled to confirm the changed code path is actually
         exercised, not just left at its default-off state).
 
+    2026.10.24.0650-NG
+      Fixed the dedicated hardware straight-key pin (FEATURE_STRAIGHT_KEY) never actually keying TX or
+        sidetone - PTT would briefly activate and then drop again, reported right after the M5 port.
+        service_straight_key()'s down-edge handler called cw_begin_key_down_hold() (which uses
+        cw_scheduler_state itself - CW_PTT_LEAD_WAIT while waiting on a cold PTT activation, then
+        CW_KEY_DOWN_HOLD once actually keyed) BEFORE its own pre-existing break-in logic
+        (clear_send_buffer() + an unconditional cw_scheduler_state = CW_IDLE reset, there since before M5
+        to abort any in-flight automatic/typed element so the straight key always wins). That reset ran
+        AFTER cw_begin_key_down_hold() and unconditionally overwrote whatever it had just set back to
+        CW_IDLE - on a cold PTT activation (the common case, pressing the key after a period of silence)
+        this wiped out the CW_PTT_LEAD_WAIT state before service_cw_scheduler() could ever reach the case
+        that calls cw_finish_key_down_hold() to actually key the line, leaving PTT raised (from
+        cw_ptt_key_start(), which had already run) but the key/sidetone step never happened - PTT then
+        dropped again on its own via check_ptt_tail()'s ordinary tail-timeout once cw_scheduler_state
+        was no longer CW_PTT_LEAD_WAIT, matching "PTT light briefly on, no TX, no sidetone" exactly.
+        Fixed by reordering: the break-in reset now runs first, then cw_begin_key_down_hold() - so
+        whatever it sets afterward is no longer immediately clobbered. Compile-verified (arduino:avr:
+        mega, FEATURE_STRAIGHT_KEY enabled) - not yet confirmed on hardware.
+
   qwerty
 
   Documentation: https://github.com/k3ng/k3ng_cw_keyer/wiki
@@ -2066,7 +2085,7 @@ If you offer a hardware kit using this software, show your appreciation by sendi
 */
 
 
-#define CODE_VERSION "2026.10.23.1831-NG"
+#define CODE_VERSION "2026.10.24.0650-NG"
 
 #define eeprom_magic_number 60               // you can change this number to have the unit re-initialize EEPROM
 
@@ -3825,7 +3844,6 @@ void service_keypad(){
     if (digitalRead(pin_straight_key) == STRAIGHT_KEY_ACTIVE_STATE){
       if (!last_straight_key_state){
         sending_mode = MANUAL_SENDING;
-        cw_begin_key_down_hold();  // non-blocking (Milestone 5)
         last_straight_key_state = 1;
         // Bugfix: break in on any in-flight/queued automatic (typed/memory) CW - this dedicated
         // straight-key pin always wins, the same way a paddle touch already aborts typed sending via
@@ -3837,12 +3855,18 @@ void service_keypad(){
         // empties the buffers, it doesn't touch an element already mid-flight, so without this,
         // service_cw_scheduler()'s Part B would still run that element's own timed key-up on schedule,
         // fighting the key for control of the line.
+        // Bugfix (Milestone 5 regression): this reset must run BEFORE cw_begin_key_down_hold(), not
+        // after - cw_begin_key_down_hold() uses cw_scheduler_state itself (CW_PTT_LEAD_WAIT while
+        // waiting on a cold PTT activation, then CW_KEY_DOWN_HOLD once keyed), so resetting it
+        // afterward wiped out the hold it had just set, leaving PTT raised but the key/sidetone never
+        // actually turned on - "PTT light briefly on, no TX, no sidetone" on every press from idle.
         clear_send_buffer();
         cw_scheduler_state = CW_IDLE;
         being_sent = SENDING_NOTHING;
         #ifdef FEATURE_MEMORIES
           repeat_memory = 255;
         #endif
+        cw_begin_key_down_hold();  // non-blocking (Milestone 5)
       }
     } else {
       if (last_straight_key_state){
