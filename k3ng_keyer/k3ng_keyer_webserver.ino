@@ -892,6 +892,33 @@ void web_print_page_keyer_settings_process(NETWORK_CLIENT_CLS client){
 
     // TODO !  data validation
 
+    for (int x = 0; x < parse_get_results_index; x++){
+      String parameter = parse_get_results[x].parameter;
+      long value_long = parse_get_results[x].value_long;
+
+      // wp is a divisor (1200 / configuration.wpm in the timing and LCD paths),
+      // so 0 must not get through. The serial path already bounds it the same
+      // way: k3ng_keyer.ino:8010  if ((wpm_set > 0) && (wpm_set < 1000))
+      if (parameter == "wp"){
+        if ((value_long < 1) || (value_long > 999)){
+          invalid_data = 1;
+        }
+      }
+
+      // Keyer mode is used as a selector; anything outside the known set leaves
+      // the keyer in an undefined state.
+      if (parameter == "md"){
+        if ((value_long < 0) || (value_long > 3)){
+          invalid_data = 1;
+        }
+      }
+
+      if (parameter == "di"){ if (value_long < 0){ invalid_data = 1; } }
+      if (parameter == "da"){ if (value_long < 0){ invalid_data = 1; } }
+      if (parameter == "ws"){ if (value_long < 0){ invalid_data = 1; } }
+      if (parameter == "hz"){ if ((value_long < 1) || (value_long > 4000)){ invalid_data = 1; } }
+    }
+
 
     if (invalid_data){
 
