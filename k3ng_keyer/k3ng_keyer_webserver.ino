@@ -892,6 +892,44 @@ void web_print_page_keyer_settings_process(NETWORK_CLIENT_CLS client){
 
     // TODO !  data validation
 
+    for (int x = 0; x < parse_get_results_index; x++){
+      String parameter = parse_get_results[x].parameter;
+      long value_long = parse_get_results[x].value_long;
+
+      // wp is a divisor (1200 / configuration.wpm in the timing and LCD paths),
+      // so 0 must not get through. The serial path already bounds it the same
+      // way: k3ng_keyer.ino:8010  if ((wpm_set > 0) && (wpm_set < 1000))
+      if (parameter == "wp"){
+        if ((value_long < 1) || (value_long > 999)){
+          invalid_data = 1;
+        }
+      }
+
+      // Keyer mode: keyer.h:5-10 defines STRAIGHT 1, IAMBIC_B 2, IAMBIC_A 3,
+      // BUG 4, ULTIMATIC 5, SINGLE_PADDLE 6. Anything outside that is not a mode
+      // the keyer can run in. (0 is not a valid mode.)
+      if (parameter == "md"){
+        if ((value_long < STRAIGHT) || (value_long > SINGLE_PADDLE)){
+          invalid_data = 1;
+        }
+      }
+
+      // dit/dah buffer offsets are stored as uint8_t (k3ng_keyer.ino:2208-2209).
+      if (parameter == "di"){ if ((value_long < 0) || (value_long > 255)){ invalid_data = 1; } }
+      if (parameter == "da"){ if ((value_long < 0) || (value_long > 255)){ invalid_data = 1; } }
+
+      // Wordspace of 0 would make the inter-word timing collapse.
+      if (parameter == "ws"){ if (value_long < 1){ invalid_data = 1; } }
+
+      // Sidetone must stay within the configured limits (settings.h), the same
+      // check the serial command path applies at k3ng_keyer.ino:15093-15094.
+      if (parameter == "hz"){
+        if ((value_long < sidetone_hz_limit_low) || (value_long > sidetone_hz_limit_high)){
+          invalid_data = 1;
+        }
+      }
+    }
+
 
     if (invalid_data){
 
